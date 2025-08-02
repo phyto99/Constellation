@@ -379,6 +379,10 @@
                     movesLeft: this.S
                 }));
 
+                // HQ Connection System
+                this.hqConnections = new Map(); // teamId -> { path: [starIndices], distance: number, lastUpdate: timestamp }
+                this.hqConnectionPulse = 0; // Animation timer for pulsating effect
+
                 // Cursor tracking for moves display
                 this.cursorPos = { x: 0, y: 0 };
                 this.showCursorInfo = false;
@@ -500,6 +504,7 @@
                 // Rebuild cache after map changes
                 this.buildAdjacencyCache();
                 this.initializeClusterState();
+                this.updateHQConnections();
             }
 
             loadCustomMap(m) {
@@ -722,6 +727,10 @@
                 }
 
                 if (stolen) this.addFx(s.x * this.G, s.y * this.G, 'steal');
+                
+                // Update HQ connections after any star change
+                this.updateHQConnections();
+                
                 this.updateProtection();
                 this.checkSpecial();
                 if (this.checkWormhole()) {
@@ -745,7 +754,7 @@
                     this.t -= dt; const te = document.getElementById('timer'); te.style.width = `${(this.t / this.RT) * 100}%`;
                     if (this.t <= 0) this.nextRound();
                 }
-                this.pu += dt * 2; this.bhr += dt * 0.5; this.updateFx(dt);
+                this.pu += dt * 2; this.bhr += dt * 0.5; this.hqConnectionPulse += dt * 3; this.updateFx(dt);
 
                 // Optimized animation checking - only check when necessary
                 if (this.fx.length > 0) {
@@ -754,6 +763,11 @@
 
                 // Only check for protected stars animation if we have protected stars
                 if (this.pr.size > 0) {
+                    this.needsLineRedraw = true;
+                }
+
+                // Check for HQ connection animation
+                if (this.hqConnections.size > 0) {
                     this.needsLineRedraw = true;
                 }
 
@@ -779,6 +793,7 @@
             startGame() {
                 this.p = false; document.getElementById('planning').style.display = 'none'; document.getElementById('timer').style.display = 'block';
                 this.st.forEach(s => { if (s.ty >= T.B && s.req === undefined) s.req = Math.floor(Math.random() * 3) + 2; });
+                this.updateHQConnections();
                 this.needsStarRedraw = true; this.initStateTracking();
             }
             nextRound() {
@@ -793,6 +808,7 @@
                     t.st = this.S;
                     t.movesLeft = this.S;
                 });
+                this.updateHQConnections();
                 this.updateUI();
                 this.checkStateChanges();
             }
@@ -817,14 +833,11 @@
                 });
 
                 this.teamScoreData.forEach(data => {
-                    const hqStars = this.st.filter(s => s.hq && s.tm === data.teamIdx);
-                    if (hqStars.length >= 2) {
-                        for (let i = 0; i < hqStars.length - 1; i++) {
-                            const dx = hqStars[i].x - hqStars[i + 1].x;
-                            const dy = hqStars[i].y - hqStars[i + 1].y;
-                            data.hqDistance += Math.sqrt(dx * dx + dy * dy) * this.G;
-                        }
-                    }
+                    // Calculate HQ connection bonus using the new system
+                    const hqConnectionScore = this.getHQConnectionScore(data.teamIdx);
+                    data.hqDistance = hqConnectionScore;
+                    
+                    // Apply multiplier to HQ score for final score calculation, but keep raw value for display
                     data.finalScore = Math.round(data.count * MULTIPLIERS.count + data.distance * MULTIPLIERS.distance + data.hqDistance * MULTIPLIERS.hq);
                     data.count = Math.round(data.count); data.distance = Math.round(data.distance); data.hqDistance = Math.round(data.hqDistance);
                 });
@@ -909,6 +922,146 @@
                 `;
                 cursorDiv.textContent = movesLeft.toString();
                 document.body.appendChild(cursorDiv);
+            }
+
+            // HQ Connection System Methods
+            updateHQConnections() {
+                // Update HQ connections for all teams
+                for (let teamId = 0; teamId < this.tms.length; teamId++) {
+                    this.calculateHQConnection(teamId);
+                }
+            }
+
+            calculateHQConnection(teamId) {
+                const hqStars = this.st.map((s, i) => ({ star: s, index: i }))
+                    .filter(item => item.star.hq && item.star.tm === teamId);
+
+                if (hqStars.length < 2) {
+                    this.hqConnections.delete(teamId);
+                    return;
+                }
+
+                // Check if we need to recalculate (forced by stealing or no existing connection)
+                const existingConnection = this.hqConnections.get(teamId);
+                const shouldRecalculate = !existingConnection || this.isConnectionBroken(existingConnection, teamId);
+
+                if (shouldRecalculate) {
+                    const shortestPath = this.findShortestHQPath(hqStars, teamId);
+                    if (shortestPath) {
+                        this.hqConnections.set(teamId, {
+                            path: shortestPath.path,
+                            distance: shortestPath.distance,
+                            lastUpdate: Date.now()
+                        });
+                    } else {
+                        this.hqConnections.delete(teamId);
+                    }
+                }
+            }
+
+            isConnectionBroken(connection, teamId) {
+                // Check if any star in the path is no longer owned by the team
+                return connection.path.some(starIndex => this.st[starIndex].tm !== teamId);
+            }
+
+            findShortestHQPath(hqStars, teamId) {
+                if (hqStars.length < 2) return null;
+
+                let bestPath = null;
+                let shortestDistance = Infinity;
+
+                // Try all pairs of HQ stars to find the shortest connected path
+                for (let i = 0; i < hqStars.length - 1; i++) {
+                    for (let j = i + 1; j < hqStars.length; j++) {
+                        const path = this.findPathBetweenStars(hqStars[i].index, hqStars[j].index, teamId);
+                        if (path && path.distance < shortestDistance) {
+                            shortestDistance = path.distance;
+                            bestPath = path;
+                        }
+                    }
+                }
+
+                return bestPath;
+            }
+
+            findPathBetweenStars(startIndex, endIndex, teamId) {
+                // Dijkstra's algorithm to find shortest path between two stars
+                const distances = new Array(this.st.length).fill(Infinity);
+                const previous = new Array(this.st.length).fill(null);
+                const visited = new Set();
+                const queue = [startIndex];
+
+                distances[startIndex] = 0;
+
+                while (queue.length > 0) {
+                    // Find unvisited node with minimum distance
+                    let current = -1;
+                    let minDist = Infinity;
+                    for (let i = 0; i < queue.length; i++) {
+                        if (distances[queue[i]] < minDist) {
+                            minDist = distances[queue[i]];
+                            current = queue[i];
+                        }
+                    }
+
+                    if (current === -1) break;
+
+                    // Remove current from queue
+                    queue.splice(queue.indexOf(current), 1);
+                    visited.add(current);
+
+                    if (current === endIndex) break;
+
+                    // Check all neighbors
+                    for (const neighbor of this.adjacencyCache[current]) {
+                        if (visited.has(neighbor) || this.st[neighbor].tm !== teamId) continue;
+
+                        const currentStar = this.st[current];
+                        const neighborStar = this.st[neighbor];
+                        const edgeWeight = Math.sqrt(
+                            (currentStar.x - neighborStar.x) ** 2 + 
+                            (currentStar.y - neighborStar.y) ** 2
+                        );
+
+                        const newDistance = distances[current] + edgeWeight;
+                        if (newDistance < distances[neighbor]) {
+                            distances[neighbor] = newDistance;
+                            previous[neighbor] = current;
+                            if (!queue.includes(neighbor)) {
+                                queue.push(neighbor);
+                            }
+                        }
+                    }
+                }
+
+                // Reconstruct path if we found one
+                if (distances[endIndex] === Infinity) return null;
+
+                const path = [];
+                let current = endIndex;
+                while (current !== null) {
+                    path.unshift(current);
+                    current = previous[current];
+                }
+
+                return {
+                    path: path,
+                    distance: distances[endIndex] * this.G // Convert to game units
+                };
+            }
+
+            getHQConnectionScore(teamId) {
+                const connection = this.hqConnections.get(teamId);
+                if (!connection) return 0;
+
+                // Count the number of lines in the connection (path length - 1)
+                const lineCount = connection.path.length - 1;
+                
+                // Calculate total distance of the connection
+                const totalDistance = connection.distance;
+
+                // Return raw value (line count + distance) for display in scoreboard
+                return Math.round(lineCount + totalDistance);
             }
 
             checkSpecial() {
@@ -1068,16 +1221,64 @@
 
             renderLines() {
                 this.lineGfx.clear(); this.lto.forEach(t => t.visible = false); this.lti = 0;
+                
                 this.lineData.forEach(l => {
                     const txt = this.getLineText(l.dist.toString(), l.cx + Math.cos(l.pang) * 5, l.cy + Math.sin(l.pang) * 5, { fontSize: 10, fill: 0xFFFFFF, fontFamily: 'Arial' });
                     txt.rotation = Math.abs(l.ang) > Math.PI / 2 ? l.ang + Math.PI : l.ang;
-                    const a = this.st[l.f], b = this.st[l.t]; let color = 0xFFFFFF, th = 2;
+                    const a = this.st[l.f], b = this.st[l.t]; 
+                    let color = 0xFFFFFF, th = 2;
+                    
+                    // Check if this line is part of an HQ connection
+                    let isHQConnection = false;
+                    for (const [teamId, connection] of this.hqConnections) {
+                        if (this.isLineInHQPath(l.f, l.t, connection.path)) {
+                            isHQConnection = true;
+                            break;
+                        }
+                    }
+                    
                     if (this.connected(a, b)) {
                         const team = a.ty === T.B ? b.tm : a.tm;
-                        if (team !== null) { color = this.tms[team].c; th = a.pr && b.pr ? 5 + (Math.sin(this.pu) + 1) * 1.5 : 4; }
+                        if (team !== null) { 
+                            // Base color from team
+                            color = this.tms[team].c;
+                            
+                            // Calculate thickness based on effects
+                            th = 4; // Base thickness for connected lines
+                            
+                            // Apply protected line effect (pulsating thickness)
+                            if (a.pr && b.pr) {
+                                th += (Math.sin(this.pu) + 1) * 1.5;
+                            }
+                            
+                            // Apply HQ connection effect (pulsate to white and back)
+                            if (isHQConnection) {
+                                const hqPulse = (Math.sin(this.hqConnectionPulse) + 1) * 0.5; // 0 to 1
+                                // Interpolate between team color and white
+                                const teamR = (color >> 16) & 0xFF;
+                                const teamG = (color >> 8) & 0xFF;
+                                const teamB = color & 0xFF;
+                                const r = Math.round(teamR + (255 - teamR) * hqPulse);
+                                const g = Math.round(teamG + (255 - teamG) * hqPulse);
+                                const b = Math.round(teamB + (255 - teamB) * hqPulse);
+                                color = (r << 16) | (g << 8) | b;
+                                th += 2; // Make HQ lines slightly thicker
+                            }
+                        }
                     }
                     this.lineGfx.lineStyle(th, color).moveTo(l.x1, l.y1).lineTo(l.x2, l.y2);
                 });
+            }
+
+            isLineInHQPath(starA, starB, path) {
+                // Check if the line between starA and starB is part of the HQ connection path
+                for (let i = 0; i < path.length - 1; i++) {
+                    if ((path[i] === starA && path[i + 1] === starB) || 
+                        (path[i] === starB && path[i + 1] === starA)) {
+                        return true;
+                    }
+                }
+                return false;
             }
 
             drawHQOutline(x, y, s) {
