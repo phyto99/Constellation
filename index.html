@@ -669,8 +669,8 @@
                     }
                 }
 
-                // Check if protected
-                const isProtected = a.pr && b.pr;
+                // Check if protected (logical: if line is connected and either star is protected)
+                const isProtected = this.connected(a, b) && (a.pr || b.pr);
                 if (isProtected) {
                     isAnimated = true;
                 }
@@ -873,6 +873,8 @@
 
                                 if (!isNaN(teamIndex) && teamIndex >= 0 && teamIndex < this.tms.length) {
                                     this.tm = teamIndex;
+                                    // Force immediate leaderboard visual update
+                                    this.needsFullUIUpdate = true;
                                     this.updateUI();
                                     e.stopPropagation();
                                     return;
@@ -1868,8 +1870,8 @@
                         }
                     }
 
-                    // Check protected
-                    if (a.pr && b.pr) {
+                    // Check protected (logical: if line is connected and either star is protected)
+                    if (this.connected(a, b) && (a.pr || b.pr)) {
                         isAnimated = true;
                     }
 
@@ -1907,8 +1909,8 @@
                         }
                     }
 
-                    // Check if protected
-                    const isProtected = a.pr && b.pr;
+                    // Check if protected (logical: if line is connected and either star is protected)
+                    const isProtected = this.connected(a, b) && (a.pr || b.pr);
                     if (isProtected) {
                         isAnimated = true;
                     }
