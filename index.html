@@ -432,6 +432,7 @@
                 Object.assign(this, { G: 20, S: s.steals || 15, HM: s.headquarters || 2, RT: s.roundLength || 30, TR: s.rounds || 10, PT: s.countdownLength || 5, MW: 64, MH: 36 });
                 Object.assign(this, { r: 1, t: this.RT, go: false, p: true, pt: this.PT, tm: 0, pu: 0, bhr: 0, ml: false });
                 this.st = []; this.ln = []; this.pr = new Set(); this.fx = []; this.cm = s.customMap || null;
+                this.wormholeWinner = null; // Track which team won by connecting wormholes
 
                 // Initialize teams based on TEAM_CONFIGS
                 this.tms = TEAM_CONFIGS.map(config => ({
@@ -1071,7 +1072,11 @@
                         }
                         if (this.deferredSpecialCheck) {
                             this.checkSpecialOptimized();
-                            if (this.checkWormholeOptimized()) {
+                            const wormholeWinner = this.checkWormholeOptimized();
+                            if (wormholeWinner !== false) {
+                                this.wormholeWinner = wormholeWinner;
+                                this.needsFullUIUpdate = true;
+                                this.updateScoreDisplay(); // Update scores first
                                 this.go = true;
                                 this.updateUI();
                             }
@@ -1669,16 +1674,29 @@
                     }
                 }
 
-                return Object.values(w).some(v => v >= 2);
+                // Find the first team that has connected 2+ wormholes
+                for (const [teamId, count] of Object.entries(w)) {
+                    if (count >= 2) {
+                        return parseInt(teamId); // Return the winning team ID
+                    }
+                }
+
+                return false; // No team has won yet
             }
 
             updateUI() {
                 document.getElementById('round').textContent = this.go ? "Game Over" : `Round #${this.r}`;
                 const timerEl = document.getElementById('timer');
                 if (this.go) {
-                    // Find winning team (highest score)
-                    const sortedData = [...this.teamScoreData].sort((a, b) => b.finalScore - a.finalScore);
-                    const winningTeamColor = `#${sortedData[0].team.c.toString(16).padStart(6, '0')}`;
+                    let winningTeamColor;
+
+                    // Use wormhole winner's color if available, otherwise highest score
+                    if (this.wormholeWinner !== null) {
+                        winningTeamColor = `#${this.tms[this.wormholeWinner].c.toString(16).padStart(6, '0')}`;
+                    } else {
+                        const sortedData = [...this.teamScoreData].sort((a, b) => b.finalScore - a.finalScore);
+                        winningTeamColor = `#${sortedData[0].team.c.toString(16).padStart(6, '0')}`;
+                    }
 
                     timerEl.style.display = 'block';
                     timerEl.style.width = '100%';
@@ -1766,7 +1784,11 @@
                 sortedData.forEach((data, index) => {
                     const color = `#${data.team.c.toString(16).padStart(6, '0')}`;
                     const isCurrentTeam = data.teamIdx === this.tm;
-                    const scoreWidth = data.finalScore.toString().length * 9 + 36 + (isCurrentTeam ? 8 : 0);
+                    const isWormholeWinner = this.wormholeWinner !== null && data.teamIdx === this.wormholeWinner;
+
+                    // Display "Won" for wormhole winner, otherwise show score
+                    const displayScore = isWormholeWinner ? "Won" : data.finalScore;
+                    const scoreWidth = displayScore.toString().length * 9 + 36 + (isCurrentTeam ? 8 : 0);
                     const teamBorder = isCurrentTeam ? `outline: 2px solid ${color}; outline-offset: -2px; padding: 0 4px;` : '';
 
                     html += `<div class="score-row" data-team-index="${data.teamIdx}" style="${teamBorder}" title="Click to select ${data.team.displayName} team">
@@ -1774,7 +1796,7 @@
                                 <div class="score-highlight" style="background:${color};width:${scoreWidth}px;"></div>
                                 <div class="score-content">
                                     <div class="steal-circle">${data.steals}</div>
-                                    <span class="score-number">${data.finalScore}</span>
+                                    <span class="score-number">${displayScore}</span>
                                 </div>
                             </div>
                             <div class="detail-section">
