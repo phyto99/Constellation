@@ -53,7 +53,6 @@
             background: white;
             width: 100vw;
             display: none;
-            transition: width 0.1s linear;
             will-change: width;
         }
 
@@ -1049,7 +1048,7 @@
 
                 // Use real-time for smooth animations (lag-independent)
                 const animTime = currentTime / 1000;
-                this.pu = animTime * 8;
+                this.pu = animTime * 3;  // Match HQ connection speed
                 this.bhr = animTime * 0.5;
                 this.hqConnectionPulse = animTime * 3;
 
@@ -1148,6 +1147,9 @@
                 this.t = this.RT;
                 // Reset timing for smooth next round timer
                 this.roundStartTime = Date.now();
+                // Instantly reset timer width to 100% without transition
+                const timerEl = document.getElementById('timer');
+                timerEl.style.width = '100%';
 
                 this.tms.forEach((t, i) => {
                     t.st = this.S;
