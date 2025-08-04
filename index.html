@@ -52,7 +52,9 @@
             height: 5px;
             background: white;
             width: 100vw;
-            display: none
+            display: none;
+            transition: width 0.1s linear;
+            will-change: width;
         }
 
         .scores {
@@ -416,7 +418,15 @@
 
         class Game {
             constructor(s = {}) {
-                this.app = new PIXI.Application({ width: innerWidth, height: innerHeight, backgroundColor: 0, resolution: devicePixelRatio || 1, autoDensity: true });
+                this.app = new PIXI.Application({
+                    width: innerWidth,
+                    height: innerHeight,
+                    backgroundColor: 0,
+                    resolution: devicePixelRatio || 1,
+                    autoDensity: true,
+                    antialias: true,
+                    powerPreference: 'high-performance'
+                });
                 document.getElementById('gameContainer').appendChild(this.app.view);
 
                 Object.assign(this, { G: 20, S: s.steals || 15, HM: s.headquarters || 2, RT: s.roundLength || 30, TR: s.rounds || 10, PT: s.countdownLength || 5, MW: 64, MH: 36 });
@@ -443,6 +453,11 @@
                 this.deferredSpecialCheck = false;
                 this.deferredScoreUpdate = false;
                 this.networkAnalysisTimer = 0;
+
+                // Lag-independent timing for smooth animations
+                this.gameStartTime = Date.now();
+                this.lastRealTime = Date.now();
+                this.roundStartTime = Date.now();
 
                 // Cursor tracking for moves display
                 this.cursorPos = { x: 0, y: 0 };
@@ -492,6 +507,11 @@
             }
 
             init() {
+                // Initialize timing for lag-independent animations
+                this.gameStartTime = Date.now();
+                this.lastRealTime = Date.now();
+                this.roundStartTime = Date.now();
+
                 this.loadMap(); this.calculateMapBounds(); this.setupCam(); this.setupEvents(); this.precomputeStaticData(); this.calcScores(); this.updateUI(); this.initStateTracking();
                 this.app.ticker.add(dt => this.update(dt));
             }
@@ -867,9 +887,27 @@
                 }, 100);
             }
 
-            addFx(x, y, ty) { this.fx.push({ x, y, ty, t: 0, mt: ty === 'steal' ? 0.8 : 0.6 }); this.needsFxRedraw = true; }
+            addFx(x, y, ty) {
+                const currentTime = Date.now() / 1000;
+                this.fx.push({
+                    x, y, ty,
+                    startTime: currentTime,
+                    mt: ty === 'steal' ? 0.8 : 0.6
+                });
+                this.needsFxRedraw = true;
+            }
+
             updateFx(dt) {
-                dt *= 1.1; const pl = this.fx.length; this.fx = this.fx.filter(e => { e.t += dt; return e.t < e.mt; });
+                const currentTime = Date.now() / 1000;
+                const pl = this.fx.length;
+
+                // Use real-time for lag-independent steal animations
+                this.fx = this.fx.filter(e => {
+                    const elapsed = currentTime - e.startTime;
+                    e.t = elapsed; // Update progress based on real time
+                    return elapsed < e.mt;
+                });
+
                 if (this.fx.length || pl !== this.fx.length) this.needsFxRedraw = true;
             }
 
@@ -974,28 +1012,48 @@
             }
 
             update(dt) {
+                // Use real-time for lag-independent animations
+                const currentTime = Date.now();
+                const realDt = (currentTime - this.lastRealTime) / 1000;
+                this.lastRealTime = currentTime;
+
+                // Frame-dependent dt for game logic (can lag)
                 dt /= 60;
+
                 if (this.p) {
-                    const oldPt = Math.ceil(this.pt);
-                    this.pt -= dt;
-                    const newPt = Math.ceil(this.pt);
+                    // Use real-time for smooth planning countdown
+                    const elapsedTime = (currentTime - this.gameStartTime) / 1000;
+                    const remainingTime = Math.max(0, this.PT - elapsedTime);
+                    const newPt = Math.ceil(remainingTime);
+
                     // Only update planning text if the displayed seconds changed
-                    if (oldPt !== newPt) {
+                    if (!this.lastPlanningTime || this.lastPlanningTime !== newPt) {
                         document.getElementById('planning').textContent = `Planning Stage: ${newPt}s`;
+                        this.lastPlanningTime = newPt;
                     }
-                    if (this.pt <= 0) this.startGame();
+
+                    if (remainingTime <= 0) this.startGame();
                 } else if (!this.go) {
-                    this.t -= dt;
+                    // Use real-time for ultra-smooth timer bar
+                    const elapsedTime = (currentTime - this.roundStartTime) / 1000;
+                    const remainingTime = Math.max(0, this.RT - elapsedTime);
+                    const newWidth = (remainingTime / this.RT) * 100;
+
+                    // Update timer bar every frame for maximum smoothness
                     const te = document.getElementById('timer');
-                    const newWidth = Math.max(0, (this.t / this.RT) * 100);
-                    // Only update timer width if change is significant (> 0.5%)
-                    if (!this.lastTimerWidth || Math.abs(newWidth - this.lastTimerWidth) > 0.5) {
-                        te.style.width = `${newWidth}%`;
-                        this.lastTimerWidth = newWidth;
-                    }
-                    if (this.t <= 0) this.nextRound();
+                    te.style.width = `${newWidth.toFixed(2)}%`;
+
+                    if (remainingTime <= 0) this.nextRound();
                 }
-                this.pu += dt * 8; this.bhr += dt * 0.5; this.hqConnectionPulse += dt * 3; this.updateFx(dt);
+
+                // Use real-time for smooth animations (lag-independent)
+                const animTime = currentTime / 1000;
+                this.pu = animTime * 8;
+                this.bhr = animTime * 0.5;
+                this.hqConnectionPulse = animTime * 3;
+
+                // Use frame-dependent dt for effects (can lag, but less critical)
+                this.updateFx(dt);
 
                 // Handle deferred expensive operations to prevent lag spikes
                 if (this.deferredScoreUpdate || this.deferredNetworkAnalysis || this.deferredSpecialCheck) {
@@ -1062,6 +1120,9 @@
                 this.p = false; document.getElementById('planning').style.display = 'none'; document.getElementById('timer').style.display = 'block';
                 this.st.forEach(s => { if (s.ty >= T.B && s.req === undefined) s.req = Math.floor(Math.random() * 3) + 2; });
 
+                // Reset timing for smooth round timer
+                this.roundStartTime = Date.now();
+
                 // Mark all teams as changed for initial score calculation
                 for (let i = 0; i < this.tms.length; i++) {
                     this.changedTeams.add(i);
@@ -1080,6 +1141,9 @@
                     return;
                 }
                 this.t = this.RT;
+                // Reset timing for smooth next round timer
+                this.roundStartTime = Date.now();
+
                 this.tms.forEach((t, i) => {
                     t.st = this.S;
                     t.movesLeft = this.S;
