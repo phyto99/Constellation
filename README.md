@@ -1,3 +1,5 @@
+Almost all done
+
 Things left to work on:
 
 Custom wormhole value logic working how I want it; 
