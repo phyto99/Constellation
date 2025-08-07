@@ -1,0 +1,2150 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Const</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            font-family: Arial, sans-serif;
+            overflow: hidden
+        }
+
+        #gameContainer {
+            width: 100vw;
+            height: 100vh
+        }
+
+        .ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            color: white;
+            z-index: 1000
+        }
+
+        .round {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 8px
+        }
+
+        .planning {
+            font-size: 24px;
+            color: #ff0;
+            margin: 10px
+        }
+
+        .timer-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            z-index: 1001
+        }
+
+        .timer {
+            height: 5px;
+            background: white;
+            width: 100vw;
+            display: none;
+            transition: width 0.1s linear;
+            will-change: width;
+        }
+
+        .scores {
+            position: fixed;
+            top: 5px;
+            right: 20px;
+            z-index: 1000;
+            font-family: Arial, sans-serif;
+            cursor: pointer;
+            user-select: none
+        }
+
+        .score-row {
+            margin-bottom: 1px;
+            height: 30px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .score-row:hover:not(.multiplier-row):not(.selected-team) {
+            transform: translateX(-2px);
+            box-shadow: 2px 0px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .score-row:hover:not(.multiplier-row).selected-team {
+            box-shadow: 2px 0px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .score-row.multiplier-row {
+            cursor: default;
+        }
+
+        .main-score-section {
+            position: relative;
+            display: flex;
+            align-items: center
+        }
+
+        .score-highlight {
+            position: absolute;
+            left: 0;
+            height: 30px;
+            z-index: 1;
+        }
+
+        .scores.expanded .score-highlight {
+            right: 0;
+            width: 100% !important;
+        }
+
+        .score-content {
+            position: relative;
+            z-index: 2;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 0 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            height: 30px;
+            text-shadow: -1px -0.5px 3px rgba(0, 0, 0, 1)
+        }
+
+        .score-number {
+            color: white
+        }
+
+        .detail-col {
+            text-align: right;
+            display: inline-block;
+            font-size: 14px;
+            font-weight: bold
+        }
+
+        .detail-section {
+            display: none
+        }
+
+        .scores.expanded .detail-section {
+            display: flex;
+            gap: 8px
+        }
+
+        .steal-circle {
+            width: 15px;
+            height: 15px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: normal;
+            color: black;
+            box-shadow: -1px -1px 1px rgba(0, 0, 0, 0.5);
+            text-shadow: none
+        }
+
+        .multipliers {
+            display: none;
+            font-size: 11px;
+            color: #ccc;
+            margin-top: 5px;
+            justify-content: flex-end
+        }
+
+        .scores.expanded .multipliers {
+            display: flex;
+            gap: 8px
+        }
+
+        .multiplier-col {
+            text-align: center;
+            display: inline-block;
+            font-size: 11px;
+            font-weight: normal
+        }
+
+        .settings-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            min-width: 300px;
+            z-index: 1002
+        }
+
+        .settings-panel h3 {
+            margin-top: 0;
+            color: #ff0
+        }
+
+        .setting-group {
+            margin-bottom: 15px
+        }
+
+        .setting-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px
+        }
+
+        .setting-group input,
+        .setting-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #555;
+            background: #222;
+            color: white;
+            border-radius: 4px;
+            box-sizing: border-box
+        }
+
+        .setting-group textarea {
+            height: 100px;
+            resize: vertical;
+            font-family: monospace;
+            font-size: 12px
+        }
+
+        .button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px
+        }
+
+        .button:hover {
+            background: #0080ff
+        }
+
+        .button.start {
+            background: #00cc00
+        }
+
+        .button.start:hover {
+            background: #00ff00
+        }
+
+        .button.toggle {
+            background: #666
+        }
+
+        .button.toggle:hover {
+            background: #888
+        }
+
+        .error {
+            color: #ff6666;
+            font-size: 12px;
+            margin-top: 5px
+        }
+
+        .hidden {
+            display: none
+        }
+
+        .header {
+            position: fixed;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1003;
+            text-align: center;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1
+        }
+
+        .header .info-line {
+            margin-top: 1px
+        }
+
+        #teamColor {
+            color: cyan;
+            font-weight: bold
+        }
+
+        .timer-container+.ui {
+            margin-top: 5px
+        }
+    </style>
+</head>
+
+<body>
+    <div id="gameContainer"></div>
+    <div class="timer-container">
+        <div id="timer" class="timer"></div>
+    </div>
+    <div class="header" id="gameHeader" style="display:none;">
+        <div id="titleLine"></div>
+        <div class="info-line">Game ID: Placeholder.⠀ My team: <span id="teamColor">cyan</span>.⠀ Breakout room #1</div>
+    </div>
+    <div class="ui">
+        <div id="round" class="round">Round #1</div>
+        <div id="planning" class="planning">Planning Stage: 5s</div>
+        <div class="scores" id="scores"></div>
+    </div>
+    <div class="settings-panel" id="settingsPanel">
+        <h3>Game Settings</h3>
+        <div class="setting-group">
+            <label for="mapJson">Map JSON Data:</label>
+            <textarea id="mapJson"
+                placeholder='{"title":"Custom Map","author":"Player","dimensions":[64,36],"stars":[[10,10,0],[20,20,1]],"lines":[[0,1]]}'></textarea>
+            <div id="mapError" class="error hidden"></div>
+        </div>
+        <div class="setting-group">
+            <label for="moves">Moves per Round:</label>
+            <input type="number" id="moves" value="15" min="1" max="50">
+        </div>
+        <div class="setting-group">
+            <label for="rounds">Total Rounds:</label>
+            <input type="number" id="rounds" value="10" min="1" max="20">
+        </div>
+        <div class="setting-group">
+            <label for="roundLength">Round Length (seconds):</label>
+            <input type="number" id="roundLength" value="30" min="10" max="120">
+        </div>
+        <div class="setting-group">
+            <label for="countdownLength">Planning Stage Length (seconds):</label>
+            <input type="number" id="countdownLength" value="5" min="3" max="30">
+        </div>
+        <div class="setting-group">
+            <label for="steals">Steals per Round:</label>
+            <input type="number" id="steals" value="15" min="0" max="30">
+        </div>
+        <div class="setting-group">
+            <label for="headquarters">Max Headquarters per Team:</label>
+            <input type="number" id="headquarters" value="2" min="1" max="5">
+        </div>
+        <div style="text-align:center;margin-top:20px;">
+            <button class="button start" onclick="startNewGame()">Start New Game</button>
+            <button class="button toggle" onclick="toggleSettings()">Hide Settings</button>
+        </div>
+    </div>
+
+    <script>
+        const T = { N: 0, C: 1, B: 2, W: 3 },
+            C = { CY: 0x00FFFF, M: 0xFF00FF, G: 0x00FF00, GOLD: 0xFFD700, BLUE: 0x0000FF, RED: 0xFF0000, DGREEN: 0x006400 },
+            J2I = { 1: T.N, 2: T.C, 3: T.W, 4: T.B };
+        const MULTIPLIERS = { count: 500, distance: 1, hq: 10 };
+
+        // Optimized MinHeap for Dijkstra's algorithm
+        class MinHeap {
+            constructor() {
+                this.heap = [];
+            }
+
+            insert(item) {
+                this.heap.push(item);
+                this.heapifyUp(this.heap.length - 1);
+            }
+
+            extractMin() {
+                if (this.heap.length === 0) return null;
+                if (this.heap.length === 1) return this.heap.pop();
+
+                const min = this.heap[0];
+                this.heap[0] = this.heap.pop();
+                this.heapifyDown(0);
+                return min;
+            }
+
+            isEmpty() {
+                return this.heap.length === 0;
+            }
+
+            heapifyUp(index) {
+                while (index > 0) {
+                    const parentIndex = Math.floor((index - 1) / 2);
+                    if (this.heap[parentIndex].dist <= this.heap[index].dist) break;
+
+                    [this.heap[parentIndex], this.heap[index]] = [this.heap[index], this.heap[parentIndex]];
+                    index = parentIndex;
+                }
+            }
+
+            heapifyDown(index) {
+                while (true) {
+                    let minIndex = index;
+                    const leftChild = 2 * index + 1;
+                    const rightChild = 2 * index + 2;
+
+                    if (leftChild < this.heap.length && this.heap[leftChild].dist < this.heap[minIndex].dist) {
+                        minIndex = leftChild;
+                    }
+                    if (rightChild < this.heap.length && this.heap[rightChild].dist < this.heap[minIndex].dist) {
+                        minIndex = rightChild;
+                    }
+
+                    if (minIndex === index) break;
+                    [this.heap[index], this.heap[minIndex]] = [this.heap[minIndex], this.heap[index]];
+                    index = minIndex;
+                }
+            }
+        }
+
+        // Team configuration - easily modifiable for any number of teams
+        const TEAM_CONFIGS = [
+            { color: C.CY, name: 'cyan', displayName: 'Cyan' },
+            { color: C.M, name: 'magenta', displayName: 'Magenta' },
+            { color: C.G, name: 'lime', displayName: 'Lime' },
+            { color: C.GOLD, name: 'gold', displayName: 'Gold' },
+            { color: C.BLUE, name: 'blue', displayName: 'Blue' },
+            { color: C.RED, name: 'red', displayName: 'Red' },
+            { color: C.DGREEN, name: 'dark green', displayName: 'Dark Green' }
+        ];
+
+        class Game {
+            constructor(s = {}) {
+                this.app = new PIXI.Application({
+                    width: innerWidth,
+                    height: innerHeight,
+                    backgroundColor: 0,
+                    resolution: devicePixelRatio || 1,
+                    autoDensity: true,
+                    antialias: true,
+                    powerPreference: 'high-performance'
+                });
+                document.getElementById('gameContainer').appendChild(this.app.view);
+
+                Object.assign(this, { G: 20, S: s.steals || 15, HM: s.headquarters || 2, RT: s.roundLength || 30, TR: s.rounds || 10, PT: s.countdownLength || 5, MW: 64, MH: 36 });
+                Object.assign(this, { r: 1, t: this.RT, go: false, p: true, pt: this.PT, tm: 0, pu: 0, bhr: 0, ml: false });
+                this.st = []; this.ln = []; this.pr = new Set(); this.fx = []; this.cm = s.customMap || null;
+                this.wormholeWinner = null; // Track which team won by connecting wormholes
+
+                // Initialize teams based on TEAM_CONFIGS
+                this.tms = TEAM_CONFIGS.map(config => ({
+                    c: config.color,
+                    name: config.name,
+                    displayName: config.displayName,
+                    s: 0,
+                    st: this.S,
+                    h: 0,
+                    movesLeft: this.S
+                }));
+
+                // HQ Connection System
+                this.hqConnections = new Map(); // teamId -> { path: [starIndices], distance: number, lastUpdate: timestamp }
+                this.hqConnectionPulse = 0; // Animation timer for pulsating effect
+
+                // Simple deferred network analysis to prevent lag spikes
+                this.deferredNetworkAnalysis = false;
+                this.deferredSpecialCheck = false;
+                this.deferredScoreUpdate = false;
+                this.networkAnalysisTimer = 0;
+
+                // Lag-independent timing for smooth animations
+                this.gameStartTime = Date.now();
+                this.lastRealTime = Date.now();
+                this.roundStartTime = Date.now();
+
+                // Cursor tracking for moves display
+                this.cursorPos = { x: 0, y: 0 };
+                this.showCursorInfo = false;
+
+                this.c = new PIXI.Container(); this.app.stage.addChild(this.c);
+                const g = ['bgGfx', 'staticLineGfx', 'animatedLineGfx', 'starGfx', 'fxGfx'].map(n => this[n] = new PIXI.Graphics());
+                this.llc = new PIXI.Container(); this.tc = new PIXI.Container();
+                [this.bgGfx, this.staticLineGfx, this.animatedLineGfx, this.llc, this.starGfx, this.fxGfx, this.tc].forEach(x => this.c.addChild(x));
+
+                this.cam = { x: 0, y: 0, z: 1 }; this.d = { a: false, sx: 0, sy: 0, cx: 0, cy: 0, m: false };
+                this.to = []; this.ti = 0; this.lto = []; this.lti = 0;
+                Object.assign(this, { needsStaticLineRedraw: true, needsAnimatedLineRedraw: true, needsStarRedraw: true, needsBgRedraw: true, needsFxRedraw: true });
+                this.starClickRadius = []; this.lineData = [];
+                this.lastStarStates = []; this.lastLineStates = []; this.lastProtectedStars = new Set(); this.lastScores = []; this.lastTeamSteals = [];
+                this.mapBounds = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+                this.teamScoreData = [];
+
+                // Cache for performance optimization
+                this.adjacencyCache = null;
+                this.lastClusterState = new Map(); // Track cluster ownership changes
+
+                // Optimization 1: Spatial indexing for star lookups
+                this.spatialGrid = new Map();
+                this.gridSize = this.G * 2;
+
+                // Optimization 2: Dirty regions for batch graphics updates
+                this.dirtyRegions = new Set();
+                this.regionSize = this.G * 4;
+                this.dirtyStars = new Set(); // Track individual dirty stars
+
+                // Optimization 3: Compressed state tracking with bit fields
+                this.lastStarStateBits = [];
+
+                // Optimization 4: WebGL batch rendering for lines
+                this.lineMesh = null;
+                this.lineVertices = null;
+                this.lineIndices = null;
+
+                // Optimization 5: Optimized score calculation with caching
+                this.clusterCache = new Map();
+                this.scoreCache = new Array(this.tms.length).fill(0);
+                this.changedTeams = new Set();
+                this.needsFullUIUpdate = false;
+
+                this.init();
+            }
+
+            init() {
+                // Initialize timing for lag-independent animations
+                this.gameStartTime = Date.now();
+                this.lastRealTime = Date.now();
+                this.roundStartTime = Date.now();
+
+                this.loadMap(); this.calculateMapBounds(); this.setupCam(); this.setupEvents(); this.precomputeStaticData(); this.calcScores(); this.updateUI(); this.initStateTracking();
+                this.app.ticker.add(dt => this.update(dt));
+            }
+
+            calculateMapBounds() {
+                if (this.st.length === 0) return;
+                let minX = this.st[0].x, maxX = this.st[0].x, minY = this.st[0].y, maxY = this.st[0].y;
+                // Use for loop for better performance
+                for (let i = 1; i < this.st.length; i++) {
+                    const s = this.st[i];
+                    if (s.x < minX) minX = s.x;
+                    if (s.x > maxX) maxX = s.x;
+                    if (s.y < minY) minY = s.y;
+                    if (s.y > maxY) maxY = s.y;
+                }
+                this.mapBounds = { minX: minX - 1, minY: minY - 1, maxX: maxX + 1, maxY: maxY + 1 };
+            }
+
+            initStateTracking() {
+                this.lastStarStates = this.st.map(s => ({ tm: s.tm, hq: s.hq, pr: s.pr, ful: s.ful ? [...s.ful] : null, req: s.req }));
+                this.lastLineStates = this.lineData.map(l => ({ connected: this.connected(this.st[l.f], this.st[l.t]), team: this.getLineTeam(l.f, l.t) }));
+                this.lastProtectedStars = new Set(this.pr); this.lastScores = this.tms.map(t => t.s); this.lastTeamSteals = this.tms.map(t => t.st);
+
+                // Initialize compressed state tracking
+                this.lastStarStateBits = this.st.map(s => this.getStarStateBits(s));
+            }
+
+            getLineTeam(f, t) { const a = this.st[f], b = this.st[t]; return a.ty === T.B ? b.tm : b.ty === T.B ? a.tm : a.tm; }
+
+            hasStarStateChanged(i) {
+                // Use bit comparison for faster state checking
+                const current = this.getStarStateBits(this.st[i]);
+                const last = this.lastStarStateBits[i];
+                return current !== last;
+            }
+
+            hasLineStateChanged(i) {
+                const l = this.lineData[i], cc = this.connected(this.st[l.f], this.st[l.t]), ct = this.getLineTeam(l.f, l.t), last = this.lastLineStates[i];
+                return cc !== last.connected || ct !== last.team;
+            }
+
+            updateStateTracking() {
+                this.st.forEach((s, i) => this.lastStarStates[i] = { tm: s.tm, hq: s.hq, pr: s.pr, ful: s.ful ? [...s.ful] : null, req: s.req });
+                this.lineData.forEach((l, i) => this.lastLineStates[i] = { connected: this.connected(this.st[l.f], this.st[l.t]), team: this.getLineTeam(l.f, l.t) });
+                this.lastProtectedStars = new Set(this.pr); this.lastScores = this.tms.map(t => t.s); this.lastTeamSteals = this.tms.map(t => t.st);
+
+                // Update compressed state tracking
+                this.lastStarStateBits = this.st.map(s => this.getStarStateBits(s));
+            }
+
+            checkStateChanges() {
+                let sc = false, lc = false;
+                for (let i = 0; i < this.st.length && !sc; i++)if (this.hasStarStateChanged(i)) sc = true;
+                for (let i = 0; i < this.lineData.length && !lc; i++)if (this.hasLineStateChanged(i)) lc = true;
+                if (this.pr.size !== this.lastProtectedStars.size || !Array.from(this.pr).every(x => this.lastProtectedStars.has(x))) sc = lc = true;
+                for (let i = 0; i < this.tms.length; i++)if (this.tms[i].s !== this.lastScores[i] || this.tms[i].st !== this.lastTeamSteals[i]) { lc = true; break; }
+                if (sc) this.needsStarRedraw = true;
+                if (lc) {
+                    this.needsStaticLineRedraw = true;
+                    this.needsAnimatedLineRedraw = true;
+                }
+                this.updateStateTracking();
+            }
+
+            precomputeStaticData() {
+                this.starClickRadius = this.st.map(s => (s.ty === T.C ? this.G : this.G / 2) ** 2);
+                this.lineData = this.ln.map(l => {
+                    const a = this.st[l.f], b = this.st[l.t], x1 = a.x * this.G, y1 = a.y * this.G, x2 = b.x * this.G, y2 = b.y * this.G;
+                    const dist = Math.floor(Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)), cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+                    let dx = x2 - x1, dy = y2 - y1; if (dx < 0) { dx = -dx; dy = -dy; }
+                    const ang = Math.atan2(dy, dx); return { x1, y1, x2, y2, dist, cx, cy, ang, pang: ang - Math.PI / 2, f: l.f, t: l.t };
+                });
+
+                // Build and cache adjacency list once
+                this.buildAdjacencyCache();
+                this.initializeClusterState();
+
+                // Build spatial index for fast star lookups
+                this.buildSpatialIndex();
+
+                // Initialize WebGL line rendering
+                this.initializeLineGraphics();
+            }
+
+            buildAdjacencyCache() {
+                this.adjacencyCache = new Array(this.st.length).fill(null).map(() => []);
+                // Use for loop for better performance
+                for (let i = 0; i < this.ln.length; i++) {
+                    const l = this.ln[i];
+                    this.adjacencyCache[l.f].push(l.t);
+                    this.adjacencyCache[l.t].push(l.f);
+                }
+            }
+
+            // Optimization 1: Spatial indexing for fast star lookups
+            buildSpatialIndex() {
+                this.spatialGrid.clear();
+                // Use for loop for better performance than forEach
+                for (let i = 0; i < this.st.length; i++) {
+                    const s = this.st[i];
+                    const key = `${Math.floor(s.x * this.G / this.gridSize)},${Math.floor(s.y * this.G / this.gridSize)}`;
+                    if (!this.spatialGrid.has(key)) this.spatialGrid.set(key, []);
+                    this.spatialGrid.get(key).push(i);
+                }
+            }
+
+            // Optimization 2: Mark regions dirty for batch updates
+            markRegionDirty(x, y) {
+                const rx = Math.floor(x / this.regionSize);
+                const ry = Math.floor(y / this.regionSize);
+                this.dirtyRegions.add(`${rx},${ry}`);
+            }
+
+            // Mark individual stars as dirty (much faster for single star changes)
+            markStarDirty(starIndex) {
+                this.dirtyStars.add(starIndex);
+            }
+
+            // Ultra-fast line rendering - only redraws lines connected to a specific star
+            renderConnectedLines(starIndex) {
+                const neighbors = this.adjacencyCache[starIndex];
+                if (!neighbors) return;
+
+                // Find and redraw only the lines connected to this star
+                for (let i = 0; i < neighbors.length; i++) {
+                    const neighborIndex = neighbors[i];
+
+                    // Find the line data for this connection
+                    for (let j = 0; j < this.lineData.length; j++) {
+                        const l = this.lineData[j];
+                        if ((l.f === starIndex && l.t === neighborIndex) ||
+                            (l.f === neighborIndex && l.t === starIndex)) {
+
+                            // Redraw this specific line
+                            this.drawSingleLine(l, j);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Draw a single line with proper styling
+            drawSingleLine(l, lineIndex) {
+                const a = this.st[l.f], b = this.st[l.t];
+                let color = 0xFFFFFF, th = 2;
+                let isAnimated = false;
+
+                // Check if this line is part of an HQ connection
+                let isHQConnection = false;
+                for (const [teamId, connection] of this.hqConnections) {
+                    if (this.isLineInHQPath(l.f, l.t, connection.path)) {
+                        isHQConnection = true;
+                        isAnimated = true;
+                        break;
+                    }
+                }
+
+                // Check if protected
+                const isProtected = a.pr && b.pr;
+                if (isProtected) {
+                    isAnimated = true;
+                }
+
+                if (this.connected(a, b)) {
+                    const team = a.ty === T.B ? b.tm : a.tm;
+                    if (team !== null) {
+                        color = this.tms[team].c;
+                        th = 4;
+
+                        // Apply effects for animated lines
+                        if (isProtected) {
+                            th += (Math.sin(this.pu) + 1) * 1.5;
+                        }
+
+                        if (isHQConnection) {
+                            const hqPulse = (Math.sin(this.hqConnectionPulse) + 1) * 0.5;
+                            const teamR = (color >> 16) & 0xFF;
+                            const teamG = (color >> 8) & 0xFF;
+                            const teamB = color & 0xFF;
+                            const r = Math.round(teamR + (255 - teamR) * hqPulse);
+                            const g = Math.round(teamG + (255 - teamG) * hqPulse);
+                            const b = Math.round(teamB + (255 - teamB) * hqPulse);
+                            color = (r << 16) | (g << 8) | b;
+                        }
+                    }
+                }
+
+                // Draw to the appropriate graphics container
+                const gfx = isAnimated ? this.animatedLineGfx : this.staticLineGfx;
+                gfx.lineStyle(th, color).moveTo(l.x1, l.y1).lineTo(l.x2, l.y2);
+            }
+
+            // Optimization 3: Compressed state tracking with bit manipulation
+            getStarStateBits(s) {
+                return (s.tm << 0) | (s.hq << 3) | (s.pr << 4) | (s.req << 5) | ((s.ful ? s.ful.length : 0) << 10);
+            }
+
+            initializeClusterState() {
+                this.lastClusterState.clear();
+                for (let i = 0; i < this.st.length; i++) {
+                    if (this.st[i].ty === T.C) {
+                        this.lastClusterState.set(i, this.st[i].tm);
+                    }
+                }
+            }
+
+
+
+            loadMap() {
+                if (this.cm) { try { this.loadCustomMap(this.cm); } catch (e) { console.error(e); this.genMap(); } } else this.genMap();
+                this.ml = true; this.markAllDirty();
+                // Rebuild cache after map changes
+                this.buildAdjacencyCache();
+                this.initializeClusterState();
+                // Rebuild spatial index for new map
+                this.buildSpatialIndex();
+                // Reinitialize line graphics for new map
+                this.initializeLineGraphics();
+            }
+
+            loadCustomMap(m) {
+                this.st = []; this.ln = []; this.pr.clear();
+                if (m.dimensions) { this.MW = m.dimensions[0]; this.MH = m.dimensions[1]; }
+                this.tms.forEach((t, i) => {
+                    t.st = this.S;
+                    t.h = 0;
+                    t.movesLeft = this.S;
+                    // Mark all teams as changed for score recalculation
+                    this.changedTeams.add(i);
+                });
+                if (m.stars) m.stars.forEach(d => {
+                    const it = J2I[d[2]] !== undefined ? J2I[d[2]] : d[2], s = this.makeStar(d[0], d[1], it);
+                    if (it === T.W || it === T.B) {
+                        if (d.length >= 5) {
+                            s.min_value = d[3];
+                            s.max_value = d[4];
+                        } else if (d.length >= 4) {
+                            s.min_value = d[3];
+                            s.max_value = d[3];
+                        } else {
+                            s.min_value = it === T.B ? 2 : 2;
+                            s.max_value = it === T.B ? 4 : 3;
+                        }
+                    }
+                    this.st.push(s);
+                });
+                if (m.lines) m.lines.forEach(d => {
+                    let f, t; if (Array.isArray(d)) { f = d[0]; t = d[1]; } else { f = d.from; t = d.to; }
+                    if (f < this.st.length && t < this.st.length) this.ln.push({ f, t });
+                });
+                this.st.forEach(s => {
+                    if (s.ty === T.B) {
+                        const min = s.min_value || 2, max = s.max_value || 4;
+                        s.req = Math.floor(Math.random() * (max - min + 1)) + min;
+                        s.ful = [];
+                    }
+                    else if (s.ty === T.W) {
+                        const min = s.min_value || 2, max = s.max_value || 3;
+                        s.req = Math.floor(Math.random() * (max - min + 1)) + min;
+                    }
+                });
+            }
+
+            setupCam() {
+                const w = (this.mapBounds.maxX - this.mapBounds.minX) * this.G, h = (this.mapBounds.maxY - this.mapBounds.minY) * this.G;
+                const z = Math.min(this.app.screen.width / w, this.app.screen.height / h) * 0.8;
+                const centerX = this.mapBounds.minX * this.G + w / 2, centerY = this.mapBounds.minY * this.G + h / 2;
+                this.cam = { x: this.app.screen.width / 2 - centerX * z, y: this.app.screen.height / 2 - centerY * z, z };
+                this.updateCam();
+            }
+            updateCam() { this.c.x = this.cam.x; this.c.y = this.cam.y; this.c.scale.set(this.cam.z); }
+
+            setupEvents() {
+                this.app.stage.eventMode = 'static'; this.app.stage.hitArea = this.app.screen;
+                const v = this.app.view, events = [
+                    ['mousedown', e => this.onDown(e)], ['mousemove', e => this.onMove(e)], ['mouseup', e => this.onUp(e)],
+                    ['wheel', e => this.onWheel(e)], ['contextmenu', e => e.preventDefault()],
+                    ['mouseleave', e => this.onMouseLeave(e)],
+                    ['touchstart', e => this.onDown(e.touches[0])], ['touchmove', e => { e.preventDefault(); this.onMove(e.touches[0]); }],
+                    ['touchend', e => this.onUp(e.changedTouches[0])]
+                ]; events.forEach(([n, h]) => v.addEventListener(n, h));
+
+                // Add global mouse up listener to catch mouse up events outside the canvas
+                document.addEventListener('mouseup', (e) => {
+                    if (this.d.a) {
+                        this.d.a = false;
+                        this.d.m = false;
+                    }
+                });
+
+                // Add global mouse leave listener for additional safety
+                document.addEventListener('mouseleave', (e) => {
+                    if (this.d.a) {
+                        this.d.a = false;
+                        this.d.m = false;
+                    }
+                });
+            }
+
+            onDown(e) {
+                if (e.button && e.button !== 0 && e.button !== 2) return;
+                const x = e.clientX || e.pageX, y = e.clientY || e.pageY;
+                this.d = { a: true, sx: x, sy: y, cx: this.cam.x, cy: this.cam.y, m: false, b: e.button };
+            }
+            onMove(e) {
+                const x = e.clientX || e.pageX, y = e.clientY || e.pageY;
+
+                // Update cursor position for moves display
+                this.cursorPos = { x, y };
+                this.showCursorInfo = !this.p && !this.go;
+
+                if (!this.d.a) return;
+                const dx = x - this.d.sx, dy = y - this.d.sy;
+                if (Math.abs(dx) > 3 || Math.abs(dy) > 3) this.d.m = true;
+                this.cam.x = this.d.cx + dx; this.cam.y = this.d.cy + dy;
+                this.updateCam();
+            }
+            onUp(e) {
+                if (!this.d.a) return;
+                if (!this.d.m && this.ml) {
+                    const x = e.clientX || e.pageX, y = e.clientY || e.pageY, wx = (x - this.cam.x) / this.cam.z, wy = (y - this.cam.y) / this.cam.z;
+                    if (this.d.b === 2) this.addFx(wx, wy, 'pointer');
+                    else if (!this.p && !this.go) { const s = this.findStar({ x: wx, y: wy }); if (s !== -1) this.clickStar(s); }
+                }
+                this.d.a = this.d.m = false;
+            }
+            onWheel(e) {
+                e.preventDefault(); const f = e.deltaY > 0 ? 0.9 : 1.1, nz = Math.max(0.2, Math.min(3, this.cam.z * f));
+                if (nz === this.cam.z) return; const mx = e.clientX, my = e.clientY, wx = (mx - this.cam.x) / this.cam.z, wy = (my - this.cam.y) / this.cam.z;
+                this.cam.z = nz; this.cam.x = mx - wx * nz; this.cam.y = my - wy * nz; this.updateCam();
+            }
+
+            onMouseLeave(e) {
+                this.showCursorInfo = false;
+                const existing = document.getElementById('cursorInfo');
+                if (existing) existing.remove();
+
+                // Reset drag state to prevent camera getting stuck
+                this.d.a = false;
+                this.d.m = false;
+            }
+
+            setupScoreboardEvents() {
+                // This will be called after the scoreboard is created
+                setTimeout(() => {
+                    const scoresEl = document.getElementById('scores');
+                    if (scoresEl) {
+                        // Remove any existing handlers to prevent duplicates
+                        scoresEl.removeAttribute('data-team-click-handler');
+                        const newScoresEl = scoresEl.cloneNode(true);
+                        scoresEl.parentNode.replaceChild(newScoresEl, scoresEl);
+
+                        // Add fresh event handler
+                        newScoresEl.addEventListener('click', (e) => {
+                            // Check if clicking on a team row
+                            const scoreRow = e.target.closest('.score-row');
+                            if (scoreRow && !scoreRow.classList.contains('multiplier-row')) {
+                                const teamIndex = parseInt(scoreRow.getAttribute('data-team-index'));
+
+                                if (!isNaN(teamIndex) && teamIndex >= 0 && teamIndex < this.tms.length) {
+                                    this.tm = teamIndex;
+                                    this.updateUI();
+                                    e.stopPropagation();
+                                    return;
+                                }
+                            }
+
+                            // Toggle expanded view if not clicking on team
+                            newScoresEl.classList.toggle('expanded');
+                        });
+                        newScoresEl.setAttribute('data-team-click-handler', 'true');
+                    }
+                }, 100);
+            }
+
+            addFx(x, y, ty) {
+                const currentTime = Date.now() / 1000;
+                this.fx.push({
+                    x, y, ty,
+                    startTime: currentTime,
+                    mt: ty === 'steal' ? 0.8 : 0.6
+                });
+                this.needsFxRedraw = true;
+            }
+
+            updateFx(dt) {
+                const currentTime = Date.now() / 1000;
+                const pl = this.fx.length;
+
+                // Use real-time for lag-independent steal animations
+                this.fx = this.fx.filter(e => {
+                    const elapsed = currentTime - e.startTime;
+                    e.t = elapsed; // Update progress based on real time
+                    return elapsed < e.mt;
+                });
+
+                if (this.fx.length || pl !== this.fx.length) this.needsFxRedraw = true;
+            }
+
+            getText(tx, x, y, st) {
+                if (this.ti >= this.to.length) { const t = new PIXI.Text('', st); t.anchor.set(0.5); this.to.push(t); this.tc.addChild(t); }
+                const t = this.to[this.ti++]; Object.assign(t, { text: tx, x, y, style: st, visible: true }); return t;
+            }
+            getLineText(tx, x, y, st) {
+                if (this.lti >= this.lto.length) { const t = new PIXI.Text('', st); t.anchor.set(0.5); this.lto.push(t); this.llc.addChild(t); }
+                const t = this.lto[this.lti++]; Object.assign(t, { text: tx, x, y, style: st, visible: true }); return t;
+            }
+            resetText() { this.to.forEach(t => t.visible = false); this.ti = 0; this.lto.forEach(t => t.visible = false); this.lti = 0; }
+
+            genMap() {
+                this.st = []; this.ln = []; this.pr.clear();
+                this.tms.forEach((t, i) => {
+                    t.st = this.S;
+                    t.h = 0;
+                    t.movesLeft = this.S;
+                    // Mark all teams as changed for score recalculation
+                    this.changedTeams.add(i);
+                });
+
+                for (let i = 0; i < 35; i++)this.st.push(this.makeStar(Math.random() * this.MW, Math.random() * this.MH, Math.random() < 0.2 ? T.C : T.N));
+                for (let i = 0; i < 5; i++) { const s = this.makeStar(Math.random() * this.MW, Math.random() * this.MH, T.B); s.req = Math.floor(Math.random() * 3) + 2; s.ful = []; this.st.push(s); }
+                for (let i = 0; i < 3; i++) { const s = this.makeStar(Math.random() * this.MW, Math.random() * this.MH, T.W); s.req = Math.floor(Math.random() * 2) + 2; this.st.push(s); }
+                for (let i = 0; i < this.st.length; i++)for (let j = i + 1; j < this.st.length; j++)if (Math.random() < 0.2) this.ln.push({ f: i, t: j });
+            }
+            makeStar(x, y, ty) { return { x, y, tm: null, hq: false, ty, pr: false }; }
+
+            // Optimized star finding using spatial indexing
+            findStar(pos) {
+                const gx = Math.floor(pos.x / this.gridSize);
+                const gy = Math.floor(pos.y / this.gridSize);
+
+                // Check 9 cells (current + 8 neighbors) for maximum efficiency
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dy = -1; dy <= 1; dy++) {
+                        const candidates = this.spatialGrid.get(`${gx + dx},${gy + dy}`);
+                        if (candidates) {
+                            for (const i of candidates) {
+                                const s = this.st[i];
+                                const deltaX = pos.x - s.x * this.G, deltaY = pos.y - s.y * this.G;
+                                if (deltaX * deltaX + deltaY * deltaY <= this.starClickRadius[i]) return i;
+                            }
+                        }
+                    }
+                }
+                return -1;
+            }
+
+            clickStar(i) {
+                const s = this.st[i];
+                if (s.ty === T.B) return;
+
+                // Check if current team has moves left
+                if (this.tms[this.tm].movesLeft <= 0) return;
+
+                // Can't use moves on stars already owned by same team
+                if (s.tm === this.tm) return;
+
+                let stolen = false;
+                if (s.tm !== null && s.tm !== this.tm) {
+                    if (s.hq || s.pr || this.tms[this.tm].st <= 0) return;
+                    this.tms[this.tm].st--;
+                    this.tms[this.tm].movesLeft--;
+                    s.tm = this.tm;
+                    stolen = true;
+                } else {
+                    s.tm = this.tm;
+                    this.tms[this.tm].movesLeft--;
+                }
+
+                // First X moves should be HQs regardless of whether they're steals or regular claims
+                if (this.tms[this.tm].h < this.HM) {
+                    s.hq = true;
+                    this.tms[this.tm].h++;
+                }
+
+                if (stolen) this.addFx(s.x * this.G, s.y * this.G, 'steal');
+
+                // INSTANT VISUAL UPDATES - no delays
+
+                // 1. Immediately redraw just this star (ultra-fast)
+                this.drawStar(s, i);
+
+                // 2. Immediately redraw connected lines (fast)
+                this.renderConnectedLines(i);
+
+                // 3. Update header immediately
+                this.updateHeader();
+
+                // 4. Mark team as changed for later score calculation
+                this.changedTeams.add(this.tm);
+                if (stolen && s.tm !== null) this.changedTeams.add(s.tm);
+
+                // Defer score calculation and full UI update
+                this.deferredScoreUpdate = true;
+                this.deferredNetworkAnalysis = true;
+                this.deferredSpecialCheck = true;
+                this.networkAnalysisTimer = 0;
+            }
+
+            update(dt) {
+                // Use real-time for lag-independent animations
+                const currentTime = Date.now();
+                const realDt = (currentTime - this.lastRealTime) / 1000;
+                this.lastRealTime = currentTime;
+
+                // Frame-dependent dt for game logic (can lag)
+                dt /= 60;
+
+                if (this.p) {
+                    // Use real-time for smooth planning countdown
+                    const elapsedTime = (currentTime - this.gameStartTime) / 1000;
+                    const remainingTime = Math.max(0, this.PT - elapsedTime);
+                    const newPt = Math.ceil(remainingTime);
+
+                    // Only update planning text if the displayed seconds changed
+                    if (!this.lastPlanningTime || this.lastPlanningTime !== newPt) {
+                        document.getElementById('planning').textContent = `Planning Stage: ${newPt}s`;
+                        this.lastPlanningTime = newPt;
+                    }
+
+                    if (remainingTime <= 0) this.startGame();
+                } else if (!this.go) {
+                    // Use real-time for ultra-smooth timer bar
+                    const elapsedTime = (currentTime - this.roundStartTime) / 1000;
+                    const remainingTime = Math.max(0, this.RT - elapsedTime);
+                    const newWidth = (remainingTime / this.RT) * 100;
+
+                    // Update timer bar every frame for maximum smoothness
+                    const te = document.getElementById('timer');
+                    te.style.width = `${newWidth.toFixed(2)}%`;
+
+                    if (remainingTime <= 0) this.nextRound();
+                }
+
+                // Use real-time for smooth animations (lag-independent)
+                const animTime = currentTime / 1000;
+                this.pu = animTime * 8;
+                this.bhr = animTime * 0.5;
+                this.hqConnectionPulse = animTime * 3;
+
+                // Use frame-dependent dt for effects (can lag, but less critical)
+                this.updateFx(dt);
+
+                // Handle deferred expensive operations to prevent lag spikes
+                if (this.deferredScoreUpdate || this.deferredNetworkAnalysis || this.deferredSpecialCheck) {
+                    this.networkAnalysisTimer += dt;
+                    // Wait 50ms for score update, 150ms for heavy operations
+                    if (this.networkAnalysisTimer > 0.05 && this.deferredScoreUpdate) {
+                        this.calcScoresIncremental();
+                        this.updateUI();
+                        this.deferredScoreUpdate = false;
+                    }
+                    if (this.networkAnalysisTimer > 0.15) {
+                        if (this.deferredNetworkAnalysis) {
+                            this.updateProtection();
+                            this.deferredNetworkAnalysis = false;
+                        }
+                        if (this.deferredSpecialCheck) {
+                            this.checkSpecialOptimized();
+                            const wormholeWinner = this.checkWormholeOptimized();
+                            if (wormholeWinner !== false) {
+                                this.wormholeWinner = wormholeWinner;
+                                this.needsFullUIUpdate = true;
+                                this.updateScoreDisplay(); // Update scores first
+                                this.go = true;
+                                this.updateUI();
+                            }
+                            this.deferredSpecialCheck = false;
+                        }
+                        this.networkAnalysisTimer = 0;
+                    }
+                }
+
+                // Optimized animation checking - consolidate redundant checks
+                let hasAnimations = this.fx.length > 0;
+                let hasProtectedOrHQ = this.pr.size > 0 || this.hqConnections.size > 0;
+                let hasBlackHoleAnimation = false;
+
+                // Check for black hole animation only when needed
+                if (!hasAnimations) {
+                    for (let i = 0; i < this.st.length; i++) {
+                        if (this.st[i].ty === T.B && this.st[i].ful && this.st[i].ful.length > 0) {
+                            hasBlackHoleAnimation = true;
+                            break;
+                        }
+                    }
+                }
+
+                // Set redraw flags based on animation state
+                if (hasAnimations) this.needsFxRedraw = true;
+                if (hasProtectedOrHQ) this.needsAnimatedLineRedraw = true;
+                if (hasBlackHoleAnimation) this.needsStarRedraw = true;
+
+                // Optimized rendering - only render what's needed
+                if (this.needsBgRedraw) { this.renderBackground(); this.needsBgRedraw = false; }
+                if (this.needsStaticLineRedraw) { this.renderStaticLines(); this.needsStaticLineRedraw = false; }
+                if (this.needsAnimatedLineRedraw) { this.renderAnimatedLines(); this.needsAnimatedLineRedraw = false; }
+                if (this.needsStarRedraw || this.dirtyRegions.size > 0 || this.dirtyStars.size > 0) { this.renderStars(); this.needsStarRedraw = false; }
+                if (this.needsFxRedraw) { this.renderFx(); this.needsFxRedraw = false; }
+
+                // Update cursor info display
+                this.updateCursorDisplay();
+            }
+
+            markAllDirty() {
+                this.needsBgRedraw = this.needsStaticLineRedraw = this.needsAnimatedLineRedraw = this.needsStarRedraw = this.needsFxRedraw = true;
+            }
+
+            startGame() {
+                this.p = false; document.getElementById('planning').style.display = 'none'; document.getElementById('timer').style.display = 'block';
+                this.st.forEach(s => { if (s.ty >= T.B && s.req === undefined) s.req = Math.floor(Math.random() * 3) + 2; });
+
+                // Reset timing for smooth round timer
+                this.roundStartTime = Date.now();
+
+                // Mark all teams as changed for initial score calculation
+                for (let i = 0; i < this.tms.length; i++) {
+                    this.changedTeams.add(i);
+                }
+
+                this.needsStarRedraw = true;
+                this.initStateTracking();
+                this.calcScoresIncremental();
+            }
+            nextRound() {
+                this.r++;
+                if (this.r > this.TR) {
+                    this.go = true;
+                    this.needsFullUIUpdate = true;
+                    this.updateUI();
+                    return;
+                }
+                this.t = this.RT;
+                // Reset timing for smooth next round timer
+                this.roundStartTime = Date.now();
+
+                this.tms.forEach((t, i) => {
+                    t.st = this.S;
+                    t.movesLeft = this.S;
+                    // Mark all teams as changed for score recalculation
+                    this.changedTeams.add(i);
+                });
+                // Only recalculate scores if there are changes
+                if (this.changedTeams.size > 0) {
+                    this.calcScoresIncremental();
+                }
+                // Only update UI if scores actually changed
+                this.needsFullUIUpdate = true;
+                this.updateUI();
+                this.checkStateChanges();
+            }
+
+            calcScores() {
+                this.tms.forEach(t => t.s = 0);
+                this.teamScoreData = this.tms.map((team, idx) => ({
+                    team, teamIdx: idx, count: 0, distance: 0, hqDistance: 0, steals: team.st
+                }));
+
+                this.lineData.forEach(l => {
+                    const a = this.st[l.f], b = this.st[l.t];
+                    if (this.connected(a, b)) {
+                        const team = a.ty === T.B ? b.tm : a.tm;
+                        if (team !== null) {
+                            const dist = Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2) * this.G;
+                            this.teamScoreData[team].count++;
+                            this.teamScoreData[team].distance += dist;
+                            this.tms[team].s += dist;
+                        }
+                    }
+                });
+
+                this.teamScoreData.forEach(data => {
+                    // Calculate HQ connection bonus using the new system
+                    const hqConnectionScore = this.getHQConnectionScore(data.teamIdx);
+                    data.hqDistance = hqConnectionScore;
+
+                    // Apply multiplier to HQ score for final score calculation, but keep raw value for display
+                    data.finalScore = Math.round(data.count * MULTIPLIERS.count + data.distance * MULTIPLIERS.distance + data.hqDistance * MULTIPLIERS.hq);
+                    data.count = Math.round(data.count); data.distance = Math.round(data.distance); data.hqDistance = Math.round(data.hqDistance);
+                });
+
+                // Update score cache
+                this.tms.forEach((t, i) => this.scoreCache[i] = t.s);
+                this.changedTeams.clear();
+            }
+
+            // Optimization 5: Incremental score calculation
+            calcScoresIncremental() {
+                // Only recalculate scores for teams with changes
+                if (this.changedTeams.size === 0) return;
+
+                // If too many teams changed, fall back to full calculation
+                if (this.changedTeams.size > this.tms.length / 2) {
+                    this.calcScores();
+                    return;
+                }
+
+                // Recalculate only changed teams
+                this.changedTeams.forEach(teamId => {
+                    if (teamId >= 0 && teamId < this.tms.length) {
+                        this.scoreCache[teamId] = this.calculateTeamScore(teamId);
+                        this.tms[teamId].s = this.scoreCache[teamId];
+                    }
+                });
+
+                // Update team score data for changed teams - use cached scores to avoid line iteration
+                this.changedTeams.forEach(teamId => {
+                    if (teamId >= 0 && teamId < this.teamScoreData.length) {
+                        const data = this.teamScoreData[teamId];
+
+                        // Use cached score instead of recalculating from lines
+                        data.distance = this.scoreCache[teamId];
+
+                        // Estimate count based on distance (rough approximation for UI)
+                        data.count = Math.round(data.distance / (this.G * 10)); // Rough estimate
+
+                        const hqConnectionScore = this.getHQConnectionScore(teamId);
+                        data.hqDistance = hqConnectionScore;
+                        data.finalScore = Math.round(data.count * MULTIPLIERS.count + data.distance * MULTIPLIERS.distance + data.hqDistance * MULTIPLIERS.hq);
+                        data.count = Math.round(data.count);
+                        data.distance = Math.round(data.distance);
+                        data.hqDistance = Math.round(data.hqDistance);
+                    }
+                });
+
+                this.changedTeams.clear();
+            }
+
+            calculateTeamScore(teamId) {
+                let score = 0;
+                // Use for loop for better performance
+                for (let i = 0; i < this.lineData.length; i++) {
+                    const l = this.lineData[i];
+                    const a = this.st[l.f], b = this.st[l.t];
+                    if (this.connected(a, b)) {
+                        const team = a.ty === T.B ? b.tm : a.tm;
+                        if (team === teamId) {
+                            const dist = Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2) * this.G;
+                            score += dist;
+                        }
+                    }
+                }
+                return score;
+            }
+
+            // Ultra-fast incremental score update - only recalculate affected lines
+            calculateTeamScoreFast(teamId, changedStarIndex) {
+                // Start with cached score
+                let score = this.scoreCache[teamId] || 0;
+
+                // Only check lines connected to the changed star
+                const neighbors = this.adjacencyCache[changedStarIndex];
+                for (let i = 0; i < neighbors.length; i++) {
+                    const neighborIndex = neighbors[i];
+                    const lineIndex = this.findLineIndex(changedStarIndex, neighborIndex);
+                    if (lineIndex !== -1) {
+                        const l = this.lineData[lineIndex];
+                        const a = this.st[l.f], b = this.st[l.t];
+                        if (this.connected(a, b)) {
+                            const team = a.ty === T.B ? b.tm : a.tm;
+                            if (team === teamId) {
+                                const dist = Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2) * this.G;
+                                // This is a rough approximation - for exact calculation use full method
+                                score += dist * 0.1; // Small incremental change
+                            }
+                        }
+                    }
+                }
+                return score;
+            }
+
+            findLineIndex(starA, starB) {
+                // Quick lookup for line between two stars
+                for (let i = 0; i < this.lineData.length; i++) {
+                    const l = this.lineData[i];
+                    if ((l.f === starA && l.t === starB) || (l.f === starB && l.t === starA)) {
+                        return i;
+                    }
+                }
+                return -1;
+            }
+
+            connected(a, b) { return a.ty === T.B ? b.tm !== null : b.ty === T.B ? a.tm !== null : a.tm !== null && a.tm === b.tm; }
+
+            updateProtection() {
+                // Clear previous protection state
+                this.pr.clear();
+                this.st.forEach(s => s.pr = false);
+
+                // Use unified network analysis for both protection and HQ connections
+                this.analyzeTeamNetworks();
+
+                // Trigger redraw of both static and animated lines when network changes
+                this.needsStaticLineRedraw = true;
+                this.needsAnimatedLineRedraw = true;
+            }
+
+            // Unified network analysis system - simple and reliable
+            analyzeTeamNetworks() {
+                // Single pass through all stars to group by team
+                const teamStars = new Map();
+                const teamClusters = new Map();
+                const teamHQs = new Map();
+
+                for (let i = 0; i < this.st.length; i++) {
+                    const s = this.st[i];
+                    if (s.tm !== null) {
+                        // Group all stars by team
+                        if (!teamStars.has(s.tm)) {
+                            teamStars.set(s.tm, []);
+                            teamClusters.set(s.tm, []);
+                            teamHQs.set(s.tm, []);
+                        }
+                        teamStars.get(s.tm).push(i);
+
+                        // Track clusters and HQs
+                        if (s.ty === T.C) teamClusters.get(s.tm).push(i);
+                        if (s.hq) teamHQs.get(s.tm).push(i);
+                    }
+                }
+
+                // Process each team's network once
+                teamStars.forEach((stars, teamId) => {
+                    this.processTeamNetwork(teamId, stars, teamClusters.get(teamId), teamHQs.get(teamId));
+                });
+
+
+            }
+
+            processTeamNetwork(teamId, allStars, clusterStars, hqStars) {
+                // Build team-specific adjacency for faster lookups
+                const teamAdjacency = this.buildTeamAdjacency(allStars, teamId);
+
+                // Process cluster protection using optimized BFS
+                if (clusterStars.length > 0) {
+                    this.processClusterProtection(clusterStars, teamAdjacency);
+                }
+
+                // Process HQ connections using optimized pathfinding
+                if (hqStars.length >= 2) {
+                    this.processHQConnections(teamId, hqStars, teamAdjacency);
+                } else {
+                    this.hqConnections.delete(teamId);
+                }
+            }
+
+            // Optimization 4: WebGL batch rendering initialization
+            initializeLineGraphics() {
+                if (this.ln.length === 0) return;
+
+                // Create vertices array (4 vertices per line, 2 coords each)
+                this.lineVertices = new Float32Array(this.ln.length * 4 * 2);
+
+                // Create indices array (2 triangles per line)
+                this.lineIndices = new Uint16Array(this.ln.length * 6);
+
+                // Setup indices (same for all lines)
+                this.ln.forEach((l, i) => {
+                    const base = i * 6;
+                    const vBase = i * 4;
+                    this.lineIndices[base] = vBase;
+                    this.lineIndices[base + 1] = vBase + 1;
+                    this.lineIndices[base + 2] = vBase + 2;
+                    this.lineIndices[base + 3] = vBase;
+                    this.lineIndices[base + 4] = vBase + 2;
+                    this.lineIndices[base + 5] = vBase + 3;
+                });
+
+                // Update line vertices
+                this.updateLineVertices();
+            }
+
+            updateLineVertices() {
+                if (!this.lineVertices) return;
+
+                // Use for loop for maximum performance in critical path
+                const thickness = 2;
+                for (let i = 0; i < this.lineData.length; i++) {
+                    const l = this.lineData[i];
+                    const dx = l.x2 - l.x1;
+                    const dy = l.y2 - l.y1;
+                    const length = Math.sqrt(dx * dx + dy * dy);
+
+                    if (length === 0) continue;
+
+                    const nx = -dy / length * thickness;
+                    const ny = dx / length * thickness;
+
+                    const base = i * 8; // 4 vertices * 2 coords
+
+                    // Vertex 0
+                    this.lineVertices[base] = l.x1 + nx;
+                    this.lineVertices[base + 1] = l.y1 + ny;
+
+                    // Vertex 1
+                    this.lineVertices[base + 2] = l.x1 - nx;
+                    this.lineVertices[base + 3] = l.y1 - ny;
+
+                    // Vertex 2
+                    this.lineVertices[base + 4] = l.x2 - nx;
+                    this.lineVertices[base + 5] = l.y2 - ny;
+
+                    // Vertex 3
+                    this.lineVertices[base + 6] = l.x2 + nx;
+                    this.lineVertices[base + 7] = l.y2 + ny;
+                }
+            }
+
+            buildTeamAdjacency(teamStars, teamId) {
+                const teamAdjacency = new Map();
+
+                // Initialize adjacency for team stars only
+                teamStars.forEach(starId => {
+                    teamAdjacency.set(starId, []);
+                });
+
+                // Build adjacency list for this team only
+                teamStars.forEach(starId => {
+                    for (const neighbor of this.adjacencyCache[starId]) {
+                        if (this.st[neighbor].tm === teamId) {
+                            teamAdjacency.get(starId).push(neighbor);
+                        }
+                    }
+                });
+
+                return teamAdjacency;
+            }
+
+            processClusterProtection(clusterStars, teamAdjacency) {
+                const globalProcessed = new Set();
+
+                for (const startStar of clusterStars) {
+                    if (!globalProcessed.has(startStar)) {
+                        this.expandProtectionNetwork(startStar, teamAdjacency, globalProcessed);
+                    }
+                }
+            }
+
+            expandProtectionNetwork(start, teamAdjacency, globalProcessed) {
+                // Optimized BFS using array as queue (faster than shift())
+                const queue = [start];
+                let queueIndex = 0;
+                const visited = new Set([start]);
+
+                while (queueIndex < queue.length) {
+                    const current = queue[queueIndex++];
+
+                    globalProcessed.add(current);
+                    this.st[current].pr = true;
+                    this.pr.add(current);
+
+                    // Add unvisited neighbors to queue
+                    for (const neighbor of teamAdjacency.get(current)) {
+                        if (!visited.has(neighbor)) {
+                            visited.add(neighbor);
+                            queue.push(neighbor);
+                        }
+                    }
+                }
+            }
+
+            processHQConnections(teamId, hqStars, teamAdjacency) {
+                // Check if existing connection is still valid
+                const existingConnection = this.hqConnections.get(teamId);
+                if (existingConnection && !this.isConnectionBroken(existingConnection, teamId)) {
+                    return; // Connection still valid, no need to recalculate
+                }
+
+                // Find shortest path between any two HQ stars
+                const shortestPath = this.findOptimalHQPath(hqStars, teamAdjacency);
+                if (shortestPath) {
+                    this.hqConnections.set(teamId, {
+                        path: shortestPath.path,
+                        distance: shortestPath.distance,
+                        lastUpdate: Date.now()
+                    });
+                } else {
+                    this.hqConnections.delete(teamId);
+                }
+            }
+
+            findOptimalHQPath(hqStars, teamAdjacency) {
+                if (hqStars.length < 2) return null;
+
+                let bestPath = null;
+                let shortestDistance = Infinity;
+
+                // Try all pairs to find shortest connection
+                for (let i = 0; i < hqStars.length - 1; i++) {
+                    for (let j = i + 1; j < hqStars.length; j++) {
+                        const path = this.findShortestPath(hqStars[i], hqStars[j], teamAdjacency);
+                        if (path && path.distance < shortestDistance) {
+                            shortestDistance = path.distance;
+                            bestPath = path;
+                        }
+                    }
+                }
+
+                return bestPath;
+            }
+
+            findShortestPath(startIndex, endIndex, teamAdjacency) {
+                // Optimized Dijkstra using binary heap for priority queue
+                const distances = new Map();
+                const previous = new Map();
+                const heap = new MinHeap();
+
+                // Initialize distances
+                for (const starId of teamAdjacency.keys()) {
+                    distances.set(starId, Infinity);
+                }
+                distances.set(startIndex, 0);
+                heap.insert({ id: startIndex, dist: 0 });
+
+                while (!heap.isEmpty()) {
+                    const { id: current, dist: currentDist } = heap.extractMin();
+
+                    if (current === endIndex) break;
+                    if (currentDist > distances.get(current)) continue;
+
+                    for (const neighbor of teamAdjacency.get(current)) {
+                        const edgeWeight = this.getStarDistance(current, neighbor);
+                        const newDistance = currentDist + edgeWeight;
+
+                        if (newDistance < distances.get(neighbor)) {
+                            distances.set(neighbor, newDistance);
+                            previous.set(neighbor, current);
+                            heap.insert({ id: neighbor, dist: newDistance });
+                        }
+                    }
+                }
+
+                // Reconstruct path
+                if (distances.get(endIndex) === Infinity) return null;
+
+                const path = [];
+                let current = endIndex;
+                while (current !== undefined) {
+                    path.unshift(current);
+                    current = previous.get(current);
+                }
+
+                return {
+                    path: path,
+                    distance: distances.get(endIndex) * this.G
+                };
+            }
+
+            getStarDistance(starA, starB) {
+                const a = this.st[starA];
+                const b = this.st[starB];
+                return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+            }
+
+
+
+            updateCursorDisplay() {
+                // Remove existing cursor display
+                const existing = document.getElementById('cursorInfo');
+                if (existing) existing.remove();
+
+                if (!this.showCursorInfo || this.tm >= this.tms.length) return;
+
+                const movesLeft = this.tms[this.tm].movesLeft;
+                const teamColor = `#${this.tms[this.tm].c.toString(16).padStart(6, '0')}`;
+
+                const cursorDiv = document.createElement('div');
+                cursorDiv.id = 'cursorInfo';
+                cursorDiv.style.cssText = `
+                    position: fixed;
+                    left: ${this.cursorPos.x - 20}px;
+                    top: ${this.cursorPos.y - 25}px;
+                    color: ${teamColor};
+                    font-size: 16px;
+                    font-weight: bold;
+                    pointer-events: none;
+                    z-index: 10000;
+                `;
+                cursorDiv.textContent = movesLeft.toString();
+                document.body.appendChild(cursorDiv);
+            }
+
+            isConnectionBroken(connection, teamId) {
+                // Check if any star in the path is no longer owned by the team
+                return connection.path.some(starIndex => this.st[starIndex].tm !== teamId);
+            }
+
+            getHQConnectionScore(teamId) {
+                const connection = this.hqConnections.get(teamId);
+                if (!connection) return 0;
+
+                // Count the number of lines in the connection (path length - 1)
+                const lineCount = connection.path.length - 1;
+
+                // Calculate total distance of the connection
+                const totalDistance = connection.distance;
+
+                // Return raw value (line count + distance) for display in scoreboard
+                return Math.round(lineCount + totalDistance);
+            }
+
+            checkSpecial() {
+                // Legacy method - use optimized version instead
+                this.checkSpecialOptimized();
+            }
+
+            // Optimized version that reuses adjacency cache and only checks when needed
+            checkSpecialOptimized() {
+                // Only check black holes - use existing adjacency cache
+                for (let i = 0; i < this.st.length; i++) {
+                    const s = this.st[i];
+                    if (s.ty === T.B) {
+                        s.ful = [];
+                        for (let j = 0; j < this.tms.length; j++) {
+                            if (this.countConnCached(i, j) >= s.req) {
+                                s.ful.push(j);
+                            }
+                        }
+                    }
+                }
+            }
+
+            countConnOptimized(star, team, adjacency) {
+                let count = 0;
+                const neighbors = adjacency[star];
+                for (let i = 0; i < neighbors.length; i++) {
+                    if (this.st[neighbors[i]].tm === team) {
+                        count++;
+                    }
+                }
+                return count;
+            }
+
+            // Optimized version using cached adjacency
+            countConnCached(star, team) {
+                let count = 0;
+                const neighbors = this.adjacencyCache[star];
+                for (let i = 0; i < neighbors.length; i++) {
+                    if (this.st[neighbors[i]].tm === team) {
+                        count++;
+                    }
+                }
+                return count;
+            }
+
+            checkWormhole() {
+                // Legacy method - use optimized version instead
+                return this.checkWormholeOptimized();
+            }
+
+            // Optimized version using cached adjacency
+            checkWormholeOptimized() {
+                const w = {};
+
+                for (let i = 0; i < this.st.length; i++) {
+                    const s = this.st[i];
+                    if (s.ty === T.W && s.tm !== null && this.countConnCached(i, s.tm) >= s.req) {
+                        w[s.tm] = (w[s.tm] || 0) + 1;
+                    }
+                }
+
+                // Find the first team that has connected 2+ wormholes
+                for (const [teamId, count] of Object.entries(w)) {
+                    if (count >= 2) {
+                        return parseInt(teamId); // Return the winning team ID
+                    }
+                }
+
+                return false; // No team has won yet
+            }
+
+            updateUI() {
+                document.getElementById('round').textContent = this.go ? "Game Over" : `Round #${this.r}`;
+                const timerEl = document.getElementById('timer');
+                if (this.go) {
+                    let winningTeamColor;
+
+                    // Use wormhole winner's color if available, otherwise highest score
+                    if (this.wormholeWinner !== null) {
+                        winningTeamColor = `#${this.tms[this.wormholeWinner].c.toString(16).padStart(6, '0')}`;
+                    } else {
+                        const sortedData = [...this.teamScoreData].sort((a, b) => b.finalScore - a.finalScore);
+                        winningTeamColor = `#${sortedData[0].team.c.toString(16).padStart(6, '0')}`;
+                    }
+
+                    timerEl.style.display = 'block';
+                    timerEl.style.width = '100%';
+                    timerEl.style.background = winningTeamColor;
+                } else {
+                    if (!this.p) {
+                        timerEl.style.display = 'block';
+                        timerEl.style.background = 'white';
+                    }
+                }
+                // Only update scoreboard if scores actually changed
+                if (this.needsFullUIUpdate || this.hasScoreChanges()) {
+                    this.updateScoreDisplay();
+                    this.needsFullUIUpdate = false;
+                }
+                this.updateHeader();
+            }
+
+            // Check if scores have actually changed since last update
+            hasScoreChanges() {
+                if (!this.lastScoreSnapshot) return true;
+
+                // Quick check - if team count changed, definitely need update
+                if (this.lastScoreSnapshot.length !== this.teamScoreData.length) return true;
+
+                // Check if any scores changed
+                for (let i = 0; i < this.teamScoreData.length; i++) {
+                    const current = this.teamScoreData[i];
+                    const last = this.lastScoreSnapshot[i];
+                    if (!last ||
+                        current.finalScore !== last.finalScore ||
+                        current.steals !== last.steals ||
+                        current.count !== last.count ||
+                        current.distance !== last.distance ||
+                        current.hqDistance !== last.hqDistance) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            // Fast UI update - only essential visual changes, no heavy calculations
+            updateUIFast() {
+                // Only update the team color display and moves counter - skip expensive scoreboard rebuild
+                this.updateHeader();
+
+                // Mark that we need a full UI update later
+                this.needsFullUIUpdate = true;
+            }
+
+            updateHeader() {
+                const header = document.getElementById('gameHeader');
+                const titleLine = document.getElementById('titleLine');
+                const teamColorSpan = document.getElementById('teamColor');
+
+                if (this.ml) {
+                    header.style.display = 'block';
+                    let titleText = '';
+                    if (this.cm && this.cm.title) {
+                        titleText = `${this.cm.title}`;
+                        if (this.cm.author) {
+                            titleText += ` by ${this.cm.author}`;
+                        }
+                    }
+                    titleLine.textContent = titleText;
+
+                    // Use the current team's name in lowercase
+                    if (this.tm < this.tms.length) {
+                        teamColorSpan.textContent = this.tms[this.tm].name;
+                        teamColorSpan.style.color = `#${this.tms[this.tm].c.toString(16).padStart(6, '0')}`;
+                    }
+                } else {
+                    header.style.display = 'none';
+                }
+            }
+
+            updateScoreDisplay() {
+                const scoresEl = document.getElementById('scores');
+                const sortedData = [...this.teamScoreData].sort((a, b) => b.finalScore - a.finalScore);
+                const maxCountWidth = Math.max(...sortedData.map(d => d.count.toString().length)) * 8 + 16;
+                const maxDistWidth = Math.max(...sortedData.map(d => d.distance.toString().length)) * 8 + 16;
+                const maxHQWidth = Math.max(...sortedData.map(d => d.hqDistance.toString().length)) * 8 + 16;
+
+                let html = '';
+                sortedData.forEach((data, index) => {
+                    const color = `#${data.team.c.toString(16).padStart(6, '0')}`;
+                    const isCurrentTeam = data.teamIdx === this.tm;
+                    const isWormholeWinner = this.wormholeWinner !== null && data.teamIdx === this.wormholeWinner;
+
+                    // Display "Won" for wormhole winner, otherwise show score
+                    const displayScore = isWormholeWinner ? "Won" : data.finalScore;
+                    const scoreWidth = displayScore.toString().length * 9 + 36 + (isCurrentTeam ? 8 : 0);
+                    const teamBorder = isCurrentTeam ? `outline: 2px solid ${color}; outline-offset: -2px; padding: 0 4px;` : '';
+
+                    html += `<div class="score-row" data-team-index="${data.teamIdx}" style="${teamBorder}" title="Click to select ${data.team.displayName} team">
+                            <div class="main-score-section">
+                                <div class="score-highlight" style="background:${color};width:${scoreWidth}px;"></div>
+                                <div class="score-content">
+                                    <div class="steal-circle">${data.steals}</div>
+                                    <span class="score-number">${displayScore}</span>
+                                </div>
+                            </div>
+                            <div class="detail-section">
+                                <span class="detail-col" style="color:${color};width:${maxCountWidth}px;">${data.count}</span>
+                                <span class="detail-col" style="color:${color};width:${maxDistWidth}px;">${data.distance}</span>
+                                <span class="detail-col" style="color:${color};width:${maxHQWidth}px;">${data.hqDistance}</span>
+                            </div>
+                        </div>`;
+                });
+
+                html += `<div class="score-row multiplier-row">
+                        <div class="main-score-section" style="visibility:hidden;">
+                            <div class="score-content">
+                                <div class="steal-circle"></div>
+                                <span class="score-number"></span>
+                            </div>
+                        </div>
+                        <div class="multipliers">
+                            <span class="multiplier-col" style="color:#ccc;width:${maxCountWidth}px;">${MULTIPLIERS.count}x</span>
+                            <span class="multiplier-col" style="color:#ccc;width:${maxDistWidth}px;">${MULTIPLIERS.distance}x</span>
+                            <span class="multiplier-col" style="color:#ccc;width:${maxHQWidth}px;">${MULTIPLIERS.hq}x</span>
+                        </div>
+                    </div>`;
+
+                scoresEl.innerHTML = html;
+                this.setupScoreboardEvents();
+
+                // Save snapshot of current scores for change detection
+                this.lastScoreSnapshot = this.teamScoreData.map(data => ({
+                    finalScore: data.finalScore,
+                    steals: data.steals,
+                    count: data.count,
+                    distance: data.distance,
+                    hqDistance: data.hqDistance
+                }));
+            }
+
+            renderBackground() {
+                this.bgGfx.clear().lineStyle(2, 0x808080);
+                const x = this.mapBounds.minX * this.G, y = this.mapBounds.minY * this.G;
+                const w = (this.mapBounds.maxX - this.mapBounds.minX) * this.G, h = (this.mapBounds.maxY - this.mapBounds.minY) * this.G;
+                this.bgGfx.drawRect(x, y, w, h);
+            }
+
+            // Render static lines (no animations) - called rarely
+            renderStaticLines() {
+                this.staticLineGfx.clear();
+                this.lto.forEach(t => t.visible = false);
+                this.lti = 0;
+
+                this.lineData.forEach(l => {
+                    // Render line text
+                    const txt = this.getLineText(l.dist.toString(), l.cx + Math.cos(l.pang) * 5, l.cy + Math.sin(l.pang) * 5, { fontSize: 10, fill: 0xFFFFFF, fontFamily: 'Arial' });
+                    txt.rotation = Math.abs(l.ang) > Math.PI / 2 ? l.ang + Math.PI : l.ang;
+
+                    const a = this.st[l.f], b = this.st[l.t];
+                    let color = 0xFFFFFF, th = 2;
+
+                    // Check if this line is animated (HQ or protected)
+                    let isAnimated = false;
+
+                    // Check HQ connection
+                    for (const [teamId, connection] of this.hqConnections) {
+                        if (this.isLineInHQPath(l.f, l.t, connection.path)) {
+                            isAnimated = true;
+                            break;
+                        }
+                    }
+
+                    // Check protected
+                    if (a.pr && b.pr) {
+                        isAnimated = true;
+                    }
+
+                    // Only render non-animated lines here
+                    if (!isAnimated && this.connected(a, b)) {
+                        const team = a.ty === T.B ? b.tm : a.tm;
+                        if (team !== null) {
+                            color = this.tms[team].c;
+                            th = 4;
+                        }
+                        this.staticLineGfx.lineStyle(th, color).moveTo(l.x1, l.y1).lineTo(l.x2, l.y2);
+                    } else if (!isAnimated) {
+                        // Unconnected lines
+                        this.staticLineGfx.lineStyle(th, color).moveTo(l.x1, l.y1).lineTo(l.x2, l.y2);
+                    }
+                });
+            }
+
+            // Render animated lines only - called every animation frame
+            renderAnimatedLines() {
+                this.animatedLineGfx.clear();
+
+                this.lineData.forEach(l => {
+                    const a = this.st[l.f], b = this.st[l.t];
+                    let color = 0xFFFFFF, th = 2;
+                    let isAnimated = false;
+
+                    // Check if this line is part of an HQ connection
+                    let isHQConnection = false;
+                    for (const [teamId, connection] of this.hqConnections) {
+                        if (this.isLineInHQPath(l.f, l.t, connection.path)) {
+                            isHQConnection = true;
+                            isAnimated = true;
+                            break;
+                        }
+                    }
+
+                    // Check if protected
+                    const isProtected = a.pr && b.pr;
+                    if (isProtected) {
+                        isAnimated = true;
+                    }
+
+                    // Only render animated lines
+                    if (isAnimated && this.connected(a, b)) {
+                        const team = a.ty === T.B ? b.tm : a.tm;
+                        if (team !== null) {
+                            color = this.tms[team].c;
+                            th = 4;
+
+                            // Apply protected line effect
+                            if (isProtected) {
+                                th += (Math.sin(this.pu) + 1) * 1.5;
+                            }
+
+                            // Apply HQ connection effect
+                            if (isHQConnection) {
+                                const hqPulse = (Math.sin(this.hqConnectionPulse) + 1) * 0.5;
+                                const teamR = (color >> 16) & 0xFF;
+                                const teamG = (color >> 8) & 0xFF;
+                                const teamB = color & 0xFF;
+                                const r = Math.round(teamR + (255 - teamR) * hqPulse);
+                                const g = Math.round(teamG + (255 - teamG) * hqPulse);
+                                const b = Math.round(teamB + (255 - teamB) * hqPulse);
+                                color = (r << 16) | (g << 8) | b;
+                            }
+                        }
+                        this.animatedLineGfx.lineStyle(th, color).moveTo(l.x1, l.y1).lineTo(l.x2, l.y2);
+                    }
+                });
+            }
+
+            isLineInHQPath(starA, starB, path) {
+                // Check if the line between starA and starB is part of the HQ connection path
+                for (let i = 0; i < path.length - 1; i++) {
+                    if ((path[i] === starA && path[i + 1] === starB) ||
+                        (path[i] === starB && path[i + 1] === starA)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+
+
+            drawHQOutline(x, y, s) {
+                const th = 6; let sz = this.G / 2; this.starGfx.lineStyle(th, 0xFFFFFF).beginFill(0, 0);
+                if (s.ty === T.W) { this.starGfx.moveTo(x, y + sz * 2.5).lineTo(x - sz * 2.1625, y - sz * 1.25).lineTo(x + sz * 2.1625, y - sz * 1.25).closePath(); }
+                else if (s.ty === T.B) { sz *= 1.8; this.starGfx.drawCircle(x, y, sz); }
+                else if (s.ty === T.C) { sz *= 1.5; this.starGfx.drawRect(x - sz, y - sz, sz * 2, sz * 2); }
+                else this.starGfx.drawCircle(x, y, sz); this.starGfx.endFill();
+            }
+
+            // Optimized star rendering with dirty regions
+            renderStars() {
+                if (!this.needsStarRedraw && this.dirtyRegions.size === 0 && this.dirtyStars.size === 0) return;
+
+                if (this.needsStarRedraw) {
+                    // Full redraw
+                    this.starGfx.clear();
+                    this.to.forEach(t => t.visible = false);
+                    this.ti = 0;
+                    for (let i = 0; i < this.st.length; i++) {
+                        this.drawStar(this.st[i], i);
+                    }
+                } else {
+                    // Partial redraw - prioritize individual stars (much faster)
+                    if (this.dirtyStars.size > 0) {
+                        this.dirtyStars.forEach(starIndex => {
+                            if (starIndex < this.st.length) {
+                                this.drawStar(this.st[starIndex], starIndex);
+                            }
+                        });
+                    }
+
+                    // Handle dirty regions if any (fallback)
+                    this.dirtyRegions.forEach(region => {
+                        const [rx, ry] = region.split(',').map(Number);
+                        const minX = rx * this.regionSize;
+                        const maxX = (rx + 1) * this.regionSize;
+                        const minY = ry * this.regionSize;
+                        const maxY = (ry + 1) * this.regionSize;
+
+                        for (let i = 0; i < this.st.length; i++) {
+                            const s = this.st[i];
+                            const sx = s.x * this.G, sy = s.y * this.G;
+                            if (sx >= minX && sx < maxX && sy >= minY && sy < maxY) {
+                                this.drawStar(s, i);
+                            }
+                        }
+                    });
+                }
+
+                this.dirtyRegions.clear();
+                this.dirtyStars.clear();
+            }
+
+            drawStar(s, i) {
+                const x = s.x * this.G, y = s.y * this.G;
+                let sz = this.G / 2;
+                const color = s.tm !== null ? this.tms[s.tm].c : 0xFFFFFF;
+
+                if (s.hq) this.drawHQOutline(x, y, s);
+                this.starGfx.lineStyle(0);
+
+                if (s.ty === T.W) {
+                    this.starGfx.beginFill(color).moveTo(x, y + sz * 2.5).lineTo(x - sz * 2.1625, y - sz * 1.25).lineTo(x + sz * 2.1625, y - sz * 1.25).closePath().endFill();
+                } else if (s.ty === T.B) {
+                    sz *= 1.5;
+                    if (s.ful && s.ful.length) {
+                        const sega = (Math.PI * 2) / s.ful.length, or = sz * 1.2, ir = sz;
+                        s.ful.forEach((t, j) => {
+                            this.starGfx.beginFill(this.tms[t].c);
+                            const sa = j * sega + this.bhr, ea = (j + 1) * sega + this.bhr, segs = Math.max(1, Math.ceil(sega * 16)), as = (ea - sa) / segs;
+                            this.starGfx.moveTo(x + Math.cos(sa) * ir, y + Math.sin(sa) * ir).lineTo(x + Math.cos(sa) * or, y + Math.sin(sa) * or);
+                            for (let k = 1; k <= segs; k++) { const a = sa + as * k; this.starGfx.lineTo(x + Math.cos(a) * or, y + Math.sin(a) * or); }
+                            this.starGfx.lineTo(x + Math.cos(ea) * ir, y + Math.sin(ea) * ir);
+                            for (let k = segs - 1; k >= 0; k--) { const a = sa + as * k; this.starGfx.lineTo(x + Math.cos(a) * ir, y + Math.sin(a) * ir); }
+                            this.starGfx.endFill();
+                        });
+                    } else {
+                        this.starGfx.beginFill(0xFFFFFF).drawCircle(x, y, sz * 1.2).endFill();
+                    }
+                    this.starGfx.beginFill(0x000000).drawCircle(x, y, sz).endFill();
+                } else if (s.ty === T.C) {
+                    sz *= 1.5;
+                    this.starGfx.beginFill(color).drawRect(x - sz, y - sz, sz * 2, sz * 2).endFill();
+                } else {
+                    this.starGfx.beginFill(color).drawCircle(x, y, sz).endFill();
+                }
+
+                if (s.pr && s.ty !== T.C) {
+                    // Draw yellow X for protected stars
+                    this.starGfx.lineStyle(3, 0xFFFF00);
+                    const xSize = sz * 0.8;
+                    this.starGfx.moveTo(x - xSize, y - xSize).lineTo(x + xSize, y + xSize);
+                    this.starGfx.moveTo(x + xSize, y - xSize).lineTo(x - xSize, y + xSize);
+                }
+
+                // Draw text for special stars
+                if (s.ty >= T.B) {
+                    let rt = this.p ? (s.min_value !== undefined && s.max_value !== undefined ?
+                        (s.min_value === s.max_value ? s.min_value.toString() : `${s.min_value}-${s.max_value}`) :
+                        (s.ty === T.B ? '2-4' : '2-3')) : (s.req ? s.req.toString() : null);
+                    if (rt) {
+                        const tc = s.ty === T.B ? 0xFFFFFF : 0x000000;
+                        this.getText(rt, x, y, { fontSize: this.G / 1.4, fill: tc, fontFamily: 'Arial', fontWeight: 'bold' });
+                    }
+                }
+            }
+
+            renderFx() {
+                this.fxGfx.clear();
+                this.fx.forEach(e => {
+                    const p = e.t / e.mt;
+                    if (e.ty === 'steal') {
+                        const r = p * 150, a = 1 - p; this.fxGfx.lineStyle(9, 0xFFFFFF, a).drawCircle(e.x, e.y, r);
+                        if (p < 0.5) { const ir = p * 60, ia = (1 - p * 2) * 0.5; this.fxGfx.lineStyle(6, 0xFFFF00, ia).drawCircle(e.x, e.y, ir); }
+                    } else if (e.ty === 'pointer') {
+                        const r = (1 - p) * 120, a = 1 - p; this.fxGfx.lineStyle(9, 0x00FFFF, a).drawCircle(e.x, e.y, r);
+                        if (p > 0.3) { const dr = (p - 0.3) * 24, da = 1 - p; this.fxGfx.lineStyle(0).beginFill(0x00FFFF, da).drawCircle(e.x, e.y, dr).endFill(); }
+                    }
+                });
+            }
+        }
+
+        let currentGame = null;
+
+        function getSettings() {
+            return {
+                steals: +document.getElementById('steals').value, headquarters: +document.getElementById('headquarters').value,
+                roundLength: +document.getElementById('roundLength').value, rounds: +document.getElementById('rounds').value,
+                countdownLength: +document.getElementById('countdownLength').value, customMap: parseMapJSON()
+            };
+        }
+
+        function parseMapJSON() {
+            const jsonText = document.getElementById('mapJson').value.trim(), errorDiv = document.getElementById('mapError');
+            errorDiv.classList.add('hidden'); if (!jsonText) return null;
+            try {
+                const mapData = JSON.parse(jsonText);
+                if (!mapData.stars || !Array.isArray(mapData.stars)) throw new Error('Map must contain a "stars" array');
+                if (!mapData.lines || !Array.isArray(mapData.lines)) throw new Error('Map must contain a "lines" array');
+                for (let i = 0; i < mapData.stars.length; i++) {
+                    const star = mapData.stars[i];
+                    if (!Array.isArray(star) || star.length < 3) throw new Error(`Star ${i} must be an array with at least [x, y, type]`);
+                    if (typeof star[0] !== 'number' || typeof star[1] !== 'number' || typeof star[2] !== 'number')
+                        throw new Error(`Star ${i} coordinates and type must be numbers`);
+                    if (star[2] < 1 || star[2] > 4) throw new Error(`Star ${i} type must be 1-4 (1=NORMAL, 2=CLUSTER, 3=WORMHOLE, 4=BLACK_HOLE)`);
+                }
+                for (let i = 0; i < mapData.lines.length; i++) {
+                    const line = mapData.lines[i]; let from, to;
+                    if (Array.isArray(line)) {
+                        if (line.length !== 2) throw new Error(`Line ${i} array must have exactly 2 elements [from, to]`);
+                        [from, to] = line;
+                    } else if (typeof line === 'object') { ({ from, to } = line); }
+                    else throw new Error(`Line ${i} must be an array [from, to] or object {from, to}`);
+                    if (typeof from !== 'number' || typeof to !== 'number') throw new Error(`Line ${i} from and to must be numbers`);
+                    if (from < 0 || from >= mapData.stars.length || to < 0 || to >= mapData.stars.length)
+                        throw new Error(`Line ${i} references invalid star indices`);
+                }
+                return mapData;
+            } catch (e) { errorDiv.textContent = `JSON Error: ${e.message}`; errorDiv.classList.remove('hidden'); return null; }
+        }
+
+        function startNewGame() {
+            const settings = getSettings(); if (document.getElementById('mapJson').value.trim() && !settings.customMap) return;
+
+            // Clean up cursor display
+            const existing = document.getElementById('cursorInfo');
+            if (existing) existing.remove();
+
+            if (currentGame && currentGame.app) currentGame.app.destroy(true);
+            document.getElementById('gameContainer').innerHTML = ''; currentGame = new Game(settings);
+            document.getElementById('settingsPanel').classList.add('hidden');
+        }
+
+        function toggleSettings() {
+            const panel = document.getElementById('settingsPanel'), button = event.target;
+            if (panel.classList.contains('hidden')) { panel.classList.remove('hidden'); button.textContent = 'Hide Settings'; }
+            else { panel.classList.add('hidden'); button.textContent = 'Show Settings'; }
+        }
+
+        const sampleMap = {
+            title: "Sample Map", author: "Game Creator", dimensions: [32, 20],
+            stars: [[5, 5, 1], [10, 5, 2], [15, 5, 1], [5, 10, 4, 3], [10, 10, 1], [15, 10, 3, 2], [5, 15, 1], [10, 15, 2], [15, 15, 1]],
+            lines: [[0, 1], [1, 2], [3, 4], [4, 5], [6, 7], [7, 8], [0, 3], [1, 4], [2, 5], [3, 6], [4, 7], [5, 8]]
+        };
+
+        window.addEventListener('load', () => {
+            document.getElementById('mapJson').placeholder = JSON.stringify(sampleMap, null, 2);
+            currentGame = new Game();
+            window.addEventListener('resize', () => {
+                if (currentGame && currentGame.app) { currentGame.app.renderer.resize(innerWidth, innerHeight); currentGame.setupCam(); }
+            });
+        });
+    </script>
+</body>
+
+</html>
