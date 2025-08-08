@@ -905,9 +905,15 @@
 
                 // Use real-time for lag-independent steal animations
                 this.fx = this.fx.filter(e => {
-                    const elapsed = currentTime - e.startTime;
-                    e.t = elapsed; // Update progress based on real time
-                    return elapsed < e.mt;
+                    if (e.type === 'blackhole_destruction') {
+                        // Handle blackhole destruction particles
+                        return e.life > 0;
+                    } else {
+                        // Handle regular effects
+                        const elapsed = currentTime - e.startTime;
+                        e.t = elapsed; // Update progress based on real time
+                        return elapsed < e.mt;
+                    }
                 });
 
                 if (this.fx.length || pl !== this.fx.length) this.needsFxRedraw = true;
@@ -1630,9 +1636,15 @@
                     const s = this.st[i];
                     if (s.ty === T.B) {
                         s.ful = [];
+
                         for (let j = 0; j < this.tms.length; j++) {
-                            if (this.countConnCached(i, j) >= s.req) {
+                            const connectedCount = this.countConnectedBlackholes(i, j);
+
+                            if (connectedCount >= s.req) {
                                 s.ful.push(j);
+
+                                // Check if this creates a valid blackhole connection for activation
+                                this.checkBlackholeActivation(i, j);
                             }
                         }
                     }
@@ -1662,6 +1674,299 @@
                 return count;
             }
 
+            // Count connected blackholes for a team (including the blackhole itself if owned by team)
+            countConnectedBlackholes(blackholeIndex, team) {
+                let count = 0;
+                const visited = new Set();
+                const queue = [blackholeIndex];
+                visited.add(blackholeIndex);
+
+                while (queue.length > 0) {
+                    const currentStar = queue.shift();
+                    const star = this.st[currentStar];
+
+                    // If this is a blackhole and connected to the team, count it
+                    if (star.ty === T.B && this.isBlackholeConnectedToTeam(currentStar, team)) {
+                        count++;
+                    }
+
+                    // Explore neighbors through valid paths
+                    const neighbors = this.adjacencyCache[currentStar];
+                    for (let i = 0; i < neighbors.length; i++) {
+                        const neighborIndex = neighbors[i];
+
+                        if (!visited.has(neighborIndex) && this.isValidBlackholePath(currentStar, neighborIndex, team)) {
+                            visited.add(neighborIndex);
+                            queue.push(neighborIndex);
+                        }
+                    }
+                }
+
+                return count;
+            }
+
+            // Check if a blackhole is connected to a team (has team members connected to it)
+            isBlackholeConnectedToTeam(blackholeIndex, team) {
+                const neighbors = this.adjacencyCache[blackholeIndex];
+                for (let i = 0; i < neighbors.length; i++) {
+                    const neighbor = this.st[neighbors[i]];
+                    if (neighbor.tm === team) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            // Check if a path between two stars is valid for blackhole connections
+            isValidBlackholePath(fromIndex, toIndex, team) {
+                const fromStar = this.st[fromIndex];
+                const toStar = this.st[toIndex];
+
+                // Path cannot have HQ dots, wormholes, cluster dots, or other blackholes (except endpoints)
+                if (toStar.hq || toStar.ty === T.W || toStar.ty === T.C) {
+                    return false;
+                }
+
+                // If destination is a blackhole, it's valid
+                if (toStar.ty === T.B) {
+                    return true;
+                }
+
+                // If destination is a normal star owned by the team, it's valid
+                if (toStar.ty === T.N && toStar.tm === team) {
+                    return true;
+                }
+
+                return false;
+            }
+
+            // Check for blackhole activation and handle destruction
+            checkBlackholeActivation(blackholeIndex, team) {
+                // Only check activation if multiple blackholes are involved
+                const allBlackholes = [];
+                for (let i = 0; i < this.st.length; i++) {
+                    if (this.st[i].ty === T.B && this.st[i].ful && this.st[i].ful.includes(team)) {
+                        allBlackholes.push(i);
+                    }
+                }
+
+                // Check if any pair of blackholes can connect and activate
+                for (let i = 0; i < allBlackholes.length; i++) {
+                    for (let j = i + 1; j < allBlackholes.length; j++) {
+                        const bh1 = allBlackholes[i];
+                        const bh2 = allBlackholes[j];
+
+                        // Check if these blackholes can connect
+                        const path = this.findFullPathBetweenBlackholes(bh1, bh2, team);
+                        if (path.length > 0) {
+                            // Check if requirements are met for activation
+                            const req1 = this.st[bh1].req;
+                            const req2 = this.st[bh2].req;
+                            const totalConnected = allBlackholes.length;
+
+                            // If both blackholes meet their requirements, activate
+                            if (totalConnected >= req1 && totalConnected >= req2) {
+                                this.activateBlackholeNetwork(allBlackholes, team);
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Find all blackholes connected to a specific blackhole for a team
+            findConnectedBlackholes(startBlackhole, team) {
+                const connectedBlackholes = [];
+                const visited = new Set();
+                const queue = [startBlackhole];
+                visited.add(startBlackhole);
+
+                while (queue.length > 0) {
+                    const currentIndex = queue.shift();
+                    const currentStar = this.st[currentIndex];
+
+                    if (currentStar.ty === T.B && this.isBlackholeConnectedToTeam(currentIndex, team)) {
+                        connectedBlackholes.push(currentIndex);
+                    }
+
+                    // Explore valid paths to other blackholes
+                    const path = this.findPathBetweenBlackholes(currentIndex, team);
+                    for (const nextBlackhole of path) {
+                        if (!visited.has(nextBlackhole)) {
+                            visited.add(nextBlackhole);
+                            queue.push(nextBlackhole);
+                        }
+                    }
+                }
+
+                return connectedBlackholes;
+            }
+
+            // Find valid paths between blackholes for a team
+            findPathBetweenBlackholes(fromBlackhole, team) {
+                const reachableBlackholes = [];
+                const visited = new Set();
+                const queue = [{ index: fromBlackhole, path: [fromBlackhole] }];
+                visited.add(fromBlackhole);
+
+                while (queue.length > 0) {
+                    const { index: currentIndex, path } = queue.shift();
+                    const neighbors = this.adjacencyCache[currentIndex];
+
+                    for (let i = 0; i < neighbors.length; i++) {
+                        const neighborIndex = neighbors[i];
+                        const neighbor = this.st[neighborIndex];
+
+                        if (visited.has(neighborIndex)) continue;
+
+                        // If we found another blackhole, add it to reachable list
+                        if (neighbor.ty === T.B && neighborIndex !== fromBlackhole &&
+                            this.isBlackholeConnectedToTeam(neighborIndex, team)) {
+                            reachableBlackholes.push(neighborIndex);
+                            console.log(`DEBUG: Found path from blackhole ${fromBlackhole} to ${neighborIndex}: [${[...path, neighborIndex].join(' -> ')}]`);
+                        }
+
+                        // Continue exploring if this is a valid path node
+                        if (this.isValidBlackholePath(currentIndex, neighborIndex, team)) {
+                            visited.add(neighborIndex);
+                            queue.push({ index: neighborIndex, path: [...path, neighborIndex] });
+                        }
+                    }
+                }
+
+                return reachableBlackholes;
+            }
+
+            // Activate blackhole network - destroy connections and create particle effects
+            activateBlackholeNetwork(blackholes, team) {
+                console.log(`DEBUG: Activating blackhole network for team ${team}: [${blackholes.join(', ')}]`);
+
+                // Find all paths between the blackholes
+                const pathsToDestroy = [];
+                const dotsToDestroy = [];
+
+                for (let i = 0; i < blackholes.length; i++) {
+                    for (let j = i + 1; j < blackholes.length; j++) {
+                        const path = this.findFullPathBetweenBlackholes(blackholes[i], blackholes[j], team);
+                        if (path.length > 0) {
+                            pathsToDestroy.push(...path);
+                            console.log(`DEBUG: Path to destroy between ${blackholes[i]} and ${blackholes[j]}: [${path.join(' -> ')}]`);
+                        }
+                    }
+                }
+
+                // Create particle effects and destroy the paths
+                this.createBlackholeParticleEffect(pathsToDestroy, blackholes, team);
+                this.destroyBlackholePaths(pathsToDestroy);
+
+                // Update HQ and cluster paths accordingly
+                this.updateHQPathsAfterDestruction();
+                this.updateClusterPathsAfterDestruction();
+            }
+
+            // Find the complete path between two blackholes
+            findFullPathBetweenBlackholes(blackhole1, blackhole2, team) {
+                const visited = new Set();
+                const queue = [{ index: blackhole1, path: [blackhole1] }];
+                visited.add(blackhole1);
+
+                while (queue.length > 0) {
+                    const { index: currentIndex, path } = queue.shift();
+
+                    if (currentIndex === blackhole2) {
+                        return path;
+                    }
+
+                    const neighbors = this.adjacencyCache[currentIndex];
+                    for (let i = 0; i < neighbors.length; i++) {
+                        const neighborIndex = neighbors[i];
+
+                        if (!visited.has(neighborIndex) &&
+                            this.isValidBlackholePath(currentIndex, neighborIndex, team)) {
+                            visited.add(neighborIndex);
+                            queue.push({ index: neighborIndex, path: [...path, neighborIndex] });
+                        }
+                    }
+                }
+
+                return [];
+            }
+
+            // Create particle effect for blackhole activation
+            createBlackholeParticleEffect(pathNodes, blackholes, team) {
+                // Get team color for the particle effect
+                const teamColor = this.tms[team].c;
+
+                // Create particles that move from path nodes toward the blackholes
+                for (const nodeIndex of pathNodes) {
+                    const node = this.st[nodeIndex];
+
+                    // Skip if this is a blackhole itself
+                    if (node.ty === T.B) continue;
+
+                    // Find the nearest blackhole for this particle
+                    let nearestBlackhole = blackholes[0];
+                    let minDistance = Infinity;
+
+                    for (const bhIndex of blackholes) {
+                        const bh = this.st[bhIndex];
+                        const distance = Math.sqrt((node.x - bh.x) ** 2 + (node.y - bh.y) ** 2);
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            nearestBlackhole = bhIndex;
+                        }
+                    }
+
+                    // Create particle effect with team color
+                    this.fx.push({
+                        type: 'blackhole_destruction',
+                        x: node.x * this.G,
+                        y: node.y * this.G,
+                        targetX: this.st[nearestBlackhole].x * this.G,
+                        targetY: this.st[nearestBlackhole].y * this.G,
+                        life: 1.0,
+                        maxLife: 1.0,
+                        color: teamColor
+                    });
+                }
+
+                // Force fx redraw
+                this.needsFxRedraw = true;
+            }
+
+            // Destroy the paths between blackholes
+            destroyBlackholePaths(pathNodes) {
+                // Remove ownership from all nodes in the paths
+                for (const nodeIndex of pathNodes) {
+                    const node = this.st[nodeIndex];
+                    if (node.ty !== T.B) { // Don't destroy the blackholes themselves
+                        node.tm = null;
+                    }
+                }
+
+                // Mark for redraw
+                this.needsStarRedraw = true;
+                this.needsStaticLineRedraw = true;
+                this.needsAnimatedLineRedraw = true;
+            }
+
+            // Update HQ paths after blackhole destruction
+            updateHQPathsAfterDestruction() {
+                // Force recalculation of HQ connections
+                this.hqConnections.clear();
+                this.deferredNetworkAnalysis = true;
+            }
+
+            // Update cluster paths after blackhole destruction  
+            updateClusterPathsAfterDestruction() {
+                // Clear cluster cache to force recalculation
+                this.clusterCache.clear();
+                this.changedTeams.clear();
+                for (let i = 0; i < this.tms.length; i++) {
+                    this.changedTeams.add(i);
+                }
+            }
+
             checkWormhole() {
                 // Legacy method - use optimized version instead
                 return this.checkWormholeOptimized();
@@ -1673,8 +1978,17 @@
 
                 for (let i = 0; i < this.st.length; i++) {
                     const s = this.st[i];
-                    if (s.ty === T.W && s.tm !== null && this.countConnCached(i, s.tm) >= s.req) {
-                        w[s.tm] = (w[s.tm] || 0) + 1;
+                    if (s.ty === T.W && s.tm !== null) {
+                        const connectedCount = this.countConnCached(i, s.tm);
+
+                        if (connectedCount >= s.req) {
+                            w[s.tm] = (w[s.tm] || 0) + 1;
+
+                            // Check for path overlaps (wormhole paths cannot overlap)
+                            if (this.checkWormholePathOverlap(i, s.tm)) {
+                                w[s.tm]--; // Remove this wormhole from count due to overlap
+                            }
+                        }
                     }
                 }
 
@@ -1686,6 +2000,13 @@
                 }
 
                 return false; // No team has won yet
+            }
+
+            // Check if wormhole paths overlap (wormhole paths cannot overlap)
+            checkWormholePathOverlap(wormholeIndex, team) {
+                // For now, return false (no overlap) - can be enhanced later
+                // This is where you'd implement path overlap detection
+                return false;
             }
 
             updateUI() {
@@ -2066,16 +2387,35 @@
             renderFx() {
                 this.fxGfx.clear();
                 this.fx.forEach(e => {
-                    const p = e.t / e.mt;
                     if (e.ty === 'steal') {
+                        const p = e.t / e.mt;
                         const r = p * 150, a = 1 - p; this.fxGfx.lineStyle(9, 0xFFFFFF, a).drawCircle(e.x, e.y, r);
                         if (p < 0.5) { const ir = p * 60, ia = (1 - p * 2) * 0.5; this.fxGfx.lineStyle(6, 0xFFFF00, ia).drawCircle(e.x, e.y, ir); }
                     } else if (e.ty === 'pointer') {
+                        const p = e.t / e.mt;
                         const r = (1 - p) * 120, a = 1 - p; this.fxGfx.lineStyle(9, 0x00FFFF, a).drawCircle(e.x, e.y, r);
                         if (p > 0.3) { const dr = (p - 0.3) * 24, da = 1 - p; this.fxGfx.lineStyle(0).beginFill(0x00FFFF, da).drawCircle(e.x, e.y, dr).endFill(); }
+                    } else if (e.type === 'blackhole_destruction') {
+                        // Render blackhole destruction particle effect
+                        const progress = 1 - e.life;
+                        const currentX = e.x + (e.targetX - e.x) * progress;
+                        const currentY = e.y + (e.targetY - e.y) * progress;
+
+                        // Particle trail effect
+                        const alpha = e.life;
+                        const size = 3 + Math.sin(progress * Math.PI * 4) * 2;
+
+                        // Use team color if available, otherwise default to red
+                        const particleColor = e.color || 0xFF4444;
+                        this.fxGfx.lineStyle(0).beginFill(particleColor, alpha).drawCircle(currentX, currentY, size).endFill();
+
+                        // Update particle
+                        e.life -= 0.02; // Adjust speed as needed
                     }
                 });
             }
+
+
         }
 
         let currentGame = null;
