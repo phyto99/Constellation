@@ -223,6 +223,24 @@
             font-size: 12px
         }
 
+        .multiplier-settings {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .multiplier-input {
+            width: 23%;
+            padding: 4px;
+            border: 1px solid #555;
+            background: #222;
+            color: white;
+            border-radius: 4px;
+            box-sizing: border-box;
+            text-align: center;
+            font-size: 12px;
+        }
+
         .button {
             background: #0066cc;
             color: white;
@@ -337,6 +355,19 @@
             <label for="headquarters">Max Headquarters per Team:</label>
             <input type="number" id="headquarters" value="2" min="1" max="5">
         </div>
+        <div class="setting-group">
+            <label>Score Multipliers:</label>
+            <div class="multiplier-settings">
+                <input type="number" id="countMultiplier" class="multiplier-input" value="500" min="0" max="9999"
+                    title="Count Multiplier">
+                <input type="number" id="distanceMultiplier" class="multiplier-input" value="1" min="0" max="9999"
+                    title="Distance Multiplier">
+                <input type="number" id="hqMultiplier" class="multiplier-input" value="10" min="0" max="9999"
+                    title="HQ Multiplier">
+                <input type="number" id="destructionMultiplier" class="multiplier-input" value="1" min="0" max="9999"
+                    title="Destruction Multiplier">
+            </div>
+        </div>
         <div style="text-align:center;margin-top:20px;">
             <button class="button start" onclick="startNewGame()">Start New Game</button>
             <button class="button toggle" onclick="toggleSettings()">Hide Settings</button>
@@ -347,7 +378,7 @@
         const T = { N: 0, C: 1, B: 2, W: 3 },
             C = { CY: 0x00FFFF, M: 0xFF00FF, G: 0x00FF00, GOLD: 0xFFD700, BLUE: 0x0000FF, RED: 0xFF0000, DGREEN: 0x006400 },
             J2I = { 1: T.N, 2: T.C, 3: T.W, 4: T.B };
-        const MULTIPLIERS = { count: 500, distance: 1, hq: 10 };
+        let MULTIPLIERS = { count: 500, distance: 1, hq: 10, destruction: 1 };
 
         // Optimized MinHeap for Dijkstra's algorithm
         class MinHeap {
@@ -427,6 +458,11 @@
                     powerPreference: 'high-performance'
                 });
                 document.getElementById('gameContainer').appendChild(this.app.view);
+
+                // Update global MULTIPLIERS if provided in settings
+                if (s.multipliers) {
+                    MULTIPLIERS = { ...MULTIPLIERS, ...s.multipliers };
+                }
 
                 Object.assign(this, { G: 20, S: s.steals || 15, HM: s.headquarters || 2, RT: s.roundLength || 30, TR: s.rounds || 10, PT: s.countdownLength || 5, MW: 64, MH: 36 });
                 Object.assign(this, { r: 1, t: this.RT, go: false, p: true, pt: this.PT, tm: 0, pu: 0, bhr: 0, ml: false });
@@ -1218,7 +1254,7 @@
                     data.hqDistance = hqConnectionScore;
 
                     // Apply multiplier to HQ score for final score calculation, but keep raw value for display
-                    data.finalScore = Math.round(data.count * MULTIPLIERS.count + data.distance * MULTIPLIERS.distance + data.hqDistance * MULTIPLIERS.hq + data.destruction);
+                    data.finalScore = Math.round(data.count * MULTIPLIERS.count + data.distance * MULTIPLIERS.distance + data.hqDistance * MULTIPLIERS.hq + data.destruction * MULTIPLIERS.destruction);
                     data.count = Math.round(data.count); data.distance = Math.round(data.distance); data.hqDistance = Math.round(data.hqDistance); data.destruction = Math.round(data.destruction);
                 });
 
@@ -1273,7 +1309,7 @@
 
                         const hqConnectionScore = this.getHQConnectionScore(teamId);
                         data.hqDistance = hqConnectionScore;
-                        data.finalScore = Math.round(data.count * MULTIPLIERS.count + data.distance * MULTIPLIERS.distance + data.hqDistance * MULTIPLIERS.hq + data.destruction);
+                        data.finalScore = Math.round(data.count * MULTIPLIERS.count + data.distance * MULTIPLIERS.distance + data.hqDistance * MULTIPLIERS.hq + data.destruction * MULTIPLIERS.destruction);
                         data.count = Math.round(data.count);
                         data.distance = Math.round(data.distance);
                         data.hqDistance = Math.round(data.hqDistance);
@@ -2052,10 +2088,17 @@
             updateScoreDisplay() {
                 const scoresEl = document.getElementById('scores');
                 const sortedData = [...this.teamScoreData].sort((a, b) => b.finalScore - a.finalScore);
-                const maxCountWidth = Math.max(...sortedData.map(d => d.count.toString().length)) * 8 + 16;
-                const maxDistWidth = Math.max(...sortedData.map(d => d.distance.toString().length)) * 8 + 16;
-                const maxHQWidth = Math.max(...sortedData.map(d => d.hqDistance.toString().length)) * 8 + 16;
-                const maxDestructionWidth = Math.max(...sortedData.map(d => d.destruction.toString().length)) * 8 + 16;
+
+                // Only calculate widths for columns that will be shown (multiplier > 0)
+                const showCount = MULTIPLIERS.count > 0;
+                const showDistance = MULTIPLIERS.distance > 0;
+                const showHQ = MULTIPLIERS.hq > 0;
+                const showDestruction = MULTIPLIERS.destruction > 0;
+
+                const maxCountWidth = showCount ? Math.max(...sortedData.map(d => d.count.toString().length)) * 8 + 16 : 0;
+                const maxDistWidth = showDistance ? Math.max(...sortedData.map(d => d.distance.toString().length)) * 8 + 16 : 0;
+                const maxHQWidth = showHQ ? Math.max(...sortedData.map(d => d.hqDistance.toString().length)) * 8 + 16 : 0;
+                const maxDestructionWidth = showDestruction ? Math.max(...sortedData.map(d => d.destruction.toString().length)) * 8 + 16 : 0;
 
                 let html = '';
                 sortedData.forEach((data, index) => {
@@ -2077,10 +2120,10 @@
                                 </div>
                             </div>
                             <div class="detail-section">
-                                <span class="detail-col" style="color:${color};width:${maxCountWidth}px;">${data.count}</span>
-                                <span class="detail-col" style="color:${color};width:${maxDistWidth}px;">${data.distance}</span>
-                                <span class="detail-col" style="color:${color};width:${maxHQWidth}px;">${data.hqDistance}</span>
-                                <span class="detail-col" style="color:${color};width:${maxDestructionWidth}px;">${data.destruction}</span>
+                                ${showCount ? `<span class="detail-col" style="color:${color};width:${maxCountWidth}px;">${data.count}</span>` : ''}
+                                ${showDistance ? `<span class="detail-col" style="color:${color};width:${maxDistWidth}px;">${data.distance}</span>` : ''}
+                                ${showHQ ? `<span class="detail-col" style="color:${color};width:${maxHQWidth}px;">${data.hqDistance}</span>` : ''}
+                                ${showDestruction ? `<span class="detail-col" style="color:${color};width:${maxDestructionWidth}px;">${data.destruction}</span>` : ''}
                             </div>
                         </div>`;
                 });
@@ -2093,10 +2136,10 @@
                             </div>
                         </div>
                         <div class="multipliers">
-                            <span class="multiplier-col" style="color:#ccc;width:${maxCountWidth}px;">${MULTIPLIERS.count}x</span>
-                            <span class="multiplier-col" style="color:#ccc;width:${maxDistWidth}px;">${MULTIPLIERS.distance}x</span>
-                            <span class="multiplier-col" style="color:#ccc;width:${maxHQWidth}px;">${MULTIPLIERS.hq}x</span>
-                            <span class="multiplier-col" style="color:#ccc;width:${maxDestructionWidth}px;">1x</span>
+                            ${showCount ? `<span class="multiplier-col" style="color:#ccc;width:${maxCountWidth}px;">${MULTIPLIERS.count}x</span>` : ''}
+                            ${showDistance ? `<span class="multiplier-col" style="color:#ccc;width:${maxDistWidth}px;">${MULTIPLIERS.distance}x</span>` : ''}
+                            ${showHQ ? `<span class="multiplier-col" style="color:#ccc;width:${maxHQWidth}px;">${MULTIPLIERS.hq}x</span>` : ''}
+                            ${showDestruction ? `<span class="multiplier-col" style="color:#ccc;width:${maxDestructionWidth}px;">${MULTIPLIERS.destruction}x</span>` : ''}
                         </div>
                     </div>`;
 
@@ -2383,7 +2426,13 @@
             return {
                 steals: +document.getElementById('steals').value, headquarters: +document.getElementById('headquarters').value,
                 roundLength: +document.getElementById('roundLength').value, rounds: +document.getElementById('rounds').value,
-                countdownLength: +document.getElementById('countdownLength').value, customMap: parseMapJSON()
+                countdownLength: +document.getElementById('countdownLength').value, customMap: parseMapJSON(),
+                multipliers: {
+                    count: +document.getElementById('countMultiplier').value,
+                    distance: +document.getElementById('distanceMultiplier').value,
+                    hq: +document.getElementById('hqMultiplier').value,
+                    destruction: +document.getElementById('destructionMultiplier').value
+                }
             };
         }
 
