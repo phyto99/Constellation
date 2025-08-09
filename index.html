@@ -760,7 +760,7 @@
                 });
                 if (m.lines) m.lines.forEach(d => {
                     let f, t; if (Array.isArray(d)) { f = d[0]; t = d[1]; } else { f = d.from; t = d.to; }
-                    if (f < this.st.length && t < this.st.length) this.ln.push({ f, t });
+                    if (f < this.st.length && t < this.st.length) this.ln.push({ f, t, destroyed: false, destroyedBy: null, destroyedScore: 0 });
                 });
                 this.st.forEach(s => {
                     if (s.ty === T.B) {
@@ -942,9 +942,19 @@
                 for (let i = 0; i < 35; i++)this.st.push(this.makeStar(Math.random() * this.MW, Math.random() * this.MH, Math.random() < 0.2 ? T.C : T.N));
                 for (let i = 0; i < 5; i++) { const s = this.makeStar(Math.random() * this.MW, Math.random() * this.MH, T.B); s.req = Math.floor(Math.random() * 3) + 2; s.ful = []; this.st.push(s); }
                 for (let i = 0; i < 3; i++) { const s = this.makeStar(Math.random() * this.MW, Math.random() * this.MH, T.W); s.req = Math.floor(Math.random() * 2) + 2; this.st.push(s); }
-                for (let i = 0; i < this.st.length; i++)for (let j = i + 1; j < this.st.length; j++)if (Math.random() < 0.2) this.ln.push({ f: i, t: j });
+                for (let i = 0; i < this.st.length; i++)for (let j = i + 1; j < this.st.length; j++)if (Math.random() < 0.2) this.ln.push({ f: i, t: j, destroyed: false, destroyedBy: null, destroyedScore: 0 });
             }
-            makeStar(x, y, ty) { return { x, y, tm: null, hq: false, ty, pr: false }; }
+            makeStar(x, y, ty) { return { x, y, tm: null, hq: false, ty, pr: false, destroyed: false, destroyedBy: null, destroyedScore: 0 }; }
+
+            // Calculate score for destroying a star (simple count)
+            calculateDestroyedStarScore(star) {
+                return 1; // Just count each destroyed star as 1 point
+            }
+
+            // Calculate score for destroying a line (simple count)
+            calculateDestroyedLineScore(line) {
+                return 1; // Just count each destroyed line as 1 point
+            }
 
             // Optimized star finding using spatial indexing
             findStar(pos) {
@@ -970,6 +980,7 @@
             clickStar(i) {
                 const s = this.st[i];
                 if (s.ty === T.B) return;
+                if (s.destroyed) return; // Can't reclaim destroyed stars
 
                 // Check if current team has moves left
                 if (this.tms[this.tm].movesLeft <= 0) return;
@@ -1178,7 +1189,7 @@
             calcScores() {
                 this.tms.forEach(t => t.s = 0);
                 this.teamScoreData = this.tms.map((team, idx) => ({
-                    team, teamIdx: idx, count: 0, distance: 0, hqDistance: 0, steals: team.st
+                    team, teamIdx: idx, count: 0, distance: 0, hqDistance: 0, destruction: 0, steals: team.st
                 }));
 
                 this.lineData.forEach(l => {
@@ -1194,14 +1205,36 @@
                     }
                 });
 
+                // Add destroyed element scores
+                for (let team = 0; team < this.tms.length; team++) {
+                    let destructionScore = 0;
+
+                    // Score from destroyed stars
+                    for (const star of this.st) {
+                        if (star.destroyedBy === team) {
+                            destructionScore += star.destroyedScore;
+                        }
+                    }
+
+                    // Score from destroyed lines
+                    for (const line of this.ln) {
+                        if (line.destroyedBy === team) {
+                            destructionScore += line.destroyedScore;
+                        }
+                    }
+
+                    this.teamScoreData[team].destruction = destructionScore;
+                    this.tms[team].s += destructionScore;
+                }
+
                 this.teamScoreData.forEach(data => {
                     // Calculate HQ connection bonus using the new system
                     const hqConnectionScore = this.getHQConnectionScore(data.teamIdx);
                     data.hqDistance = hqConnectionScore;
 
                     // Apply multiplier to HQ score for final score calculation, but keep raw value for display
-                    data.finalScore = Math.round(data.count * MULTIPLIERS.count + data.distance * MULTIPLIERS.distance + data.hqDistance * MULTIPLIERS.hq);
-                    data.count = Math.round(data.count); data.distance = Math.round(data.distance); data.hqDistance = Math.round(data.hqDistance);
+                    data.finalScore = Math.round(data.count * MULTIPLIERS.count + data.distance * MULTIPLIERS.distance + data.hqDistance * MULTIPLIERS.hq + data.destruction);
+                    data.count = Math.round(data.count); data.distance = Math.round(data.distance); data.hqDistance = Math.round(data.hqDistance); data.destruction = Math.round(data.destruction);
                 });
 
                 // Update score cache
@@ -1236,15 +1269,30 @@
                         // Use cached score instead of recalculating from lines
                         data.distance = this.scoreCache[teamId];
 
+                        // Calculate destruction score
+                        let destructionScore = 0;
+                        for (const star of this.st) {
+                            if (star.destroyedBy === teamId) {
+                                destructionScore += star.destroyedScore;
+                            }
+                        }
+                        for (const line of this.ln) {
+                            if (line.destroyedBy === teamId) {
+                                destructionScore += line.destroyedScore;
+                            }
+                        }
+                        data.destruction = destructionScore;
+
                         // Estimate count based on distance (rough approximation for UI)
                         data.count = Math.round(data.distance / (this.G * 10)); // Rough estimate
 
                         const hqConnectionScore = this.getHQConnectionScore(teamId);
                         data.hqDistance = hqConnectionScore;
-                        data.finalScore = Math.round(data.count * MULTIPLIERS.count + data.distance * MULTIPLIERS.distance + data.hqDistance * MULTIPLIERS.hq);
+                        data.finalScore = Math.round(data.count * MULTIPLIERS.count + data.distance * MULTIPLIERS.distance + data.hqDistance * MULTIPLIERS.hq + data.destruction);
                         data.count = Math.round(data.count);
                         data.distance = Math.round(data.distance);
                         data.hqDistance = Math.round(data.hqDistance);
+                        data.destruction = Math.round(data.destruction);
                     }
                 });
 
@@ -1265,6 +1313,19 @@
                         }
                     }
                 }
+
+                // Add destruction scores
+                for (const star of this.st) {
+                    if (star.destroyedBy === teamId) {
+                        score += star.destroyedScore;
+                    }
+                }
+                for (const line of this.ln) {
+                    if (line.destroyedBy === teamId) {
+                        score += line.destroyedScore;
+                    }
+                }
+
                 return score;
             }
 
@@ -1857,7 +1918,7 @@
 
                 // Create particle effects and destroy the paths
                 this.createBlackholeParticleEffect(pathsToDestroy, blackholes, team);
-                this.destroyBlackholePaths(pathsToDestroy);
+                this.destroyBlackholePaths(pathsToDestroy, team);
 
                 // Update HQ and cluster paths accordingly
                 this.updateHQPathsAfterDestruction();
@@ -1935,12 +1996,29 @@
             }
 
             // Destroy the paths between blackholes
-            destroyBlackholePaths(pathNodes) {
-                // Remove ownership from all nodes in the paths
+            destroyBlackholePaths(pathNodes, team) {
+                // Mark stars as destroyed
                 for (const nodeIndex of pathNodes) {
                     const node = this.st[nodeIndex];
-                    if (node.ty !== T.B) { // Don't destroy the blackholes themselves
-                        node.tm = null;
+                    if (node.ty !== T.B && !node.destroyed) { // Don't destroy blackholes themselves or already destroyed stars
+                        node.destroyed = true;
+                        node.destroyedBy = team;
+                        node.destroyedScore = this.calculateDestroyedStarScore(node);
+                        node.tm = null; // Remove original ownership
+                    }
+                }
+
+                // Mark connected lines as destroyed
+                for (let i = 0; i < this.ln.length; i++) {
+                    const line = this.ln[i];
+                    const starA = this.st[line.f];
+                    const starB = this.st[line.t];
+
+                    // If either endpoint is destroyed and line isn't already destroyed, destroy the line
+                    if ((starA.destroyed || starB.destroyed) && !line.destroyed) {
+                        line.destroyed = true;
+                        line.destroyedBy = team;
+                        line.destroyedScore = this.calculateDestroyedLineScore(line);
                     }
                 }
 
@@ -2104,6 +2182,7 @@
                 const maxCountWidth = Math.max(...sortedData.map(d => d.count.toString().length)) * 8 + 16;
                 const maxDistWidth = Math.max(...sortedData.map(d => d.distance.toString().length)) * 8 + 16;
                 const maxHQWidth = Math.max(...sortedData.map(d => d.hqDistance.toString().length)) * 8 + 16;
+                const maxDestructionWidth = Math.max(...sortedData.map(d => d.destruction.toString().length)) * 8 + 16;
 
                 let html = '';
                 sortedData.forEach((data, index) => {
@@ -2128,6 +2207,7 @@
                                 <span class="detail-col" style="color:${color};width:${maxCountWidth}px;">${data.count}</span>
                                 <span class="detail-col" style="color:${color};width:${maxDistWidth}px;">${data.distance}</span>
                                 <span class="detail-col" style="color:${color};width:${maxHQWidth}px;">${data.hqDistance}</span>
+                                <span class="detail-col" style="color:${color};width:${maxDestructionWidth}px;">${data.destruction}</span>
                             </div>
                         </div>`;
                 });
@@ -2143,6 +2223,7 @@
                             <span class="multiplier-col" style="color:#ccc;width:${maxCountWidth}px;">${MULTIPLIERS.count}x</span>
                             <span class="multiplier-col" style="color:#ccc;width:${maxDistWidth}px;">${MULTIPLIERS.distance}x</span>
                             <span class="multiplier-col" style="color:#ccc;width:${maxHQWidth}px;">${MULTIPLIERS.hq}x</span>
+                            <span class="multiplier-col" style="color:#ccc;width:${maxDestructionWidth}px;">1x</span>
                         </div>
                     </div>`;
 
@@ -2172,13 +2253,25 @@
                 this.lto.forEach(t => t.visible = false);
                 this.lti = 0;
 
-                this.lineData.forEach(l => {
-                    // Render line text
-                    const txt = this.getLineText(l.dist.toString(), l.cx + Math.cos(l.pang) * 5, l.cy + Math.sin(l.pang) * 5, { fontSize: 10, fill: 0xFFFFFF, fontFamily: 'Arial' });
-                    txt.rotation = Math.abs(l.ang) > Math.PI / 2 ? l.ang + Math.PI : l.ang;
+                this.lineData.forEach((l, lineIndex) => {
+                    const line = this.ln[lineIndex];
+
+                    // Don't render line text if destroyed
+                    if (!line.destroyed) {
+                        const txt = this.getLineText(l.dist.toString(), l.cx + Math.cos(l.pang) * 5, l.cy + Math.sin(l.pang) * 5, { fontSize: 10, fill: 0xFFFFFF, fontFamily: 'Arial' });
+                        txt.rotation = Math.abs(l.ang) > Math.PI / 2 ? l.ang + Math.PI : l.ang;
+                    }
 
                     const a = this.st[l.f], b = this.st[l.t];
                     let color = 0xFFFFFF, th = 2;
+
+                    // Check if line is destroyed
+                    if (line.destroyed) {
+                        color = 0x000000; // Black for destroyed lines
+                        th = 4; // Thick black line
+                        this.staticLineGfx.lineStyle(th, color).moveTo(l.x1, l.y1).lineTo(l.x2, l.y2);
+                        return;
+                    }
 
                     // Check if this line is animated (HQ or protected)
                     let isAnimated = false;
@@ -2215,10 +2308,14 @@
             renderAnimatedLines() {
                 this.animatedLineGfx.clear();
 
-                this.lineData.forEach(l => {
+                this.lineData.forEach((l, lineIndex) => {
+                    const line = this.ln[lineIndex];
                     const a = this.st[l.f], b = this.st[l.t];
                     let color = 0xFFFFFF, th = 2;
                     let isAnimated = false;
+
+                    // Skip destroyed lines (they're rendered in static)
+                    if (line.destroyed) return;
 
                     // Check if this line is part of an HQ connection
                     let isHQConnection = false;
@@ -2333,7 +2430,7 @@
             drawStar(s, i) {
                 const x = s.x * this.G, y = s.y * this.G;
                 let sz = this.G / 2;
-                const color = s.tm !== null ? this.tms[s.tm].c : 0xFFFFFF;
+                const color = s.destroyed ? 0x000000 : (s.tm !== null ? this.tms[s.tm].c : 0xFFFFFF);
 
                 if (s.hq) this.drawHQOutline(x, y, s);
                 this.starGfx.lineStyle(0);
@@ -2342,7 +2439,7 @@
                     this.starGfx.beginFill(color).moveTo(x, y + sz * 2.5).lineTo(x - sz * 2.1625, y - sz * 1.25).lineTo(x + sz * 2.1625, y - sz * 1.25).closePath().endFill();
                 } else if (s.ty === T.B) {
                     sz *= 1.5;
-                    if (s.ful && s.ful.length) {
+                    if (s.ful && s.ful.length && !s.destroyed) {
                         const sega = (Math.PI * 2) / s.ful.length, or = sz * 1.2, ir = sz;
                         s.ful.forEach((t, j) => {
                             this.starGfx.beginFill(this.tms[t].c);
@@ -2354,7 +2451,7 @@
                             this.starGfx.endFill();
                         });
                     } else {
-                        this.starGfx.beginFill(0xFFFFFF).drawCircle(x, y, sz * 1.2).endFill();
+                        this.starGfx.beginFill(s.destroyed ? 0x000000 : 0xFFFFFF).drawCircle(x, y, sz * 1.2).endFill();
                     }
                     this.starGfx.beginFill(0x000000).drawCircle(x, y, sz).endFill();
                 } else if (s.ty === T.C) {
@@ -2372,8 +2469,8 @@
                     this.starGfx.moveTo(x + xSize, y - xSize).lineTo(x - xSize, y + xSize);
                 }
 
-                // Draw text for special stars
-                if (s.ty >= T.B) {
+                // Draw text for special stars (but not if destroyed)
+                if (s.ty >= T.B && !s.destroyed) {
                     let rt = this.p ? (s.min_value !== undefined && s.max_value !== undefined ?
                         (s.min_value === s.max_value ? s.min_value.toString() : `${s.min_value}-${s.max_value}`) :
                         (s.ty === T.B ? '2-4' : '2-3')) : (s.req ? s.req.toString() : null);
