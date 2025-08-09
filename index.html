@@ -480,9 +480,10 @@
                     movesLeft: this.S
                 }));
 
-                // HQ Connection System
-                this.hqConnections = new Map(); // teamId -> { path: [starIndices], distance: number, lastUpdate: timestamp }
+                // HQ Connection System - Enhanced for multiple connections
+                this.hqConnections = new Map(); // teamId -> Map of connectionId -> { path: [starIndices], distance: number, lastUpdate: timestamp, hqPair: [hqA, hqB] }
                 this.hqConnectionPulse = 0; // Animation timer for pulsating effect
+                this.usedHQLines = new Map(); // teamId -> Set of line identifiers (starA-starB) to prevent overlap
 
                 // Simple deferred network analysis to prevent lag spikes
                 this.deferredNetworkAnalysis = false;
@@ -705,11 +706,14 @@
                 // Check if protected or HQ connection (animated)
                 const isProtected = this.connected(a, b) && (a.pr || b.pr);
                 let isHQConnection = false;
-                for (const [teamId, connection] of this.hqConnections) {
-                    if (this.isLineInHQPath(l.f, l.t, connection.path)) {
-                        isHQConnection = true;
-                        break;
+                for (const [teamId, connections] of this.hqConnections) {
+                    for (const [connectionId, connection] of connections) {
+                        if (this.isLineInHQPath(l.f, l.t, connection.path)) {
+                            isHQConnection = true;
+                            break;
+                        }
                     }
+                    if (isHQConnection) break;
                 }
                 const isAnimated = isProtected || isHQConnection;
 
@@ -1127,7 +1131,7 @@
 
                 // Optimized animation checking - consolidate redundant checks
                 let hasAnimations = this.fx.length > 0;
-                let hasProtectedOrHQ = this.pr.size > 0 || this.hqConnections.size > 0;
+                let hasProtectedOrHQ = this.pr.size > 0 || this.hasAnyHQConnections();
                 let hasBlackHoleAnimation = false;
 
                 // Check for black hole animation only when needed
@@ -1249,7 +1253,7 @@
                 }
 
                 this.teamScoreData.forEach(data => {
-                    // Calculate HQ connection bonus using the new system
+                    // Calculate HQ connection bonus using the enhanced system
                     const hqConnectionScore = this.getHQConnectionScore(data.teamIdx);
                     data.hqDistance = hqConnectionScore;
 
@@ -1443,11 +1447,12 @@
                     this.processClusterProtection(clusterStars, teamAdjacency);
                 }
 
-                // Process HQ connections using optimized pathfinding
+                // Process HQ connections using enhanced modular system
                 if (hqStars.length >= 2) {
-                    this.processHQConnections(teamId, hqStars, teamAdjacency);
+                    this.processModularHQConnections(teamId, hqStars, teamAdjacency);
                 } else {
                     this.hqConnections.delete(teamId);
+                    this.usedHQLines.delete(teamId);
                 }
             }
 
@@ -1566,44 +1571,171 @@
                 }
             }
 
-            processHQConnections(teamId, hqStars, teamAdjacency) {
-                // Check if existing connection is still valid
-                const existingConnection = this.hqConnections.get(teamId);
-                if (existingConnection && !this.isConnectionBroken(existingConnection, teamId)) {
-                    return; // Connection still valid, no need to recalculate
+            processModularHQConnections(teamId, hqStars, teamAdjacency) {
+                // Initialize team connections if not exists
+                if (!this.hqConnections.has(teamId)) {
+                    this.hqConnections.set(teamId, new Map());
+                }
+                if (!this.usedHQLines.has(teamId)) {
+                    this.usedHQLines.set(teamId, new Set());
                 }
 
-                // Find shortest path between any two HQ stars
-                const shortestPath = this.findOptimalHQPath(hqStars, teamAdjacency);
-                if (shortestPath) {
-                    this.hqConnections.set(teamId, {
-                        path: shortestPath.path,
-                        distance: shortestPath.distance,
-                        lastUpdate: Date.now()
-                    });
-                } else {
+                const teamConnections = this.hqConnections.get(teamId);
+                const usedLines = this.usedHQLines.get(teamId);
+
+                // Remove broken connections and their used lines
+                for (const [connectionId, connection] of teamConnections) {
+                    if (this.isConnectionBroken(connection, teamId)) {
+                        // Remove used lines for this broken connection
+                        this.removeUsedLinesForConnection(connection, usedLines);
+                        teamConnections.delete(connectionId);
+                    }
+                }
+
+                // Generate all possible HQ pairs
+                const hqPairs = [];
+                for (let i = 0; i < hqStars.length; i++) {
+                    for (let j = i + 1; j < hqStars.length; j++) {
+                        hqPairs.push([hqStars[i], hqStars[j]]);
+                    }
+                }
+
+                // Try to establish connections for each pair
+                for (const [hqA, hqB] of hqPairs) {
+                    const connectionId = this.getConnectionId(hqA, hqB);
+                    
+                    // Skip if connection already exists and is valid
+                    if (teamConnections.has(connectionId)) continue;
+
+                    // Find path between this HQ pair
+                    const path = this.findShortestPath(hqA, hqB, teamAdjacency);
+                    if (!path) continue;
+
+                    // Check if this path would overlap with existing HQ lines
+                    if (this.wouldPathOverlap(path.path, usedLines)) {
+                        // Try to find alternative path that doesn't overlap
+                        const altPath = this.findAlternativeHQPath(hqA, hqB, teamAdjacency, usedLines);
+                        if (altPath && !this.wouldPathOverlap(altPath.path, usedLines)) {
+                            // Use alternative path
+                            this.addHQConnection(teamId, connectionId, altPath, [hqA, hqB], usedLines);
+                        }
+                    } else {
+                        // Direct path is clear, use it
+                        this.addHQConnection(teamId, connectionId, path, [hqA, hqB], usedLines);
+                    }
+                }
+
+                // Clean up if no connections remain
+                if (teamConnections.size === 0) {
                     this.hqConnections.delete(teamId);
+                    this.usedHQLines.delete(teamId);
                 }
             }
 
-            findOptimalHQPath(hqStars, teamAdjacency) {
-                if (hqStars.length < 2) return null;
+            // Helper functions for modular HQ system
+            getConnectionId(hqA, hqB) {
+                // Create consistent connection ID regardless of order
+                return hqA < hqB ? `${hqA}-${hqB}` : `${hqB}-${hqA}`;
+            }
 
-                let bestPath = null;
-                let shortestDistance = Infinity;
+            getLineId(starA, starB) {
+                // Create consistent line ID regardless of order
+                return starA < starB ? `${starA}-${starB}` : `${starB}-${starA}`;
+            }
 
-                // Try all pairs to find shortest connection
-                for (let i = 0; i < hqStars.length - 1; i++) {
-                    for (let j = i + 1; j < hqStars.length; j++) {
-                        const path = this.findShortestPath(hqStars[i], hqStars[j], teamAdjacency);
-                        if (path && path.distance < shortestDistance) {
-                            shortestDistance = path.distance;
-                            bestPath = path;
+            addHQConnection(teamId, connectionId, path, hqPair, usedLines) {
+                const teamConnections = this.hqConnections.get(teamId);
+                
+                // Add the connection
+                teamConnections.set(connectionId, {
+                    path: path.path,
+                    distance: path.distance,
+                    lastUpdate: Date.now(),
+                    hqPair: hqPair
+                });
+
+                // Mark lines as used
+                for (let i = 0; i < path.path.length - 1; i++) {
+                    const lineId = this.getLineId(path.path[i], path.path[i + 1]);
+                    usedLines.add(lineId);
+                }
+            }
+
+            removeUsedLinesForConnection(connection, usedLines) {
+                for (let i = 0; i < connection.path.length - 1; i++) {
+                    const lineId = this.getLineId(connection.path[i], connection.path[i + 1]);
+                    usedLines.delete(lineId);
+                }
+            }
+
+            wouldPathOverlap(path, usedLines) {
+                for (let i = 0; i < path.length - 1; i++) {
+                    const lineId = this.getLineId(path[i], path[i + 1]);
+                    if (usedLines.has(lineId)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            findAlternativeHQPath(startIndex, endIndex, teamAdjacency, usedLines) {
+                // Modified Dijkstra that avoids used lines
+                const distances = new Map();
+                const previous = new Map();
+                const heap = new MinHeap();
+
+                // Initialize distances
+                for (const starId of teamAdjacency.keys()) {
+                    distances.set(starId, Infinity);
+                }
+                distances.set(startIndex, 0);
+                heap.insert({ id: startIndex, dist: 0 });
+
+                while (!heap.isEmpty()) {
+                    const { id: current, dist: currentDist } = heap.extractMin();
+
+                    if (current === endIndex) break;
+                    if (currentDist > distances.get(current)) continue;
+
+                    for (const neighbor of teamAdjacency.get(current)) {
+                        // Skip if this line is already used (unless it's the start or end HQ)
+                        const lineId = this.getLineId(current, neighbor);
+                        if (usedLines.has(lineId) && current !== startIndex && neighbor !== endIndex) {
+                            continue;
+                        }
+
+                        const edgeWeight = this.getStarDistance(current, neighbor);
+                        const newDistance = currentDist + edgeWeight;
+
+                        if (newDistance < distances.get(neighbor)) {
+                            distances.set(neighbor, newDistance);
+                            previous.set(neighbor, current);
+                            heap.insert({ id: neighbor, dist: newDistance });
                         }
                     }
                 }
 
-                return bestPath;
+                // Reconstruct path
+                if (distances.get(endIndex) === Infinity) return null;
+
+                const path = [];
+                let current = endIndex;
+                while (current !== undefined) {
+                    path.unshift(current);
+                    current = previous.get(current);
+                }
+
+                return {
+                    path: path,
+                    distance: distances.get(endIndex) * this.G
+                };
+            }
+
+            hasAnyHQConnections() {
+                for (const [teamId, connections] of this.hqConnections) {
+                    if (connections.size > 0) return true;
+                }
+                return false;
             }
 
             findShortestPath(startIndex, endIndex, teamAdjacency) {
@@ -1693,11 +1825,17 @@
             }
 
             getHQConnectionScore(teamId) {
-                const connection = this.hqConnections.get(teamId);
-                if (!connection) return 0;
+                const connections = this.hqConnections.get(teamId);
+                if (!connections || connections.size === 0) return 0;
 
-                // Count the number of lines in the connection (path length - 1)
-                const lineCount = connection.path.length - 1;
+                // Sum up scores from all HQ connections
+                let totalScore = 0;
+                for (const [connectionId, connection] of connections) {
+                    // Count the number of lines in the connection (path length - 1)
+                    const lineCount = connection.path.length - 1;
+                    totalScore += lineCount;
+                }
+                return totalScore;
 
                 // Calculate total distance of the connection
                 const totalDistance = connection.distance;
@@ -1951,6 +2089,7 @@
             // Update all paths after blackhole destruction
             updatePathsAfterDestruction() {
                 this.hqConnections.clear();
+                this.usedHQLines.clear();
                 this.clusterCache.clear();
                 this.changedTeams.clear();
                 for (let i = 0; i < this.tms.length; i++) this.changedTeams.add(i);
@@ -2186,11 +2325,14 @@
                     // Priority 3: Check if this line is animated (HQ or protected)
                     let isAnimated = (this.connected(a, b) && (a.pr || b.pr));
                     if (!isAnimated) {
-                        for (const [teamId, connection] of this.hqConnections) {
-                            if (this.isLineInHQPath(l.f, l.t, connection.path)) {
-                                isAnimated = true;
-                                break;
+                        for (const [teamId, connections] of this.hqConnections) {
+                            for (const [connectionId, connection] of connections) {
+                                if (this.isLineInHQPath(l.f, l.t, connection.path)) {
+                                    isAnimated = true;
+                                    break;
+                                }
                             }
+                            if (isAnimated) break;
                         }
                     }
 
@@ -2224,12 +2366,15 @@
 
                     // Check if this line is part of an HQ connection
                     let isHQConnection = false;
-                    for (const [teamId, connection] of this.hqConnections) {
-                        if (this.isLineInHQPath(l.f, l.t, connection.path)) {
-                            isHQConnection = true;
-                            isAnimated = true;
-                            break;
+                    for (const [teamId, connections] of this.hqConnections) {
+                        for (const [connectionId, connection] of connections) {
+                            if (this.isLineInHQPath(l.f, l.t, connection.path)) {
+                                isHQConnection = true;
+                                isAnimated = true;
+                                break;
+                            }
                         }
+                        if (isHQConnection) break;
                     }
 
                     // Check if protected (logical: if line is connected and either star is protected)
