@@ -501,13 +501,13 @@
                 this.showCursorInfo = false;
 
                 this.c = new PIXI.Container(); this.app.stage.addChild(this.c);
-                const g = ['bgGfx', 'staticLineGfx', 'animatedLineGfx', 'starGfx', 'fxGfx'].map(n => this[n] = new PIXI.Graphics());
+                const g = ['bgGfx', 'destroyedGfx', 'staticLineGfx', 'animatedLineGfx', 'starGfx', 'fxGfx'].map(n => this[n] = new PIXI.Graphics());
                 this.llc = new PIXI.Container(); this.tc = new PIXI.Container();
-                [this.bgGfx, this.staticLineGfx, this.animatedLineGfx, this.llc, this.starGfx, this.fxGfx, this.tc].forEach(x => this.c.addChild(x));
+                [this.bgGfx, this.destroyedGfx, this.staticLineGfx, this.animatedLineGfx, this.llc, this.starGfx, this.fxGfx, this.tc].forEach(x => this.c.addChild(x));
 
                 this.cam = { x: 0, y: 0, z: 1 }; this.d = { a: false, sx: 0, sy: 0, cx: 0, cy: 0, m: false };
                 this.to = []; this.ti = 0; this.lto = []; this.lti = 0;
-                Object.assign(this, { needsStaticLineRedraw: true, needsAnimatedLineRedraw: true, needsStarRedraw: true, needsBgRedraw: true, needsFxRedraw: true });
+                Object.assign(this, { needsStaticLineRedraw: true, needsAnimatedLineRedraw: true, needsStarRedraw: true, needsBgRedraw: true, needsFxRedraw: true, needsDestroyedRedraw: true });
                 this.starClickRadius = []; this.lineData = [];
                 this.lastStarStates = []; this.lastLineStates = []; this.lastProtectedStars = new Set(); this.lastScores = []; this.lastTeamSteals = [];
                 this.mapBounds = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
@@ -568,8 +568,8 @@
             }
 
             initStateTracking() {
-                this.lastStarStates = this.st.map(s => ({ tm: s.tm, hq: s.hq, pr: s.pr, ful: s.ful ? [...s.ful] : null, req: s.req }));
-                this.lastLineStates = this.lineData.map(l => ({ connected: this.connected(this.st[l.f], this.st[l.t]), team: this.getLineTeam(l.f, l.t) }));
+                this.lastStarStates = this.st.map(s => ({ tm: s.tm, hq: s.hq, pr: s.pr, ful: s.ful ? [...s.ful] : null, req: s.req, destroyed: s.destroyed || false }));
+                this.lastLineStates = this.lineData.map((l, i) => ({ connected: this.connected(this.st[l.f], this.st[l.t]), team: this.getLineTeam(l.f, l.t), destroyed: this.ln[i].destroyed || false }));
                 this.lastProtectedStars = new Set(this.pr); this.lastScores = this.tms.map(t => t.s); this.lastTeamSteals = this.tms.map(t => t.st);
 
                 // Initialize compressed state tracking
@@ -591,8 +591,8 @@
             }
 
             updateStateTracking() {
-                this.st.forEach((s, i) => this.lastStarStates[i] = { tm: s.tm, hq: s.hq, pr: s.pr, ful: s.ful ? [...s.ful] : null, req: s.req });
-                this.lineData.forEach((l, i) => this.lastLineStates[i] = { connected: this.connected(this.st[l.f], this.st[l.t]), team: this.getLineTeam(l.f, l.t) });
+                this.st.forEach((s, i) => this.lastStarStates[i] = { tm: s.tm, hq: s.hq, pr: s.pr, ful: s.ful ? [...s.ful] : null, req: s.req, destroyed: s.destroyed || false });
+                this.lineData.forEach((l, i) => this.lastLineStates[i] = { connected: this.connected(this.st[l.f], this.st[l.t]), team: this.getLineTeam(l.f, l.t), destroyed: this.ln[i].destroyed || false });
                 this.lastProtectedStars = new Set(this.pr); this.lastScores = this.tms.map(t => t.s); this.lastTeamSteals = this.tms.map(t => t.st);
 
                 // Update compressed state tracking
@@ -600,16 +600,22 @@
             }
 
             checkStateChanges() {
-                let sc = false, lc = false;
+                let sc = false, lc = false, dc = false;
                 for (let i = 0; i < this.st.length && !sc; i++)if (this.hasStarStateChanged(i)) sc = true;
                 for (let i = 0; i < this.lineData.length && !lc; i++)if (this.hasLineStateChanged(i)) lc = true;
                 if (this.pr.size !== this.lastProtectedStars.size || !Array.from(this.pr).every(x => this.lastProtectedStars.has(x))) sc = lc = true;
                 for (let i = 0; i < this.tms.length; i++)if (this.tms[i].s !== this.lastScores[i] || this.tms[i].st !== this.lastTeamSteals[i]) { lc = true; break; }
+
+                // Check for destroyed elements changes
+                for (let i = 0; i < this.st.length && !dc; i++) if (this.st[i].destroyed !== (this.lastStarStates[i].destroyed || false)) dc = true;
+                for (let i = 0; i < this.ln.length && !dc; i++) if (this.ln[i].destroyed !== (this.lastLineStates[i].destroyed || false)) dc = true;
+
                 if (sc) this.needsStarRedraw = true;
                 if (lc) {
                     this.needsStaticLineRedraw = true;
                     this.needsAnimatedLineRedraw = true;
                 }
+                if (dc) this.needsDestroyedRedraw = true;
                 this.updateStateTracking();
             }
 
@@ -694,9 +700,9 @@
             drawSingleLine(l, lineIndex) {
                 const line = this.ln[lineIndex];
 
-                // Priority 1: Always render destroyed lines as black
+                // Priority 1: Always render destroyed lines as black on the bottom layer
                 if (line && line.destroyed) {
-                    this.staticLineGfx.lineStyle(4, 0x000000).moveTo(l.x1, l.y1).lineTo(l.x2, l.y2);
+                    this.destroyedGfx.lineStyle(4, 0x000000).moveTo(l.x1, l.y1).lineTo(l.x2, l.y2);
                     return;
                 }
 
@@ -1151,6 +1157,7 @@
 
                 // Optimized rendering - only render what's needed
                 if (this.needsBgRedraw) { this.renderBackground(); this.needsBgRedraw = false; }
+                if (this.needsDestroyedRedraw) { this.renderDestroyed(); this.needsDestroyedRedraw = false; }
                 if (this.needsStaticLineRedraw) { this.renderStaticLines(); this.needsStaticLineRedraw = false; }
                 if (this.needsAnimatedLineRedraw) { this.renderAnimatedLines(); this.needsAnimatedLineRedraw = false; }
                 if (this.needsStarRedraw || this.dirtyRegions.size > 0 || this.dirtyStars.size > 0) { this.renderStars(); this.needsStarRedraw = false; }
@@ -1161,7 +1168,7 @@
             }
 
             markAllDirty() {
-                this.needsBgRedraw = this.needsStaticLineRedraw = this.needsAnimatedLineRedraw = this.needsStarRedraw = this.needsFxRedraw = true;
+                this.needsBgRedraw = this.needsStaticLineRedraw = this.needsAnimatedLineRedraw = this.needsStarRedraw = this.needsFxRedraw = this.needsDestroyedRedraw = true;
             }
 
             startGame() {
@@ -1603,7 +1610,7 @@
                 // Try to establish connections for each pair
                 for (const [hqA, hqB] of hqPairs) {
                     const connectionId = this.getConnectionId(hqA, hqB);
-                    
+
                     // Skip if connection already exists and is valid
                     if (teamConnections.has(connectionId)) continue;
 
@@ -1645,7 +1652,7 @@
 
             addHQConnection(teamId, connectionId, path, hqPair, usedLines) {
                 const teamConnections = this.hqConnections.get(teamId);
-                
+
                 // Add the connection
                 teamConnections.set(connectionId, {
                     path: path.path,
@@ -2063,6 +2070,7 @@
                         node.destroyedBy = team;
                         node.destroyedScore = this.calculateDestroyedScore();
                         node.tm = null; // Remove original ownership
+                        this.needsDestroyedRedraw = true;
                     }
                 }
 
@@ -2077,6 +2085,7 @@
                         line.destroyed = true;
                         line.destroyedBy = team;
                         line.destroyedScore = this.calculateDestroyedScore();
+                        this.needsDestroyedRedraw = true;
                     }
                 }
 
@@ -2302,6 +2311,30 @@
                 this.bgGfx.drawRect(x, y, w, h);
             }
 
+            // Render destroyed lines and dots on the bottom layer
+            renderDestroyed() {
+                this.destroyedGfx.clear();
+
+                // Render destroyed lines
+                this.lineData.forEach((l, lineIndex) => {
+                    const line = this.ln[lineIndex];
+                    if (line && line.destroyed) {
+                        this.destroyedGfx.lineStyle(4, 0x000000).moveTo(l.x1, l.y1).lineTo(l.x2, l.y2);
+                    }
+                });
+
+                // Render destroyed stars (dots)
+                this.st.forEach((s, i) => {
+                    if (s.destroyed) {
+                        const x = s.x * this.G, y = s.y * this.G;
+                        let sz = this.G / 2;
+                        if (s.ty === T.C) sz *= 1.5;
+                        else if (s.ty === T.B) sz *= 1.5;
+                        this.destroyedGfx.lineStyle(0).beginFill(0x000000).drawCircle(x, y, sz).endFill();
+                    }
+                });
+            }
+
             // Render static lines (no animations) - called rarely
             renderStaticLines() {
                 this.staticLineGfx.clear();
@@ -2312,9 +2345,8 @@
                     const line = this.ln[lineIndex];
                     const a = this.st[l.f], b = this.st[l.t];
 
-                    // Priority 1: Check if line is destroyed - always render as black
-                    if (line.destroyed) {
-                        this.staticLineGfx.lineStyle(4, 0x000000).moveTo(l.x1, l.y1).lineTo(l.x2, l.y2);
+                    // Skip destroyed lines - they're rendered in the destroyed layer
+                    if (line && line.destroyed) {
                         return;
                     }
 
@@ -2361,8 +2393,8 @@
                     let color = 0xFFFFFF, th = 2;
                     let isAnimated = false;
 
-                    // Skip destroyed lines (they're rendered in static)
-                    if (line.destroyed) return;
+                    // Skip destroyed lines (they're rendered in the destroyed layer)
+                    if (line && line.destroyed) return;
 
                     // Check if this line is part of an HQ connection
                     let isHQConnection = false;
@@ -2478,9 +2510,12 @@
             }
 
             drawStar(s, i) {
+                // Skip destroyed stars - they're rendered in the destroyed layer
+                if (s.destroyed) return;
+
                 const x = s.x * this.G, y = s.y * this.G;
                 let sz = this.G / 2;
-                const color = s.destroyed ? 0x000000 : (s.tm !== null ? this.tms[s.tm].c : 0xFFFFFF);
+                const color = s.tm !== null ? this.tms[s.tm].c : 0xFFFFFF;
 
                 if (s.hq) this.drawHQOutline(x, y, s);
                 this.starGfx.lineStyle(0);
@@ -2489,7 +2524,7 @@
                     this.starGfx.beginFill(color).moveTo(x, y + sz * 2.5).lineTo(x - sz * 2.1625, y - sz * 1.25).lineTo(x + sz * 2.1625, y - sz * 1.25).closePath().endFill();
                 } else if (s.ty === T.B) {
                     sz *= 1.5;
-                    if (s.ful && s.ful.length && !s.destroyed) {
+                    if (s.ful && s.ful.length) {
                         const sega = (Math.PI * 2) / s.ful.length, or = sz * 1.2, ir = sz;
                         s.ful.forEach((t, j) => {
                             this.starGfx.beginFill(this.tms[t].c);
@@ -2501,7 +2536,7 @@
                             this.starGfx.endFill();
                         });
                     } else {
-                        this.starGfx.beginFill(s.destroyed ? 0x000000 : 0xFFFFFF).drawCircle(x, y, sz * 1.2).endFill();
+                        this.starGfx.beginFill(0xFFFFFF).drawCircle(x, y, sz * 1.2).endFill();
                     }
                     this.starGfx.beginFill(0x000000).drawCircle(x, y, sz).endFill();
                 } else if (s.ty === T.C) {
@@ -2519,8 +2554,8 @@
                     this.starGfx.moveTo(x + xSize, y - xSize).lineTo(x - xSize, y + xSize);
                 }
 
-                // Draw text for special stars (but not if destroyed)
-                if (s.ty >= T.B && !s.destroyed) {
+                // Draw text for special stars
+                if (s.ty >= T.B) {
                     let rt = this.p ? (s.min_value !== undefined && s.max_value !== undefined ?
                         (s.min_value === s.max_value ? s.min_value.toString() : `${s.min_value}-${s.max_value}`) :
                         (s.ty === T.B ? '2-4' : '2-3')) : (s.req ? s.req.toString() : null);
@@ -2540,8 +2575,9 @@
                         if (p < 0.5) { const ir = p * 60, ia = (1 - p * 2) * 0.5; this.fxGfx.lineStyle(6, 0xFFFF00, ia).drawCircle(e.x, e.y, ir); }
                     } else if (e.ty === 'pointer') {
                         const p = e.t / e.mt;
-                        const r = (1 - p) * 120, a = 1 - p; this.fxGfx.lineStyle(9, 0x00FFFF, a).drawCircle(e.x, e.y, r);
-                        if (p > 0.3) { const dr = (p - 0.3) * 24, da = 1 - p; this.fxGfx.lineStyle(0).beginFill(0x00FFFF, da).drawCircle(e.x, e.y, dr).endFill(); }
+                        const pointerColor = this.tm < this.tms.length ? this.tms[this.tm].c : 0x00FFFF;
+                        const r = (1 - p) * 120, a = 1 - p; this.fxGfx.lineStyle(9, pointerColor, a).drawCircle(e.x, e.y, r);
+                        if (p > 0.3) { const dr = (p - 0.3) * 24, da = 1 - p; this.fxGfx.lineStyle(0).beginFill(pointerColor, da).drawCircle(e.x, e.y, dr).endFill(); }
                     } else if (e.type === 'blackhole_destruction') {
                         // Render blackhole destruction particle effect
                         const progress = 1 - e.life;
