@@ -655,53 +655,45 @@
 
             // Draw a single line with proper styling
             drawSingleLine(l, lineIndex) {
+                const line = this.ln[lineIndex];
+
+                // Priority 1: Always render destroyed lines as black
+                if (line && line.destroyed) {
+                    this.staticLineGfx.lineStyle(4, 0x000000).moveTo(l.x1, l.y1).lineTo(l.x2, l.y2);
+                    return;
+                }
+
                 const a = this.st[l.f], b = this.st[l.t];
                 let color = 0xFFFFFF, th = 2;
-                let isAnimated = false;
 
-                // Check if this line is part of an HQ connection
+                // Check if protected or HQ connection (animated)
+                const isProtected = this.connected(a, b) && (a.pr || b.pr);
                 let isHQConnection = false;
                 for (const [teamId, connection] of this.hqConnections) {
                     if (this.isLineInHQPath(l.f, l.t, connection.path)) {
                         isHQConnection = true;
-                        isAnimated = true;
                         break;
                     }
                 }
-
-                // Check if protected (logical: if line is connected and either star is protected)
-                const isProtected = this.connected(a, b) && (a.pr || b.pr);
-                if (isProtected) {
-                    isAnimated = true;
-                }
+                const isAnimated = isProtected || isHQConnection;
 
                 if (this.connected(a, b)) {
                     const team = a.ty === T.B ? b.tm : a.tm;
                     if (team !== null) {
                         color = this.tms[team].c;
                         th = 4;
-
-                        // Apply effects for animated lines
-                        if (isProtected) {
-                            th += (Math.sin(this.pu) + 1) * 1.5;
-                        }
-
+                        if (isProtected) th += (Math.sin(this.pu) + 1) * 1.5;
                         if (isHQConnection) {
                             const hqPulse = (Math.sin(this.hqConnectionPulse) + 1) * 0.5;
-                            const teamR = (color >> 16) & 0xFF;
-                            const teamG = (color >> 8) & 0xFF;
-                            const teamB = color & 0xFF;
-                            const r = Math.round(teamR + (255 - teamR) * hqPulse);
-                            const g = Math.round(teamG + (255 - teamG) * hqPulse);
-                            const b = Math.round(teamB + (255 - teamB) * hqPulse);
-                            color = (r << 16) | (g << 8) | b;
+                            const teamR = (color >> 16) & 0xFF, teamG = (color >> 8) & 0xFF, teamB = color & 0xFF;
+                            color = (Math.round(teamR + (255 - teamR) * hqPulse) << 16) |
+                                (Math.round(teamG + (255 - teamG) * hqPulse) << 8) |
+                                Math.round(teamB + (255 - teamB) * hqPulse);
                         }
                     }
                 }
 
-                // Draw to the appropriate graphics container
-                const gfx = isAnimated ? this.animatedLineGfx : this.staticLineGfx;
-                gfx.lineStyle(th, color).moveTo(l.x1, l.y1).lineTo(l.x2, l.y2);
+                (isAnimated ? this.animatedLineGfx : this.staticLineGfx).lineStyle(th, color).moveTo(l.x1, l.y1).lineTo(l.x2, l.y2);
             }
 
             // Optimization 3: Compressed state tracking with bit manipulation
@@ -946,15 +938,8 @@
             }
             makeStar(x, y, ty) { return { x, y, tm: null, hq: false, ty, pr: false, destroyed: false, destroyedBy: null, destroyedScore: 0 }; }
 
-            // Calculate score for destroying a star (simple count)
-            calculateDestroyedStarScore(star) {
-                return 1; // Just count each destroyed star as 1 point
-            }
-
-            // Calculate score for destroying a line (simple count)
-            calculateDestroyedLineScore(line) {
-                return 1; // Just count each destroyed line as 1 point
-            }
+            // Calculate score for destroying elements (simple count)
+            calculateDestroyedScore() { return 1; }
 
             // Optimized star finding using spatial indexing
             findStar(pos) {
@@ -1685,10 +1670,7 @@
                 return Math.round(lineCount + totalDistance);
             }
 
-            checkSpecial() {
-                // Legacy method - use optimized version instead
-                this.checkSpecialOptimized();
-            }
+
 
             // Optimized version that reuses adjacency cache and only checks when needed
             checkSpecialOptimized() {
@@ -1801,9 +1783,8 @@
                 return false;
             }
 
-            // Check for blackhole activation and handle destruction
+            // Check blackhole activation
             checkBlackholeActivation(blackholeIndex, team) {
-                // Only check activation if multiple blackholes are involved
                 const allBlackholes = [];
                 for (let i = 0; i < this.st.length; i++) {
                     if (this.st[i].ty === T.B && this.st[i].ful && this.st[i].ful.includes(team)) {
@@ -1811,22 +1792,13 @@
                     }
                 }
 
-                // Check if any pair of blackholes can connect and activate
                 for (let i = 0; i < allBlackholes.length; i++) {
                     for (let j = i + 1; j < allBlackholes.length; j++) {
-                        const bh1 = allBlackholes[i];
-                        const bh2 = allBlackholes[j];
-
-                        // Check if these blackholes can connect
+                        const bh1 = allBlackholes[i], bh2 = allBlackholes[j];
                         const path = this.findFullPathBetweenBlackholes(bh1, bh2, team);
                         if (path.length > 0) {
-                            // Check if requirements are met for activation
-                            const req1 = this.st[bh1].req;
-                            const req2 = this.st[bh2].req;
                             const totalConnected = allBlackholes.length;
-
-                            // If both blackholes meet their requirements, activate
-                            if (totalConnected >= req1 && totalConnected >= req2) {
+                            if (totalConnected >= this.st[bh1].req && totalConnected >= this.st[bh2].req) {
                                 this.activateBlackholeNetwork(allBlackholes, team);
                                 return;
                             }
@@ -1835,94 +1807,20 @@
                 }
             }
 
-            // Find all blackholes connected to a specific blackhole for a team
-            findConnectedBlackholes(startBlackhole, team) {
-                const connectedBlackholes = [];
-                const visited = new Set();
-                const queue = [startBlackhole];
-                visited.add(startBlackhole);
 
-                while (queue.length > 0) {
-                    const currentIndex = queue.shift();
-                    const currentStar = this.st[currentIndex];
 
-                    if (currentStar.ty === T.B && this.isBlackholeConnectedToTeam(currentIndex, team)) {
-                        connectedBlackholes.push(currentIndex);
-                    }
-
-                    // Explore valid paths to other blackholes
-                    const path = this.findPathBetweenBlackholes(currentIndex, team);
-                    for (const nextBlackhole of path) {
-                        if (!visited.has(nextBlackhole)) {
-                            visited.add(nextBlackhole);
-                            queue.push(nextBlackhole);
-                        }
-                    }
-                }
-
-                return connectedBlackholes;
-            }
-
-            // Find valid paths between blackholes for a team
-            findPathBetweenBlackholes(fromBlackhole, team) {
-                const reachableBlackholes = [];
-                const visited = new Set();
-                const queue = [{ index: fromBlackhole, path: [fromBlackhole] }];
-                visited.add(fromBlackhole);
-
-                while (queue.length > 0) {
-                    const { index: currentIndex, path } = queue.shift();
-                    const neighbors = this.adjacencyCache[currentIndex];
-
-                    for (let i = 0; i < neighbors.length; i++) {
-                        const neighborIndex = neighbors[i];
-                        const neighbor = this.st[neighborIndex];
-
-                        if (visited.has(neighborIndex)) continue;
-
-                        // If we found another blackhole, add it to reachable list
-                        if (neighbor.ty === T.B && neighborIndex !== fromBlackhole &&
-                            this.isBlackholeConnectedToTeam(neighborIndex, team)) {
-                            reachableBlackholes.push(neighborIndex);
-                            console.log(`DEBUG: Found path from blackhole ${fromBlackhole} to ${neighborIndex}: [${[...path, neighborIndex].join(' -> ')}]`);
-                        }
-
-                        // Continue exploring if this is a valid path node
-                        if (this.isValidBlackholePath(currentIndex, neighborIndex, team)) {
-                            visited.add(neighborIndex);
-                            queue.push({ index: neighborIndex, path: [...path, neighborIndex] });
-                        }
-                    }
-                }
-
-                return reachableBlackholes;
-            }
-
-            // Activate blackhole network - destroy connections and create particle effects
+            // Activate blackhole network
             activateBlackholeNetwork(blackholes, team) {
-                console.log(`DEBUG: Activating blackhole network for team ${team}: [${blackholes.join(', ')}]`);
-
-                // Find all paths between the blackholes
                 const pathsToDestroy = [];
-                const dotsToDestroy = [];
-
                 for (let i = 0; i < blackholes.length; i++) {
                     for (let j = i + 1; j < blackholes.length; j++) {
                         const path = this.findFullPathBetweenBlackholes(blackholes[i], blackholes[j], team);
-                        if (path.length > 0) {
-                            pathsToDestroy.push(...path);
-                            console.log(`DEBUG: Path to destroy between ${blackholes[i]} and ${blackholes[j]}: [${path.join(' -> ')}]`);
-                        }
+                        if (path.length > 0) pathsToDestroy.push(...path);
                     }
                 }
-
-                // Create particle effects and destroy the paths
                 this.createBlackholeParticleEffect(pathsToDestroy, blackholes, team);
                 this.destroyBlackholePaths(pathsToDestroy, team);
-
-                // Update HQ and cluster paths accordingly
-                this.updateHQPathsAfterDestruction();
-                this.updateClusterPathsAfterDestruction();
+                this.updatePathsAfterDestruction();
             }
 
             // Find the complete path between two blackholes
@@ -1953,22 +1851,14 @@
                 return [];
             }
 
-            // Create particle effect for blackhole activation
+            // Create blackhole destruction particles
             createBlackholeParticleEffect(pathNodes, blackholes, team) {
-                // Get team color for the particle effect
                 const teamColor = this.tms[team].c;
-
-                // Create particles that move from path nodes toward the blackholes
                 for (const nodeIndex of pathNodes) {
                     const node = this.st[nodeIndex];
-
-                    // Skip if this is a blackhole itself
                     if (node.ty === T.B) continue;
 
-                    // Find the nearest blackhole for this particle
-                    let nearestBlackhole = blackholes[0];
-                    let minDistance = Infinity;
-
+                    let nearestBlackhole = blackholes[0], minDistance = Infinity;
                     for (const bhIndex of blackholes) {
                         const bh = this.st[bhIndex];
                         const distance = Math.sqrt((node.x - bh.x) ** 2 + (node.y - bh.y) ** 2);
@@ -1978,20 +1868,14 @@
                         }
                     }
 
-                    // Create particle effect with team color
                     this.fx.push({
                         type: 'blackhole_destruction',
-                        x: node.x * this.G,
-                        y: node.y * this.G,
+                        x: node.x * this.G, y: node.y * this.G,
                         targetX: this.st[nearestBlackhole].x * this.G,
                         targetY: this.st[nearestBlackhole].y * this.G,
-                        life: 1.0,
-                        maxLife: 1.0,
-                        color: teamColor
+                        life: 1.0, maxLife: 1.0, color: teamColor
                     });
                 }
-
-                // Force fx redraw
                 this.needsFxRedraw = true;
             }
 
@@ -2003,7 +1887,7 @@
                     if (node.ty !== T.B && !node.destroyed) { // Don't destroy blackholes themselves or already destroyed stars
                         node.destroyed = true;
                         node.destroyedBy = team;
-                        node.destroyedScore = this.calculateDestroyedStarScore(node);
+                        node.destroyedScore = this.calculateDestroyedScore();
                         node.tm = null; // Remove original ownership
                     }
                 }
@@ -2018,7 +1902,7 @@
                     if ((starA.destroyed || starB.destroyed) && !line.destroyed) {
                         line.destroyed = true;
                         line.destroyedBy = team;
-                        line.destroyedScore = this.calculateDestroyedLineScore(line);
+                        line.destroyedScore = this.calculateDestroyedScore();
                     }
                 }
 
@@ -2028,27 +1912,16 @@
                 this.needsAnimatedLineRedraw = true;
             }
 
-            // Update HQ paths after blackhole destruction
-            updateHQPathsAfterDestruction() {
-                // Force recalculation of HQ connections
+            // Update all paths after blackhole destruction
+            updatePathsAfterDestruction() {
                 this.hqConnections.clear();
+                this.clusterCache.clear();
+                this.changedTeams.clear();
+                for (let i = 0; i < this.tms.length; i++) this.changedTeams.add(i);
                 this.deferredNetworkAnalysis = true;
             }
 
-            // Update cluster paths after blackhole destruction  
-            updateClusterPathsAfterDestruction() {
-                // Clear cluster cache to force recalculation
-                this.clusterCache.clear();
-                this.changedTeams.clear();
-                for (let i = 0; i < this.tms.length; i++) {
-                    this.changedTeams.add(i);
-                }
-            }
 
-            checkWormhole() {
-                // Legacy method - use optimized version instead
-                return this.checkWormholeOptimized();
-            }
 
             // Optimized version using cached adjacency
             checkWormholeOptimized() {
@@ -2255,50 +2128,39 @@
 
                 this.lineData.forEach((l, lineIndex) => {
                     const line = this.ln[lineIndex];
-
-                    // Don't render line text if destroyed
-                    if (!line.destroyed) {
-                        const txt = this.getLineText(l.dist.toString(), l.cx + Math.cos(l.pang) * 5, l.cy + Math.sin(l.pang) * 5, { fontSize: 10, fill: 0xFFFFFF, fontFamily: 'Arial' });
-                        txt.rotation = Math.abs(l.ang) > Math.PI / 2 ? l.ang + Math.PI : l.ang;
-                    }
-
                     const a = this.st[l.f], b = this.st[l.t];
-                    let color = 0xFFFFFF, th = 2;
 
-                    // Check if line is destroyed
+                    // Priority 1: Check if line is destroyed - always render as black
                     if (line.destroyed) {
-                        color = 0x000000; // Black for destroyed lines
-                        th = 4; // Thick black line
-                        this.staticLineGfx.lineStyle(th, color).moveTo(l.x1, l.y1).lineTo(l.x2, l.y2);
+                        this.staticLineGfx.lineStyle(4, 0x000000).moveTo(l.x1, l.y1).lineTo(l.x2, l.y2);
                         return;
                     }
 
-                    // Check if this line is animated (HQ or protected)
-                    let isAnimated = false;
+                    // Priority 2: Render line text for non-destroyed lines
+                    const txt = this.getLineText(l.dist.toString(), l.cx + Math.cos(l.pang) * 5, l.cy + Math.sin(l.pang) * 5, { fontSize: 10, fill: 0xFFFFFF, fontFamily: 'Arial' });
+                    txt.rotation = Math.abs(l.ang) > Math.PI / 2 ? l.ang + Math.PI : l.ang;
 
-                    // Check HQ connection
-                    for (const [teamId, connection] of this.hqConnections) {
-                        if (this.isLineInHQPath(l.f, l.t, connection.path)) {
-                            isAnimated = true;
-                            break;
+                    // Priority 3: Check if this line is animated (HQ or protected)
+                    let isAnimated = (this.connected(a, b) && (a.pr || b.pr));
+                    if (!isAnimated) {
+                        for (const [teamId, connection] of this.hqConnections) {
+                            if (this.isLineInHQPath(l.f, l.t, connection.path)) {
+                                isAnimated = true;
+                                break;
+                            }
                         }
                     }
 
-                    // Check protected (logical: if line is connected and either star is protected)
-                    if (this.connected(a, b) && (a.pr || b.pr)) {
-                        isAnimated = true;
-                    }
-
-                    // Only render non-animated lines here
-                    if (!isAnimated && this.connected(a, b)) {
-                        const team = a.ty === T.B ? b.tm : a.tm;
-                        if (team !== null) {
-                            color = this.tms[team].c;
-                            th = 4;
+                    // Priority 4: Render non-animated lines
+                    if (!isAnimated) {
+                        let color = 0xFFFFFF, th = 2;
+                        if (this.connected(a, b)) {
+                            const team = a.ty === T.B ? b.tm : a.tm;
+                            if (team !== null) {
+                                color = this.tms[team].c;
+                                th = 4;
+                            }
                         }
-                        this.staticLineGfx.lineStyle(th, color).moveTo(l.x1, l.y1).lineTo(l.x2, l.y2);
-                    } else if (!isAnimated) {
-                        // Unconnected lines
                         this.staticLineGfx.lineStyle(th, color).moveTo(l.x1, l.y1).lineTo(l.x2, l.y2);
                     }
                 });
