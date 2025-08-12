@@ -6,6 +6,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Star Conquest Game</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+    <!-- Buffer polyfill for browser compatibility -->
+    <script>
+        // Polyfill Buffer for browser compatibility
+        if (typeof Buffer === 'undefined') {
+            window.Buffer = {
+                from: function(data) {
+                    if (typeof data === 'string') {
+                        return new TextEncoder().encode(data);
+                    }
+                    return data;
+                },
+                isBuffer: function(obj) {
+                    return obj instanceof Uint8Array;
+                }
+            };
+        }
+    </script>
     <style>
         body {
             margin: 0;
