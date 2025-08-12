@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Constellation Admin Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: white;
+            color: black;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: #f5f5f5;
+            border-right: 1px solid #ccc;
+            height: 100vh;
+            position: fixed;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-content {
+            padding: 15px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .sidebar-bottom {
+            border-top: 1px solid #ccc;
+            padding: 5px 10px;
+        }
+
+        .main-content {
+            margin-left: 280px;
+            width: calc(100% - 280px);
+        }
+
+        .game-section {
+            margin-bottom: 20px;
+        }
+
+        .game-section h3 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            font-weight: normal;
+        }
+
+        .game-section p {
+            font-size: 12px;
+            color: #666;
+            margin: 0;
+        }
+
+        .game-item {
+            padding: 8px 12px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .game-item:hover {
+            background: #e8e8e8;
+        }
+
+        .game-item.selected {
+            background: #e0e0e0;
+            border-color: #999;
+        }
+
+        .game-item .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+
+        .game-item .timestamp {
+            font-size: 11px;
+            color: #666;
+        }
+
+        .create-section {
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+
+        .create-section h3 {
+            margin: 0 0 5px 0;
+            font-size: 14px;
+            font-weight: normal;
+        }
+
+        .create-section select,
+        .create-section input {
+            width: 100%;
+            font-size: 12px;
+            padding: 4px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            margin-bottom: 5px;
+        }
+
+        .create-section .create-row {
+            display: flex;
+            gap: 5px;
+        }
+
+        .create-section .create-row input {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .create-section button {
+            font-size: 12px;
+            padding: 4px 8px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .scenario-header {
+            background: #e5e7eb;
+            padding: 15px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .scenario-header h3 {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .scenario-status {
+            background: #9ca3af;
+            color: black;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .scenario-content {
+            background: #f9f9f9;
+            border: 1px solid #e5e7eb;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            padding: 15px;
+        }
+
+        .settings-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .settings-section h3 {
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .form-group .sublabel {
+            font-weight: normal;
+            font-size: 12px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .form-group textarea {
+            height: 60px;
+            resize: vertical;
+        }
+
+        .team-section h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .team-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .team-controls select {
+            padding: 4px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+        }
+
+        .team-box {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+
+        .team-box h4 {
+            margin: 0 0 8px 0;
+        }
+
+        .team-players {
+            min-height: 30px;
+        }
+
+        .player-tag {
+            display: inline-block;
+            margin-right: 10px;
+            margin-bottom: 5px;
+            padding: 2px 6px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .player-tag button {
+            margin-left: 5px;
+            font-size: 12px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            color: #ef4444;
+        }
+
+        .unassigned-section h4 {
+            margin-bottom: 10px;
+        }
+
+        .unassigned-player {
+            margin-bottom: 10px;
+        }
+
+        .unassigned-player span {
+            margin-right: 10px;
+        }
+
+        .team-button {
+            margin-right: 5px;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .game-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .game-actions button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-start {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-start:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .btn-delete {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-auto {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .active-game-banner {
+            margin: 20px;
+            padding: 15px;
+            background: #dcfce7;
+            border-radius: 4px;
+        }
+
+        .no-games {
+            padding: 20px;
+        }
+
+        .no-games h1 {
+            margin-bottom: 20px;
+        }
+
+        .no-games h2 {
+            margin-bottom: 10px;
+        }
+
+        .game-link {
+            font-size: 12px;
+            color: #3b82f6;
+            text-decoration: none;
+            display: block;
+            margin-top: 3px;
+            margin-bottom: 2px;
+        }
+
+        .game-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <div class="sidebar-content">
+            <div class="game-section">
+                <h3>Pending Instances (<span id="pending-count">0</span>)</h3>
+                <div id="pending-games">
+                    <p>No games pending start</p>
+                </div>
+            </div>
+            <div class="game-section">
+                <h3>Active Instances (<span id="active-count">0</span>)</h3>
+                <div id="active-games">
+                    <p>No currently active games</p>
+                </div>
+            </div>
+            <div class="game-section">
+                <h3>Past Instances (<span id="past-count">0</span>)</h3>
+                <div id="past-games">
+                    <p>No recorded past games</p>
+                </div>
+            </div>
+        </div>
+        <div class="sidebar-bottom">
+            <div class="create-section">
+                <h3>Create New Session</h3>
+                <select id="game-type">
+                    <option value="Constellation">Constellation</option>
+                    <option value="Geobridge">Geobridge</option>
+                    <option value="No game focus">No game focus</option>
+                </select>
+                <div class="create-row">
+                    <input type="text" id="game-name" placeholder="Session name">
+                    <button onclick="createGame()">Create</button>
+                </div>
+                <div style="margin-top: 8px; font-size: 11px; text-align: center;">
+                    Status: <span id="connection-status" style="font-weight: bold;">Connecting...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="main-content">
+        <div id="no-game-selected" class="no-games">
+            <h1>Constellation Admin Panel</h1>
+            <h2>Select a Game</h2>
+            <p>No games created yet. Create a new game to get started.</p>
+        </div>
+        <div id="game-content" style="display: none;">
+            <div style="padding: 20px;">
+                <div class="scenario-header" onclick="toggleScenario()">
+                    <div>
+                        <h3 id="scenario-name">Game Session</h3>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="scenario-status" id="scenario-status">Waiting</span>
+                        <span id="scenario-toggle">▼</span>
+                    </div>
+                </div>
+                <div id="scenario-content" class="scenario-content">
+                    <div class="settings-section">
+                        <h3>Game Settings</h3>
+                        <div class="settings-grid">
+                            <div class="form-group">
+                                <label>Map JSON Data <span class="sublabel">(Paste JSON or leave empty for random
+                                        map)</span></label>
+                                <textarea id="edit-mapJson" placeholder="Paste map JSON data here"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Moves <span class="sublabel">(Number of moves per round)</span></label>
+                                <input type="number" id="edit-movesPerRound" value="15">
+                            </div>
+                            <div class="form-group">
+                                <label>Rounds <span class="sublabel">(Number of rounds)</span></label>
+                                <input type="number" id="edit-rounds" value="10">
+                            </div>
+                            <div class="form-group">
+                                <label>Round Length <span class="sublabel">(Seconds per round)</span></label>
+                                <input type="number" id="edit-roundTime" value="30">
+                            </div>
+                            <div class="form-group">
+                                <label>Countdown Length <span class="sublabel">(Seconds before game
+                                        starts)</span></label>
+                                <input type="number" id="edit-countdownTime" value="5">
+                            </div>
+                            <div class="form-group">
+                                <label>Steals <span class="sublabel">(Number of steals allowed)</span></label>
+                                <input type="number" id="edit-stealLimit" value="15">
+                            </div>
+                            <div class="form-group">
+                                <label>Headquarters <span class="sublabel">(Number of Headquarters)</span></label>
+                                <input type="number" id="edit-hqMax" value="2">
+                            </div>
+                            <div class="form-group">
+                                <label>Score Multipliers <span class="sublabel">(Count, Distance, HQ,
+                                        Destruction)</span></label>
+                                <div style="display: flex; gap: 5px;">
+                                    <input type="number" id="edit-countMultiplier" value="500" placeholder="Count"
+                                        style="width: 25%;">
+                                    <input type="number" id="edit-distanceMultiplier" value="1" placeholder="Distance"
+                                        style="width: 25%;">
+                                    <input type="number" id="edit-hqMultiplier" value="10" placeholder="HQ"
+                                        style="width: 25%;">
+                                    <input type="number" id="edit-destructionMultiplier" value="1"
+                                        placeholder="Destruction" style="width: 25%;">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>AI Bots <span class="sublabel">(Add AI players to the game)</span></label>
+                                <div id="admin-ai-bots" style="margin-bottom: 10px;"></div>
+                                <button type="button" onclick="addAdminAIBot()"
+                                    style="padding: 4px 8px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Add
+                                    AI Bot</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="team-section">
+                        <h3>Team Management</h3>
+                        <div class="team-controls">
+                            <div>
+                                <label>Number of Teams:</label>
+                                <select id="team-count" onchange="updateTeamCount()">
+                                    <option value="3" selected>3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                </select>
+                            </div>
+                            <button class="btn-auto" onclick="autoSetupTeams()">Auto Balance</button>
+                        </div>
+                        <div id="teams-container"></div>
+                        <div id="unassigned-section">
+                            <h4>Connected Players:</h4>
+                            <div id="unassigned-players"></div>
+                        </div>
+                        <div class="game-actions">
+                            <button class="btn-start" id="start-btn" onclick="startGame()">Start Game</button>
+                            <button class="btn-delete" onclick="deleteGame()">Delete Game</button>
+                            <a href="#" id="game-direct-link" class="game-link" target="_blank"
+                                style="display: inline-block; margin-left: 10px; padding: 8px 0;">Join Game</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="active-game-banner" class="active-game-banner" style="display: none;">
+            <h3>Active Game: <span id="active-game-id"></span></h3>
+            <p>Game URL: <a href="#" id="active-game-url" target="_blank">Click to join</a></p>
+        </div>
+    </div>
+
+    <!-- Buffer polyfill for browser -->
+    <script>
+        // Polyfill Buffer for browser compatibility
+        if (typeof Buffer === 'undefined') {
+            window.Buffer = {
+                from: function (data) {
+                    if (typeof data === 'string') {
+                        return new TextEncoder().encode(data);
+                    }
+                    return data;
+                },
+                isBuffer: function (obj) {
+                    return obj instanceof Uint8Array;
+                }
+            };
+        }
+    </script>
+    <!-- Colyseus Client -->
+    <script src="https://unpkg.com/colyseus.js@0.15.24/dist/colyseus.js"></script>
+
+    <script>
+        // Global state management
+        let gameState = {
+            games: [],
+            selectedGameId: null,
+            scenarioExpanded: true,
+            client: null,
+            adminRoom: null,
+            connectedRooms: new Map()
+        };
+
+        // AI Bot types
+        const AI_BOT_TYPES = {
+            HAL: { name: 'HAL', description: 'Steady and logical', icon: '🤖' },
+            CAESAR: { name: 'Caesar', description: 'Tactical', icon: '👑' },
+            ATHENA: { name: 'Athena', description: 'Aggressive', icon: '⚡' },
+            ROBIN_HOOD: { name: 'Robin Hood', description: 'Opportunistic', icon: '🏹' },
+            EINSTEIN: { name: 'Einstein', description: 'Wormhole focused', icon: '🧠' },
+            LORENZ: { name: 'Lorenz', description: 'Chaotic', icon: '🌪️' }
+        };
+
+        let adminAIBots = [];
+
+        // Colyseus Admin Manager
+        class ColyseusAdminManager {
+            constructor(serverUrl = window.location.origin) {
+                this.serverUrl = serverUrl;
+                this.client = null;
+                this.adminRoom = null;
+                this.gameRooms = new Map();
+                this.isConnected = false;
+                this.reconnectAttempts = 0;
+                this.maxReconnectAttempts = 5;
+
+                // Check if Colyseus is loaded
+                if (typeof Colyseus === 'undefined') {
+                    throw new Error('Colyseus client library not loaded');
+                }
+            }
+
+            async initialize() {
+                try {
+                    console.log('Attempting to connect to Colyseus server at:', this.serverUrl);
+
+                    // Create new client instance
+                    this.client = new Colyseus.Client(this.serverUrl);
+
+                    // Connect to admin room for managing game sessions
+                    this.adminRoom = await this.client.joinOrCreate('admin', {
+                        role: 'admin'
+                    });
+
+                    this.setupAdminRoomListeners();
+                    this.isConnected = true;
+                    this.reconnectAttempts = 0;
+                    console.log('Successfully connected to admin room');
+                    return true;
+                } catch (error) {
+                    console.error('Failed to connect to admin room:', error);
+                    console.error('Error details:', error.message);
+
+                    this.isConnected = false;
+
+                    // If it's a connection error, provide more helpful message
+                    if (error.message.includes('WebSocket') || error.message.includes('connect')) {
+                        console.error('Make sure the Colyseus server is running on', this.serverUrl);
+                    }
+
+                    return false;
+                }
+            }
+
+            setupAdminRoomListeners() {
+                if (!this.adminRoom) return;
+
+                // Listen for room list updates
+                this.adminRoom.onMessage('rooms_update', (rooms) => {
+                    this.updateGamesList(rooms);
+                });
+
+                // Listen for room state changes
+                this.adminRoom.onMessage('room_state_change', (data) => {
+                    this.updateRoomState(data.roomId, data.state);
+                });
+
+                // Listen for player updates
+                this.adminRoom.onMessage('player_update', (data) => {
+                    this.updateRoomPlayers(data.roomId, data.players);
+                });
+
+                this.adminRoom.onError((code, message) => {
+                    console.error('Admin room error:', code, message);
+                    this.isConnected = false;
+                    this.handleDisconnection();
+                });
+
+                this.adminRoom.onLeave((code) => {
+                    console.log('Left admin room:', code);
+                    this.isConnected = false;
+                    this.handleDisconnection();
+                });
+            }
+
+            handleDisconnection() {
+                updateConnectionStatus(false);
+
+                if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                    this.reconnectAttempts++;
+                    console.log(`Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+
+                    setTimeout(() => {
+                        this.initialize();
+                    }, 2000 * this.reconnectAttempts); // Exponential backoff
+                } else {
+                    console.error('Max reconnection attempts reached');
+                    alert('Connection lost. Please refresh the page to reconnect.');
+                }
+            }
+
+            async ensureConnection() {
+                if (!this.isConnected || !this.adminRoom) {
+                    console.log('Connection lost, attempting to reconnect...');
+                    const connected = await this.initialize();
+                    if (!connected) {
+                        throw new Error('Failed to establish connection to server');
+                    }
+                }
+                return true;
+            }
+
+            async createGameRoom(gameConfig) {
+                try {
+                    // Ensure we have a valid connection
+                    await this.ensureConnection();
+
+                    console.log('Sending create_room request with config:', gameConfig);
+
+                    // Send create room request
+                    this.adminRoom.send('create_room', {
+                        roomType: gameConfig.type || 'constellation',
+                        options: gameConfig
+                    });
+
+                    return new Promise((resolve, reject) => {
+                        const timeout = setTimeout(() => {
+                            console.error('Room creation timeout after 15 seconds');
+                            reject(new Error('Room creation timeout - server may be overloaded'));
+                        }, 15000); // Increased timeout
+
+                        const handler = (data) => {
+                            console.log('Received room_created response:', data);
+                            clearTimeout(timeout);
+                            this.adminRoom.off('room_created', handler);
+
+                            if (data.success) {
+                                console.log('Room created successfully:', data.roomId);
+                                resolve({
+                                    roomId: data.roomId,
+                                    gameUrl: `/game/${data.roomId}`,
+                                    fullUrl: `${window.location.origin}/game/${data.roomId}`
+                                });
+                            } else {
+                                console.error('Room creation failed:', data.error);
+                                reject(new Error(data.error || 'Failed to create room'));
+                            }
+                        };
+
+                        this.adminRoom.onMessage('room_created', handler);
+                    });
+                } catch (error) {
+                    console.error('Error creating game room:', error);
+                    throw error;
+                }
+            }
+
+            async startGame(roomId) {
+                try {
+                    // Ensure we have a valid connection
+                    await this.ensureConnection();
+
+                    this.adminRoom.send('start_game', { roomId });
+
+                    return new Promise((resolve, reject) => {
+                        const timeout = setTimeout(() => {
+                            reject(new Error('Game start timeout'));
+                        }, 10000); // Increased timeout
+
+                        const handler = (data) => {
+                            if (data.roomId === roomId) {
+                                clearTimeout(timeout);
+                                this.adminRoom.off('game_started', handler);
+                                if (data.success) {
+                                    resolve(data);
+                                } else {
+                                    reject(new Error(data.error || 'Failed to start game'));
+                                }
+                            }
+                        };
+
+                        this.adminRoom.onMessage('game_started', handler);
+                    });
+                } catch (error) {
+                    console.error('Error starting game:', error);
+                    throw error;
+                }
+            }
+
+            async deleteGame(roomId) {
+                try {
+                    // Ensure we have a valid connection
+                    await this.ensureConnection();
+
+                    this.adminRoom.send('delete_room', { roomId });
+
+                    return new Promise((resolve, reject) => {
+                        const timeout = setTimeout(() => {
+                            reject(new Error('Room deletion timeout'));
+                        }, 10000); // Increased timeout
+
+                        const handler = (data) => {
+                            if (data.roomId === roomId) {
+                                clearTimeout(timeout);
+                                this.adminRoom.off('room_deleted', handler);
+                                if (data.success) {
+                                    resolve(data);
+                                } else {
+                                    reject(new Error(data.error || 'Failed to delete room'));
+                                }
+                            }
+                        };
+
+                        this.adminRoom.onMessage('room_deleted', handler);
+                    });
+                } catch (error) {
+                    console.error('Error deleting game:', error);
+                    throw error;
+                }
+            }
+
+            async assignPlayerToTeam(roomId, playerId, teamIndex) {
+                try {
+                    // Ensure we have a valid connection
+                    await this.ensureConnection();
+
+                    this.adminRoom.send('assign_team', {
+                        roomId,
+                        playerId,
+                        teamIndex
+                    });
+                } catch (error) {
+                    console.error('Error assigning player to team:', error);
+                    throw error;
+                }
+            }
+
+            updateGamesList(rooms) {
+                const updatedGames = rooms.map(room => ({
+                    id: room.roomId,
+                    name: room.metadata?.name || `Game ${room.roomId}`,
+                    type: room.metadata?.type || 'Constellation',
+                    state: room.state || 'waiting',
+                    players: room.players || [],
+                    roomId: room.roomId,
+                    gameUrl: `/game/${room.roomId}`,
+                    fullUrl: `${window.location.origin}/game/${room.roomId}`,
+                    config: room.metadata?.config || {},
+                    playerCount: room.clients || 0,
+                    createdAt: room.createdAt || new Date().toISOString()
+                }));
+
+                gameState.games = updatedGames;
+                updateUI();
+            }
+
+            updateRoomState(roomId, state) {
+                const game = gameState.games.find(g => g.roomId === roomId);
+                if (game) {
+                    game.state = state;
+                    updateUI();
+                }
+            }
+
+            updateRoomPlayers(roomId, players) {
+                const game = gameState.games.find(g => g.roomId === roomId);
+                if (game) {
+                    game.players = players;
+                    game.playerCount = players.length;
+                    updateUI();
+                }
+            }
+
+            disconnect() {
+                if (this.adminRoom) {
+                    this.adminRoom.leave();
+                    this.adminRoom = null;
+                }
+
+                this.gameRooms.forEach(room => {
+                    room.leave();
+                });
+                this.gameRooms.clear();
+            }
+        }
+
+        let adminManager = null;
+
+        // Utility functions
+        function getStatusColor(state) {
+            switch (state) {
+                case 'waiting': return '#fbbf24';
+                case 'playing': return '#10b981';
+                case 'finished': return '#6b7280';
+                default: return '#9ca3af';
+            }
+        }
+
+        function formatDateTime(dateString) {
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } catch (e) {
+                return 'Unknown';
+            }
+        }
+
+        function getTeamColor(teamIndex) {
+            const colors = ['#00FFFF', '#FF00FF', '#00FF00', '#FFFF00', '#0000FF', '#FF0000', '#006400'];
+            return teamIndex !== null ? colors[teamIndex] || '#666' : '#666';
+        }
+
+        // UI Update functions
+        function updateUI() {
+            updateGameCounts();
+            updateGameLists();
+            updateSelectedGame();
+        }
+
+        function updateGameCounts() {
+            const pending = gameState.games.filter(g => g.state === 'waiting').length;
+            const active = gameState.games.filter(g => g.state === 'playing').length;
+            const past = gameState.games.filter(g => g.state === 'finished').length;
+
+            document.getElementById('pending-count').textContent = pending;
+            document.getElementById('active-count').textContent = active;
+            document.getElementById('past-count').textContent = past;
+        }
+
+        function updateGameLists() {
+            renderGameList('pending-games', gameState.games.filter(g => g.state === 'waiting'));
+            renderGameList('active-games', gameState.games.filter(g => g.state === 'playing'));
+            renderGameList('past-games', gameState.games.filter(g => g.state === 'finished'));
+        }
+
+        function renderGameList(containerId, games) {
+            const container = document.getElementById(containerId);
+            if (games.length === 0) {
+                container.innerHTML = '<p style="font-size:12px;color:#666;margin:0">No games</p>';
+                return;
+            }
+
+            container.innerHTML = games.map(game => `
+                <div class="game-item ${gameState.selectedGameId === game.id ? 'selected' : ''}" 
+                     onclick="selectGame('${game.id}')">
+                    <div style="display:flex;align-items:center;gap:6px">
+                        <div class="status-dot" style="background-color:${getStatusColor(game.state)}"></div>
+                        <span>${game.name || `Game ${game.roomId}`}</span>
+                    </div>
+                    <div style="font-size:10px;color:#666">
+                        <div>${formatDateTime(game.createdAt)}</div>
+                        <div>${game.playerCount || 0} players</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateSelectedGame() {
+            const selectedGame = gameState.games.find(game => game.id === gameState.selectedGameId);
+
+            if (selectedGame) {
+                document.getElementById('no-game-selected').style.display = 'none';
+                document.getElementById('game-content').style.display = 'block';
+
+                // Update game details
+                document.getElementById('scenario-name').textContent = selectedGame.name || `Game ${selectedGame.roomId}`;
+                document.getElementById('scenario-status').textContent = selectedGame.state || 'waiting';
+
+                // Update game direct link
+                const gameDirectLink = document.getElementById('game-direct-link');
+                gameDirectLink.href = selectedGame.fullUrl || `/game/${selectedGame.roomId}`;
+
+                // Update form fields if config exists
+                if (selectedGame.config) {
+                    updateFormFields(selectedGame.config);
+                }
+
+                // Update team display
+                updateTeamDisplay(selectedGame);
+
+                // Update start button state
+                const startBtn = document.getElementById('start-btn');
+                startBtn.disabled = selectedGame.state !== 'waiting';
+
+                // Show active game banner if playing
+                if (selectedGame.state === 'playing') {
+                    document.getElementById('active-game-banner').style.display = 'block';
+                    document.getElementById('active-game-id').textContent = selectedGame.name || `Game ${selectedGame.roomId}`;
+                    const gameUrl = document.getElementById('active-game-url');
+                    gameUrl.href = selectedGame.fullUrl;
+                    gameUrl.textContent = selectedGame.fullUrl;
+                } else {
+                    document.getElementById('active-game-banner').style.display = 'none';
+                }
+            } else {
+                document.getElementById('no-game-selected').style.display = 'block';
+                document.getElementById('game-content').style.display = 'none';
+                document.getElementById('active-game-banner').style.display = 'none';
+            }
+        }
+
+        function updateFormFields(config) {
+            const fields = {
+                'edit-movesPerRound': config.movesPerRound || 15,
+                'edit-rounds': config.rounds || 10,
+                'edit-roundTime': config.roundTime || 30,
+                'edit-countdownTime': config.countdownTime || 5,
+                'edit-stealLimit': config.stealLimit || 15,
+                'edit-hqMax': config.hqMax || 2
+            };
+
+            Object.entries(fields).forEach(([id, value]) => {
+                const element = document.getElementById(id);
+                if (element) element.value = value;
+            });
+
+            if (config.multipliers) {
+                document.getElementById('edit-countMultiplier').value = config.multipliers.count || 500;
+                document.getElementById('edit-distanceMultiplier').value = config.multipliers.distance || 1;
+                document.getElementById('edit-hqMultiplier').value = config.multipliers.hq || 10;
+                document.getElementById('edit-destructionMultiplier').value = config.multipliers.destruction || 1;
+            }
+
+            if (config.mapJson) {
+                try {
+                    document.getElementById('edit-mapJson').value = JSON.stringify(config.mapJson, null, 2);
+                } catch (e) {
+                    console.warn('Could not parse map data:', e);
+                }
+            }
+        }
+
+        function updateTeamDisplay(game) {
+            const teamsContainer = document.getElementById('teams-container');
+            const unassignedContainer = document.getElementById('unassigned-players');
+
+            if (!game.players || game.players.length === 0) {
+                teamsContainer.innerHTML = '<p>No players connected</p>';
+                unassignedContainer.innerHTML = '<p>No players connected</p>';
+                return;
+            }
+
+            // Group players by team
+            const teamPlayers = {};
+            const unassignedPlayers = [];
+
+            game.players.forEach(player => {
+                if (player.team !== undefined && player.team !== null) {
+                    if (!teamPlayers[player.team]) {
+                        teamPlayers[player.team] = [];
+                    }
+                    teamPlayers[player.team].push(player);
+                } else {
+                    unassignedPlayers.push(player);
+                }
+            });
+
+            // Render teams
+            const teamColors = ['#00FFFF', '#FF00FF', '#00FF00'];
+            const teamNames = ['Cyan', 'Magenta', 'Lime'];
+
+            teamsContainer.innerHTML = '';
+
+            for (let i = 0; i < 3; i++) {
+                const teamBox = document.createElement('div');
+                teamBox.className = 'team-box';
+                teamBox.style.borderLeft = `4px solid ${teamColors[i]}`;
+
+                const players = teamPlayers[i] || [];
+                const playerTags = players.map(player =>
+                    `<span class="player-tag">
+                        ${player.name || player.id}
+                        <button onclick="removePlayerFromTeam('${player.id}')">×</button>
+                    </span>`
+                ).join('');
+
+                teamBox.innerHTML = `
+                    <h4>${teamNames[i]} Team (${players.length})</h4>
+                    <div class="team-players">${playerTags || '<em>No players assigned</em>'}</div>
+                `;
+
+                teamsContainer.appendChild(teamBox);
+            }
+
+            // Render unassigned players
+            if (unassignedPlayers.length > 0) {
+                unassignedContainer.innerHTML = unassignedPlayers.map(player => `
+                    <div class="unassigned-player">
+                        <span>${player.name || player.id}</span>
+                        <button class="team-button" style="background: #00FFFF;" onclick="assignPlayerToTeam('${player.id}', 0)">Cyan</button>
+                        <button class="team-button" style="background: #FF00FF;" onclick="assignPlayerToTeam('${player.id}', 1)">Magenta</button>
+                        <button class="team-button" style="background: #00FF00;" onclick="assignPlayerToTeam('${player.id}', 2)">Lime</button>
+                    </div>
+                `).join('');
+            } else {
+                unassignedContainer.innerHTML = '<p>All players assigned to teams</p>';
+            }
+        }
+
+        // AI Bot management
+        function addAdminAIBot() {
+            const botId = `bot_${Date.now()}`;
+            const bot = {
+                id: botId,
+                type: 'HAL',
+                team: null,
+                aggression: 0.5
+            };
+
+            adminAIBots.push(bot);
+            renderAdminAIBots();
+        }
+
+        function removeAdminAIBot(botId) {
+            adminAIBots = adminAIBots.filter(bot => bot.id !== botId);
+            renderAdminAIBots();
+        }
+
+        function renderAdminAIBots() {
+            const container = document.getElementById('admin-ai-bots');
+            if (adminAIBots.length === 0) {
+                container.innerHTML = '<p style="font-size: 12px; color: #666; margin: 0;">No AI bots added</p>';
+                return;
+            }
+
+            container.innerHTML = adminAIBots.map(bot => `
+                <div style="background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; padding: 8px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 16px; height: 16px; background: ${getTeamColor(bot.team)}; border-radius: 2px;"></div>
+                    <select onchange="updateBotType('${bot.id}', this.value)" style="font-size: 11px; padding: 2px;">
+                        ${Object.entries(AI_BOT_TYPES).map(([key, type]) =>
+                `<option value="${key}" ${bot.type === key ? 'selected' : ''}>${type.icon} ${type.name}</option>`
+            ).join('')}
+                    </select>
+                    <select onchange="updateBotTeam('${bot.id}', this.value)" style="font-size: 11px; padding: 2px;">
+                        <option value="null" ${bot.team === null ? 'selected' : ''}>Auto</option>
+                        <option value="0" ${bot.team === 0 ? 'selected' : ''}>Cyan</option>
+                        <option value="1" ${bot.team === 1 ? 'selected' : ''}>Magenta</option>
+                        <option value="2" ${bot.team === 2 ? 'selected' : ''}>Lime</option>
+                    </select>
+                    <input type="range" min="0" max="1" step="0.1" value="${bot.aggression}" 
+                           onchange="updateBotAggression('${bot.id}', this.value)"
+                           style="width: 60px;" title="Aggression: ${bot.aggression}">
+                    <button onclick="removeAdminAIBot('${bot.id}')" 
+                            style="background: #dc3545; color: white; border: none; padding: 2px 6px; border-radius: 2px; cursor: pointer; font-size: 10px;">×</button>
+                </div>
+            `).join('');
+        }
+
+        function updateBotType(botId, type) {
+            const bot = adminAIBots.find(b => b.id === botId);
+            if (bot) {
+                bot.type = type;
+                renderAdminAIBots();
+            }
+        }
+
+        function updateBotTeam(botId, team) {
+            const bot = adminAIBots.find(b => b.id === botId);
+            if (bot) {
+                bot.team = team === 'null' ? null : parseInt(team);
+                renderAdminAIBots();
+            }
+        }
+
+        function updateBotAggression(botId, aggression) {
+            const bot = adminAIBots.find(b => b.id === botId);
+            if (bot) {
+                bot.aggression = parseFloat(aggression);
+                renderAdminAIBots();
+            }
+        }
+
+        // Game management functions
+        async function createGame() {
+            const sessionName = document.getElementById('game-name').value.trim();
+            const gameType = document.getElementById('game-type').value;
+
+            if (!sessionName) {
+                alert('Please enter a session name');
+                return;
+            }
+
+            if (!adminManager || !adminManager.isConnected) {
+                alert('Not connected to server. Please wait for connection or refresh the page.');
+                return;
+            }
+
+            // Show loading state
+            const createButton = document.querySelector('button[onclick="createGame()"]');
+            const originalText = createButton.textContent;
+            createButton.textContent = 'Creating...';
+            createButton.disabled = true;
+
+            try {
+                // Collect game configuration from form
+                const config = {
+                    name: sessionName,
+                    type: gameType,
+                    movesPerRound: parseInt(document.getElementById('edit-movesPerRound').value) || 15,
+                    rounds: parseInt(document.getElementById('edit-rounds').value) || 10,
+                    roundTime: parseInt(document.getElementById('edit-roundTime').value) || 30,
+                    countdownTime: parseInt(document.getElementById('edit-countdownTime').value) || 5,
+                    stealLimit: parseInt(document.getElementById('edit-stealLimit').value) || 15,
+                    hqMax: parseInt(document.getElementById('edit-hqMax').value) || 2,
+                    multipliers: {
+                        count: parseInt(document.getElementById('edit-countMultiplier').value) || 500,
+                        distance: parseInt(document.getElementById('edit-distanceMultiplier').value) || 1,
+                        hq: parseInt(document.getElementById('edit-hqMultiplier').value) || 10,
+                        destruction: parseInt(document.getElementById('edit-destructionMultiplier').value) || 1
+                    },
+                    aiBots: adminAIBots.slice()
+                };
+
+                // Parse map JSON if provided
+                const mapJsonText = document.getElementById('edit-mapJson').value.trim();
+                if (mapJsonText) {
+                    try {
+                        config.mapJson = JSON.parse(mapJsonText);
+                    } catch (e) {
+                        alert('Invalid JSON in map data field');
+                        return;
+                    }
+                }
+
+                const game = await adminManager.createGameRoom(config);
+
+                // Clear the input
+                document.getElementById('game-name').value = '';
+
+                // The game will be added to the list via the admin room listener
+                console.log('Game created successfully:', game);
+
+            } catch (error) {
+                console.error('Failed to create game:', error);
+                alert('Failed to create game: ' + error.message);
+            } finally {
+                // Restore button state
+                createButton.textContent = originalText;
+                createButton.disabled = false;
+            }
+        }
+
+        async function startGame() {
+            const selectedGame = gameState.games.find(game => game.id === gameState.selectedGameId);
+            if (selectedGame && selectedGame.state === 'waiting') {
+                try {
+                    if (!adminManager) {
+                        alert('Not connected to server. Please refresh the page.');
+                        return;
+                    }
+                    await adminManager.startGame(selectedGame.roomId);
+                    console.log('Game started successfully');
+                } catch (error) {
+                    console.error('Failed to start game:', error);
+                    alert('Failed to start game: ' + error.message);
+                }
+            }
+        }
+
+        async function deleteGame() {
+            const selectedGame = gameState.games.find(game => game.id === gameState.selectedGameId);
+            if (selectedGame && confirm(`Are you sure you want to delete "${selectedGame.name}"?`)) {
+                try {
+                    if (!adminManager) {
+                        alert('Not connected to server. Please refresh the page.');
+                        return;
+                    }
+                    await adminManager.deleteGame(selectedGame.roomId);
+                    console.log('Game deleted successfully');
+                } catch (error) {
+                    console.error('Failed to delete game:', error);
+                    alert('Failed to delete game: ' + error.message);
+                }
+            }
+        }
+
+        function selectGame(gameId) {
+            gameState.selectedGameId = gameId;
+            updateUI();
+        }
+
+        function toggleScenario() {
+            gameState.scenarioExpanded = !gameState.scenarioExpanded;
+            const content = document.getElementById('scenario-content');
+            const toggle = document.getElementById('scenario-toggle');
+
+            if (gameState.scenarioExpanded) {
+                content.style.display = 'block';
+                toggle.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                toggle.textContent = '▶';
+            }
+        }
+
+        function updateTeamCount() {
+            const teamCount = parseInt(document.getElementById('team-count').value);
+            console.log('Team count updated to:', teamCount);
+
+            // Update team display based on new count
+            const selectedGame = gameState.games.find(game => game.id === gameState.selectedGameId);
+            if (selectedGame) {
+                updateTeamDisplay(selectedGame);
+            }
+        }
+
+        function autoSetupTeams() {
+            const selectedGame = gameState.games.find(game => game.id === gameState.selectedGameId);
+            if (!selectedGame || !selectedGame.players || selectedGame.players.length === 0) {
+                alert('No players to assign to teams');
+                return;
+            }
+
+            const teamCount = parseInt(document.getElementById('team-count').value);
+            const players = selectedGame.players.slice();
+
+            // Shuffle players for random assignment
+            for (let i = players.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [players[i], players[j]] = [players[j], players[i]];
+            }
+
+            // Assign players to teams
+            players.forEach((player, index) => {
+                const teamIndex = index % teamCount;
+                assignPlayerToTeam(player.id, teamIndex);
+            });
+        }
+
+        async function assignPlayerToTeam(playerId, teamIndex) {
+            const selectedGame = gameState.games.find(game => game.id === gameState.selectedGameId);
+            if (!selectedGame) {
+                console.error('No game selected');
+                return;
+            }
+
+            try {
+                if (!adminManager) {
+                    alert('Not connected to server. Please refresh the page.');
+                    return;
+                }
+                await adminManager.assignPlayerToTeam(selectedGame.roomId, playerId, teamIndex);
+                console.log(`Assigned player ${playerId} to team ${teamIndex}`);
+            } catch (error) {
+                console.error('Failed to assign player to team:', error);
+                alert('Failed to assign player to team: ' + error.message);
+            }
+        }
+
+        async function removePlayerFromTeam(playerId) {
+            await assignPlayerToTeam(playerId, null);
+        }
+
+        // Connection status indicator
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('connection-status');
+            console.log('Updating connection status:', connected, 'Element found:', !!statusElement);
+            if (statusElement) {
+                statusElement.textContent = connected ? 'Connected' : 'Disconnected';
+                statusElement.style.color = connected ? '#10b981' : '#ef4444';
+            } else {
+                console.error('Connection status element not found');
+            }
+        }
+
+        // Initialize application
+        async function initializeApp() {
+            try {
+                console.log('Initializing Colyseus admin connection...');
+
+                // Initialize adminManager
+                adminManager = new ColyseusAdminManager();
+                const connected = await adminManager.initialize();
+
+                if (connected) {
+                    console.log('Successfully connected to Colyseus server');
+                    updateConnectionStatus(true);
+                } else {
+                    console.error('Failed to connect to Colyseus server');
+                    updateConnectionStatus(false);
+                    alert('Failed to connect to game server. Please check if the server is running.');
+                }
+            } catch (error) {
+                console.error('Error initializing app:', error);
+                updateConnectionStatus(false);
+                alert('Error connecting to game server: ' + error.message);
+            }
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (adminManager) {
+                adminManager.disconnect();
+            }
+        });
+
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('DOM loaded, initializing admin panel...');
+            renderAdminAIBots();
+
+            // Set initial connection status
+            updateConnectionStatus(false);
+
+            // Initialize connection
+            setTimeout(() => {
+                initializeApp();
+            }, 100); // Small delay to ensure DOM is fully ready
+        });
+    </script>
+</body>
+
+</html>
