@@ -6,6 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Star Conquest Game</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+    <!-- Colyseus Client -->
+    <script src="https://unpkg.com/colyseus.js@0.15.24/dist/colyseus.js"></script>
+    <!-- Buffer polyfill for browser compatibility -->
+    <script>
+        // Polyfill Buffer for browser compatibility
+        if (typeof Buffer === 'undefined') {
+            window.Buffer = {
+                from: function (data) {
+                    if (typeof data === 'string') {
+                        return new TextEncoder().encode(data);
+                    }
+                    return data;
+                },
+                isBuffer: function (obj) {
+                    return obj instanceof Uint8Array;
+                }
+            };
+        }
+    </script>
     <style>
         body {
             margin: 0;
@@ -277,6 +296,62 @@
             margin-top: 5px
         }
 
+        .ai-bot-item {
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ai-bot-select,
+        .ai-team-select,
+        .ai-aggression-select {
+            padding: 4px;
+            border: 1px solid #555;
+            background: #222;
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .ai-bot-cube {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            display: inline-block;
+            margin-right: 5px;
+            position: relative;
+        }
+
+        .ai-bot-cube::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            right: 2px;
+            bottom: 2px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 1px;
+        }
+
+        .remove-bot-btn {
+            background: #cc0000;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .remove-bot-btn:hover {
+            background: #ff0000;
+        }
+
         .hidden {
             display: none
         }
@@ -316,7 +391,7 @@
     </div>
     <div class="header" id="gameHeader" style="display:none;">
         <div id="titleLine"></div>
-        <div class="info-line">Game ID: Placeholder.⠀ My team: <span id="teamColor">cyan</span>.⠀ Breakout room #1</div>
+        <div class="info-line">Game ID: Placeholder.⠀ My team: <span id="teamColor">cyan</span>.⠀ Status: <span id="connection-status" style="font-weight: bold;">Connecting...</span></div>
     </div>
     <div class="ui">
         <div id="round" class="round">Round #1</div>
@@ -367,6 +442,11 @@
                 <input type="number" id="destructionMultiplier" class="multiplier-input" value="1" min="0" max="9999"
                     title="Destruction Multiplier">
             </div>
+        </div>
+        <div class="setting-group">
+            <label>AI Bots:</label>
+            <div id="aiBotsList"></div>
+            <button class="button" onclick="addAIBot()">Add AI Bot</button>
         </div>
         <div style="text-align:center;margin-top:20px;">
             <button class="button start" onclick="startNewGame()">Start New Game</button>
@@ -445,6 +525,447 @@
             { color: C.RED, name: 'red', displayName: 'Red' },
             { color: C.DGREEN, name: 'dark green', displayName: 'Dark Green' }
         ];
+
+        // AI Bot Types and Configurations
+        const AI_BOT_TYPES = {
+            HAL: {
+                name: 'HAL',
+                description: 'Steady, logical, and dispassionate',
+                icon: '🤖',
+                strategy: 'defensive'
+            },
+            CAESAR: {
+                name: 'Caesar',
+                description: 'Thoughtful and tactical',
+                icon: '👑',
+                strategy: 'tactical'
+            },
+            ATHENA: {
+                name: 'Athena',
+                description: 'Hits hard and fast',
+                icon: '⚡',
+                strategy: 'aggressive'
+            },
+            ROBIN_HOOD: {
+                name: 'Robin Hood',
+                description: 'Steals from the rich',
+                icon: '🏹',
+                strategy: 'opportunistic'
+            },
+            EINSTEIN: {
+                name: 'Einstein',
+                description: 'Loves to study worm-holes',
+                icon: '🧠',
+                strategy: 'wormhole'
+            },
+            LORENZ: {
+                name: 'Lorenz',
+                description: 'An advocate of chaos',
+                icon: '🌪️',
+                strategy: 'chaotic'
+            }
+        };
+
+        // AI Bot Class
+        class AIBot {
+            constructor(type, teamIndex, aggression = 0.5) {
+                this.type = type;
+                this.teamIndex = teamIndex;
+                this.aggression = Math.max(0, Math.min(1, aggression)); // 0-1 range
+                this.config = AI_BOT_TYPES[type];
+                this.lastMoveTime = 0;
+                this.moveDelay = this.calculateMoveDelay();
+                this.hqPlaced = false;
+                this.specialStars = new Map(); // Cache special star locations
+                this.targetStars = new Set(); // Current targets
+                this.lastRoundMoves = 0;
+            }
+
+            calculateMoveDelay() {
+                // Higher aggression = faster moves (lower delay)
+                // Low aggression (0.1) = 2000ms delay, High aggression (1.0) = 100ms delay
+                return 2000 - (this.aggression * 1900) + Math.random() * 200;
+            }
+
+            shouldMakeMove(currentTime, gameState) {
+                if (currentTime - this.lastMoveTime < this.moveDelay) return false;
+
+                // Near end of round, high aggression bots move more frequently
+                const timeLeft = gameState.t;
+                const roundLength = gameState.RT;
+                const timeRatio = timeLeft / roundLength;
+
+                if (timeRatio < 0.3 && this.aggression > 0.7) {
+                    // High aggression bots speed up at the end
+                    return currentTime - this.lastMoveTime > this.moveDelay * 0.3;
+                }
+
+                return true;
+            }
+
+            analyzeGameState(game) {
+                // Update special stars cache
+                this.specialStars.clear();
+                game.st.forEach((star, index) => {
+                    if (star.ty === T.W) this.specialStars.set(index, 'wormhole');
+                    else if (star.ty === T.B) this.specialStars.set(index, 'blackhole');
+                    else if (star.ty === T.C) this.specialStars.set(index, 'cluster');
+                });
+
+                // Get current team state
+                const team = game.tms[this.teamIndex];
+                const teamStars = game.st.filter(s => s.tm === this.teamIndex);
+                const teamHQs = teamStars.filter(s => s.hq);
+
+                return {
+                    team,
+                    teamStars,
+                    teamHQs,
+                    multipliers: MULTIPLIERS,
+                    timeLeft: game.t,
+                    roundLength: game.RT,
+                    stealsLeft: team.st
+                };
+            }
+
+            makeMove(game) {
+                if (!this.shouldMakeMove(Date.now(), game)) return false;
+
+                const gameState = this.analyzeGameState(game);
+                let move = null;
+
+                // Strategy-based decision making
+                switch (this.config.strategy) {
+                    case 'defensive':
+                        move = this.defensiveStrategy(game, gameState);
+                        break;
+                    case 'tactical':
+                        move = this.tacticalStrategy(game, gameState);
+                        break;
+                    case 'aggressive':
+                        move = this.aggressiveStrategy(game, gameState);
+                        break;
+                    case 'opportunistic':
+                        move = this.opportunisticStrategy(game, gameState);
+                        break;
+                    case 'wormhole':
+                        move = this.wormholeStrategy(game, gameState);
+                        break;
+                    case 'chaotic':
+                        move = this.chaoticStrategy(game, gameState);
+                        break;
+                }
+
+                if (move) {
+                    this.executeMove(game, move);
+                    this.lastMoveTime = Date.now();
+                    this.moveDelay = this.calculateMoveDelay();
+                    return true;
+                }
+
+                return false;
+            }
+
+            defensiveStrategy(game, gameState) {
+                // HAL: Focus on protecting existing territory and building strong connections
+                if (!this.hqPlaced && gameState.teamHQs.length < game.HM) {
+                    return this.findBestHQPlacement(game, gameState);
+                }
+
+                // Protect valuable stars
+                const vulnerableStars = this.findVulnerableStars(game, gameState);
+                if (vulnerableStars.length > 0) {
+                    return { type: 'capture', target: vulnerableStars[0] };
+                }
+
+                // Build defensive connections
+                return this.findDefensiveConnection(game, gameState);
+            }
+
+            tacticalStrategy(game, gameState) {
+                // Caesar: Calculated moves, focus on strategic positions
+                if (!this.hqPlaced && gameState.teamHQs.length < game.HM) {
+                    return this.findStrategicHQPlacement(game, gameState);
+                }
+
+                // Target high-value strategic positions
+                const strategicTargets = this.findStrategicTargets(game, gameState);
+                if (strategicTargets.length > 0) {
+                    return { type: 'capture', target: strategicTargets[0] };
+                }
+
+                return this.findTacticalMove(game, gameState);
+            }
+
+            aggressiveStrategy(game, gameState) {
+                // Athena: Fast expansion and aggressive captures
+                const enemyTargets = this.findEnemyTargets(game, gameState);
+                if (enemyTargets.length > 0 && gameState.stealsLeft > 0) {
+                    return { type: 'steal', target: enemyTargets[0] };
+                }
+
+                // Rapid expansion
+                const expansionTargets = this.findExpansionTargets(game, gameState);
+                if (expansionTargets.length > 0) {
+                    return { type: 'capture', target: expansionTargets[0] };
+                }
+
+                return null;
+            }
+
+            opportunisticStrategy(game, gameState) {
+                // Robin Hood: Steal from leading teams, target valuable undefended stars
+                const richTargets = this.findRichTargets(game, gameState);
+                if (richTargets.length > 0 && gameState.stealsLeft > 0) {
+                    return { type: 'steal', target: richTargets[0] };
+                }
+
+                // Target undefended valuable stars
+                const valuableTargets = this.findValuableUndefendedStars(game, gameState);
+                if (valuableTargets.length > 0) {
+                    return { type: 'capture', target: valuableTargets[0] };
+                }
+
+                return null;
+            }
+
+            wormholeStrategy(game, gameState) {
+                // Einstein: Focus on wormhole connections and scientific approach
+                const wormholes = Array.from(this.specialStars.entries())
+                    .filter(([_, type]) => type === 'wormhole')
+                    .map(([index, _]) => index);
+
+                if (wormholes.length >= 2) {
+                    // Try to connect wormholes
+                    const wormholeMove = this.findWormholeConnection(game, gameState, wormholes);
+                    if (wormholeMove) return wormholeMove;
+                }
+
+                // Fall back to tactical strategy
+                return this.tacticalStrategy(game, gameState);
+            }
+
+            chaoticStrategy(game, gameState) {
+                // Lorenz: Unpredictable moves, disrupt enemy plans
+                if (Math.random() < 0.3) {
+                    // 30% chance of random disruption
+                    const disruptionMove = this.findDisruptionMove(game, gameState);
+                    if (disruptionMove) return disruptionMove;
+                }
+
+                // Mix of all strategies
+                const strategies = ['defensive', 'aggressive', 'opportunistic'];
+                const randomStrategy = strategies[Math.floor(Math.random() * strategies.length)];
+
+                switch (randomStrategy) {
+                    case 'defensive': return this.defensiveStrategy(game, gameState);
+                    case 'aggressive': return this.aggressiveStrategy(game, gameState);
+                    case 'opportunistic': return this.opportunisticStrategy(game, gameState);
+                }
+
+                return null;
+            }
+
+            // Helper methods for move finding
+            findBestHQPlacement(game, gameState) {
+                const neutralStars = game.st
+                    .map((star, index) => ({ star, index }))
+                    .filter(({ star }) => star.tm === null && !star.destroyed);
+
+                if (neutralStars.length === 0) return null;
+
+                // Find star with good connectivity and strategic value
+                let bestStar = null;
+                let bestScore = -1;
+
+                neutralStars.forEach(({ star, index }) => {
+                    const connections = game.adjacencyCache[index] || [];
+                    const score = connections.length + (star.ty === T.C ? 5 : 0);
+
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestStar = index;
+                    }
+                });
+
+                return bestStar !== null ? { type: 'hq', target: bestStar } : null;
+            }
+
+            findVulnerableStars(game, gameState) {
+                return game.st
+                    .map((star, index) => ({ star, index }))
+                    .filter(({ star }) => star.tm === this.teamIndex && !star.hq)
+                    .filter(({ index }) => {
+                        const connections = game.adjacencyCache[index] || [];
+                        const friendlyConnections = connections.filter(connIndex =>
+                            game.st[connIndex].tm === this.teamIndex
+                        );
+                        return friendlyConnections.length <= 1; // Vulnerable if few friendly connections
+                    })
+                    .map(({ index }) => index);
+            }
+
+            findEnemyTargets(game, gameState) {
+                return game.st
+                    .map((star, index) => ({ star, index }))
+                    .filter(({ star }) => star.tm !== null && star.tm !== this.teamIndex && !star.destroyed)
+                    .sort((a, b) => {
+                        // Prioritize by value: clusters > regular stars, avoid HQs
+                        const scoreA = (a.star.ty === T.C ? 10 : 1) - (a.star.hq ? 20 : 0);
+                        const scoreB = (b.star.ty === T.C ? 10 : 1) - (b.star.hq ? 20 : 0);
+                        return scoreB - scoreA;
+                    })
+                    .map(({ index }) => index);
+            }
+
+            findExpansionTargets(game, gameState) {
+                return game.st
+                    .map((star, index) => ({ star, index }))
+                    .filter(({ star }) => star.tm === null && !star.destroyed)
+                    .sort((a, b) => {
+                        // Prioritize clusters and well-connected stars
+                        const scoreA = (a.star.ty === T.C ? 10 : 1) + (game.adjacencyCache[a.index]?.length || 0);
+                        const scoreB = (b.star.ty === T.C ? 10 : 1) + (game.adjacencyCache[b.index]?.length || 0);
+                        return scoreB - scoreA;
+                    })
+                    .map(({ index }) => index);
+            }
+
+            findRichTargets(game, gameState) {
+                // Target stars owned by leading teams
+                const teamScores = game.tms.map((team, index) => ({ team, index, score: team.s }))
+                    .sort((a, b) => b.score - a.score);
+
+                const leadingTeams = teamScores.slice(0, 2).map(t => t.index);
+
+                return game.st
+                    .map((star, index) => ({ star, index }))
+                    .filter(({ star }) => leadingTeams.includes(star.tm) && !star.hq)
+                    .map(({ index }) => index);
+            }
+
+            findWormholeConnection(game, gameState, wormholes) {
+                // Try to create a path between wormholes
+                for (let i = 0; i < wormholes.length - 1; i++) {
+                    for (let j = i + 1; j < wormholes.length; j++) {
+                        const path = this.findPath(game, wormholes[i], wormholes[j]);
+                        if (path && path.length > 0) {
+                            const nextStar = path.find(starIndex =>
+                                game.st[starIndex].tm === null || game.st[starIndex].tm === this.teamIndex
+                            );
+                            if (nextStar !== undefined) {
+                                return { type: 'capture', target: nextStar };
+                            }
+                        }
+                    }
+                }
+                return null;
+            }
+
+            findPath(game, start, end) {
+                // Simple pathfinding using adjacency
+                const visited = new Set();
+                const queue = [[start]];
+
+                while (queue.length > 0) {
+                    const path = queue.shift();
+                    const current = path[path.length - 1];
+
+                    if (current === end) return path.slice(1); // Exclude start
+                    if (visited.has(current)) continue;
+
+                    visited.add(current);
+                    const neighbors = game.adjacencyCache[current] || [];
+
+                    for (const neighbor of neighbors) {
+                        if (!visited.has(neighbor)) {
+                            queue.push([...path, neighbor]);
+                        }
+                    }
+                }
+
+                return null;
+            }
+
+            executeMove(game, move) {
+                if (!move) return;
+
+                const targetStar = game.st[move.target];
+                if (!targetStar || targetStar.destroyed) return;
+
+                let moveExecuted = false;
+                let wasSteal = false;
+
+                switch (move.type) {
+                    case 'capture':
+                        if (targetStar.tm === null) {
+                            targetStar.tm = this.teamIndex;
+                            moveExecuted = true;
+                        }
+                        break;
+                    case 'steal':
+                        if (targetStar.tm !== null && targetStar.tm !== this.teamIndex && game.tms[this.teamIndex].st > 0) {
+                            targetStar.tm = this.teamIndex;
+                            game.tms[this.teamIndex].st--;
+                            moveExecuted = true;
+                            wasSteal = true;
+                        }
+                        break;
+                    case 'hq':
+                        if (targetStar.tm === null && game.tms[this.teamIndex].h < game.HM) {
+                            targetStar.tm = this.teamIndex;
+                            targetStar.hq = true;
+                            game.tms[this.teamIndex].h++;
+                            this.hqPlaced = true;
+                            moveExecuted = true;
+                        }
+                        break;
+                }
+
+                if (moveExecuted) {
+                    // Add steal visual effect if this was a steal
+                    if (wasSteal) {
+                        game.addFx(targetStar.x * game.G, targetStar.y * game.G, 'steal');
+                    }
+
+                    // Update visuals immediately like player moves do
+                    game.drawStar(targetStar, move.target);
+                    game.renderConnectedLines(move.target);
+                    game.changedTeams.add(this.teamIndex);
+
+                    // Trigger UI updates to refresh steal counters
+                    game.deferredScoreUpdate = true;
+                    game.needsFullUIUpdate = true;
+                }
+            }
+
+            // Optimized strategy methods - consolidated to reduce redundancy
+            findStrategicHQPlacement(game, gameState) {
+                return this.findBestHQPlacement(game, gameState);
+            }
+
+            findStrategicTargets(game, gameState) {
+                return this.findExpansionTargets(game, gameState);
+            }
+
+            findTacticalMove(game, gameState) {
+                const targets = this.findExpansionTargets(game, gameState);
+                return targets.length > 0 ? { type: 'capture', target: targets[0] } : null;
+            }
+
+            findDefensiveConnection(game, gameState) {
+                return this.findTacticalMove(game, gameState);
+            }
+
+            findValuableUndefendedStars(game, gameState) {
+                return this.findExpansionTargets(game, gameState);
+            }
+
+            findDisruptionMove(game, gameState) {
+                const targets = this.findEnemyTargets(game, gameState);
+                return targets.length > 0 && gameState.stealsLeft > 0 ? { type: 'steal', target: targets[0] } : null;
+            }
+        }
 
         class Game {
             constructor(s = {}) {
@@ -539,6 +1060,11 @@
                 this.scoreCache = new Array(this.tms.length).fill(0);
                 this.changedTeams = new Set();
                 this.needsFullUIUpdate = false;
+
+                // AI Bot System
+                this.aiBots = s.aiBots || [];
+                this.lastAIUpdate = 0;
+                this.aiUpdateInterval = 100; // Check AI every 100ms
 
                 this.init();
             }
@@ -673,27 +1199,12 @@
                 this.dirtyStars.add(starIndex);
             }
 
-            // Ultra-fast line rendering - only redraws lines connected to a specific star
+            // Ultra-fast line rendering - restored to original efficient behavior
             renderConnectedLines(starIndex) {
-                const neighbors = this.adjacencyCache[starIndex];
-                if (!neighbors) return;
-
-                // Find and redraw only the lines connected to this star
-                for (let i = 0; i < neighbors.length; i++) {
-                    const neighborIndex = neighbors[i];
-
-                    // Find the line data for this connection
-                    for (let j = 0; j < this.lineData.length; j++) {
-                        const l = this.lineData[j];
-                        if ((l.f === starIndex && l.t === neighborIndex) ||
-                            (l.f === neighborIndex && l.t === starIndex)) {
-
-                            // Redraw this specific line
-                            this.drawSingleLine(l, j);
-                            break;
-                        }
-                    }
-                }
+                // Simply trigger the efficient line redraw system
+                // This is much faster than trying to manually fix individual lines
+                this.needsStaticLineRedraw = true;
+                this.needsAnimatedLineRedraw = true;
             }
 
             // Draw a single line with proper styling
@@ -1114,6 +1625,12 @@
                         this.updateUI();
                         this.deferredScoreUpdate = false;
                     }
+                }
+
+                // Update AI bots
+                this.updateAIBots(currentTime);
+
+                if (this.deferredScoreUpdate || this.deferredNetworkAnalysis || this.deferredSpecialCheck) {
                     if (this.networkAnalysisTimer > 0.15) {
                         if (this.deferredNetworkAnalysis) {
                             this.updateProtection();
@@ -2144,6 +2661,30 @@
                 return false;
             }
 
+            updateAIBots(currentTime) {
+                if (!this.p && !this.go && this.aiBots.length > 0) {
+                    // Only update AI during active gameplay, not planning or game over
+                    if (currentTime - this.lastAIUpdate > this.aiUpdateInterval) {
+                        let anyMovesMade = false;
+                        this.aiBots.forEach(bot => {
+                            if (bot.makeMove(this)) {
+                                // AI move executed - visual updates already handled in executeMove
+                                this.deferredScoreUpdate = true;
+                                anyMovesMade = true;
+                            }
+                        });
+
+                        // Force immediate UI update if any AI made moves
+                        if (anyMovesMade) {
+                            this.calcScores();
+                            this.updateUI();
+                        }
+
+                        this.lastAIUpdate = currentTime;
+                    }
+                }
+            }
+
             updateUI() {
                 document.getElementById('round').textContent = this.go ? "Game Over" : `Round #${this.r}`;
                 const timerEl = document.getElementById('timer');
@@ -2254,15 +2795,20 @@
                     const isCurrentTeam = data.teamIdx === this.tm;
                     const isWormholeWinner = this.wormholeWinner !== null && data.teamIdx === this.wormholeWinner;
 
+                    // Check if this team has an AI bot
+                    const aiBot = this.aiBots.find(bot => bot.teamIndex === data.teamIdx);
+                    const aiIndicator = aiBot ? this.createAIIndicator(aiBot, color) : '';
+
                     // Display "Won" for wormhole winner, otherwise show score
                     const displayScore = isWormholeWinner ? "Won" : data.finalScore;
                     const scoreWidth = displayScore.toString().length * 9 + 36 + (isCurrentTeam ? 8 : 0);
                     const teamBorder = isCurrentTeam ? `outline: 2px solid ${color}; outline-offset: -2px; padding: 0 4px;` : '';
 
-                    html += `<div class="score-row" data-team-index="${data.teamIdx}" style="${teamBorder}" title="Click to select ${data.team.displayName} team">
+                    html += `<div class="score-row" data-team-index="${data.teamIdx}" style="${teamBorder}" title="Click to select ${data.team.displayName} team${aiBot ? ' (AI: ' + aiBot.config.name + ')' : ''}">
                             <div class="main-score-section">
                                 <div class="score-highlight" style="background:${color};width:${scoreWidth}px;"></div>
                                 <div class="score-content">
+                                    ${aiIndicator}
                                     <div class="steal-circle">${data.steals}</div>
                                     <span class="score-number">${displayScore}</span>
                                 </div>
@@ -2302,6 +2848,11 @@
                     distance: data.distance,
                     hqDistance: data.hqDistance
                 }));
+            }
+
+            createAIIndicator(aiBot, teamColor) {
+                // Remove AI indicator icons from scoreboard as requested
+                return '';
             }
 
             renderBackground() {
@@ -2613,7 +3164,8 @@
                     distance: +document.getElementById('distanceMultiplier').value,
                     hq: +document.getElementById('hqMultiplier').value,
                     destruction: +document.getElementById('destructionMultiplier').value
-                }
+                },
+                aiBots: getAIBots()
             };
         }
 
@@ -2664,18 +3216,443 @@
             else { panel.classList.add('hidden'); button.textContent = 'Show Settings'; }
         }
 
+        // AI Bot Management Functions
+        let aiBotCounter = 0;
+
+        function addAIBot() {
+            const botsList = document.getElementById('aiBotsList');
+
+            // Remove empty message if it exists
+            const emptyMessage = botsList.querySelector('p');
+            if (emptyMessage) {
+                emptyMessage.remove();
+            }
+
+            const botId = `aiBot_${aiBotCounter++}`;
+            const botDiv = document.createElement('div');
+            botDiv.className = 'ai-bot-item';
+            botDiv.id = botId;
+
+            botDiv.innerHTML = `
+                <select class="ai-bot-select" onchange="updateAIBotDisplay('${botId}')">
+                    ${Object.keys(AI_BOT_TYPES).map(key =>
+                `<option value="${key}">${AI_BOT_TYPES[key].name} - ${AI_BOT_TYPES[key].description}</option>`
+            ).join('')}
+                </select>
+                <select class="ai-team-select">
+                    ${TEAM_CONFIGS.map((team, index) =>
+                `<option value="${index}" style="color: #${team.color.toString(16).padStart(6, '0')}">${team.displayName}</option>`
+            ).join('')}
+                </select>
+                <select class="ai-aggression-select">
+                    <option value="0.1">Very Low (10%)</option>
+                    <option value="0.3">Low (30%)</option>
+                    <option value="0.5" selected>Medium (50%)</option>
+                    <option value="0.7">High (70%)</option>
+                    <option value="0.9">Very High (90%)</option>
+                </select>
+                <div class="ai-bot-cube" style="background: #00FFFF; opacity: 0.8;"></div>
+                <button class="remove-bot-btn" onclick="removeAIBot('${botId}')">Remove</button>
+            `;
+
+            botsList.appendChild(botDiv);
+            updateAIBotDisplay(botId);
+        }
+
+        function removeAIBot(botId) {
+            const botDiv = document.getElementById(botId);
+            if (botDiv) {
+                botDiv.remove();
+
+                // Add empty message if no bots left
+                const botsList = document.getElementById('aiBotsList');
+                if (botsList.children.length === 0) {
+                    botsList.innerHTML = '<p style="color: #ccc; font-size: 12px; margin: 5px 0;">No AI bots added. Click "Add AI Bot" to add computer players.</p>';
+                }
+            }
+        }
+
+        function updateAIBotDisplay(botId) {
+            const botDiv = document.getElementById(botId);
+            if (!botDiv) return;
+
+            const botSelect = botDiv.querySelector('.ai-bot-select');
+            const teamSelect = botDiv.querySelector('.ai-team-select');
+            const aggressionSelect = botDiv.querySelector('.ai-aggression-select');
+            const cube = botDiv.querySelector('.ai-bot-cube');
+
+            const botType = botSelect.value;
+            const teamIndex = parseInt(teamSelect.value);
+            const aggression = parseFloat(aggressionSelect.value);
+
+            // Update cube appearance
+            const teamColor = `#${TEAM_CONFIGS[teamIndex].color.toString(16).padStart(6, '0')}`;
+            const opacity = 0.3 + (aggression * 0.7);
+
+            cube.style.background = teamColor;
+            cube.style.opacity = opacity;
+            cube.title = `${AI_BOT_TYPES[botType].name} on ${TEAM_CONFIGS[teamIndex].displayName} team (${Math.round(aggression * 100)}% aggression)`;
+        }
+
+        function getAIBots() {
+            const botsList = document.getElementById('aiBotsList');
+            const botDivs = botsList.querySelectorAll('.ai-bot-item');
+            const aiBots = [];
+
+            botDivs.forEach(botDiv => {
+                const botSelect = botDiv.querySelector('.ai-bot-select');
+                const teamSelect = botDiv.querySelector('.ai-team-select');
+                const aggressionSelect = botDiv.querySelector('.ai-aggression-select');
+
+                const botType = botSelect.value;
+                const teamIndex = parseInt(teamSelect.value);
+                const aggression = parseFloat(aggressionSelect.value);
+
+                aiBots.push(new AIBot(botType, teamIndex, aggression));
+            });
+
+            return aiBots;
+        }
+
+        // Initialize AI bot display updates
+        document.addEventListener('change', function (e) {
+            if (e.target.classList.contains('ai-team-select') || e.target.classList.contains('ai-aggression-select')) {
+                const botDiv = e.target.closest('.ai-bot-item');
+                if (botDiv) {
+                    updateAIBotDisplay(botDiv.id);
+                }
+            }
+        });
+
         const sampleMap = {
             title: "Sample Map", author: "Game Creator", dimensions: [32, 20],
             stars: [[5, 5, 1], [10, 5, 2], [15, 5, 1], [5, 10, 4, 3], [10, 10, 1], [15, 10, 3, 2], [5, 15, 1], [10, 15, 2], [15, 15, 1]],
             lines: [[0, 1], [1, 2], [3, 4], [4, 5], [6, 7], [7, 8], [0, 3], [1, 4], [2, 5], [3, 6], [4, 7], [5, 8]]
         };
 
+        // Colyseus Game Client Manager
+        class ColyseusGameManager {
+            constructor(serverUrl = window.location.origin) {
+                this.serverUrl = serverUrl;
+                this.client = null;
+                this.room = null;
+                this.isConnected = false;
+                this.reconnectAttempts = 0;
+                this.maxReconnectAttempts = 5;
+                this.roomId = null;
+            }
+
+            async connectToRoom(roomId) {
+                try {
+                    console.log('Attempting to connect to game room:', roomId);
+                    
+                    this.roomId = roomId;
+                    this.client = new Colyseus.Client(this.serverUrl);
+                    
+                    // Try to join the specific room
+                    this.room = await this.client.joinById(roomId, {
+                        name: `Player ${Date.now().toString().slice(-6)}`
+                    });
+
+                    this.setupRoomListeners();
+                    this.isConnected = true;
+                    this.reconnectAttempts = 0;
+                    
+                    console.log('Successfully connected to game room');
+                    this.updateConnectionStatus(true);
+                    
+                    return true;
+                } catch (error) {
+                    console.error('Failed to connect to game room:', error);
+                    this.isConnected = false;
+                    this.updateConnectionStatus(false);
+                    
+                    if (error.message.includes('not found')) {
+                        alert('Game room not found. Please check the URL or create a new game.');
+                    } else {
+                        this.handleDisconnection();
+                    }
+                    
+                    return false;
+                }
+            }
+
+            setupRoomListeners() {
+                if (!this.room) return;
+
+                // Listen for state changes
+                this.room.onStateChange((state) => {
+                    console.log('Game state updated:', state);
+                    this.handleStateUpdate(state);
+                });
+
+                // Listen for game messages
+                this.room.onMessage('game_started', (data) => {
+                    console.log('Game started:', data);
+                    this.handleGameStart(data);
+                });
+
+                this.room.onMessage('game_action', (data) => {
+                    console.log('Game action received:', data);
+                    this.handleGameAction(data);
+                });
+
+                this.room.onMessage('time_update', (data) => {
+                    this.handleTimeUpdate(data);
+                });
+
+                this.room.onMessage('round_ended', (data) => {
+                    console.log('🏁 Round ended:', data);
+                    this.handleRoundEnd(data);
+                });
+
+                this.room.onMessage('round_started', (data) => {
+                    console.log('🚀 Round started:', data);
+                    this.handleRoundStart(data);
+                });
+
+                this.room.onMessage('game_ended', (data) => {
+                    console.log('🎉 Game ended:', data);
+                    this.handleGameEnd(data);
+                });
+
+                this.room.onMessage('player_joined', (data) => {
+                    console.log('👤 Player joined:', data);
+                });
+
+                this.room.onMessage('player_left', (data) => {
+                    console.log('👋 Player left:', data);
+                });
+
+                // Handle errors and disconnections
+                this.room.onError((code, message) => {
+                    console.error('Room error:', code, message);
+                    this.isConnected = false;
+                    this.handleDisconnection();
+                });
+
+                this.room.onLeave((code) => {
+                    console.log('Left room:', code);
+                    this.isConnected = false;
+                    this.updateConnectionStatus(false);
+                });
+            }
+
+            handleStateUpdate(state) {
+                // Update game state based on server state
+                if (currentGame) {
+                    console.log('Game state updated:', {
+                        gameState: state.gameState,
+                        currentRound: state.currentRound,
+                        timeRemaining: state.timeRemaining,
+                        playerCount: state.players ? Object.keys(state.players).length : 0
+                    });
+
+                    // Update UI elements
+                    this.updateGameUI(state);
+                }
+            }
+
+            handleGameStart(data) {
+                // Handle game start
+                if (currentGame) {
+                    console.log('🎮 Game started with server data:', data);
+                    
+                    // Update game configuration from server
+                    if (data.config) {
+                        // Apply server configuration to local game
+                        console.log('Applying server config:', data.config);
+                    }
+
+                    // Update UI to show game has started
+                    const planningElement = document.getElementById('planning');
+                    if (planningElement) {
+                        planningElement.style.display = 'none';
+                    }
+
+                    const roundElement = document.getElementById('round');
+                    if (roundElement) {
+                        roundElement.textContent = `Round #${data.currentRound}`;
+                    }
+                }
+            }
+
+            handleGameAction(data) {
+                // Handle actions from other players
+                if (currentGame && data.playerId !== this.room.sessionId) {
+                    console.log('🎯 Applying action from player:', data.playerId, data.action);
+                    
+                    // Apply the action to the local game state
+                    // This would integrate with the existing game action system
+                }
+            }
+
+            updateGameUI(state) {
+                // Update round display
+                const roundElement = document.getElementById('round');
+                if (roundElement && state.currentRound) {
+                    roundElement.textContent = `Round #${state.currentRound}`;
+                }
+
+                // Update timer display
+                if (state.timeRemaining !== undefined) {
+                    const seconds = Math.ceil(state.timeRemaining / 1000);
+                    const timerElement = document.getElementById('timer');
+                    if (timerElement) {
+                        const percentage = (state.timeRemaining / (30 * 1000)) * 100; // Assuming 30s rounds
+                        timerElement.style.width = `${percentage}%`;
+                        timerElement.style.display = state.gameState === 'playing' ? 'block' : 'none';
+                    }
+                }
+
+                // Update game header
+                const titleLine = document.getElementById('titleLine');
+                if (titleLine) {
+                    const stateText = state.gameState === 'playing' ? 'In Progress' : 
+                                     state.gameState === 'finished' ? 'Finished' : 'Waiting';
+                    titleLine.textContent = `Game Room: ${this.roomId} (${stateText})`;
+                }
+            }
+
+            handleTimeUpdate(data) {
+                // Update timer display smoothly
+                const seconds = Math.ceil(data.timeRemaining / 1000);
+                const timerElement = document.getElementById('timer');
+                if (timerElement) {
+                    const percentage = (data.timeRemaining / (30 * 1000)) * 100;
+                    timerElement.style.width = `${percentage}%`;
+                }
+
+                // Update round display
+                const roundElement = document.getElementById('round');
+                if (roundElement) {
+                    roundElement.textContent = `Round #${data.currentRound} (${seconds}s)`;
+                }
+            }
+
+            handleRoundEnd(data) {
+                const planningElement = document.getElementById('planning');
+                if (planningElement) {
+                    planningElement.textContent = `Round ${data.currentRound - 1} Complete! Next round starting...`;
+                    planningElement.style.display = 'block';
+                }
+            }
+
+            handleRoundStart(data) {
+                const planningElement = document.getElementById('planning');
+                if (planningElement) {
+                    planningElement.style.display = 'none';
+                }
+
+                const roundElement = document.getElementById('round');
+                if (roundElement) {
+                    roundElement.textContent = `Round #${data.currentRound}`;
+                }
+            }
+
+            handleGameEnd(data) {
+                const planningElement = document.getElementById('planning');
+                if (planningElement) {
+                    planningElement.textContent = `Game Complete! Final Round: ${data.finalRound}`;
+                    planningElement.style.display = 'block';
+                    planningElement.style.color = '#00ff00';
+                }
+
+                const timerElement = document.getElementById('timer');
+                if (timerElement) {
+                    timerElement.style.display = 'none';
+                }
+            }
+
+            sendGameAction(action) {
+                if (this.room && this.isConnected) {
+                    this.room.send('game_action', action);
+                }
+            }
+
+            joinTeam(teamIndex) {
+                if (this.room && this.isConnected) {
+                    this.room.send('join_team', { teamIndex });
+                }
+            }
+
+            handleDisconnection() {
+                this.updateConnectionStatus(false);
+
+                if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                    this.reconnectAttempts++;
+                    console.log(`Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+
+                    setTimeout(() => {
+                        if (this.roomId) {
+                            this.connectToRoom(this.roomId);
+                        }
+                    }, 2000 * this.reconnectAttempts);
+                } else {
+                    console.error('Max reconnection attempts reached');
+                    alert('Connection lost. Please refresh the page to reconnect.');
+                }
+            }
+
+            updateConnectionStatus(connected) {
+                // Update UI to show connection status
+                const statusElement = document.getElementById('connection-status');
+                if (statusElement) {
+                    statusElement.textContent = connected ? 'Connected' : 'Disconnected';
+                    statusElement.style.color = connected ? '#00ff00' : '#ff0000';
+                }
+            }
+
+            disconnect() {
+                if (this.room) {
+                    this.room.leave();
+                }
+                this.isConnected = false;
+            }
+        }
+
+        // Global game client manager
+        let gameClientManager = null;
+
+        // Check if we're in a game room (URL contains /game/)
+        function initializeMultiplayer() {
+            const path = window.location.pathname;
+            const roomIdMatch = path.match(/\/game\/(.+)/);
+            
+            if (roomIdMatch) {
+                const roomId = roomIdMatch[1];
+                console.log('Detected game room ID:', roomId);
+                
+                // Initialize the game client manager
+                gameClientManager = new ColyseusGameManager();
+                gameClientManager.connectToRoom(roomId);
+                
+                // Update the header with room info
+                const gameHeader = document.getElementById('gameHeader');
+                const titleLine = document.getElementById('titleLine');
+                if (gameHeader && titleLine) {
+                    titleLine.textContent = `Game Room: ${roomId}`;
+                    gameHeader.style.display = 'block';
+                }
+            }
+        }
+
         window.addEventListener('load', () => {
             document.getElementById('mapJson').placeholder = JSON.stringify(sampleMap, null, 2);
+
+            // Initialize AI bot list as empty
+            const aiBotsList = document.getElementById('aiBotsList');
+            if (aiBotsList) {
+                aiBotsList.innerHTML = '<p style="color: #ccc; font-size: 12px; margin: 5px 0;">No AI bots added. Click "Add AI Bot" to add computer players.</p>';
+            }
+
             currentGame = new Game();
             window.addEventListener('resize', () => {
                 if (currentGame && currentGame.app) { currentGame.app.renderer.resize(innerWidth, innerHeight); currentGame.setupCam(); }
             });
+
+            // Initialize multiplayer if in a game room
+            initializeMultiplayer();
         });
     </script>
 </body>
