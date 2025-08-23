@@ -808,11 +808,11 @@
             findEnemyTargets(game, gameState) {
                 return game.st
                     .map((star, index) => ({ star, index }))
-                    .filter(({ star }) => star.tm !== null && star.tm !== this.teamIndex && !star.destroyed)
+                    .filter(({ star }) => star.tm !== null && star.tm !== this.teamIndex && !star.destroyed && !star.hq && !star.pr && star.ty !== T.C && star.ty !== T.B)
                     .sort((a, b) => {
-                        // Prioritize by value: clusters > regular stars, avoid HQs
-                        const scoreA = (a.star.ty === T.C ? 10 : 1) - (a.star.hq ? 20 : 0);
-                        const scoreB = (b.star.ty === T.C ? 10 : 1) - (b.star.hq ? 20 : 0);
+                        // Prioritize by value: avoid HQs
+                        const scoreA = 1 - (a.star.hq ? 20 : 0);
+                        const scoreB = 1 - (b.star.hq ? 20 : 0);
                         return scoreB - scoreA;
                     })
                     .map(({ index }) => index);
@@ -840,7 +840,7 @@
 
                 return game.st
                     .map((star, index) => ({ star, index }))
-                    .filter(({ star }) => leadingTeams.includes(star.tm) && !star.hq)
+                    .filter(({ star }) => leadingTeams.includes(star.tm) && !star.hq && !star.pr && star.ty !== T.C && star.ty !== T.B)
                     .map(({ index }) => index);
             }
 
@@ -936,6 +936,10 @@
                     // Trigger UI updates to refresh steal counters
                     game.deferredScoreUpdate = true;
                     game.needsFullUIUpdate = true;
+                    
+                    // FIX 1: Bot black hole activation - trigger same checks as player moves
+                    game.deferredSpecialCheck = true;
+                    game.deferredNetworkAnalysis = true;
                 }
             }
 
@@ -1456,6 +1460,7 @@
                 this.fx = this.fx.filter(e => {
                     if (e.type === 'blackhole_destruction') {
                         // Handle blackhole destruction particles
+                        e.life -= dt * 0.02;
                         return e.life > 0;
                     } else {
                         // Handle regular effects
@@ -2498,6 +2503,7 @@
                             const totalConnected = allBlackholes.length;
                             if (totalConnected >= this.st[bh1].req && totalConnected >= this.st[bh2].req) {
                                 this.activateBlackholeNetwork(allBlackholes, team);
+                                this.needsStarRedraw = true;
                                 return;
                             }
                         }
@@ -2620,6 +2626,7 @@
                 this.changedTeams.clear();
                 for (let i = 0; i < this.tms.length; i++) this.changedTeams.add(i);
                 this.deferredNetworkAnalysis = true;
+                this.needsStarRedraw = true;
             }
 
 
@@ -2635,11 +2642,6 @@
 
                         if (connectedCount >= s.req) {
                             w[s.tm] = (w[s.tm] || 0) + 1;
-
-                            // Check for path overlaps (wormhole paths cannot overlap)
-                            if (this.checkWormholePathOverlap(i, s.tm)) {
-                                w[s.tm]--; // Remove this wormhole from count due to overlap
-                            }
                         }
                     }
                 }
@@ -3654,7 +3656,7 @@
             // Initialize multiplayer if in a game room
             initializeMultiplayer();
         });
-    </script>
+    </script>a
 </body>
 
 </html>
