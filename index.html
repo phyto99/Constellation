@@ -6,18 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Star Conquest Game</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+    <!-- Colyseus Client -->
+    <script src="https://unpkg.com/colyseus.js@0.15.24/dist/colyseus.js"></script>
     <!-- Buffer polyfill for browser compatibility -->
     <script>
         // Polyfill Buffer for browser compatibility
         if (typeof Buffer === 'undefined') {
             window.Buffer = {
-                from: function(data) {
+                from: function (data) {
                     if (typeof data === 'string') {
                         return new TextEncoder().encode(data);
                     }
                     return data;
                 },
-                isBuffer: function(obj) {
+                isBuffer: function (obj) {
                     return obj instanceof Uint8Array;
                 }
             };
@@ -389,7 +391,7 @@
     </div>
     <div class="header" id="gameHeader" style="display:none;">
         <div id="titleLine"></div>
-        <div class="info-line">Game ID: Placeholder.⠀ My team: <span id="teamColor">cyan</span>.⠀ Breakout room #1</div>
+        <div class="info-line">Game ID: Placeholder.⠀ My team: <span id="teamColor">cyan</span>.⠀ Status: <span id="connection-status" style="font-weight: bold;">Connecting...</span></div>
     </div>
     <div class="ui">
         <div id="round" class="round">Round #1</div>
@@ -806,11 +808,11 @@
             findEnemyTargets(game, gameState) {
                 return game.st
                     .map((star, index) => ({ star, index }))
-                    .filter(({ star }) => star.tm !== null && star.tm !== this.teamIndex && !star.destroyed)
+                    .filter(({ star }) => star.tm !== null && star.tm !== this.teamIndex && !star.destroyed && !star.hq && !star.pr && star.ty !== T.C && star.ty !== T.B)
                     .sort((a, b) => {
-                        // Prioritize by value: clusters > regular stars, avoid HQs
-                        const scoreA = (a.star.ty === T.C ? 10 : 1) - (a.star.hq ? 20 : 0);
-                        const scoreB = (b.star.ty === T.C ? 10 : 1) - (b.star.hq ? 20 : 0);
+                        // Prioritize by value: avoid HQs
+                        const scoreA = 1 - (a.star.hq ? 20 : 0);
+                        const scoreB = 1 - (b.star.hq ? 20 : 0);
                         return scoreB - scoreA;
                     })
                     .map(({ index }) => index);
@@ -838,7 +840,7 @@
 
                 return game.st
                     .map((star, index) => ({ star, index }))
-                    .filter(({ star }) => leadingTeams.includes(star.tm) && !star.hq)
+                    .filter(({ star }) => leadingTeams.includes(star.tm) && !star.hq && !star.pr && star.ty !== T.C && star.ty !== T.B)
                     .map(({ index }) => index);
             }
 
@@ -930,10 +932,14 @@
                     game.drawStar(targetStar, move.target);
                     game.renderConnectedLines(move.target);
                     game.changedTeams.add(this.teamIndex);
-                    
+
                     // Trigger UI updates to refresh steal counters
                     game.deferredScoreUpdate = true;
                     game.needsFullUIUpdate = true;
+                    
+                    // FIX 1: Bot black hole activation - trigger same checks as player moves
+                    game.deferredSpecialCheck = true;
+                    game.deferredNetworkAnalysis = true;
                 }
             }
 
@@ -1454,6 +1460,7 @@
                 this.fx = this.fx.filter(e => {
                     if (e.type === 'blackhole_destruction') {
                         // Handle blackhole destruction particles
+                        e.life -= dt * 0.02;
                         return e.life > 0;
                     } else {
                         // Handle regular effects
@@ -2496,6 +2503,7 @@
                             const totalConnected = allBlackholes.length;
                             if (totalConnected >= this.st[bh1].req && totalConnected >= this.st[bh2].req) {
                                 this.activateBlackholeNetwork(allBlackholes, team);
+                                this.needsStarRedraw = true;
                                 return;
                             }
                         }
@@ -2618,6 +2626,7 @@
                 this.changedTeams.clear();
                 for (let i = 0; i < this.tms.length; i++) this.changedTeams.add(i);
                 this.deferredNetworkAnalysis = true;
+                this.needsStarRedraw = true;
             }
 
 
@@ -2633,11 +2642,6 @@
 
                         if (connectedCount >= s.req) {
                             w[s.tm] = (w[s.tm] || 0) + 1;
-
-                            // Check for path overlaps (wormhole paths cannot overlap)
-                            if (this.checkWormholePathOverlap(i, s.tm)) {
-                                w[s.tm]--; // Remove this wormhole from count due to overlap
-                            }
                         }
                     }
                 }
@@ -2671,13 +2675,13 @@
                                 anyMovesMade = true;
                             }
                         });
-                        
+
                         // Force immediate UI update if any AI made moves
                         if (anyMovesMade) {
                             this.calcScores();
                             this.updateUI();
                         }
-                        
+
                         this.lastAIUpdate = currentTime;
                     }
                 }
@@ -3328,6 +3332,313 @@
             lines: [[0, 1], [1, 2], [3, 4], [4, 5], [6, 7], [7, 8], [0, 3], [1, 4], [2, 5], [3, 6], [4, 7], [5, 8]]
         };
 
+        // Colyseus Game Client Manager
+        class ColyseusGameManager {
+            constructor(serverUrl = window.location.origin) {
+                this.serverUrl = serverUrl;
+                this.client = null;
+                this.room = null;
+                this.isConnected = false;
+                this.reconnectAttempts = 0;
+                this.maxReconnectAttempts = 5;
+                this.roomId = null;
+            }
+
+            async connectToRoom(roomId) {
+                try {
+                    console.log('Attempting to connect to game room:', roomId);
+                    
+                    this.roomId = roomId;
+                    this.client = new Colyseus.Client(this.serverUrl);
+                    
+                    // Try to join the specific room
+                    this.room = await this.client.joinById(roomId, {
+                        name: `Player ${Date.now().toString().slice(-6)}`
+                    });
+
+                    this.setupRoomListeners();
+                    this.isConnected = true;
+                    this.reconnectAttempts = 0;
+                    
+                    console.log('Successfully connected to game room');
+                    this.updateConnectionStatus(true);
+                    
+                    return true;
+                } catch (error) {
+                    console.error('Failed to connect to game room:', error);
+                    this.isConnected = false;
+                    this.updateConnectionStatus(false);
+                    
+                    if (error.message.includes('not found')) {
+                        alert('Game room not found. Please check the URL or create a new game.');
+                    } else {
+                        this.handleDisconnection();
+                    }
+                    
+                    return false;
+                }
+            }
+
+            setupRoomListeners() {
+                if (!this.room) return;
+
+                // Listen for state changes
+                this.room.onStateChange((state) => {
+                    console.log('Game state updated:', state);
+                    this.handleStateUpdate(state);
+                });
+
+                // Listen for game messages
+                this.room.onMessage('game_started', (data) => {
+                    console.log('Game started:', data);
+                    this.handleGameStart(data);
+                });
+
+                this.room.onMessage('game_action', (data) => {
+                    console.log('Game action received:', data);
+                    this.handleGameAction(data);
+                });
+
+                this.room.onMessage('time_update', (data) => {
+                    this.handleTimeUpdate(data);
+                });
+
+                this.room.onMessage('round_ended', (data) => {
+                    console.log('🏁 Round ended:', data);
+                    this.handleRoundEnd(data);
+                });
+
+                this.room.onMessage('round_started', (data) => {
+                    console.log('🚀 Round started:', data);
+                    this.handleRoundStart(data);
+                });
+
+                this.room.onMessage('game_ended', (data) => {
+                    console.log('🎉 Game ended:', data);
+                    this.handleGameEnd(data);
+                });
+
+                this.room.onMessage('player_joined', (data) => {
+                    console.log('👤 Player joined:', data);
+                });
+
+                this.room.onMessage('player_left', (data) => {
+                    console.log('👋 Player left:', data);
+                });
+
+                // Handle errors and disconnections
+                this.room.onError((code, message) => {
+                    console.error('Room error:', code, message);
+                    this.isConnected = false;
+                    this.handleDisconnection();
+                });
+
+                this.room.onLeave((code) => {
+                    console.log('Left room:', code);
+                    this.isConnected = false;
+                    this.updateConnectionStatus(false);
+                });
+            }
+
+            handleStateUpdate(state) {
+                // Update game state based on server state
+                if (currentGame) {
+                    console.log('Game state updated:', {
+                        gameState: state.gameState,
+                        currentRound: state.currentRound,
+                        timeRemaining: state.timeRemaining,
+                        playerCount: state.players ? Object.keys(state.players).length : 0
+                    });
+
+                    // Update UI elements
+                    this.updateGameUI(state);
+                }
+            }
+
+            handleGameStart(data) {
+                // Handle game start
+                if (currentGame) {
+                    console.log('🎮 Game started with server data:', data);
+                    
+                    // Update game configuration from server
+                    if (data.config) {
+                        // Apply server configuration to local game
+                        console.log('Applying server config:', data.config);
+                    }
+
+                    // Update UI to show game has started
+                    const planningElement = document.getElementById('planning');
+                    if (planningElement) {
+                        planningElement.style.display = 'none';
+                    }
+
+                    const roundElement = document.getElementById('round');
+                    if (roundElement) {
+                        roundElement.textContent = `Round #${data.currentRound}`;
+                    }
+                }
+            }
+
+            handleGameAction(data) {
+                // Handle actions from other players
+                if (currentGame && data.playerId !== this.room.sessionId) {
+                    console.log('🎯 Applying action from player:', data.playerId, data.action);
+                    
+                    // Apply the action to the local game state
+                    // This would integrate with the existing game action system
+                }
+            }
+
+            updateGameUI(state) {
+                // Update round display
+                const roundElement = document.getElementById('round');
+                if (roundElement && state.currentRound) {
+                    roundElement.textContent = `Round #${state.currentRound}`;
+                }
+
+                // Update timer display
+                if (state.timeRemaining !== undefined) {
+                    const seconds = Math.ceil(state.timeRemaining / 1000);
+                    const timerElement = document.getElementById('timer');
+                    if (timerElement) {
+                        const percentage = (state.timeRemaining / (30 * 1000)) * 100; // Assuming 30s rounds
+                        timerElement.style.width = `${percentage}%`;
+                        timerElement.style.display = state.gameState === 'playing' ? 'block' : 'none';
+                    }
+                }
+
+                // Update game header
+                const titleLine = document.getElementById('titleLine');
+                if (titleLine) {
+                    const stateText = state.gameState === 'playing' ? 'In Progress' : 
+                                     state.gameState === 'finished' ? 'Finished' : 'Waiting';
+                    titleLine.textContent = `Game Room: ${this.roomId} (${stateText})`;
+                }
+            }
+
+            handleTimeUpdate(data) {
+                // Update timer display smoothly
+                const seconds = Math.ceil(data.timeRemaining / 1000);
+                const timerElement = document.getElementById('timer');
+                if (timerElement) {
+                    const percentage = (data.timeRemaining / (30 * 1000)) * 100;
+                    timerElement.style.width = `${percentage}%`;
+                }
+
+                // Update round display
+                const roundElement = document.getElementById('round');
+                if (roundElement) {
+                    roundElement.textContent = `Round #${data.currentRound} (${seconds}s)`;
+                }
+            }
+
+            handleRoundEnd(data) {
+                const planningElement = document.getElementById('planning');
+                if (planningElement) {
+                    planningElement.textContent = `Round ${data.currentRound - 1} Complete! Next round starting...`;
+                    planningElement.style.display = 'block';
+                }
+            }
+
+            handleRoundStart(data) {
+                const planningElement = document.getElementById('planning');
+                if (planningElement) {
+                    planningElement.style.display = 'none';
+                }
+
+                const roundElement = document.getElementById('round');
+                if (roundElement) {
+                    roundElement.textContent = `Round #${data.currentRound}`;
+                }
+            }
+
+            handleGameEnd(data) {
+                const planningElement = document.getElementById('planning');
+                if (planningElement) {
+                    planningElement.textContent = `Game Complete! Final Round: ${data.finalRound}`;
+                    planningElement.style.display = 'block';
+                    planningElement.style.color = '#00ff00';
+                }
+
+                const timerElement = document.getElementById('timer');
+                if (timerElement) {
+                    timerElement.style.display = 'none';
+                }
+            }
+
+            sendGameAction(action) {
+                if (this.room && this.isConnected) {
+                    this.room.send('game_action', action);
+                }
+            }
+
+            joinTeam(teamIndex) {
+                if (this.room && this.isConnected) {
+                    this.room.send('join_team', { teamIndex });
+                }
+            }
+
+            handleDisconnection() {
+                this.updateConnectionStatus(false);
+
+                if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                    this.reconnectAttempts++;
+                    console.log(`Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+
+                    setTimeout(() => {
+                        if (this.roomId) {
+                            this.connectToRoom(this.roomId);
+                        }
+                    }, 2000 * this.reconnectAttempts);
+                } else {
+                    console.error('Max reconnection attempts reached');
+                    alert('Connection lost. Please refresh the page to reconnect.');
+                }
+            }
+
+            updateConnectionStatus(connected) {
+                // Update UI to show connection status
+                const statusElement = document.getElementById('connection-status');
+                if (statusElement) {
+                    statusElement.textContent = connected ? 'Connected' : 'Disconnected';
+                    statusElement.style.color = connected ? '#00ff00' : '#ff0000';
+                }
+            }
+
+            disconnect() {
+                if (this.room) {
+                    this.room.leave();
+                }
+                this.isConnected = false;
+            }
+        }
+
+        // Global game client manager
+        let gameClientManager = null;
+
+        // Check if we're in a game room (URL contains /game/)
+        function initializeMultiplayer() {
+            const path = window.location.pathname;
+            const roomIdMatch = path.match(/\/game\/(.+)/);
+            
+            if (roomIdMatch) {
+                const roomId = roomIdMatch[1];
+                console.log('Detected game room ID:', roomId);
+                
+                // Initialize the game client manager
+                gameClientManager = new ColyseusGameManager();
+                gameClientManager.connectToRoom(roomId);
+                
+                // Update the header with room info
+                const gameHeader = document.getElementById('gameHeader');
+                const titleLine = document.getElementById('titleLine');
+                if (gameHeader && titleLine) {
+                    titleLine.textContent = `Game Room: ${roomId}`;
+                    gameHeader.style.display = 'block';
+                }
+            }
+        }
+
         window.addEventListener('load', () => {
             document.getElementById('mapJson').placeholder = JSON.stringify(sampleMap, null, 2);
 
@@ -3341,6 +3652,9 @@
             window.addEventListener('resize', () => {
                 if (currentGame && currentGame.app) { currentGame.app.renderer.resize(innerWidth, innerHeight); currentGame.setupCam(); }
             });
+
+            // Initialize multiplayer if in a game room
+            initializeMultiplayer();
         });
     </script>
 </body>
