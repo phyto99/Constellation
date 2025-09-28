@@ -391,7 +391,8 @@
     </div>
     <div class="header" id="gameHeader" style="display:none;">
         <div id="titleLine"></div>
-        <div class="info-line">Game ID: Placeholder.⠀ My team: <span id="teamColor">cyan</span>.⠀ Status: <span id="connection-status" style="font-weight: bold;">Connecting...</span></div>
+        <div class="info-line">Game ID: Placeholder.⠀ My team: <span id="teamColor">cyan</span>.⠀ Status: <span
+                id="connection-status" style="font-weight: bold;">Connecting...</span></div>
     </div>
     <div class="ui">
         <div id="round" class="round">Round #1</div>
@@ -568,39 +569,74 @@
 
         // AI Bot Class
         class AIBot {
-            constructor(type, teamIndex, aggression = 0.5) {
+            constructor(type, teamIndex, aggression = 5) {
                 this.type = type;
                 this.teamIndex = teamIndex;
-                this.aggression = Math.max(0, Math.min(1, aggression)); // 0-1 range
+                this.aggression = Math.max(1, Math.min(9, aggression)); // 1-9 range
                 this.config = AI_BOT_TYPES[type];
                 this.lastMoveTime = 0;
                 this.moveDelay = this.calculateMoveDelay();
                 this.hqPlaced = false;
-                this.specialStars = new Map(); // Cache special star locations
-                this.targetStars = new Set(); // Current targets
+                this.specialStars = new Map();
+                this.targetStars = new Set();
                 this.lastRoundMoves = 0;
+                this.stealsUsed = 0;
+                this.totalStealsThisRound = 0;
+                this.roundStartTime = Date.now();
+                this.strategicMemory = new Map(); // Remember important decisions
+                this.lastScorePosition = 0;
             }
 
             calculateMoveDelay() {
-                // Higher aggression = faster moves (lower delay)
-                // Low aggression (0.1) = 2000ms delay, High aggression (1.0) = 100ms delay
-                return 2000 - (this.aggression * 1900) + Math.random() * 200;
+                // Aggression 1-9 maps to delays: 3000ms to 300ms
+                const baseDelay = 3300 - (this.aggression * 300);
+                const randomVariation = Math.random() * 400 - 200;
+                return Math.max(200, baseDelay + randomVariation);
             }
 
             shouldMakeMove(currentTime, gameState) {
                 if (currentTime - this.lastMoveTime < this.moveDelay) return false;
 
-                // Near end of round, high aggression bots move more frequently
-                const timeLeft = gameState.t;
-                const roundLength = gameState.RT;
-                const timeRatio = timeLeft / roundLength;
+                // Check steal limits based on aggression and philosophy
+                const maxStealsPerRound = this.calculateMaxSteals(gameState);
+                if (this.totalStealsThisRound >= maxStealsPerRound) {
+                    // No more steals this round, but can still make regular moves
+                    return true;
+                }
 
-                if (timeRatio < 0.3 && this.aggression > 0.7) {
-                    // High aggression bots speed up at the end
-                    return currentTime - this.lastMoveTime > this.moveDelay * 0.3;
+                // Time-based urgency
+                const timeRatio = gameState.timeLeft / gameState.roundLength;
+                if (timeRatio < 0.2 && this.aggression >= 7) {
+                    return currentTime - this.lastMoveTime > this.moveDelay * 0.4;
                 }
 
                 return true;
+            }
+
+            calculateMaxSteals(gameState) {
+                // Simple rule-based steal limits that create emergent behavior
+                const baseLimit = Math.floor(this.aggression / 2); // 1-4 steals based on aggression
+
+                // Position-based adjustment
+                const position = gameState.myPosition;
+                let positionMultiplier = 1.0;
+
+                if (position === 1) positionMultiplier = 0.3; // Leaders steal less
+                else if (position === 2) positionMultiplier = 0.6;
+                else if (position >= 5) positionMultiplier = 1.4; // Desperate teams steal more
+
+                // Strategy-based multipliers
+                const strategyMultipliers = {
+                    'defensive': 0.4,    // HAL rarely steals
+                    'tactical': 0.8,     // Caesar steals strategically
+                    'aggressive': 1.2,   // Athena steals more but controlled
+                    'opportunistic': 1.0, // Robin Hood balanced
+                    'wormhole': 0.3,     // Einstein focuses on science
+                    'chaotic': 0.9       // Lorenz unpredictable but not excessive
+                };
+
+                const finalLimit = Math.floor(baseLimit * positionMultiplier * strategyMultipliers[this.config.strategy]);
+                return Math.max(0, Math.min(finalLimit, gameState.stealsLeft));
             }
 
             analyzeGameState(game) {
@@ -667,307 +703,361 @@
             }
 
             defensiveStrategy(game, gameState) {
-                // HAL: Focus on protecting existing territory and building strong connections
-                if (!this.hqPlaced && gameState.teamHQs.length < game.HM) {
-                    return this.findBestHQPlacement(game, gameState);
-                }
+                // HAL: Steady, logical, and dispassionate
+                const priorities = [
+                    { action: 'hq', weight: gameState.teamHQs.length < game.HM ? 100 : 0 },
+                    { action: 'connect', weight: 80 },
+                    { action: 'expand', weight: 60 },
+                    { action: 'steal', weight: gameState.myPosition >= 4 ? 20 : 5 }
+                ];
 
-                // Protect valuable stars
-                const vulnerableStars = this.findVulnerableStars(game, gameState);
-                if (vulnerableStars.length > 0) {
-                    return { type: 'capture', target: vulnerableStars[0] };
-                }
-
-                // Build defensive connections
-                return this.findDefensiveConnection(game, gameState);
+                return this.executeTopPriority(game, gameState, priorities);
             }
 
             tacticalStrategy(game, gameState) {
-                // Caesar: Calculated moves, focus on strategic positions
-                if (!this.hqPlaced && gameState.teamHQs.length < game.HM) {
-                    return this.findStrategicHQPlacement(game, gameState);
-                }
+                // Caesar: Thoughtful and tactical
+                const priorities = [
+                    { action: 'hq', weight: gameState.teamHQs.length < game.HM ? 100 : 0 },
+                    { action: 'steal', weight: this.totalStealsThisRound < this.calculateMaxSteals(gameState) ? 70 : 0 },
+                    { action: 'expand', weight: 65 },
+                    { action: 'connect', weight: 50 }
+                ];
 
-                // Target high-value strategic positions
-                const strategicTargets = this.findStrategicTargets(game, gameState);
-                if (strategicTargets.length > 0) {
-                    return { type: 'capture', target: strategicTargets[0] };
-                }
-
-                return this.findTacticalMove(game, gameState);
+                return this.executeTopPriority(game, gameState, priorities);
             }
 
             aggressiveStrategy(game, gameState) {
-                // Athena: Fast expansion and aggressive captures
-                const enemyTargets = this.findEnemyTargets(game, gameState);
-                if (enemyTargets.length > 0 && gameState.stealsLeft > 0) {
-                    return { type: 'steal', target: enemyTargets[0] };
-                }
+                // Athena: Hits hard and fast
+                const priorities = [
+                    { action: 'expand', weight: 90 },
+                    { action: 'steal', weight: this.totalStealsThisRound < this.calculateMaxSteals(gameState) ? 75 : 0 },
+                    { action: 'hq', weight: gameState.teamHQs.length < game.HM ? 85 : 0 },
+                    { action: 'connect', weight: 40 }
+                ];
 
-                // Rapid expansion
-                const expansionTargets = this.findExpansionTargets(game, gameState);
-                if (expansionTargets.length > 0) {
-                    return { type: 'capture', target: expansionTargets[0] };
-                }
-
-                return null;
+                return this.executeTopPriority(game, gameState, priorities);
             }
 
             opportunisticStrategy(game, gameState) {
-                // Robin Hood: Steal from leading teams, target valuable undefended stars
-                const richTargets = this.findRichTargets(game, gameState);
-                if (richTargets.length > 0 && gameState.stealsLeft > 0) {
-                    return { type: 'steal', target: richTargets[0] };
-                }
+                // Robin Hood: Steals from the rich
+                const priorities = [
+                    { action: 'steal', weight: this.totalStealsThisRound < this.calculateMaxSteals(gameState) ? 85 : 0 },
+                    { action: 'hq', weight: gameState.teamHQs.length < game.HM ? 100 : 0 },
+                    { action: 'expand', weight: 70 },
+                    { action: 'connect', weight: 45 }
+                ];
 
-                // Target undefended valuable stars
-                const valuableTargets = this.findValuableUndefendedStars(game, gameState);
-                if (valuableTargets.length > 0) {
-                    return { type: 'capture', target: valuableTargets[0] };
-                }
-
-                return null;
+                return this.executeTopPriority(game, gameState, priorities);
             }
 
             wormholeStrategy(game, gameState) {
-                // Einstein: Focus on wormhole connections and scientific approach
-                const wormholes = Array.from(this.specialStars.entries())
-                    .filter(([_, type]) => type === 'wormhole')
-                    .map(([index, _]) => index);
+                // Einstein: Loves to study worm-holes
+                const priorities = [
+                    { action: 'hq', weight: gameState.teamHQs.length < game.HM ? 100 : 0 },
+                    { action: 'wormhole', weight: 95 },
+                    { action: 'expand', weight: 55 },
+                    { action: 'connect', weight: 70 },
+                    { action: 'steal', weight: gameState.myPosition >= 5 ? 25 : 10 }
+                ];
 
-                if (wormholes.length >= 2) {
-                    // Try to connect wormholes
-                    const wormholeMove = this.findWormholeConnection(game, gameState, wormholes);
-                    if (wormholeMove) return wormholeMove;
-                }
-
-                // Fall back to tactical strategy
-                return this.tacticalStrategy(game, gameState);
+                return this.executeTopPriority(game, gameState, priorities);
             }
 
             chaoticStrategy(game, gameState) {
-                // Lorenz: Unpredictable moves, disrupt enemy plans
-                if (Math.random() < 0.3) {
-                    // 30% chance of random disruption
-                    const disruptionMove = this.findDisruptionMove(game, gameState);
-                    if (disruptionMove) return disruptionMove;
-                }
+                // Lorenz: An advocate of chaos
+                const chaosLevel = Math.sin(Date.now() * 0.001) * 0.5 + 0.5; // Oscillating chaos
 
-                // Mix of all strategies
-                const strategies = ['defensive', 'aggressive', 'opportunistic'];
-                const randomStrategy = strategies[Math.floor(Math.random() * strategies.length)];
+                const priorities = [
+                    { action: 'hq', weight: gameState.teamHQs.length < game.HM ? 100 : 0 },
+                    { action: 'steal', weight: 30 + chaosLevel * 50 },
+                    { action: 'expand', weight: 40 + chaosLevel * 40 },
+                    { action: 'connect', weight: 60 - chaosLevel * 30 },
+                    { action: 'disrupt', weight: chaosLevel * 80 }
+                ];
 
-                switch (randomStrategy) {
-                    case 'defensive': return this.defensiveStrategy(game, gameState);
-                    case 'aggressive': return this.aggressiveStrategy(game, gameState);
-                    case 'opportunistic': return this.opportunisticStrategy(game, gameState);
+                return this.executeTopPriority(game, gameState, priorities);
+            }
+
+            // Core decision engine - simple rules create emergent behavior
+            executeTopPriority(game, gameState, priorities) {
+                // Sort by weight and try each action
+                priorities.sort((a, b) => b.weight - a.weight);
+
+                for (const priority of priorities) {
+                    if (priority.weight <= 0) continue;
+
+                    const move = this.tryAction(game, gameState, priority.action);
+                    if (move) return move;
                 }
 
                 return null;
             }
 
-            // Helper methods for move finding
-            findBestHQPlacement(game, gameState) {
-                const neutralStars = game.st
+            tryAction(game, gameState, action) {
+                switch (action) {
+                    case 'hq': return this.tryPlaceHQ(game, gameState);
+                    case 'steal': return this.trySteal(game, gameState);
+                    case 'expand': return this.tryExpand(game, gameState);
+                    case 'connect': return this.tryConnect(game, gameState);
+                    case 'wormhole': return this.tryWormhole(game, gameState);
+                    case 'disrupt': return this.tryDisrupt(game, gameState);
+                    default: return null;
+                }
+            }
+
+            tryPlaceHQ(game, gameState) {
+                const candidates = game.st
                     .map((star, index) => ({ star, index }))
                     .filter(({ star }) => star.tm === null && !star.destroyed);
 
-                if (neutralStars.length === 0) return null;
+                if (candidates.length === 0) return null;
 
-                // Find star with good connectivity and strategic value
-                let bestStar = null;
+                // Score based on connections and star type
+                let best = null;
                 let bestScore = -1;
 
-                neutralStars.forEach(({ star, index }) => {
+                candidates.forEach(({ star, index }) => {
                     const connections = game.adjacencyCache[index] || [];
-                    const score = connections.length + (star.ty === T.C ? 5 : 0);
+                    let score = connections.length * 2;
+
+                    if (star.ty === T.C) score += 8; // Clusters are valuable
+                    if (star.ty === T.W) score += 5; // Wormholes are good
+
+                    // Prefer central positions
+                    const centerX = game.MW / 2, centerY = game.MH / 2;
+                    const distFromCenter = Math.sqrt((star.x - centerX) ** 2 + (star.y - centerY) ** 2);
+                    score += Math.max(0, 10 - distFromCenter);
 
                     if (score > bestScore) {
                         bestScore = score;
-                        bestStar = index;
+                        best = index;
                     }
                 });
 
-                return bestStar !== null ? { type: 'hq', target: bestStar } : null;
+                return best !== null ? { type: 'hq', target: best } : null;
             }
 
-            findVulnerableStars(game, gameState) {
-                return game.st
+            trySteal(game, gameState) {
+                if (this.totalStealsThisRound >= this.calculateMaxSteals(gameState)) return null;
+
+                // Find stealable targets based on strategy
+                const candidates = game.st
                     .map((star, index) => ({ star, index }))
-                    .filter(({ star }) => star.tm === this.teamIndex && !star.hq)
-                    .filter(({ index }) => {
-                        const connections = game.adjacencyCache[index] || [];
-                        const friendlyConnections = connections.filter(connIndex =>
-                            game.st[connIndex].tm === this.teamIndex
-                        );
-                        return friendlyConnections.length <= 1; // Vulnerable if few friendly connections
-                    })
-                    .map(({ index }) => index);
+                    .filter(({ star }) =>
+                        star.tm !== null &&
+                        star.tm !== this.teamIndex &&
+                        !star.hq &&
+                        !star.pr &&
+                        !star.destroyed &&
+                        star.ty !== T.C && // Cannot steal cluster stars
+                        star.ty !== T.B    // Cannot steal black holes
+                    );
+
+                if (candidates.length === 0) return null;
+
+                // Score targets based on strategy
+                let best = null;
+                let bestScore = -1;
+
+                candidates.forEach(({ star, index }) => {
+                    let score = 1;
+
+                    // Strategy-specific scoring
+                    if (this.config.strategy === 'opportunistic') {
+                        // Robin Hood: target rich teams
+                        const ownerScore = game.tms[star.tm].s;
+                        const maxScore = Math.max(...game.tms.map(t => t.s));
+                        score += (ownerScore / maxScore) * 10;
+                    } else if (this.config.strategy === 'aggressive') {
+                        // Athena: target valuable stars
+                        if (star.ty === T.C) score += 5;
+                        score += (game.adjacencyCache[index]?.length || 0);
+                    } else {
+                        // Others: basic scoring
+                        if (star.ty === T.C) score += 3;
+                    }
+
+                    // Avoid heavily defended stars
+                    const connections = game.adjacencyCache[index] || [];
+                    const enemyConnections = connections.filter(i => game.st[i].tm === star.tm);
+                    score -= enemyConnections.length * 0.5;
+
+                    if (score > bestScore) {
+                        bestScore = score;
+                        best = index;
+                    }
+                });
+
+                return best !== null ? { type: 'steal', target: best } : null;
             }
 
-            findEnemyTargets(game, gameState) {
-                return game.st
+            tryExpand(game, gameState) {
+                const candidates = game.st
                     .map((star, index) => ({ star, index }))
-                    .filter(({ star }) => star.tm !== null && star.tm !== this.teamIndex && !star.destroyed && !star.hq && !star.pr && star.ty !== T.C && star.ty !== T.B)
-                    .sort((a, b) => {
-                        // Prioritize by value: avoid HQs
-                        const scoreA = 1 - (a.star.hq ? 20 : 0);
-                        const scoreB = 1 - (b.star.hq ? 20 : 0);
-                        return scoreB - scoreA;
-                    })
-                    .map(({ index }) => index);
+                    .filter(({ star }) => star.tm === null && !star.destroyed);
+
+                if (candidates.length === 0) return null;
+
+                let best = null;
+                let bestScore = -1;
+
+                candidates.forEach(({ star, index }) => {
+                    let score = 1;
+
+                    // Base value
+                    if (star.ty === T.C) score += 10;
+                    if (star.ty === T.W) score += 6;
+
+                    // Connectivity bonus
+                    const connections = game.adjacencyCache[index] || [];
+                    score += connections.length;
+
+                    // Bonus for connecting to our territory
+                    const friendlyConnections = connections.filter(i => game.st[i].tm === this.teamIndex);
+                    score += friendlyConnections.length * 3;
+
+                    if (score > bestScore) {
+                        bestScore = score;
+                        best = index;
+                    }
+                });
+
+                return best !== null ? { type: 'capture', target: best } : null;
             }
 
-            findExpansionTargets(game, gameState) {
-                return game.st
+            tryConnect(game, gameState) {
+                // Find isolated friendly stars and connect them
+                const myStars = game.st
                     .map((star, index) => ({ star, index }))
-                    .filter(({ star }) => star.tm === null && !star.destroyed)
-                    .sort((a, b) => {
-                        // Prioritize clusters and well-connected stars
-                        const scoreA = (a.star.ty === T.C ? 10 : 1) + (game.adjacencyCache[a.index]?.length || 0);
-                        const scoreB = (b.star.ty === T.C ? 10 : 1) + (game.adjacencyCache[b.index]?.length || 0);
-                        return scoreB - scoreA;
-                    })
-                    .map(({ index }) => index);
-            }
+                    .filter(({ star }) => star.tm === this.teamIndex);
 
-            findRichTargets(game, gameState) {
-                // Target stars owned by leading teams
-                const teamScores = game.tms.map((team, index) => ({ team, index, score: team.s }))
-                    .sort((a, b) => b.score - a.score);
+                const isolated = myStars.filter(({ index }) => {
+                    const connections = game.adjacencyCache[index] || [];
+                    const friendlyConnections = connections.filter(i => game.st[i].tm === this.teamIndex);
+                    return friendlyConnections.length <= 1;
+                });
 
-                const leadingTeams = teamScores.slice(0, 2).map(t => t.index);
+                if (isolated.length === 0) return null;
 
-                return game.st
-                    .map((star, index) => ({ star, index }))
-                    .filter(({ star }) => leadingTeams.includes(star.tm) && !star.hq && !star.pr && star.ty !== T.C && star.ty !== T.B)
-                    .map(({ index }) => index);
-            }
+                // Find neutral stars that can connect isolated stars
+                for (const { index: isolatedIndex } of isolated) {
+                    const connections = game.adjacencyCache[isolatedIndex] || [];
+                    const neutralConnections = connections.filter(i =>
+                        game.st[i].tm === null && !game.st[i].destroyed
+                    );
 
-            findWormholeConnection(game, gameState, wormholes) {
-                // Try to create a path between wormholes
-                for (let i = 0; i < wormholes.length - 1; i++) {
-                    for (let j = i + 1; j < wormholes.length; j++) {
-                        const path = this.findPath(game, wormholes[i], wormholes[j]);
-                        if (path && path.length > 0) {
-                            const nextStar = path.find(starIndex =>
-                                game.st[starIndex].tm === null || game.st[starIndex].tm === this.teamIndex
-                            );
-                            if (nextStar !== undefined) {
-                                return { type: 'capture', target: nextStar };
-                            }
-                        }
+                    if (neutralConnections.length > 0) {
+                        return { type: 'capture', target: neutralConnections[0] };
                     }
                 }
+
                 return null;
             }
 
-            findPath(game, start, end) {
-                // Simple pathfinding using adjacency
-                const visited = new Set();
-                const queue = [[start]];
+            tryWormhole(game, gameState) {
+                // Einstein's specialty: target wormholes
+                const wormholes = game.st
+                    .map((star, index) => ({ star, index }))
+                    .filter(({ star }) => star.ty === T.W && (star.tm === null || star.tm === this.teamIndex));
 
-                while (queue.length > 0) {
-                    const path = queue.shift();
-                    const current = path[path.length - 1];
+                if (wormholes.length === 0) return null;
 
-                    if (current === end) return path.slice(1); // Exclude start
-                    if (visited.has(current)) continue;
-
-                    visited.add(current);
-                    const neighbors = game.adjacencyCache[current] || [];
-
-                    for (const neighbor of neighbors) {
-                        if (!visited.has(neighbor)) {
-                            queue.push([...path, neighbor]);
-                        }
-                    }
+                // Prefer unclaimed wormholes
+                const unclaimed = wormholes.filter(({ star }) => star.tm === null);
+                if (unclaimed.length > 0) {
+                    return { type: 'capture', target: unclaimed[0].index };
                 }
 
                 return null;
+            }
+
+            tryDisrupt(game, gameState) {
+                // Lorenz's chaos: disrupt enemy connections
+                const enemyStars = game.st
+                    .map((star, index) => ({ star, index }))
+                    .filter(({ star }) =>
+                        star.tm !== null &&
+                        star.tm !== this.teamIndex &&
+                        !star.hq &&
+                        !star.pr &&
+                        star.ty !== T.C && // Cannot steal cluster stars
+                        star.ty !== T.B    // Cannot steal black holes
+                    );
+
+                if (enemyStars.length === 0) return null;
+
+                // Find enemy stars with many connections (key positions)
+                let best = null;
+                let bestConnections = 0;
+
+                enemyStars.forEach(({ star, index }) => {
+                    const connections = game.adjacencyCache[index] || [];
+                    const enemyConnections = connections.filter(i => game.st[i].tm === star.tm);
+
+                    if (enemyConnections.length > bestConnections) {
+                        bestConnections = enemyConnections.length;
+                        best = index;
+                    }
+                });
+
+                return best !== null && this.totalStealsThisRound < this.calculateMaxSteals(gameState)
+                    ? { type: 'steal', target: best }
+                    : null;
             }
 
             executeMove(game, move) {
-                if (!move) return;
+                if (!move || !move.target) return false;
 
-                const targetStar = game.st[move.target];
-                if (!targetStar || targetStar.destroyed) return;
+                const star = game.st[move.target];
+                if (!star || star.destroyed) return false;
 
-                let moveExecuted = false;
-                let wasSteal = false;
+                // Check if we have moves left
+                if (game.tms[this.teamIndex].movesLeft <= 0) return false;
 
-                switch (move.type) {
-                    case 'capture':
-                        if (targetStar.tm === null) {
-                            targetStar.tm = this.teamIndex;
-                            moveExecuted = true;
-                        }
-                        break;
-                    case 'steal':
-                        if (targetStar.tm !== null && targetStar.tm !== this.teamIndex && game.tms[this.teamIndex].st > 0) {
-                            targetStar.tm = this.teamIndex;
-                            game.tms[this.teamIndex].st--;
-                            moveExecuted = true;
-                            wasSteal = true;
-                        }
-                        break;
-                    case 'hq':
-                        if (targetStar.tm === null && game.tms[this.teamIndex].h < game.HM) {
-                            targetStar.tm = this.teamIndex;
-                            targetStar.hq = true;
-                            game.tms[this.teamIndex].h++;
-                            this.hqPlaced = true;
-                            moveExecuted = true;
-                        }
-                        break;
+                // Execute the move
+                if (move.type === 'steal' && star.tm !== null && star.tm !== this.teamIndex) {
+                    // Stealing logic - validate all conditions
+                    if (star.hq || star.pr || game.tms[this.teamIndex].st <= 0) return false;
+                    if (star.ty === T.C || star.ty === T.B) return false; // Cannot steal clusters or black holes
+                    if (this.totalStealsThisRound >= this.calculateMaxSteals(this.analyzeGameState(game))) return false;
+
+                    game.tms[this.teamIndex].st--;
+                    game.tms[this.teamIndex].movesLeft--;
+                    star.tm = this.teamIndex;
+                    this.stealsUsed++;
+                    this.totalStealsThisRound++;
+
+                    // Add steal effect
+                    game.addFx(star.x * game.G, star.y * game.G, 'steal');
+                } else if (move.type === 'capture' && (star.tm === null || star.tm === this.teamIndex)) {
+                    // Regular capture
+                    if (star.tm === this.teamIndex) return false; // Already owned
+
+                    star.tm = this.teamIndex;
+                    game.tms[this.teamIndex].movesLeft--;
+                } else if (move.type === 'hq' && star.tm === null) {
+                    // HQ placement
+                    if (game.tms[this.teamIndex].h >= game.HM) return false;
+
+                    star.tm = this.teamIndex;
+                    star.hq = true;
+                    game.tms[this.teamIndex].h++;
+                    game.tms[this.teamIndex].movesLeft--;
+                    this.hqPlaced = true;
+                } else {
+                    return false;
                 }
 
-                if (moveExecuted) {
-                    // Add steal visual effect if this was a steal
-                    if (wasSteal) {
-                        game.addFx(targetStar.x * game.G, targetStar.y * game.G, 'steal');
-                    }
+                // Update visual immediately
+                game.drawStar(star, move.target);
+                game.renderConnectedLines(move.target);
+                game.markStarDirty(move.target);
+                game.changedTeams.add(this.teamIndex);
+                game.deferredScoreUpdate = true;
+                game.deferredSpecialCheck = true;
+                game.deferredNetworkAnalysis = true;
 
-                    // Update visuals immediately like player moves do
-                    game.drawStar(targetStar, move.target);
-                    game.renderConnectedLines(move.target);
-                    game.changedTeams.add(this.teamIndex);
-
-                    // Trigger UI updates to refresh steal counters
-                    game.deferredScoreUpdate = true;
-                    game.needsFullUIUpdate = true;
-                    
-                    // FIX 1: Bot black hole activation - trigger same checks as player moves
-                    game.deferredSpecialCheck = true;
-                    game.deferredNetworkAnalysis = true;
-                }
-            }
-
-            // Optimized strategy methods - consolidated to reduce redundancy
-            findStrategicHQPlacement(game, gameState) {
-                return this.findBestHQPlacement(game, gameState);
-            }
-
-            findStrategicTargets(game, gameState) {
-                return this.findExpansionTargets(game, gameState);
-            }
-
-            findTacticalMove(game, gameState) {
-                const targets = this.findExpansionTargets(game, gameState);
-                return targets.length > 0 ? { type: 'capture', target: targets[0] } : null;
-            }
-
-            findDefensiveConnection(game, gameState) {
-                return this.findTacticalMove(game, gameState);
-            }
-
-            findValuableUndefendedStars(game, gameState) {
-                return this.findExpansionTargets(game, gameState);
-            }
-
-            findDisruptionMove(game, gameState) {
-                const targets = this.findEnemyTargets(game, gameState);
-                return targets.length > 0 && gameState.stealsLeft > 0 ? { type: 'steal', target: targets[0] } : null;
+                return true;
             }
         }
 
@@ -977,7 +1067,7 @@
                     width: innerWidth,
                     height: innerHeight,
                     backgroundColor: 0,
-                    resolution: devicePixelRatio || 1,
+                    resolution: Math.max(2, devicePixelRatio || 1), // Higher resolution for crisp rendering
                     autoDensity: true,
                     antialias: true,
                     powerPreference: 'high-performance'
@@ -1474,12 +1564,28 @@
             }
 
             getText(tx, x, y, st) {
-                if (this.ti >= this.to.length) { const t = new PIXI.Text('', st); t.anchor.set(0.5); this.to.push(t); this.tc.addChild(t); }
-                const t = this.to[this.ti++]; Object.assign(t, { text: tx, x, y, style: st, visible: true }); return t;
+                if (this.ti >= this.to.length) {
+                    const t = new PIXI.Text('', st);
+                    t.anchor.set(0.5);
+                    t.resolution = Math.max(2, devicePixelRatio || 1); // Crisp text rendering
+                    this.to.push(t);
+                    this.tc.addChild(t);
+                }
+                const t = this.to[this.ti++];
+                Object.assign(t, { text: tx, x, y, style: st, visible: true });
+                return t;
             }
             getLineText(tx, x, y, st) {
-                if (this.lti >= this.lto.length) { const t = new PIXI.Text('', st); t.anchor.set(0.5); this.lto.push(t); this.llc.addChild(t); }
-                const t = this.lto[this.lti++]; Object.assign(t, { text: tx, x, y, style: st, visible: true }); return t;
+                if (this.lti >= this.lto.length) {
+                    const t = new PIXI.Text('', st);
+                    t.anchor.set(0.5);
+                    t.resolution = Math.max(2, devicePixelRatio || 1); // Crisp text rendering
+                    this.lto.push(t);
+                    this.llc.addChild(t);
+                }
+                const t = this.lto[this.lti++];
+                Object.assign(t, { text: tx, x, y, style: st, visible: true });
+                return t;
             }
             resetText() { this.to.forEach(t => t.visible = false); this.ti = 0; this.lto.forEach(t => t.visible = false); this.lti = 0; }
 
@@ -1729,6 +1835,12 @@
                     t.movesLeft = this.S;
                     // Mark all teams as changed for score recalculation
                     this.changedTeams.add(i);
+                });
+
+                // Reset AI bot counters for new round
+                this.aiBots.forEach(bot => {
+                    bot.totalStealsThisRound = 0;
+                    bot.roundStartTime = Date.now();
                 });
                 // Only recalculate scores if there are changes
                 if (this.changedTeams.size > 0) {
@@ -2633,7 +2745,8 @@
 
             // Optimized version using cached adjacency
             checkWormholeOptimized() {
-                const w = {};
+                // Find all activated wormholes (wormholes with enough connections)
+                const activatedWormholes = new Map(); // teamId -> [wormholeIndices]
 
                 for (let i = 0; i < this.st.length; i++) {
                     const s = this.st[i];
@@ -2641,19 +2754,68 @@
                         const connectedCount = this.countConnCached(i, s.tm);
 
                         if (connectedCount >= s.req) {
-                            w[s.tm] = (w[s.tm] || 0) + 1;
+                            if (!activatedWormholes.has(s.tm)) {
+                                activatedWormholes.set(s.tm, []);
+                            }
+                            activatedWormholes.get(s.tm).push(i);
                         }
                     }
                 }
 
-                // Find the first team that has connected 2+ wormholes
-                for (const [teamId, count] of Object.entries(w)) {
-                    if (count >= 2) {
-                        return parseInt(teamId); // Return the winning team ID
+                // Check each team that has 2+ activated wormholes
+                for (const [teamId, wormholes] of activatedWormholes) {
+                    if (wormholes.length >= 2) {
+                        // Check if any pair of wormholes are connected through the team's network
+                        if (this.areWormholesConnected(wormholes, parseInt(teamId))) {
+                            return parseInt(teamId); // Return the winning team ID
+                        }
                     }
                 }
 
                 return false; // No team has won yet
+            }
+
+            areWormholesConnected(wormholes, teamId) {
+                // Check if any pair of wormholes can reach each other through the team's network
+                for (let i = 0; i < wormholes.length - 1; i++) {
+                    for (let j = i + 1; j < wormholes.length; j++) {
+                        if (this.canReachThroughTeamNetwork(wormholes[i], wormholes[j], teamId)) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+
+            canReachThroughTeamNetwork(startWormhole, endWormhole, teamId) {
+                // BFS to find if there's a path between wormholes through team's network
+                const visited = new Set();
+                const queue = [startWormhole];
+                visited.add(startWormhole);
+
+                while (queue.length > 0) {
+                    const current = queue.shift();
+
+                    if (current === endWormhole) {
+                        return true; // Found a path!
+                    }
+
+                    // Check all connected stars
+                    const connections = this.adjacencyCache[current] || [];
+                    for (const neighborIndex of connections) {
+                        const neighbor = this.st[neighborIndex];
+
+                        // Can traverse through stars owned by the same team
+                        if (!visited.has(neighborIndex) &&
+                            neighbor.tm === teamId &&
+                            !neighbor.destroyed) {
+                            visited.add(neighborIndex);
+                            queue.push(neighborIndex);
+                        }
+                    }
+                }
+
+                return false; // No path found
             }
 
             // Check if wormhole paths overlap (wormhole paths cannot overlap)
@@ -2904,7 +3066,7 @@
                     }
 
                     // Priority 2: Render line text for non-destroyed lines
-                    const txt = this.getLineText(l.dist.toString(), l.cx + Math.cos(l.pang) * 5, l.cy + Math.sin(l.pang) * 5, { fontSize: 10, fill: 0xFFFFFF, fontFamily: 'Arial' });
+                    const txt = this.getLineText(l.dist.toString(), l.cx + Math.cos(l.pang) * 5, l.cy + Math.sin(l.pang) * 5, { fontSize: 10, fill: 0xFFFFFF, fontFamily: 'Arial', fontWeight: 'bold' });
                     txt.rotation = Math.abs(l.ang) > Math.PI / 2 ? l.ang + Math.PI : l.ang;
 
                     // Priority 3: Check if this line is animated (HQ or protected)
@@ -3107,14 +3269,21 @@
                     this.starGfx.moveTo(x + xSize, y - xSize).lineTo(x - xSize, y + xSize);
                 }
 
-                // Draw text for special stars
+                // Draw text for special stars with crisp rendering
                 if (s.ty >= T.B) {
                     let rt = this.p ? (s.min_value !== undefined && s.max_value !== undefined ?
                         (s.min_value === s.max_value ? s.min_value.toString() : `${s.min_value}-${s.max_value}`) :
                         (s.ty === T.B ? '2-4' : '2-3')) : (s.req ? s.req.toString() : null);
                     if (rt) {
                         const tc = s.ty === T.B ? 0xFFFFFF : 0x000000;
-                        this.getText(rt, x, y, { fontSize: this.G / 1.4, fill: tc, fontFamily: 'Arial', fontWeight: 'bold' });
+                        this.getText(rt, x, y, {
+                            fontSize: Math.round(this.G / 1.4),
+                            fill: tc,
+                            fontFamily: 'Arial',
+                            fontWeight: 'bold',
+                            resolution: 2, // Higher resolution for crisp text
+                            antialias: true
+                        });
                     }
                 }
             }
@@ -3247,11 +3416,15 @@
             ).join('')}
                 </select>
                 <select class="ai-aggression-select">
-                    <option value="0.1">Very Low (10%)</option>
-                    <option value="0.3">Low (30%)</option>
-                    <option value="0.5" selected>Medium (50%)</option>
-                    <option value="0.7">High (70%)</option>
-                    <option value="0.9">Very High (90%)</option>
+                    <option value="1">Level 1 - Very Passive</option>
+                    <option value="2">Level 2 - Passive</option>
+                    <option value="3">Level 3 - Conservative</option>
+                    <option value="4">Level 4 - Cautious</option>
+                    <option value="5" selected>Level 5 - Balanced</option>
+                    <option value="6">Level 6 - Active</option>
+                    <option value="7">Level 7 - Aggressive</option>
+                    <option value="8">Level 8 - Very Aggressive</option>
+                    <option value="9">Level 9 - Maximum Aggression</option>
                 </select>
                 <div class="ai-bot-cube" style="background: #00FFFF; opacity: 0.8;"></div>
                 <button class="remove-bot-btn" onclick="removeAIBot('${botId}')">Remove</button>
@@ -3285,15 +3458,15 @@
 
             const botType = botSelect.value;
             const teamIndex = parseInt(teamSelect.value);
-            const aggression = parseFloat(aggressionSelect.value);
+            const aggression = parseInt(aggressionSelect.value);
 
             // Update cube appearance
             const teamColor = `#${TEAM_CONFIGS[teamIndex].color.toString(16).padStart(6, '0')}`;
-            const opacity = 0.3 + (aggression * 0.7);
+            const opacity = 0.3 + ((aggression - 1) / 8 * 0.7); // Scale 1-9 to 0.3-1.0
 
             cube.style.background = teamColor;
             cube.style.opacity = opacity;
-            cube.title = `${AI_BOT_TYPES[botType].name} on ${TEAM_CONFIGS[teamIndex].displayName} team (${Math.round(aggression * 100)}% aggression)`;
+            cube.title = `${AI_BOT_TYPES[botType].name} on ${TEAM_CONFIGS[teamIndex].displayName} team (Level ${aggression} aggression)`;
         }
 
         function getAIBots() {
@@ -3308,7 +3481,7 @@
 
                 const botType = botSelect.value;
                 const teamIndex = parseInt(teamSelect.value);
-                const aggression = parseFloat(aggressionSelect.value);
+                const aggression = parseInt(aggressionSelect.value);
 
                 aiBots.push(new AIBot(botType, teamIndex, aggression));
             });
@@ -3347,10 +3520,10 @@
             async connectToRoom(roomId) {
                 try {
                     console.log('Attempting to connect to game room:', roomId);
-                    
+
                     this.roomId = roomId;
                     this.client = new Colyseus.Client(this.serverUrl);
-                    
+
                     // Try to join the specific room
                     this.room = await this.client.joinById(roomId, {
                         name: `Player ${Date.now().toString().slice(-6)}`
@@ -3359,22 +3532,22 @@
                     this.setupRoomListeners();
                     this.isConnected = true;
                     this.reconnectAttempts = 0;
-                    
+
                     console.log('Successfully connected to game room');
                     this.updateConnectionStatus(true);
-                    
+
                     return true;
                 } catch (error) {
                     console.error('Failed to connect to game room:', error);
                     this.isConnected = false;
                     this.updateConnectionStatus(false);
-                    
+
                     if (error.message.includes('not found')) {
                         alert('Game room not found. Please check the URL or create a new game.');
                     } else {
                         this.handleDisconnection();
                     }
-                    
+
                     return false;
                 }
             }
@@ -3459,7 +3632,7 @@
                 // Handle game start
                 if (currentGame) {
                     console.log('🎮 Game started with server data:', data);
-                    
+
                     // Update game configuration from server
                     if (data.config) {
                         // Apply server configuration to local game
@@ -3483,7 +3656,7 @@
                 // Handle actions from other players
                 if (currentGame && data.playerId !== this.room.sessionId) {
                     console.log('🎯 Applying action from player:', data.playerId, data.action);
-                    
+
                     // Apply the action to the local game state
                     // This would integrate with the existing game action system
                 }
@@ -3510,8 +3683,8 @@
                 // Update game header
                 const titleLine = document.getElementById('titleLine');
                 if (titleLine) {
-                    const stateText = state.gameState === 'playing' ? 'In Progress' : 
-                                     state.gameState === 'finished' ? 'Finished' : 'Waiting';
+                    const stateText = state.gameState === 'playing' ? 'In Progress' :
+                        state.gameState === 'finished' ? 'Finished' : 'Waiting';
                     titleLine.textContent = `Game Room: ${this.roomId} (${stateText})`;
                 }
             }
@@ -3620,15 +3793,15 @@
         function initializeMultiplayer() {
             const path = window.location.pathname;
             const roomIdMatch = path.match(/\/game\/(.+)/);
-            
+
             if (roomIdMatch) {
                 const roomId = roomIdMatch[1];
                 console.log('Detected game room ID:', roomId);
-                
+
                 // Initialize the game client manager
                 gameClientManager = new ColyseusGameManager();
                 gameClientManager.connectToRoom(roomId);
-                
+
                 // Update the header with room info
                 const gameHeader = document.getElementById('gameHeader');
                 const titleLine = document.getElementById('titleLine');
