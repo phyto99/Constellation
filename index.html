@@ -424,8 +424,8 @@
             <input type="number" id="countdownLength" value="5" min="3" max="30">
         </div>
         <div class="setting-group">
-            <label for="steals">Steals per Round:</label>
-            <input type="number" id="steals" value="15" min="0" max="30">
+            <label for="steals">Total Steals (Game):</label>
+            <input type="number" id="steals" value="50" min="0" max="100">
         </div>
         <div class="setting-group">
             <label for="headquarters">Max Headquarters per Team:</label>
@@ -625,14 +625,14 @@
                 else if (position === 2) positionMultiplier = 0.6;
                 else if (position >= 5) positionMultiplier = 1.4; // Desperate teams steal more
 
-                // Strategy-based multipliers
+                // Strategy-based multipliers - MORE AGGRESSIVE
                 const strategyMultipliers = {
-                    'defensive': 0.4,    // HAL rarely steals
-                    'tactical': 0.8,     // Caesar steals strategically
-                    'aggressive': 1.2,   // Athena steals more but controlled
-                    'opportunistic': 1.0, // Robin Hood balanced
-                    'wormhole': 0.3,     // Einstein focuses on science
-                    'chaotic': 0.9       // Lorenz unpredictable but not excessive
+                    'defensive': 0.6,    // HAL still conservative but not useless
+                    'tactical': 1.2,     // Caesar steals strategically
+                    'aggressive': 2.0,   // Athena MAXIMUM stealing
+                    'opportunistic': 1.5, // Robin Hood aggressive but smart
+                    'wormhole': 0.8,     // Einstein steals for science
+                    'chaotic': 1.3       // Lorenz chaotic stealing
                 };
 
                 const finalLimit = Math.floor(baseLimit * positionMultiplier * strategyMultipliers[this.config.strategy]);
@@ -653,14 +653,26 @@
                 const teamStars = game.st.filter(s => s.tm === this.teamIndex);
                 const teamHQs = teamStars.filter(s => s.hq);
 
+                // Calculate team rankings
+                const allScores = game.tms.map((t, i) => ({ score: t.s, index: i }))
+                    .sort((a, b) => b.score - a.score);
+                const myPosition = allScores.findIndex(t => t.index === this.teamIndex) + 1;
+
                 return {
+                    game,
                     team,
                     teamStars,
                     teamHQs,
                     multipliers: MULTIPLIERS,
                     timeLeft: game.t,
                     roundLength: game.RT,
-                    stealsLeft: team.st
+                    stealsLeft: team.st,
+                    myPosition,
+                    allScores,
+                    roundProgress: 1 - (game.t / game.RT),
+                    currentRound: game.r,
+                    totalRounds: game.TR,
+                    gameProgress: game.r / game.TR // 0.0 to 1.0
                 };
             }
 
@@ -703,76 +715,138 @@
             }
 
             defensiveStrategy(game, gameState) {
-                // HAL: Steady, logical, and dispassionate
+                // HAL: Steady, logical, and dispassionate - EXTREME DEFENSE
+                const m = gameState.multipliers;
+                const desperation = Math.max(0, gameState.myPosition - 2);
+                const stealsLeft = gameState.stealsLeft;
+                const stealScarcity = stealsLeft <= 3 ? 2 : (stealsLeft <= 7 ? 1.5 : 1);
+                
+                // Round-based modifiers
+                const gameProgress = gameState.gameProgress;
+                const lateGameUrgency = gameProgress > 0.7 ? 1.5 : 1; // More urgent in late game
+                const earlyGameCaution = gameProgress < 0.3 ? 1.2 : 1; // More cautious early
+
                 const priorities = [
-                    { action: 'hq', weight: gameState.teamHQs.length < game.HM ? 100 : 0 },
-                    { action: 'connect', weight: 80 },
-                    { action: 'expand', weight: 60 },
-                    { action: 'steal', weight: gameState.myPosition >= 4 ? 20 : 5 }
+                    { action: 'hq', weight: gameState.teamHQs.length < game.HM ? 200 * earlyGameCaution : 0 },
+                    { action: 'connect', weight: (150 + (m.hq > 0 ? m.hq * 20 : 0) + (stealsLeft <= 5 ? 50 : 0)) * earlyGameCaution },
+                    { action: 'expand', weight: (Math.max(10, 80 - desperation * 10) + (stealsLeft <= 3 ? 40 : 0)) * (gameProgress < 0.5 ? 1.3 : 0.8) },
+                    { action: 'steal', weight: desperation > 3 && stealsLeft > 2 ? (desperation * 15 * lateGameUrgency) / stealScarcity : 0 }
                 ];
 
                 return this.executeTopPriority(game, gameState, priorities);
             }
 
             tacticalStrategy(game, gameState) {
-                // Caesar: Thoughtful and tactical
+                // Caesar: Thoughtful and tactical - CALCULATED STRATEGY
+                const m = gameState.multipliers;
+                const roundProgress = gameState.roundProgress;
+                const isWinning = gameState.myPosition <= 2;
+                const stealsLeft = gameState.stealsLeft;
+                
+                // Round-based tactical adjustments
+                const gameProgress = gameState.gameProgress;
+                const midGameBonus = gameProgress > 0.3 && gameProgress < 0.7 ? 1.3 : 1; // Peak tactical phase
+                const endGameDesperation = gameProgress > 0.8 ? 2.0 : 1; // Desperate tactics late game
+
                 const priorities = [
-                    { action: 'hq', weight: gameState.teamHQs.length < game.HM ? 100 : 0 },
-                    { action: 'steal', weight: this.totalStealsThisRound < this.calculateMaxSteals(gameState) ? 70 : 0 },
-                    { action: 'expand', weight: 65 },
-                    { action: 'connect', weight: 50 }
+                    { action: 'hq', weight: gameState.teamHQs.length < game.HM ? 180 * (gameProgress < 0.4 ? 1.2 : 0.8) : 0 },
+                    {
+                        action: 'steal', weight: this.totalStealsThisRound < this.calculateMaxSteals(gameState) && stealsLeft > 1 ?
+                            ((isWinning ? 40 : 120) + (roundProgress > 0.7 ? 60 : 0)) * (stealsLeft <= 3 ? 0.5 : 1) * midGameBonus * endGameDesperation : 0
+                    },
+                    { action: 'expand', weight: (100 + (m.count > 0 ? m.count * 0.2 : -20) + (stealsLeft <= 2 ? 50 : 0)) * (gameProgress < 0.6 ? 1.2 : 0.9) },
+                    { action: 'connect', weight: (90 + (m.distance > 0 ? m.distance * 10 : -30)) * midGameBonus }
                 ];
 
                 return this.executeTopPriority(game, gameState, priorities);
             }
 
             aggressiveStrategy(game, gameState) {
-                // Athena: Hits hard and fast
+                // Athena: Hits hard and fast - MAXIMUM AGGRESSION
+                const timeLeft = gameState.timeLeft / gameState.roundLength;
+                const behindMultiplier = Math.max(1, gameState.myPosition - 1);
+                const stealsLeft = gameState.stealsLeft;
+                const stealUrgency = stealsLeft <= 5 ? 1.5 : 1;
+                
+                // Round-based aggression scaling
+                const gameProgress = gameState.gameProgress;
+                const earlyGameRush = gameProgress < 0.4 ? 1.4 : 1; // Extra aggressive early
+                const finalRoundsRage = gameProgress > 0.85 ? 2.5 : 1; // MAXIMUM aggression in final rounds
+
                 const priorities = [
-                    { action: 'expand', weight: 90 },
-                    { action: 'steal', weight: this.totalStealsThisRound < this.calculateMaxSteals(gameState) ? 75 : 0 },
-                    { action: 'hq', weight: gameState.teamHQs.length < game.HM ? 85 : 0 },
-                    { action: 'connect', weight: 40 }
+                    {
+                        action: 'steal', weight: this.totalStealsThisRound < this.calculateMaxSteals(gameState) && stealsLeft > 0 ?
+                            (150 + behindMultiplier * 30 + (timeLeft < 0.3 ? 100 : 0)) * stealUrgency * earlyGameRush * finalRoundsRage : 0
+                    },
+                    { action: 'hq', weight: gameState.teamHQs.length < game.HM ? 140 * (gameProgress < 0.3 ? 1.1 : 0.9) : 0 },
+                    { action: 'expand', weight: (120 + (timeLeft > 0.7 ? 50 : 0) + (stealsLeft === 0 ? 80 : 0)) * earlyGameRush },
+                    { action: 'connect', weight: 30 + (stealsLeft <= 2 ? 40 : 0) + (gameProgress > 0.8 ? 30 : 0) } // Connect more in late game
                 ];
 
                 return this.executeTopPriority(game, gameState, priorities);
             }
 
             opportunisticStrategy(game, gameState) {
-                // Robin Hood: Steals from the rich
+                // Robin Hood: Steals from the rich - SMART OPPORTUNISM
+                const leadingTeamScore = gameState.allScores[0].score;
+                const myScore = gameState.team.s;
+                const gapToLeader = Math.max(0, leadingTeamScore - myScore);
+                const desperationLevel = Math.floor(gapToLeader / 1000);
+                const stealsLeft = gameState.stealsLeft;
+                const stealEfficiency = stealsLeft <= 3 ? 2 : 1;
+                
+                // Round-based opportunism
+                const gameProgress = gameState.gameProgress;
+                const midGameOpportunism = gameProgress > 0.25 && gameProgress < 0.75 ? 1.3 : 1; // Peak opportunity window
+                const lateGameDesperation = gameProgress > 0.8 ? 1.8 : 1; // More desperate late game
+
                 const priorities = [
-                    { action: 'steal', weight: this.totalStealsThisRound < this.calculateMaxSteals(gameState) ? 85 : 0 },
-                    { action: 'hq', weight: gameState.teamHQs.length < game.HM ? 100 : 0 },
-                    { action: 'expand', weight: 70 },
-                    { action: 'connect', weight: 45 }
+                    {
+                        action: 'steal', weight: this.totalStealsThisRound < this.calculateMaxSteals(gameState) && stealsLeft > 0 ?
+                            ((130 + desperationLevel * 20) / stealEfficiency) * midGameOpportunism * lateGameDesperation : 0
+                    },
+                    { action: 'hq', weight: gameState.teamHQs.length < game.HM ? 120 * (gameProgress < 0.4 ? 1.1 : 0.9) : 0 },
+                    { action: 'expand', weight: (80 - desperationLevel * 5 + (stealsLeft <= 2 ? 60 : 0)) * (gameProgress < 0.5 ? 1.2 : 0.8) },
+                    { action: 'connect', weight: (60 + (stealsLeft <= 3 ? 40 : 0)) * (gameProgress > 0.6 ? 1.2 : 1) }
                 ];
 
                 return this.executeTopPriority(game, gameState, priorities);
             }
 
             wormholeStrategy(game, gameState) {
-                // Einstein: Loves to study worm-holes
+                // Einstein: Loves to study worm-holes - SCIENTIFIC FOCUS
+                const myWormholes = gameState.teamStars.filter(s => s.ty === T.W).length;
+                const wormholeBonus = myWormholes * 50; // Gets more focused with each wormhole
+
                 const priorities = [
-                    { action: 'hq', weight: gameState.teamHQs.length < game.HM ? 100 : 0 },
-                    { action: 'wormhole', weight: 95 },
-                    { action: 'expand', weight: 55 },
-                    { action: 'connect', weight: 70 },
-                    { action: 'steal', weight: gameState.myPosition >= 5 ? 25 : 10 }
+                    { action: 'hq', weight: gameState.teamHQs.length < game.HM ? 130 : 0 },
+                    { action: 'wormhole', weight: 200 + wormholeBonus }, // OBSESSED with wormholes
+                    {
+                        action: 'steal', weight: this.totalStealsThisRound < this.calculateMaxSteals(gameState) ?
+                            (myWormholes >= 1 ? 90 : 40) : 0
+                    }, // Steals more once has wormholes
+                    { action: 'connect', weight: 100 + wormholeBonus }, // Connects wormholes
+                    { action: 'expand', weight: 70 }
                 ];
 
                 return this.executeTopPriority(game, gameState, priorities);
             }
 
             chaoticStrategy(game, gameState) {
-                // Lorenz: An advocate of chaos
-                const chaosLevel = Math.sin(Date.now() * 0.001) * 0.5 + 0.5; // Oscillating chaos
+                // Lorenz: An advocate of chaos - UNPREDICTABLE DISRUPTION
+                const chaosLevel = Math.sin(Date.now() * 0.003) * 0.5 + 0.5; // Faster oscillation
+                const roundChaos = Math.sin(gameState.roundProgress * Math.PI * 4) * 0.3 + 0.7;
+                const totalChaos = chaosLevel * roundChaos;
 
                 const priorities = [
-                    { action: 'hq', weight: gameState.teamHQs.length < game.HM ? 100 : 0 },
-                    { action: 'steal', weight: 30 + chaosLevel * 50 },
-                    { action: 'expand', weight: 40 + chaosLevel * 40 },
-                    { action: 'connect', weight: 60 - chaosLevel * 30 },
-                    { action: 'disrupt', weight: chaosLevel * 80 }
+                    { action: 'hq', weight: gameState.teamHQs.length < game.HM ? 110 : 0 },
+                    {
+                        action: 'steal', weight: this.totalStealsThisRound < this.calculateMaxSteals(gameState) ?
+                            60 + totalChaos * 100 : 0
+                    }, // Chaotic stealing
+                    { action: 'disrupt', weight: totalChaos * 150 }, // LOVES disruption
+                    { action: 'expand', weight: 50 + (1 - totalChaos) * 80 }, // Expands when calm
+                    { action: 'connect', weight: 80 - totalChaos * 50 } // Connects when calm
                 ];
 
                 return this.executeTopPriority(game, gameState, priorities);
@@ -839,8 +913,9 @@
 
             trySteal(game, gameState) {
                 if (this.totalStealsThisRound >= this.calculateMaxSteals(gameState)) return null;
+                if (gameState.stealsLeft <= 0) return null;
 
-                // Find stealable targets based on strategy
+                // Find stealable targets
                 const candidates = game.st
                     .map((star, index) => ({ star, index }))
                     .filter(({ star }) =>
@@ -855,40 +930,84 @@
 
                 if (candidates.length === 0) return null;
 
-                // Score targets based on strategy
+                // Calculate steal threshold based on remaining steals
+                const stealThreshold = this.calculateStealThreshold(gameState);
+
+                // Find best steal that meets threshold
                 let best = null;
-                let bestScore = -1;
+                let bestValue = -1;
 
                 candidates.forEach(({ star, index }) => {
-                    let score = 1;
+                    const stealValue = this.calculateStealValue(game, gameState, index, star);
 
-                    // Strategy-specific scoring
-                    if (this.config.strategy === 'opportunistic') {
-                        // Robin Hood: target rich teams
-                        const ownerScore = game.tms[star.tm].s;
-                        const maxScore = Math.max(...game.tms.map(t => t.s));
-                        score += (ownerScore / maxScore) * 10;
-                    } else if (this.config.strategy === 'aggressive') {
-                        // Athena: target valuable stars
-                        if (star.ty === T.C) score += 5;
-                        score += (game.adjacencyCache[index]?.length || 0);
-                    } else {
-                        // Others: basic scoring
-                        if (star.ty === T.C) score += 3;
-                    }
-
-                    // Avoid heavily defended stars
-                    const connections = game.adjacencyCache[index] || [];
-                    const enemyConnections = connections.filter(i => game.st[i].tm === star.tm);
-                    score -= enemyConnections.length * 0.5;
-
-                    if (score > bestScore) {
-                        bestScore = score;
+                    if (stealValue >= stealThreshold && stealValue > bestValue) {
+                        bestValue = stealValue;
                         best = index;
                     }
                 });
 
                 return best !== null ? { type: 'steal', target: best } : null;
+            }
+
+            calculateStealThreshold(gameState) {
+                // Modular threshold based on remaining steals AND rounds
+                const stealsLeft = gameState.stealsLeft;
+                const totalSteals = gameState.game.S;
+                const stealRatio = stealsLeft / totalSteals;
+                const gameProgress = gameState.gameProgress;
+                
+                // Base threshold increases as steals become scarce
+                let baseThreshold = 50;
+                if (stealRatio <= 0.2) baseThreshold = 500;      // Very few steals
+                else if (stealRatio <= 0.4) baseThreshold = 300; // Few steals  
+                else if (stealRatio <= 0.7) baseThreshold = 150; // Moderate steals
+                
+                // Round-based modifiers
+                let roundModifier = 1.0;
+                if (gameProgress < 0.3) {
+                    roundModifier = 1.3; // More conservative early game
+                } else if (gameProgress > 0.8) {
+                    roundModifier = 0.6; // More desperate late game
+                } else if (gameProgress > 0.6) {
+                    roundModifier = 0.8; // Moderately aggressive mid-late game
+                }
+                
+                // Strategy modifiers
+                const strategyModifiers = {
+                    'defensive': 2.0, 'tactical': 1.2, 'aggressive': 0.7,
+                    'opportunistic': 0.9, 'wormhole': 1.5, 'chaotic': 1.0
+                };
+                
+                return baseThreshold * strategyModifiers[this.config.strategy] * roundModifier;
+            }
+
+            calculateStealValue(game, gameState, starIndex, star) {
+                let value = 0;
+                const connections = game.adjacencyCache[starIndex] || [];
+                const friendlyConnections = connections.filter(i => game.st[i].tm === this.teamIndex);
+                const enemyConnections = connections.filter(i => game.st[i].tm === star.tm);
+
+                // Points gained/denied
+                value += friendlyConnections.length * gameState.multipliers.count * 0.5;
+                value += enemyConnections.length * gameState.multipliers.count * 0.3;
+
+                // Strategic value
+                if (star.ty === T.W) value += 200;
+                value += connections.length * 20;
+
+                // Strategy bonuses
+                if (this.config.strategy === 'opportunistic') {
+                    const enemyScore = game.tms[star.tm].s;
+                    const avgScore = game.tms.reduce((sum, t) => sum + t.s, 0) / game.tms.length;
+                    if (enemyScore > avgScore) value += (enemyScore - avgScore) * 0.1;
+                } else if (this.config.strategy === 'aggressive') {
+                    value += enemyConnections.length * 50;
+                }
+
+                // Desperation bonus
+                if (gameState.myPosition >= 4) value *= 1.5;
+
+                return Math.floor(value);
             }
 
             tryExpand(game, gameState) {
@@ -1079,7 +1198,7 @@
                     MULTIPLIERS = { ...MULTIPLIERS, ...s.multipliers };
                 }
 
-                Object.assign(this, { G: 20, S: s.steals || 15, HM: s.headquarters || 2, RT: s.roundLength || 30, TR: s.rounds || 10, PT: s.countdownLength || 5, MW: 64, MH: 36 });
+                Object.assign(this, { G: 20, S: s.steals || 50, HM: s.headquarters || 2, RT: s.roundLength || 30, TR: s.rounds || 10, PT: s.countdownLength || 5, MW: 64, MH: 36 });
                 Object.assign(this, { r: 1, t: this.RT, go: false, p: true, pt: this.PT, tm: 0, pu: 0, bhr: 0, ml: false });
                 this.st = []; this.ln = []; this.pr = new Set(); this.fx = []; this.cm = s.customMap || null;
                 this.wormholeWinner = null; // Track which team won by connecting wormholes
@@ -1158,7 +1277,9 @@
                 // AI Bot System
                 this.aiBots = s.aiBots || [];
                 this.lastAIUpdate = 0;
-                this.aiUpdateInterval = 100; // Check AI every 100ms
+                this.aiUpdateInterval = 150; // Check AI every 150ms for better performance
+                this.aiBotsPerUpdate = Math.max(1, Math.floor(this.aiBots.length / 3)); // Spread load
+                this.currentAIBotIndex = 0; // Round-robin bot updates
 
                 this.init();
             }
@@ -1831,7 +1952,7 @@
                 timerEl.style.width = '100%';
 
                 this.tms.forEach((t, i) => {
-                    t.st = this.S;
+                    // Only replenish moves, NOT steals
                     t.movesLeft = this.S;
                     // Mark all teams as changed for score recalculation
                     this.changedTeams.add(i);
@@ -2830,15 +2951,24 @@
                     // Only update AI during active gameplay, not planning or game over
                     if (currentTime - this.lastAIUpdate > this.aiUpdateInterval) {
                         let anyMovesMade = false;
-                        this.aiBots.forEach(bot => {
+
+                        // Round-robin update: only update a subset of bots per cycle for performance
+                        const botsToUpdate = Math.min(this.aiBotsPerUpdate, this.aiBots.length);
+                        for (let i = 0; i < botsToUpdate; i++) {
+                            const botIndex = (this.currentAIBotIndex + i) % this.aiBots.length;
+                            const bot = this.aiBots[botIndex];
+
                             if (bot.makeMove(this)) {
                                 // AI move executed - visual updates already handled in executeMove
                                 this.deferredScoreUpdate = true;
                                 anyMovesMade = true;
                             }
-                        });
+                        }
 
-                        // Force immediate UI update if any AI made moves
+                        // Advance the round-robin index
+                        this.currentAIBotIndex = (this.currentAIBotIndex + botsToUpdate) % this.aiBots.length;
+
+                        // Only update UI if moves were made (less frequent UI updates)
                         if (anyMovesMade) {
                             this.calcScores();
                             this.updateUI();
@@ -3399,6 +3529,12 @@
                 emptyMessage.remove();
             }
 
+            // Auto-cycle through bot types, teams, and set max aggression
+            const existingBots = botsList.querySelectorAll('.ai-bot-item').length;
+            const botTypes = Object.keys(AI_BOT_TYPES);
+            const nextBotType = botTypes[existingBots % botTypes.length];
+            const nextTeamIndex = existingBots % TEAM_CONFIGS.length;
+
             const botId = `aiBot_${aiBotCounter++}`;
             const botDiv = document.createElement('div');
             botDiv.className = 'ai-bot-item';
@@ -3407,12 +3543,12 @@
             botDiv.innerHTML = `
                 <select class="ai-bot-select" onchange="updateAIBotDisplay('${botId}')">
                     ${Object.keys(AI_BOT_TYPES).map(key =>
-                `<option value="${key}">${AI_BOT_TYPES[key].name} - ${AI_BOT_TYPES[key].description}</option>`
+                `<option value="${key}" ${key === nextBotType ? 'selected' : ''}>${AI_BOT_TYPES[key].name} - ${AI_BOT_TYPES[key].description}</option>`
             ).join('')}
                 </select>
                 <select class="ai-team-select">
                     ${TEAM_CONFIGS.map((team, index) =>
-                `<option value="${index}" style="color: #${team.color.toString(16).padStart(6, '0')}">${team.displayName}</option>`
+                `<option value="${index}" ${index === nextTeamIndex ? 'selected' : ''} style="color: #${team.color.toString(16).padStart(6, '0')}">${team.displayName}</option>`
             ).join('')}
                 </select>
                 <select class="ai-aggression-select">
@@ -3420,11 +3556,11 @@
                     <option value="2">Level 2 - Passive</option>
                     <option value="3">Level 3 - Conservative</option>
                     <option value="4">Level 4 - Cautious</option>
-                    <option value="5" selected>Level 5 - Balanced</option>
+                    <option value="5">Level 5 - Balanced</option>
                     <option value="6">Level 6 - Active</option>
                     <option value="7">Level 7 - Aggressive</option>
                     <option value="8">Level 8 - Very Aggressive</option>
-                    <option value="9">Level 9 - Maximum Aggression</option>
+                    <option value="9" selected>Level 9 - Maximum Aggression</option>
                 </select>
                 <div class="ai-bot-cube" style="background: #00FFFF; opacity: 0.8;"></div>
                 <button class="remove-bot-btn" onclick="removeAIBot('${botId}')">Remove</button>
