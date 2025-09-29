@@ -720,7 +720,7 @@
                 const desperation = Math.max(0, gameState.myPosition - 2);
                 const stealsLeft = gameState.stealsLeft;
                 const stealScarcity = stealsLeft <= 3 ? 2 : (stealsLeft <= 7 ? 1.5 : 1);
-                
+
                 // Round-based modifiers
                 const gameProgress = gameState.gameProgress;
                 const lateGameUrgency = gameProgress > 0.7 ? 1.5 : 1; // More urgent in late game
@@ -742,7 +742,7 @@
                 const roundProgress = gameState.roundProgress;
                 const isWinning = gameState.myPosition <= 2;
                 const stealsLeft = gameState.stealsLeft;
-                
+
                 // Round-based tactical adjustments
                 const gameProgress = gameState.gameProgress;
                 const midGameBonus = gameProgress > 0.3 && gameProgress < 0.7 ? 1.3 : 1; // Peak tactical phase
@@ -767,7 +767,7 @@
                 const behindMultiplier = Math.max(1, gameState.myPosition - 1);
                 const stealsLeft = gameState.stealsLeft;
                 const stealUrgency = stealsLeft <= 5 ? 1.5 : 1;
-                
+
                 // Round-based aggression scaling
                 const gameProgress = gameState.gameProgress;
                 const earlyGameRush = gameProgress < 0.4 ? 1.4 : 1; // Extra aggressive early
@@ -794,7 +794,7 @@
                 const desperationLevel = Math.floor(gapToLeader / 1000);
                 const stealsLeft = gameState.stealsLeft;
                 const stealEfficiency = stealsLeft <= 3 ? 2 : 1;
-                
+
                 // Round-based opportunism
                 const gameProgress = gameState.gameProgress;
                 const midGameOpportunism = gameProgress > 0.25 && gameProgress < 0.75 ? 1.3 : 1; // Peak opportunity window
@@ -854,17 +854,54 @@
 
             // Core decision engine - simple rules create emergent behavior
             executeTopPriority(game, gameState, priorities) {
-                // Sort by weight and try each action
-                priorities.sort((a, b) => b.weight - a.weight);
+                // Weighted random selection instead of deterministic top priority
+                const validPriorities = priorities.filter(p => p.weight > 0);
+                if (validPriorities.length === 0) return null;
 
-                for (const priority of priorities) {
-                    if (priority.weight <= 0) continue;
+                // Try actions in weighted random order
+                const shuffledPriorities = this.weightedRandomShuffle(validPriorities, gameState);
 
+                for (const priority of shuffledPriorities) {
                     const move = this.tryAction(game, gameState, priority.action);
                     if (move) return move;
                 }
 
                 return null;
+            }
+
+            weightedRandomShuffle(priorities, gameState) {
+                // Game progress affects randomness - more rounds = more randomness
+                const gameProgress = gameState ? gameState.gameProgress : 0.5;
+                const totalRounds = gameState ? gameState.totalRounds : 10;
+
+                // More rounds = more randomness, fewer rounds = more deterministic
+                const randomnessFactor = Math.min(2.0, totalRounds / 20); // 0.5 to 2.0 range
+                const progressRandomness = 0.5 + (gameProgress * 0.5); // 0.5 to 1.0 range
+                const finalRandomness = randomnessFactor * progressRandomness;
+
+                // Adjust weights based on randomness - higher randomness flattens the distribution
+                const adjustedPriorities = priorities.map(p => ({
+                    ...p,
+                    weight: Math.pow(p.weight, 1 / finalRandomness)
+                }));
+
+                const result = [];
+                const remaining = [...adjustedPriorities];
+
+                while (remaining.length > 0) {
+                    const currentTotal = remaining.reduce((sum, p) => sum + p.weight, 0);
+                    let random = Math.random() * currentTotal;
+
+                    for (let i = 0; i < remaining.length; i++) {
+                        random -= remaining[i].weight;
+                        if (random <= 0) {
+                            result.push(remaining.splice(i, 1)[0]);
+                            break;
+                        }
+                    }
+                }
+
+                return result;
             }
 
             tryAction(game, gameState, action) {
@@ -949,19 +986,21 @@
                 return best !== null ? { type: 'steal', target: best } : null;
             }
 
+
+
             calculateStealThreshold(gameState) {
                 // Modular threshold based on remaining steals AND rounds
                 const stealsLeft = gameState.stealsLeft;
                 const totalSteals = gameState.game.S;
                 const stealRatio = stealsLeft / totalSteals;
                 const gameProgress = gameState.gameProgress;
-                
-                // Base threshold increases as steals become scarce
-                let baseThreshold = 50;
-                if (stealRatio <= 0.2) baseThreshold = 500;      // Very few steals
-                else if (stealRatio <= 0.4) baseThreshold = 300; // Few steals  
-                else if (stealRatio <= 0.7) baseThreshold = 150; // Moderate steals
-                
+
+                // Base threshold increases as steals become scarce (much higher to conserve steals)
+                let baseThreshold = 150;
+                if (stealRatio <= 0.2) baseThreshold = 800;      // Very few steals - extremely selective
+                else if (stealRatio <= 0.4) baseThreshold = 500; // Few steals - very selective
+                else if (stealRatio <= 0.7) baseThreshold = 300; // Moderate steals - selective
+
                 // Round-based modifiers
                 let roundModifier = 1.0;
                 if (gameProgress < 0.3) {
@@ -971,13 +1010,13 @@
                 } else if (gameProgress > 0.6) {
                     roundModifier = 0.8; // Moderately aggressive mid-late game
                 }
-                
-                // Strategy modifiers
+
+                // Strategy modifiers (more conservative to preserve steals)
                 const strategyModifiers = {
-                    'defensive': 2.0, 'tactical': 1.2, 'aggressive': 0.7,
-                    'opportunistic': 0.9, 'wormhole': 1.5, 'chaotic': 1.0
+                    'defensive': 2.5, 'tactical': 1.8, 'aggressive': 1.2,
+                    'opportunistic': 1.4, 'wormhole': 2.0, 'chaotic': 1.6
                 };
-                
+
                 return baseThreshold * strategyModifiers[this.config.strategy] * roundModifier;
             }
 
