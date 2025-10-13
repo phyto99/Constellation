@@ -12,6 +12,10 @@ AI players    /working/
 
 
 ===
-My Constellation map database:  https://airtable.com/invite/l?inviteId=invjJoyjlyHUDSID7&inviteToken=dce384e52012e58ed552e0d3968bb9aee3ef4ad7b76935d3f847b4b03dabe9de&utm_medium=email&utm_source=product_team&utm_content=transactional-alerts
+
+My Constellation map database:  
+https://airtable.com/invite/l?inviteId=invjJoyjlyHUDSID7&inviteToken=dce384e52012e58ed552e0d3968bb9aee3ef4ad7b76935d3f847b4b03dabe9de&utm_medium=email&utm_source=product_team&utm_content=transactional-alerts
+
 Mapmaker:
+
 https://craetio.itch.io/constellation-mapmaker
