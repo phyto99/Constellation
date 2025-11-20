@@ -54,7 +54,7 @@ class ConstellationRoom extends Room {
         
         // Set room metadata using setMetadata method
         this.setMetadata({
-            name: options.name || `Game ${this.roomId}`,
+            name: options.roomName || options.name || `Game ${this.roomId}`,
             type: options.type || 'Constellation',
             gameState: 'waiting',
             createdAt: new Date().toISOString(),
