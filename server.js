@@ -58,7 +58,9 @@ class ConstellationRoom extends Room {
             type: options.type || 'Constellation',
             gameState: 'waiting',
             createdAt: new Date().toISOString(),
-            maxPlayers: this.maxClients
+            maxPlayers: this.maxClients,
+            gameMode: options.gameMode || 'competitive',
+            hostName: options.hostName || 'Unknown'
         });
 
         console.log('Room created successfully');
@@ -100,6 +102,8 @@ class ConstellationRoom extends Room {
         player.connectedAt = Date.now();
 
         this.state.players.set(client.sessionId, player);
+        
+        console.log(`✓ Player joined: ${player.name}`);
         
         // Enhanced admin room notification
         this.updateAdminRoom();

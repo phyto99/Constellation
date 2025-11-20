@@ -161,7 +161,7 @@
           const formattedLobbies = availableRooms.map(room => ({
             id: room.roomId,
             name: room.metadata?.name || `Game ${room.roomId}`,
-            host: 'HOST',
+            host: room.metadata?.hostName || 'Unknown',
             players: room.clients,
             maxPlayers: room.maxClients,
             mode: room.metadata?.gameMode || 'competitive',
@@ -198,6 +198,7 @@
             name: lobbyConfig.name,
             maxPlayers: lobbyConfig.maxPlayers,
             gameMode: lobbyConfig.gameMode,
+            hostName: playerName,
             ...lobbyConfig
           });
           
@@ -502,10 +503,7 @@
                   CREATE GAME
                 </button>
                 <button
-                  onClick={() => {
-                    setView('browse');
-                    loadLobbies();
-                  }}
+                  onClick={() => setView('browse')}
                   className="w-full py-3 bg-black text-white border border-white font-bold hover:bg-white hover:text-black uppercase tracking-wider transition-colors"
                 >
                   BROWSE LOBBIES
@@ -518,15 +516,23 @@
       };
 
       // Browse Lobbies
-      const BrowseLobbiesView = () => (
-        <div className="min-h-screen bg-black p-4">
-          <div className="max-w-6xl mx-auto py-8">
-            <button
-              onClick={() => setView('main')}
-              className="mb-6 text-white hover:text-gray-400 uppercase tracking-wider text-xs"
-            >
-              ← BACK
-            </button>
+      const BrowseLobbiesView = () => {
+        // Auto-refresh when view opens
+        useEffect(() => {
+          if (view === 'browse') {
+            loadLobbies();
+          }
+        }, [view]);
+
+        return (
+          <div className="min-h-screen bg-black p-4">
+            <div className="max-w-6xl mx-auto py-8">
+              <button
+                onClick={() => setView('main')}
+                className="mb-6 text-white hover:text-gray-400 uppercase tracking-wider text-xs"
+              >
+                ← BACK
+              </button>
 
             <div className="border border-white p-8">
               <div className="flex justify-between items-center mb-6">
@@ -556,7 +562,7 @@
                         <div className="flex items-center gap-6 text-sm text-white uppercase tracking-wider">
                           <div>HOST: {lobby.host}</div>
                           <div>PLAYERS: {lobby.players}/{lobby.maxPlayers}</div>
-                          <div>{lobby.mode}</div>
+                          <div>MODE: {lobby.mode}</div>
                         </div>
                       </div>
                       {lobby.status === 'waiting' && (
@@ -574,7 +580,8 @@
             </div>
           </div>
         </div>
-      );
+        );
+      };
 
       // Lobby Waiting Room
       const LobbyView = () => {
