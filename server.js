@@ -30,14 +30,12 @@ class RoomState extends Schema {
         super();
         this.players = new MapSchema();
         this.gameState = 'waiting';
-        this.config = {};
         this.teams = new MapSchema();
     }
 }
 
 type({ map: Player })(RoomState.prototype, 'players');
 type('string')(RoomState.prototype, 'gameState');
-type('object')(RoomState.prototype, 'config');
 type({ map: 'any' })(RoomState.prototype, 'teams');
 
 // Game room classes
@@ -47,21 +45,23 @@ class ConstellationRoom extends Room {
         
         const state = new RoomState();
         state.gameState = 'waiting';
-        state.config = options || {};
         this.setState(state);
 
         this.maxClients = options.maxPlayers || 20;
         
-        // Store room metadata
-        this.metadata = {
+        // Store config separately (not in Schema state)
+        this.gameConfig = options || {};
+        
+        // Set room metadata using setMetadata method
+        this.setMetadata({
             name: options.name || `Game ${this.roomId}`,
             type: options.type || 'Constellation',
-            config: options,
             gameState: 'waiting',
-            createdAt: new Date().toISOString()
-        };
+            createdAt: new Date().toISOString(),
+            maxPlayers: this.maxClients
+        });
 
-        console.log('Room metadata set:', this.metadata);
+        console.log('Room created successfully');
 
         this.onMessage('join_team', (client, data) => {
             this.assignPlayerToTeam(client.sessionId, data.teamIndex);
@@ -141,13 +141,17 @@ class ConstellationRoom extends Room {
         const previousState = this.state.gameState;
         this.state.gameState = 'playing';
         
-        // Update metadata
-        this.metadata.gameState = 'playing';
-        this.metadata.startedAt = new Date().toISOString();
+        // Update metadata using setMetadata
+        const currentMetadata = this.metadata || {};
+        this.setMetadata({
+            ...currentMetadata,
+            gameState: 'playing',
+            startedAt: new Date().toISOString()
+        });
         
         this.broadcast('game_started', { 
             gameState: 'playing',
-            startedAt: this.metadata.startedAt
+            startedAt: new Date().toISOString()
         });
         
         // Enhanced admin room notification
@@ -160,13 +164,14 @@ class ConstellationRoom extends Room {
     // Enhanced admin room update with comprehensive data
     updateAdminRoom() {
         if (this.presence) {
+            const currentMetadata = this.metadata || {};
             const updateData = {
                 roomId: this.roomId,
                 players: Array.from(this.state.players.values()),
                 state: this.state.gameState,
                 playerCount: this.clients.length,
                 metadata: {
-                    ...this.metadata,
+                    ...currentMetadata,
                     lastUpdate: Date.now(),
                     activeClients: this.clients.length
                 },
@@ -207,7 +212,7 @@ class ConstellationRoom extends Room {
                 roomId: this.roomId,
                 oldState: oldState,
                 gameState: newState,
-                metadata: this.metadata,
+                metadata: this.metadata || {},
                 timestamp: Date.now()
             });
         }
@@ -906,8 +911,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Serve admin panel at root
+// Serve lobby at root
 app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'other.html'));
+});
+
+// Serve admin panel
+app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
@@ -941,6 +951,8 @@ gameServer.define('admin', AdminRoom);
 const port = process.env.PORT || 2567;
 gameServer.listen(port);
 
-console.log(`Colyseus server listening on port ${port}`);
-console.log(`Admin panel available at http://localhost:${port}`);
-console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log('\n========================================');
+console.log(`✓ Server running on http://localhost:${port}`);
+console.log(`✓ Lobby: http://localhost:${port}`);
+console.log(`✓ Admin: http://localhost:${port}/admin`);
+console.log('========================================\n');
