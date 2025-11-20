@@ -27,6 +27,7 @@
       const [errorMessage, setErrorMessage] = useState('');
       const [serverStatus, setServerStatus] = useState('checking');
       const [lastCheckTime, setLastCheckTime] = useState(0);
+      const [errorLog, setErrorLog] = useState([]);
       
       // Colyseus state
       const [colyseusClient, setColyseusClient] = useState(null);
@@ -34,6 +35,14 @@
       const [playerCursors, setPlayerCursors] = useState({});
       const [mySessionId, setMySessionId] = useState(null);
       const canvasRef = useRef(null);
+
+      // Error logging helper
+      const logError = (context, error) => {
+        const timestamp = new Date().toLocaleTimeString();
+        const errorMsg = `[${timestamp}] ${context}: ${error.message || error}`;
+        console.error(errorMsg, error);
+        setErrorLog(prev => [...prev, errorMsg].slice(-10)); // Keep last 10 errors
+      };
 
       // Check server status periodically
       useEffect(() => {
@@ -152,6 +161,7 @@
           loadLobbies();
         } catch (error) {
           console.error('✗ Failed to connect:', error);
+          logError('Connect', error);
           setServerStatus('offline');
           const errorMsg = 'Failed to connect: ' + error.message;
           setErrorMessage(errorMsg);
@@ -199,6 +209,8 @@
         try {
           setErrorMessage('');
           console.log('Creating lobby:', lobbyConfig.name);
+          logError('Create Lobby', `Creating room: ${lobbyConfig.name}`);
+          
           const roomInstance = await colyseusClient.create('constellation', {
             name: lobbyConfig.name,
             maxPlayers: lobbyConfig.maxPlayers,
@@ -208,6 +220,8 @@
           });
           
           console.log('✓ Room created:', roomInstance.roomId);
+          logError('Create Lobby', `SUCCESS - Room ${roomInstance.roomId} created`);
+          
           setRoom(roomInstance);
           setMySessionId(roomInstance.sessionId);
           
@@ -245,6 +259,7 @@
           setView('lobby');
         } catch (error) {
           console.error('✗ Failed to create lobby:', error);
+          logError('Create Lobby', error);
           setErrorMessage('Failed to create lobby: ' + error.message);
         }
       };
@@ -252,18 +267,31 @@
       const joinLobby = async (lobby) => {
         try {
           setErrorMessage('');
-          console.log('Joining lobby:', lobby.id);
+          logError('Join Lobby', `Attempting to join room ${lobby.id}`);
+          console.log('Joining lobby:', lobby.id, 'with name:', playerName);
+          
+          if (!colyseusClient) {
+            throw new Error('Not connected to server. Click CONNECT first.');
+          }
+          
           const roomInstance = await colyseusClient.joinById(lobby.id, { name: playerName });
           
           console.log('✓ Joined room:', roomInstance.sessionId);
+          logError('Join Lobby', `SUCCESS - Joined as ${roomInstance.sessionId}`);
+          
           setRoom(roomInstance);
           setMySessionId(roomInstance.sessionId);
           setCurrentLobby(lobby);
           setViewAsPlayer(roomInstance.sessionId);
           setupRoomListeners(roomInstance);
+          
+          // Initialize players from room state
+          updatePlayersFromRoomState(roomInstance);
+          
           setView('lobby');
         } catch (error) {
           console.error('✗ Failed to join lobby:', error);
+          logError('Join Lobby', error);
           setErrorMessage('Failed to join lobby: ' + error.message);
         }
       };
@@ -328,12 +356,14 @@
       
       const startGame = () => {
         if (room) {
-          console.log('Starting game, redirecting to /game/' + room.roomId);
+          console.log('Starting game, redirecting to index.html with room ID');
+          logError('Start Game', `Redirecting to index.html?room=${room.roomId}`);
           room.send('start_game');
-          // Redirect to actual game
-          window.location.href = '/game/' + room.roomId;
+          // Redirect to index.html with room ID as query parameter
+          window.location.href = `/index.html?room=${room.roomId}`;
         } else {
           console.error('No room connection');
+          logError('Start Game', 'No room connection available');
           setErrorMessage('No room connection available');
         }
       };
@@ -1164,20 +1194,41 @@
         };
 
         return (
-          <div className="fixed bottom-4 right-4 bg-black border-2 border-white p-3 z-50">
-            <div className="flex items-center gap-2 mb-1">
-              <div className={`w-2 h-2 rounded-full ${getStatusColor()} animate-pulse`} />
-              <span className="text-white text-xs font-bold uppercase tracking-wider">
-                SERVER: {getStatusText()}
-              </span>
+          <>
+            {/* Server Status - Bottom Right */}
+            <div className="fixed bottom-4 right-4 bg-black border-2 border-white p-3 z-50">
+              <div className="flex items-center gap-2 mb-1">
+                <div className={`w-2 h-2 rounded-full ${getStatusColor()} animate-pulse`} />
+                <span className="text-white text-xs font-bold uppercase tracking-wider">
+                  SERVER: {getStatusText()}
+                </span>
+              </div>
+              <div className="text-gray-400 text-xs">
+                Check #{lastCheckTime} • Every 3s
+              </div>
+              <div className="text-gray-500 text-xs mt-1">
+                ws://localhost:2567
+              </div>
             </div>
-            <div className="text-gray-400 text-xs">
-              Check #{lastCheckTime} • Every 3s
-            </div>
-            <div className="text-gray-500 text-xs mt-1">
-              ws://localhost:2567
-            </div>
-          </div>
+
+            {/* Error Log - Bottom Left */}
+            {errorLog.length > 0 && (
+              <div className="fixed bottom-4 left-4 bg-black border-2 border-red-500 p-3 z-50 max-w-md max-h-48 overflow-y-auto">
+                <div className="text-red-500 text-xs font-bold uppercase tracking-wider mb-2">ERROR LOG</div>
+                {errorLog.map((log, idx) => (
+                  <div key={idx} className="text-red-400 text-xs font-mono mb-1">
+                    {log}
+                  </div>
+                ))}
+                <button
+                  onClick={() => setErrorLog([])}
+                  className="mt-2 px-2 py-1 bg-red-500 text-black text-xs uppercase hover:bg-red-400"
+                >
+                  CLEAR
+                </button>
+              </div>
+            )}
+          </>
         );
       };
 
