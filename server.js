@@ -40,6 +40,17 @@ class ConstellationRoom extends Room {
             }
         });
 
+        this.onMessage('cursor_move', (client, data) => {
+            // Broadcast cursor position to all other clients
+            this.broadcast('cursor_move', {
+                sessionId: client.sessionId,
+                x: data.x,
+                y: data.y,
+                color: data.color,
+                name: data.name
+            }, { except: client });
+        });
+
         // Enhanced message handlers for cross-room communication
         this.setupCrossRoomMessageHandlers();
     }
