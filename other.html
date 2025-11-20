@@ -57,12 +57,13 @@
         localStorage.setItem('activityLog', JSON.stringify(errorLog));
       }, [errorLog]);
 
-      // Activity logging helper - logs everything (not just errors)
-      const logActivity = (context, message, isError = false) => {
+      // Activity logging helper - logs everything with color coding
+      const logActivity = (context, message, type = 'info') => {
         const timestamp = new Date().toLocaleTimeString();
         const logMsg = `[${timestamp}] ${context}: ${message}`;
         console.log(logMsg);
-        setErrorLog(prev => [...prev, { msg: logMsg, isError }].slice(-15)); // Keep last 15 logs
+        // type can be: 'info', 'error', 'success', 'warning', 'player'
+        setErrorLog(prev => [...prev, { msg: logMsg, type }].slice(-15)); // Keep last 15 logs
       };
 
       // Check server status periodically
@@ -214,7 +215,7 @@
           loadLobbies();
         } catch (error) {
           console.error('✗ Failed to connect:', error);
-          logActivity('Connect', `✗ ERROR: ${error.message}`, true);
+          logActivity('Connect', `✗ ERROR: ${error.message}`, 'error');
           setServerStatus('offline');
           const errorMsg = 'Failed to connect: ' + error.message;
           setErrorMessage(errorMsg);
@@ -262,7 +263,7 @@
         try {
           setErrorMessage('');
           console.log('Creating lobby:', lobbyConfig.name);
-          logActivity('Create Lobby', `Creating room: ${lobbyConfig.name}`);
+          logActivity('Create Lobby', `Creating room: ${lobbyConfig.name}`, 'info');
           
           const roomInstance = await colyseusClient.create('constellation', {
             name: lobbyConfig.name,
@@ -273,7 +274,7 @@
           });
           
           console.log('✓ Room created:', roomInstance.roomId);
-          logActivity('Create Lobby', `✓ Room ${roomInstance.roomId} created`);
+          logActivity('Create Lobby', `✓ Room ${roomInstance.roomId} created`, 'success');
           
           setRoom(roomInstance);
           setMySessionId(roomInstance.sessionId);
@@ -309,10 +310,11 @@
           setLobbyPlayers(initialPlayers);
           setCurrentLobby(newLobby);
           setupRoomListeners(roomInstance);
+          logActivity('Lobby', `Created lobby: ${lobbyConfig.name}`, 'success');
           setView('lobby');
         } catch (error) {
           console.error('✗ Failed to create lobby:', error);
-          logActivity('Create Lobby', `✗ ERROR: ${error.message}`, true);
+          logActivity('Create Lobby', `✗ ERROR: ${error.message}`, 'error');
           setErrorMessage('Failed to create lobby: ' + error.message);
         }
       };
@@ -320,7 +322,7 @@
       const joinLobby = async (lobby) => {
         try {
           setErrorMessage('');
-          logActivity('Join Lobby', `Attempting to join room ${lobby.id}`);
+          logActivity('Join Lobby', `Attempting to join room ${lobby.id}`, 'info');
           console.log('Joining lobby:', lobby.id, 'with name:', playerName);
           
           if (!colyseusClient) {
@@ -330,7 +332,7 @@
           const roomInstance = await colyseusClient.joinById(lobby.id, { name: playerName });
           
           console.log('✓ Joined room:', roomInstance.sessionId);
-          logActivity('Join Lobby', `✓ Joined as ${roomInstance.sessionId}`);
+          logActivity('Join Lobby', `✓ Joined as ${playerName}`, 'success');
           
           setRoom(roomInstance);
           setMySessionId(roomInstance.sessionId);
@@ -338,36 +340,39 @@
           setViewAsPlayer(roomInstance.sessionId);
           setupRoomListeners(roomInstance);
           
-          // Initialize players from room state
-          updatePlayersFromRoomState(roomInstance);
+          // Wait a moment for room state to initialize, then update players
+          setTimeout(() => {
+            updatePlayersFromRoomState(roomInstance);
+          }, 100);
           
           setView('lobby');
         } catch (error) {
           console.error('✗ Failed to join lobby:', error);
-          logActivity('Join Lobby', `✗ ERROR: ${error.message}`, true);
+          logActivity('Join Lobby', `✗ ERROR: ${error.message}`, 'error');
           setErrorMessage('Failed to join lobby: ' + error.message);
         }
       };
 
       const setupRoomListeners = (roomInstance) => {
-        // Listen for player state changes
-        roomInstance.state.players.onAdd = (player, sessionId) => {
-          console.log('Player added:', sessionId, player);
-          logActivity('Room Event', `Player ${player.name} joined`);
-          updatePlayersFromRoomState(roomInstance);
-        };
-        
-        roomInstance.state.players.onRemove = (player, sessionId) => {
-          console.log('Player removed:', sessionId);
-          logActivity('Room Event', `Player ${sessionId} left`);
-          updatePlayersFromRoomState(roomInstance);
-        };
-        
-        roomInstance.state.players.onChange = (player, sessionId) => {
-          console.log('Player changed:', sessionId, player);
-          logActivity('Room Event', `Player ${player.name} updated`);
-          updatePlayersFromRoomState(roomInstance);
-        };
+        try {
+          // Listen for player state changes
+          roomInstance.state.players.onAdd = (player, sessionId) => {
+            console.log('Player added:', sessionId, player);
+            logActivity('Player', `${player.name} joined the room`, 'player');
+            updatePlayersFromRoomState(roomInstance);
+          };
+          
+          roomInstance.state.players.onRemove = (player, sessionId) => {
+            console.log('Player removed:', sessionId);
+            const playerName = player?.name || sessionId;
+            logActivity('Player', `${playerName} left the room`, 'warning');
+            updatePlayersFromRoomState(roomInstance);
+          };
+          
+          roomInstance.state.players.onChange = (player, sessionId) => {
+            console.log('Player changed:', sessionId, player);
+            updatePlayersFromRoomState(roomInstance);
+          };
         
         // Listen for cursor movements
         roomInstance.onMessage('cursor_move', (data) => {
@@ -385,43 +390,76 @@
         // Listen for team changes
         roomInstance.onMessage('player_team_changed', (data) => {
           console.log('Team changed:', data);
-          logActivity('Room Event', `Player moved to team ${data.newTeam}`);
+          logActivity('Team', `Player moved to team ${data.newTeam}`, 'info');
           updatePlayersFromRoomState(roomInstance);
         });
         
         // Listen for game start
         roomInstance.onMessage('game_started', (data) => {
           console.log('Game started:', data);
-          logActivity('Room Event', 'Game started!');
+          logActivity('Game', 'Game started!', 'success');
           setView('game');
         });
+
+        // Listen for room errors
+        roomInstance.onError = (code, message) => {
+          console.error('Room error:', code, message);
+          logActivity('Room Error', `${message} (code: ${code})`, 'error');
+        };
+
+        // Listen for room leave
+        roomInstance.onLeave = (code) => {
+          console.log('Left room with code:', code);
+          if (code === 1000) {
+            logActivity('Session', 'Left room normally', 'info');
+          } else if (code === 4000) {
+            logActivity('Session', 'Session expired - disconnected', 'error');
+          } else {
+            logActivity('Session', `Disconnected (code: ${code})`, 'warning');
+          }
+        };
+        } catch (error) {
+          console.error('Error setting up room listeners:', error);
+          logActivity('Error', `Failed to setup listeners: ${error.message}`, 'error');
+        }
+      };
       };
       
       const updatePlayersFromRoomState = (roomInstance) => {
-        const players = [];
-        roomInstance.state.players.forEach((player, sessionId) => {
-          players.push({
-            id: sessionId,
-            name: player.name,
-            teamIndex: player.team !== null ? player.team : 0,
-            isHost: sessionId === roomInstance.sessionId,
-            isAI: false,
-            ready: player.ready
+        try {
+          if (!roomInstance || !roomInstance.state || !roomInstance.state.players) {
+            console.error('Invalid room instance');
+            return;
+          }
+          
+          const players = [];
+          roomInstance.state.players.forEach((player, sessionId) => {
+            players.push({
+              id: sessionId,
+              name: player.name,
+              teamIndex: player.team !== null && player.team !== undefined ? player.team : 0,
+              isHost: sessionId === roomInstance.sessionId,
+              isAI: false,
+              ready: player.ready || false
+            });
           });
-        });
-        setLobbyPlayers(players);
+          setLobbyPlayers(players);
+        } catch (error) {
+          console.error('Error updating players from room state:', error);
+          logActivity('Error', `Failed to update players: ${error.message}`, 'error');
+        }
       };
       
       const startGame = () => {
         if (room) {
           console.log('Starting game, redirecting to index.html with room ID');
-          logActivity('Start Game', `Redirecting to index.html?room=${room.roomId}`);
+          logActivity('Start Game', `Redirecting to index.html?room=${room.roomId}`, 'success');
           room.send('start_game');
           // Redirect to index.html with room ID as query parameter
           window.location.href = `/index.html?room=${room.roomId}`;
         } else {
           console.error('No room connection');
-          logActivity('Start Game', '✗ ERROR: No room connection available', true);
+          logActivity('Start Game', '✗ ERROR: No room connection available', 'error');
           setErrorMessage('No room connection available');
         }
       };
@@ -456,12 +494,21 @@
       };
 
       const changePlayerTeam = (playerId, newTeamIndex) => {
-        if (room) {
-          room.send('join_team', { teamIndex: newTeamIndex });
+        try {
+          // Only send message if it's the current player's team change
+          if (room && playerId === mySessionId) {
+            room.send('join_team', { teamIndex: newTeamIndex });
+            logActivity('Team', `You moved to team ${newTeamIndex}`, 'info');
+          }
+          
+          // Update local state optimistically
+          setLobbyPlayers(prev => prev.map(p => 
+            p.id === playerId ? { ...p, teamIndex: newTeamIndex } : p
+          ));
+        } catch (error) {
+          console.error('Error changing player team:', error);
+          logActivity('Error', `Failed to change team: ${error.message}`, 'error');
         }
-        setLobbyPlayers(lobbyPlayers.map(p => 
-          p.id === playerId ? { ...p, teamIndex: newTeamIndex } : p
-        ));
       };
 
       const randomizeTeams = () => {
@@ -477,18 +524,22 @@
       };
 
       const handleDragStart = (e, player) => {
-        const currentPlayer = lobbyPlayers.find(p => 
-          isHost() ? p.id === 'host' : p.id === viewAsPlayer
-        );
-        
-        if (!(viewAsPlayer === 'host' || (player.id === currentPlayer?.id && canSwitchTeams()))) {
+        try {
+          const isHostUser = mySessionId === room?.sessionId;
+          const canDrag = isHostUser || (player.id === mySessionId && canSwitchTeams());
+          
+          if (!canDrag) {
+            e.preventDefault();
+            return;
+          }
+          
+          setDraggedPlayer(player);
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', player.id);
+        } catch (error) {
+          console.error('Error in handleDragStart:', error);
           e.preventDefault();
-          return;
         }
-        
-        setDraggedPlayer(player);
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', player.id);
       };
 
       const handleDragEnd = () => {
@@ -501,17 +552,32 @@
       };
 
       const handleDrop = (e, teamIndex) => {
-        e.preventDefault();
-        if (draggedPlayer) {
-          const currentPlayer = lobbyPlayers.find(p => 
-            isHost() ? p.id === 'host' : p.id === viewAsPlayer
-          );
+        try {
+          e.preventDefault();
+          e.stopPropagation();
           
-          if (viewAsPlayer === 'host' || (draggedPlayer.id === currentPlayer?.id && canSwitchTeams())) {
-            changePlayerTeam(draggedPlayer.id, teamIndex);
+          if (!draggedPlayer) {
+            return;
           }
+          
+          const currentPlayer = lobbyPlayers.find(p => p.id === mySessionId);
+          const isHostUser = mySessionId === room?.sessionId;
+          
+          // Check if user can move this player
+          const canMove = isHostUser || (draggedPlayer.id === mySessionId && canSwitchTeams());
+          
+          if (canMove) {
+            changePlayerTeam(draggedPlayer.id, teamIndex);
+          } else {
+            logActivity('Team', '✗ Cannot move this player', 'error');
+          }
+          
+          setDraggedPlayer(null);
+        } catch (error) {
+          console.error('Error in handleDrop:', error);
+          logActivity('Error', `Drag failed: ${error.message}`, 'error');
+          setDraggedPlayer(null);
         }
-        setDraggedPlayer(null);
       };
 
       const isHost = () => viewAsPlayer === mySessionId || viewAsPlayer === 'host';
@@ -571,11 +637,11 @@
                   onClick={(e) => {
                     e.preventDefault();
                     if (!playerName) {
-                      logActivity('Connect', '✗ ERROR: Please enter your name', true);
+                      logActivity('Connect', '✗ ERROR: Please enter your name', 'error');
                       return;
                     }
                     if (serverStatus !== 'online') {
-                      logActivity('Connect', '✗ ERROR: Server is offline', true);
+                      logActivity('Connect', '✗ ERROR: Server is offline', 'error');
                       return;
                     }
                     connectToColyseus();
@@ -629,8 +695,13 @@
           <div className="min-h-screen bg-black p-4">
             <div className="max-w-6xl mx-auto py-8">
               <button
-                onClick={() => setView('main')}
-                className="mb-6 text-white hover:text-gray-400 uppercase tracking-wider text-xs"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  logActivity('Navigation', 'Returning to main menu', 'info');
+                  setView('main');
+                }}
+                className="mb-6 text-white hover:text-gray-400 uppercase tracking-wider text-xs cursor-pointer"
               >
                 ← BACK
               </button>
@@ -670,7 +741,7 @@
                         <button
                           onClick={() => {
                             if (!isConnected) {
-                              logActivity('Join', '✗ ERROR: Not connected. Click CONNECT first.', true);
+                              logActivity('Join', '✗ ERROR: Not connected. Click CONNECT first.', 'error');
                               return;
                             }
                             joinLobby(lobby);
@@ -699,8 +770,16 @@
             <div className="max-w-7xl mx-auto py-8">
               <div className="mb-6 flex items-center gap-4">
                 <button
-                  onClick={() => setView('browse')}
-                  className="text-white hover:text-gray-400 uppercase tracking-wider text-xs"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (room) {
+                      room.leave();
+                      logActivity('Navigation', 'Left lobby', 'warning');
+                    }
+                    setView('browse');
+                  }}
+                  className="text-white hover:text-gray-400 uppercase tracking-wider text-xs cursor-pointer"
                 >
                   ← LEAVE
                 </button>
@@ -738,7 +817,11 @@
                           value={lobbyConfig.name}
                           onChange={(e) => {
                             const newValue = e.target.value;
-                            setLobbyConfig(prev => ({ ...prev, name: newValue }));
+                            setLobbyConfig(prev => {
+                              const updated = { ...prev, name: newValue };
+                              logActivity('Settings', `Room name changed to: ${newValue}`, 'info');
+                              return updated;
+                            });
                           }}
                           className="w-full px-3 py-2 bg-black border border-white text-white text-sm focus:outline-none"
                         />
@@ -750,7 +833,11 @@
                           value={lobbyConfig.gameMode}
                           onChange={(e) => {
                             const newValue = e.target.value;
-                            setLobbyConfig(prev => ({ ...prev, gameMode: newValue }));
+                            setLobbyConfig(prev => {
+                              const updated = { ...prev, gameMode: newValue };
+                              logActivity('Settings', `Game mode changed to: ${newValue}`, 'info');
+                              return updated;
+                            });
                           }}
                           className="w-full px-3 py-2 bg-black border border-white text-white text-sm focus:outline-none"
                         >
@@ -768,7 +855,11 @@
                             value={lobbyConfig.moves}
                             onChange={(e) => {
                               const newValue = parseInt(e.target.value) || 0;
-                              setLobbyConfig(prev => ({ ...prev, moves: newValue }));
+                              setLobbyConfig(prev => {
+                                const updated = { ...prev, moves: newValue };
+                                logActivity('Settings', `Moves per round: ${newValue}`, 'info');
+                                return updated;
+                              });
                             }}
                             className="w-full px-3 py-2 bg-black border border-white text-white text-sm focus:outline-none"
                           />
@@ -780,7 +871,11 @@
                             value={lobbyConfig.rounds}
                             onChange={(e) => {
                               const newValue = parseInt(e.target.value) || 0;
-                              setLobbyConfig(prev => ({ ...prev, rounds: newValue }));
+                              setLobbyConfig(prev => {
+                                const updated = { ...prev, rounds: newValue };
+                                logActivity('Settings', `Total rounds: ${newValue}`, 'info');
+                                return updated;
+                              });
                             }}
                             className="w-full px-3 py-2 bg-black border border-white text-white text-sm focus:outline-none"
                           />
@@ -792,7 +887,11 @@
                             value={lobbyConfig.roundLength}
                             onChange={(e) => {
                               const newValue = parseInt(e.target.value) || 0;
-                              setLobbyConfig(prev => ({ ...prev, roundLength: newValue }));
+                              setLobbyConfig(prev => {
+                                const updated = { ...prev, roundLength: newValue };
+                                logActivity('Settings', `Round length: ${newValue}s`, 'info');
+                                return updated;
+                              });
                             }}
                             className="w-full px-3 py-2 bg-black border border-white text-white text-sm focus:outline-none"
                           />
@@ -804,7 +903,11 @@
                             value={lobbyConfig.steals}
                             onChange={(e) => {
                               const newValue = parseInt(e.target.value) || 0;
-                              setLobbyConfig(prev => ({ ...prev, steals: newValue }));
+                              setLobbyConfig(prev => {
+                                const updated = { ...prev, steals: newValue };
+                                logActivity('Settings', `Total steals: ${newValue}`, 'info');
+                                return updated;
+                              });
                             }}
                             className="w-full px-3 py-2 bg-black border border-white text-white text-sm focus:outline-none"
                           />
@@ -818,7 +921,11 @@
                             checked={lobbyConfig.allowTeamSwitching}
                             onChange={(e) => {
                               const newValue = e.target.checked;
-                              setLobbyConfig(prev => ({ ...prev, allowTeamSwitching: newValue }));
+                              setLobbyConfig(prev => {
+                                const updated = { ...prev, allowTeamSwitching: newValue };
+                                logActivity('Settings', `Team switching: ${newValue ? 'ON' : 'OFF'}`, 'info');
+                                return updated;
+                              });
                             }}
                             className="w-4 h-4"
                           />
@@ -830,7 +937,11 @@
                             checked={lobbyConfig.showSettingsToPlayers}
                             onChange={(e) => {
                               const newValue = e.target.checked;
-                              setLobbyConfig(prev => ({ ...prev, showSettingsToPlayers: newValue }));
+                              setLobbyConfig(prev => {
+                                const updated = { ...prev, showSettingsToPlayers: newValue };
+                                logActivity('Settings', `Show settings to players: ${newValue ? 'ON' : 'OFF'}`, 'info');
+                                return updated;
+                              });
                             }}
                             className="w-4 h-4"
                           />
@@ -1313,11 +1424,20 @@
               {errorLog.length === 0 ? (
                 <div className="text-gray-500 text-xs">No activity yet...</div>
               ) : (
-                errorLog.map((log, idx) => (
-                  <div key={idx} className={`text-xs font-mono mb-1 ${log.isError ? 'text-red-400' : 'text-green-400'}`}>
-                    {log.msg}
-                  </div>
-                ))
+                errorLog.map((log, idx) => {
+                  let colorClass = 'text-gray-400';
+                  if (log.type === 'error') colorClass = 'text-red-400';
+                  else if (log.type === 'success') colorClass = 'text-green-400';
+                  else if (log.type === 'warning') colorClass = 'text-yellow-400';
+                  else if (log.type === 'player') colorClass = 'text-cyan-400';
+                  else if (log.type === 'info') colorClass = 'text-blue-400';
+                  
+                  return (
+                    <div key={idx} className={`text-xs font-mono mb-1 ${colorClass}`}>
+                      {log.msg}
+                    </div>
+                  );
+                })
               )}
               <button
                 onClick={() => setErrorLog([])}
