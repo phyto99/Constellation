@@ -35,6 +35,18 @@
       const [mySessionId, setMySessionId] = useState(null);
       const canvasRef = useRef(null);
 
+      // Check for invite link on load
+      useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const joinRoomId = urlParams.get('join');
+        
+        if (joinRoomId) {
+          console.log('Invite link detected, room ID:', joinRoomId);
+          // Store the room ID to join after connection
+          sessionStorage.setItem('joinRoomId', joinRoomId);
+        }
+      }, []);
+
       // Check server status periodically
       useEffect(() => {
         let checkCount = 0;
@@ -144,7 +156,38 @@
           setIsConnected(true);
           setServerStatus('online');
           console.log('✓ Connected successfully!');
-          loadLobbies();
+          
+          // Check if there's a room to auto-join
+          const joinRoomId = sessionStorage.getItem('joinRoomId');
+          if (joinRoomId) {
+            sessionStorage.removeItem('joinRoomId');
+            console.log('Auto-joining room:', joinRoomId);
+            
+            try {
+              const roomInstance = await client.joinById(joinRoomId, { name: playerName });
+              setRoom(roomInstance);
+              setMySessionId(roomInstance.sessionId);
+              setCurrentLobby({
+                id: roomInstance.roomId,
+                name: roomInstance.metadata?.name || 'Game',
+                host: roomInstance.metadata?.hostName || 'Unknown',
+                players: roomInstance.state.players.size,
+                maxPlayers: roomInstance.maxClients,
+                mode: roomInstance.metadata?.gameMode || 'competitive',
+                status: 'waiting'
+              });
+              setViewAsPlayer(roomInstance.sessionId);
+              setupRoomListeners(roomInstance);
+              updatePlayersFromRoomState(roomInstance);
+              setView('lobby');
+            } catch (error) {
+              console.error('Failed to auto-join room:', error);
+              setErrorMessage('Failed to join room: ' + error.message);
+              loadLobbies();
+            }
+          } else {
+            loadLobbies();
+          }
         } catch (error) {
           console.error('✗ Failed to connect:', error);
           setServerStatus('offline');
@@ -253,9 +296,19 @@
           console.log('✓ Joined room:', roomInstance.sessionId);
           setRoom(roomInstance);
           setMySessionId(roomInstance.sessionId);
-          setCurrentLobby(lobby);
+          
+          // Update lobby with actual data
+          const updatedLobby = {
+            ...lobby,
+            players: roomInstance.state.players.size
+          };
+          setCurrentLobby(updatedLobby);
           setViewAsPlayer(roomInstance.sessionId);
           setupRoomListeners(roomInstance);
+          
+          // Initialize players from room state
+          updatePlayersFromRoomState(roomInstance);
+          
           setView('lobby');
         } catch (error) {
           console.error('✗ Failed to join lobby:', error);
@@ -323,10 +376,10 @@
       
       const startGame = () => {
         if (room) {
-          console.log('Starting game, redirecting to /game/' + room.roomId);
+          console.log('Starting game, redirecting to index.html with room ID');
           room.send('start_game');
-          // Redirect to actual game
-          window.location.href = '/game/' + room.roomId;
+          // Redirect to index.html with room ID as query parameter
+          window.location.href = `/index.html?room=${room.roomId}`;
         } else {
           console.error('No room connection');
           setErrorMessage('No room connection available');
@@ -786,15 +839,37 @@
 
                 <div className={isHost() ? 'lg:col-span-3' : 'lg:col-span-4'}>
                   <div className="border border-white p-6">
-                    <div className="flex justify-between items-center mb-6">
-                      <h2 className="text-2xl font-bold text-white uppercase tracking-wider">
-                        {currentLobby?.name}
-                      </h2>
-                      {currentPlayer && (
-                        <div className="text-white text-sm uppercase tracking-wider">
-                          YOU: <span style={{ color: TEAM_CONFIGS[currentPlayer.teamIndex].color }}>
-                            {TEAM_CONFIGS[currentPlayer.teamIndex].name}
-                          </span>
+                    <div className="mb-6">
+                      <div className="flex justify-between items-center mb-3">
+                        <h2 className="text-2xl font-bold text-white uppercase tracking-wider">
+                          {currentLobby?.name}
+                        </h2>
+                        {currentPlayer && (
+                          <div className="text-white text-sm uppercase tracking-wider">
+                            YOU: <span style={{ color: TEAM_CONFIGS[currentPlayer.teamIndex].color }}>
+                              {TEAM_CONFIGS[currentPlayer.teamIndex].name}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {isHost() && room && (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            readOnly
+                            value={`${window.location.origin}/?join=${room.roomId}`}
+                            className="flex-1 px-3 py-2 bg-black border border-gray-600 text-gray-400 text-xs font-mono"
+                          />
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(`${window.location.origin}/?join=${room.roomId}`);
+                              alert('Invite link copied!');
+                            }}
+                            className="px-4 py-2 bg-white text-black text-xs uppercase tracking-wider hover:bg-gray-300"
+                          >
+                            COPY LINK
+                          </button>
                         </div>
                       )}
                     </div>
