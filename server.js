@@ -5,17 +5,50 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
+// Schema definitions
+class Player extends Schema {
+    constructor() {
+        super();
+        this.id = '';
+        this.name = '';
+        this.team = null;
+        this.ready = false;
+        this.connected = true;
+        this.connectedAt = 0;
+    }
+}
+
+type('string')(Player.prototype, 'id');
+type('string')(Player.prototype, 'name');
+type('number')(Player.prototype, 'team');
+type('boolean')(Player.prototype, 'ready');
+type('boolean')(Player.prototype, 'connected');
+type('number')(Player.prototype, 'connectedAt');
+
+class RoomState extends Schema {
+    constructor() {
+        super();
+        this.players = new MapSchema();
+        this.gameState = 'waiting';
+        this.config = {};
+        this.teams = new MapSchema();
+    }
+}
+
+type({ map: Player })(RoomState.prototype, 'players');
+type('string')(RoomState.prototype, 'gameState');
+type('object')(RoomState.prototype, 'config');
+type({ map: 'any' })(RoomState.prototype, 'teams');
+
 // Game room classes
 class ConstellationRoom extends Room {
     onCreate(options) {
         console.log('ConstellationRoom created with options:', options);
         
-        this.setState({
-            players: new MapSchema(),
-            gameState: 'waiting',
-            config: options || {},
-            teams: new MapSchema()
-        });
+        const state = new RoomState();
+        state.gameState = 'waiting';
+        state.config = options || {};
+        this.setState(state);
 
         this.maxClients = options.maxPlayers || 20;
         
@@ -58,14 +91,13 @@ class ConstellationRoom extends Room {
     onJoin(client, options) {
         console.log(`Player ${client.sessionId} joined room ${this.roomId}`);
         
-        const player = {
-            id: client.sessionId,
-            name: options.name || `Player ${client.sessionId.substring(0, 6)}`,
-            team: null,
-            ready: false,
-            connected: true,
-            connectedAt: Date.now()
-        };
+        const player = new Player();
+        player.id = client.sessionId;
+        player.name = options.name || `Player ${client.sessionId.substring(0, 6)}`;
+        player.team = null;
+        player.ready = false;
+        player.connected = true;
+        player.connectedAt = Date.now();
 
         this.state.players.set(client.sessionId, player);
         
