@@ -8,7 +8,7 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/colyseus.js@^0.15.0/dist/colyseus.js"></script>
+  <script src="https://unpkg.com/colyseus.js@0.15.24/dist/colyseus.js"></script>
 
 </head>
 <body>
@@ -24,6 +24,9 @@
       const [playerName, setPlayerName] = useState('');
       const [isConnected, setIsConnected] = useState(false);
       const [viewAsPlayer, setViewAsPlayer] = useState('host');
+      const [errorMessage, setErrorMessage] = useState('');
+      const [serverStatus, setServerStatus] = useState('checking');
+      const [lastCheckTime, setLastCheckTime] = useState(0);
       
       // Colyseus state
       const [colyseusClient, setColyseusClient] = useState(null);
@@ -31,6 +34,41 @@
       const [playerCursors, setPlayerCursors] = useState({});
       const [mySessionId, setMySessionId] = useState(null);
       const canvasRef = useRef(null);
+
+      // Check server status periodically
+      useEffect(() => {
+        let checkCount = 0;
+        
+        const checkServer = async () => {
+          checkCount++;
+          setLastCheckTime(checkCount);
+          
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            
+            const response = await fetch('http://localhost:2567', {
+              signal: controller.signal,
+              cache: 'no-cache'
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (response.ok) {
+              setServerStatus('online');
+            } else {
+              setServerStatus('error');
+            }
+          } catch (error) {
+            console.log('Server check failed:', error.message);
+            setServerStatus('offline');
+          }
+        };
+
+        checkServer();
+        const interval = setInterval(checkServer, 3000); // Check every 3 seconds
+        return () => clearInterval(interval);
+      }, []);
       
       const [lobbyConfig, setLobbyConfig] = useState({
         name: 'My Game Room',
@@ -81,12 +119,37 @@
 
       const connectToColyseus = async () => {
         try {
+          setErrorMessage('');
+          console.log('Connecting to ws://localhost:2567...');
+          
+          // Check if Colyseus is loaded
+          if (typeof Colyseus === 'undefined') {
+            throw new Error('Colyseus library not loaded. Check your internet connection.');
+          }
+          
           const client = new Colyseus.Client('ws://localhost:2567');
+          
+          // Test connection with timeout
+          console.log('Testing connection...');
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Connection timeout')), 5000)
+          );
+          
+          await Promise.race([
+            client.getAvailableRooms('constellation'),
+            timeoutPromise
+          ]);
+          
           setColyseusClient(client);
           setIsConnected(true);
+          setServerStatus('online');
+          console.log('✓ Connected successfully!');
           loadLobbies();
         } catch (error) {
-          console.error('Failed to connect to Colyseus:', error);
+          console.error('✗ Failed to connect:', error);
+          setServerStatus('offline');
+          const errorMsg = 'Failed to connect: ' + error.message;
+          setErrorMessage(errorMsg);
         }
       };
 
@@ -129,6 +192,8 @@
 
       const createLobby = async () => {
         try {
+          setErrorMessage('');
+          console.log('Creating lobby:', lobbyConfig.name);
           const roomInstance = await colyseusClient.create('constellation', {
             name: lobbyConfig.name,
             maxPlayers: lobbyConfig.maxPlayers,
@@ -136,6 +201,7 @@
             ...lobbyConfig
           });
           
+          console.log('✓ Room created:', roomInstance.roomId);
           setRoom(roomInstance);
           setMySessionId(roomInstance.sessionId);
           
@@ -172,14 +238,18 @@
           setupRoomListeners(roomInstance);
           setView('lobby');
         } catch (error) {
-          console.error('Failed to create lobby:', error);
+          console.error('✗ Failed to create lobby:', error);
+          setErrorMessage('Failed to create lobby: ' + error.message);
         }
       };
 
       const joinLobby = async (lobby) => {
         try {
+          setErrorMessage('');
+          console.log('Joining lobby:', lobby.id);
           const roomInstance = await colyseusClient.joinById(lobby.id, { name: playerName });
           
+          console.log('✓ Joined room:', roomInstance.sessionId);
           setRoom(roomInstance);
           setMySessionId(roomInstance.sessionId);
           setCurrentLobby(lobby);
@@ -187,7 +257,8 @@
           setupRoomListeners(roomInstance);
           setView('lobby');
         } catch (error) {
-          console.error('Failed to join lobby:', error);
+          console.error('✗ Failed to join lobby:', error);
+          setErrorMessage('Failed to join lobby: ' + error.message);
         }
       };
 
@@ -251,9 +322,14 @@
       
       const startGame = () => {
         if (room) {
+          console.log('Starting game, redirecting to /game/' + room.roomId);
           room.send('start_game');
+          // Redirect to actual game
+          window.location.href = '/game/' + room.roomId;
+        } else {
+          console.error('No room connection');
+          setErrorMessage('No room connection available');
         }
-        setView('game');
       };
 
       const addAIBot = () => {
@@ -360,14 +436,23 @@
       };
 
       // Main Menu
-      const MainMenuView = () => (
-        <div className="min-h-screen bg-black flex items-center justify-center p-4">
-          <div className="border border-white p-8 max-w-md w-full">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 border-2 border-white mx-auto mb-4" />
-              <h1 className="text-4xl font-bold text-white mb-2">STAR CONQUEST</h1>
-              <p className="text-white text-sm tracking-widest">MULTIPLAYER</p>
-            </div>
+      const MainMenuView = () => {
+        return (
+          <div className="min-h-screen bg-black flex items-center justify-center p-4">
+            <div className="border border-white p-8 max-w-md w-full">
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 border-2 border-white mx-auto mb-4" />
+                <h1 className="text-4xl font-bold text-white mb-2">STAR CONQUEST</h1>
+                <p className="text-white text-sm tracking-widest">MULTIPLAYER</p>
+              </div>
+
+              {/* Error Message Display */}
+              {errorMessage && (
+                <div className="mb-4 p-3 border-2 border-red-500 bg-red-900 bg-opacity-20">
+                  <div className="text-red-500 text-sm font-bold uppercase tracking-wider mb-1">ERROR</div>
+                  <div className="text-red-400 text-sm">{errorMessage}</div>
+                </div>
+              )}
 
             {!isConnected ? (
               <div className="space-y-4">
@@ -377,8 +462,15 @@
                     type="text"
                     value={playerName}
                     onChange={(e) => setPlayerName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && playerName) {
+                        e.preventDefault();
+                        connectToColyseus();
+                      }
+                    }}
                     className="w-full px-4 py-3 bg-black border border-white text-white focus:outline-none"
                     placeholder="ENTER NAME"
+                    autoFocus
                   />
                 </div>
                 <button
@@ -386,11 +478,16 @@
                     e.preventDefault();
                     connectToColyseus();
                   }}
-                  disabled={!playerName}
+                  disabled={!playerName || serverStatus !== 'online'}
                   className="w-full py-3 bg-white text-black font-bold hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider transition-colors"
                 >
                   CONNECT
                 </button>
+                {serverStatus === 'offline' && (
+                  <div className="text-red-500 text-xs text-center uppercase tracking-wider">
+                    Server is offline. Start server with: npm start
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-3">
@@ -405,16 +502,20 @@
                   CREATE GAME
                 </button>
                 <button
-                  onClick={() => setView('browse')}
+                  onClick={() => {
+                    setView('browse');
+                    loadLobbies();
+                  }}
                   className="w-full py-3 bg-black text-white border border-white font-bold hover:bg-white hover:text-black uppercase tracking-wider transition-colors"
                 >
                   BROWSE LOBBIES
                 </button>
               </div>
             )}
+            </div>
           </div>
-        </div>
-      );
+        );
+      };
 
       // Browse Lobbies
       const BrowseLobbiesView = () => (
@@ -1030,12 +1131,51 @@
         );
       };
 
+      // Persistent Server Status Display
+      const ServerStatusDisplay = () => {
+        const getStatusColor = () => {
+          switch (serverStatus) {
+            case 'online': return 'bg-green-500';
+            case 'offline': return 'bg-red-500';
+            case 'error': return 'bg-yellow-500';
+            default: return 'bg-gray-500';
+          }
+        };
+
+        const getStatusText = () => {
+          switch (serverStatus) {
+            case 'online': return 'ONLINE';
+            case 'offline': return 'OFFLINE';
+            case 'error': return 'ERROR';
+            default: return 'CHECKING';
+          }
+        };
+
+        return (
+          <div className="fixed bottom-4 right-4 bg-black border-2 border-white p-3 z-50">
+            <div className="flex items-center gap-2 mb-1">
+              <div className={`w-2 h-2 rounded-full ${getStatusColor()} animate-pulse`} />
+              <span className="text-white text-xs font-bold uppercase tracking-wider">
+                SERVER: {getStatusText()}
+              </span>
+            </div>
+            <div className="text-gray-400 text-xs">
+              Check #{lastCheckTime} • Every 3s
+            </div>
+            <div className="text-gray-500 text-xs mt-1">
+              ws://localhost:2567
+            </div>
+          </div>
+        );
+      };
+
       return (
         <div>
           {view === 'main' && <MainMenuView />}
           {view === 'browse' && <BrowseLobbiesView />}
           {view === 'lobby' && <LobbyView />}
           {view === 'game' && <GameView />}
+          <ServerStatusDisplay />
         </div>
       );
     };
