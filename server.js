@@ -915,6 +915,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: Date.now() });
+});
+
 // Serve lobby at root
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'other.html'));
