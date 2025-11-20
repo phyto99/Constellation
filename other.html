@@ -21,13 +21,29 @@
       const [view, setView] = useState('main');
       const [lobbies, setLobbies] = useState([]);
       const [currentLobby, setCurrentLobby] = useState(null);
-      const [playerName, setPlayerName] = useState('');
+      const [playerName, setPlayerName] = useState(() => {
+        return localStorage.getItem('playerName') || '';
+      });
       const [isConnected, setIsConnected] = useState(false);
       const [viewAsPlayer, setViewAsPlayer] = useState('host');
       const [errorMessage, setErrorMessage] = useState('');
+
+      // Persist player name
+      useEffect(() => {
+        if (playerName) {
+          localStorage.setItem('playerName', playerName);
+        }
+      }, [playerName]);
       const [serverStatus, setServerStatus] = useState('checking');
       const [lastCheckTime, setLastCheckTime] = useState(0);
-      const [errorLog, setErrorLog] = useState([]);
+      const [errorLog, setErrorLog] = useState(() => {
+        try {
+          const saved = localStorage.getItem('activityLog');
+          return saved ? JSON.parse(saved) : [];
+        } catch {
+          return [];
+        }
+      });
       
       // Colyseus state
       const [colyseusClient, setColyseusClient] = useState(null);
@@ -35,6 +51,11 @@
       const [playerCursors, setPlayerCursors] = useState({});
       const [mySessionId, setMySessionId] = useState(null);
       const canvasRef = useRef(null);
+
+      // Persist activity log to localStorage
+      useEffect(() => {
+        localStorage.setItem('activityLog', JSON.stringify(errorLog));
+      }, [errorLog]);
 
       // Activity logging helper - logs everything (not just errors)
       const logActivity = (context, message, isError = false) => {
@@ -84,27 +105,59 @@
         return () => clearInterval(interval);
       }, []);
       
-      const [lobbyConfig, setLobbyConfig] = useState({
-        name: 'My Game Room',
-        maxPlayers: 4,
-        isPrivate: false,
-        gameMode: 'competitive',
-        allowTeamSwitching: true,
-        showSettingsToPlayers: true,
-        moves: 15,
-        rounds: 10,
-        roundLength: 30,
-        planningTime: 5,
-        steals: 15,
-        headquarters: 2,
-        multipliers: {
-          count: 500,
-          distance: 1,
-          hq: 10,
-          destruction: 1
-        },
-        aiBots: []
+      const [lobbyConfig, setLobbyConfig] = useState(() => {
+        try {
+          const saved = localStorage.getItem('lobbyConfig');
+          return saved ? JSON.parse(saved) : {
+            name: 'My Game Room',
+            maxPlayers: 4,
+            isPrivate: false,
+            gameMode: 'competitive',
+            allowTeamSwitching: true,
+            showSettingsToPlayers: true,
+            moves: 15,
+            rounds: 10,
+            roundLength: 30,
+            planningTime: 5,
+            steals: 15,
+            headquarters: 2,
+            multipliers: {
+              count: 500,
+              distance: 1,
+              hq: 10,
+              destruction: 1
+            },
+            aiBots: []
+          };
+        } catch {
+          return {
+            name: 'My Game Room',
+            maxPlayers: 4,
+            isPrivate: false,
+            gameMode: 'competitive',
+            allowTeamSwitching: true,
+            showSettingsToPlayers: true,
+            moves: 15,
+            rounds: 10,
+            roundLength: 30,
+            planningTime: 5,
+            steals: 15,
+            headquarters: 2,
+            multipliers: {
+              count: 500,
+              distance: 1,
+              hq: 10,
+              destruction: 1
+            },
+            aiBots: []
+          };
+        }
       });
+
+      // Persist lobby config
+      useEffect(() => {
+        localStorage.setItem('lobbyConfig', JSON.stringify(lobbyConfig));
+      }, [lobbyConfig]);
 
       const [lobbyPlayers, setLobbyPlayers] = useState([]);
       const [draggedPlayer, setDraggedPlayer] = useState(null);
@@ -683,7 +736,10 @@
                         <input
                           type="text"
                           value={lobbyConfig.name}
-                          onChange={(e) => setLobbyConfig({ ...lobbyConfig, name: e.target.value })}
+                          onChange={(e) => {
+                            const newValue = e.target.value;
+                            setLobbyConfig(prev => ({ ...prev, name: newValue }));
+                          }}
                           className="w-full px-3 py-2 bg-black border border-white text-white text-sm focus:outline-none"
                         />
                       </div>
@@ -692,7 +748,10 @@
                         <label className="block text-xs text-white mb-2 uppercase tracking-wider">Mode</label>
                         <select
                           value={lobbyConfig.gameMode}
-                          onChange={(e) => setLobbyConfig({ ...lobbyConfig, gameMode: e.target.value })}
+                          onChange={(e) => {
+                            const newValue = e.target.value;
+                            setLobbyConfig(prev => ({ ...prev, gameMode: newValue }));
+                          }}
                           className="w-full px-3 py-2 bg-black border border-white text-white text-sm focus:outline-none"
                         >
                           <option value="competitive">COMPETITIVE</option>
@@ -707,7 +766,10 @@
                           <input
                             type="number"
                             value={lobbyConfig.moves}
-                            onChange={(e) => setLobbyConfig({ ...lobbyConfig, moves: parseInt(e.target.value) })}
+                            onChange={(e) => {
+                              const newValue = parseInt(e.target.value) || 0;
+                              setLobbyConfig(prev => ({ ...prev, moves: newValue }));
+                            }}
                             className="w-full px-3 py-2 bg-black border border-white text-white text-sm focus:outline-none"
                           />
                         </div>
@@ -716,7 +778,10 @@
                           <input
                             type="number"
                             value={lobbyConfig.rounds}
-                            onChange={(e) => setLobbyConfig({ ...lobbyConfig, rounds: parseInt(e.target.value) })}
+                            onChange={(e) => {
+                              const newValue = parseInt(e.target.value) || 0;
+                              setLobbyConfig(prev => ({ ...prev, rounds: newValue }));
+                            }}
                             className="w-full px-3 py-2 bg-black border border-white text-white text-sm focus:outline-none"
                           />
                         </div>
@@ -725,7 +790,10 @@
                           <input
                             type="number"
                             value={lobbyConfig.roundLength}
-                            onChange={(e) => setLobbyConfig({ ...lobbyConfig, roundLength: parseInt(e.target.value) })}
+                            onChange={(e) => {
+                              const newValue = parseInt(e.target.value) || 0;
+                              setLobbyConfig(prev => ({ ...prev, roundLength: newValue }));
+                            }}
                             className="w-full px-3 py-2 bg-black border border-white text-white text-sm focus:outline-none"
                           />
                         </div>
@@ -734,7 +802,10 @@
                           <input
                             type="number"
                             value={lobbyConfig.steals}
-                            onChange={(e) => setLobbyConfig({ ...lobbyConfig, steals: parseInt(e.target.value) })}
+                            onChange={(e) => {
+                              const newValue = parseInt(e.target.value) || 0;
+                              setLobbyConfig(prev => ({ ...prev, steals: newValue }));
+                            }}
                             className="w-full px-3 py-2 bg-black border border-white text-white text-sm focus:outline-none"
                           />
                         </div>
@@ -745,7 +816,10 @@
                           <input
                             type="checkbox"
                             checked={lobbyConfig.allowTeamSwitching}
-                            onChange={(e) => setLobbyConfig({ ...lobbyConfig, allowTeamSwitching: e.target.checked })}
+                            onChange={(e) => {
+                              const newValue = e.target.checked;
+                              setLobbyConfig(prev => ({ ...prev, allowTeamSwitching: newValue }));
+                            }}
                             className="w-4 h-4"
                           />
                           <label className="text-white uppercase tracking-wider text-xs">ALLOW TEAM SWITCHING</label>
@@ -754,7 +828,10 @@
                           <input
                             type="checkbox"
                             checked={lobbyConfig.showSettingsToPlayers}
-                            onChange={(e) => setLobbyConfig({ ...lobbyConfig, showSettingsToPlayers: e.target.checked })}
+                            onChange={(e) => {
+                              const newValue = e.target.checked;
+                              setLobbyConfig(prev => ({ ...prev, showSettingsToPlayers: newValue }));
+                            }}
                             className="w-4 h-4"
                           />
                           <label className="text-white uppercase tracking-wider text-xs">SHOW SETTINGS TO PLAYERS</label>
