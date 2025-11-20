@@ -36,12 +36,12 @@
       const [mySessionId, setMySessionId] = useState(null);
       const canvasRef = useRef(null);
 
-      // Error logging helper
-      const logError = (context, error) => {
+      // Activity logging helper - logs everything (not just errors)
+      const logActivity = (context, message, isError = false) => {
         const timestamp = new Date().toLocaleTimeString();
-        const errorMsg = `[${timestamp}] ${context}: ${error.message || error}`;
-        console.error(errorMsg, error);
-        setErrorLog(prev => [...prev, errorMsg].slice(-10)); // Keep last 10 errors
+        const logMsg = `[${timestamp}] ${context}: ${message}`;
+        console.log(logMsg);
+        setErrorLog(prev => [...prev, { msg: logMsg, isError }].slice(-15)); // Keep last 15 logs
       };
 
       // Check server status periodically
@@ -161,7 +161,7 @@
           loadLobbies();
         } catch (error) {
           console.error('✗ Failed to connect:', error);
-          logError('Connect', error);
+          logActivity('Connect', `✗ ERROR: ${error.message}`, true);
           setServerStatus('offline');
           const errorMsg = 'Failed to connect: ' + error.message;
           setErrorMessage(errorMsg);
@@ -209,7 +209,7 @@
         try {
           setErrorMessage('');
           console.log('Creating lobby:', lobbyConfig.name);
-          logError('Create Lobby', `Creating room: ${lobbyConfig.name}`);
+          logActivity('Create Lobby', `Creating room: ${lobbyConfig.name}`);
           
           const roomInstance = await colyseusClient.create('constellation', {
             name: lobbyConfig.name,
@@ -220,7 +220,7 @@
           });
           
           console.log('✓ Room created:', roomInstance.roomId);
-          logError('Create Lobby', `SUCCESS - Room ${roomInstance.roomId} created`);
+          logActivity('Create Lobby', `✓ Room ${roomInstance.roomId} created`);
           
           setRoom(roomInstance);
           setMySessionId(roomInstance.sessionId);
@@ -259,7 +259,7 @@
           setView('lobby');
         } catch (error) {
           console.error('✗ Failed to create lobby:', error);
-          logError('Create Lobby', error);
+          logActivity('Create Lobby', `✗ ERROR: ${error.message}`, true);
           setErrorMessage('Failed to create lobby: ' + error.message);
         }
       };
@@ -267,7 +267,7 @@
       const joinLobby = async (lobby) => {
         try {
           setErrorMessage('');
-          logError('Join Lobby', `Attempting to join room ${lobby.id}`);
+          logActivity('Join Lobby', `Attempting to join room ${lobby.id}`);
           console.log('Joining lobby:', lobby.id, 'with name:', playerName);
           
           if (!colyseusClient) {
@@ -277,7 +277,7 @@
           const roomInstance = await colyseusClient.joinById(lobby.id, { name: playerName });
           
           console.log('✓ Joined room:', roomInstance.sessionId);
-          logError('Join Lobby', `SUCCESS - Joined as ${roomInstance.sessionId}`);
+          logActivity('Join Lobby', `✓ Joined as ${roomInstance.sessionId}`);
           
           setRoom(roomInstance);
           setMySessionId(roomInstance.sessionId);
@@ -291,7 +291,7 @@
           setView('lobby');
         } catch (error) {
           console.error('✗ Failed to join lobby:', error);
-          logError('Join Lobby', error);
+          logActivity('Join Lobby', `✗ ERROR: ${error.message}`, true);
           setErrorMessage('Failed to join lobby: ' + error.message);
         }
       };
@@ -300,16 +300,19 @@
         // Listen for player state changes
         roomInstance.state.players.onAdd = (player, sessionId) => {
           console.log('Player added:', sessionId, player);
+          logActivity('Room Event', `Player ${player.name} joined`);
           updatePlayersFromRoomState(roomInstance);
         };
         
         roomInstance.state.players.onRemove = (player, sessionId) => {
           console.log('Player removed:', sessionId);
+          logActivity('Room Event', `Player ${sessionId} left`);
           updatePlayersFromRoomState(roomInstance);
         };
         
         roomInstance.state.players.onChange = (player, sessionId) => {
           console.log('Player changed:', sessionId, player);
+          logActivity('Room Event', `Player ${player.name} updated`);
           updatePlayersFromRoomState(roomInstance);
         };
         
@@ -329,12 +332,14 @@
         // Listen for team changes
         roomInstance.onMessage('player_team_changed', (data) => {
           console.log('Team changed:', data);
+          logActivity('Room Event', `Player moved to team ${data.newTeam}`);
           updatePlayersFromRoomState(roomInstance);
         });
         
         // Listen for game start
         roomInstance.onMessage('game_started', (data) => {
           console.log('Game started:', data);
+          logActivity('Room Event', 'Game started!');
           setView('game');
         });
       };
@@ -357,13 +362,13 @@
       const startGame = () => {
         if (room) {
           console.log('Starting game, redirecting to index.html with room ID');
-          logError('Start Game', `Redirecting to index.html?room=${room.roomId}`);
+          logActivity('Start Game', `Redirecting to index.html?room=${room.roomId}`);
           room.send('start_game');
           // Redirect to index.html with room ID as query parameter
           window.location.href = `/index.html?room=${room.roomId}`;
         } else {
           console.error('No room connection');
-          logError('Start Game', 'No room connection available');
+          logActivity('Start Game', '✗ ERROR: No room connection available', true);
           setErrorMessage('No room connection available');
         }
       };
@@ -512,6 +517,14 @@
                 <button
                   onClick={(e) => {
                     e.preventDefault();
+                    if (!playerName) {
+                      logActivity('Connect', '✗ ERROR: Please enter your name', true);
+                      return;
+                    }
+                    if (serverStatus !== 'online') {
+                      logActivity('Connect', '✗ ERROR: Server is offline', true);
+                      return;
+                    }
                     connectToColyseus();
                   }}
                   disabled={!playerName || serverStatus !== 'online'}
@@ -602,7 +615,13 @@
                       </div>
                       {lobby.status === 'waiting' && (
                         <button
-                          onClick={() => joinLobby(lobby)}
+                          onClick={() => {
+                            if (!isConnected) {
+                              logActivity('Join', '✗ ERROR: Not connected. Click CONNECT first.', true);
+                              return;
+                            }
+                            joinLobby(lobby);
+                          }}
                           className="px-6 py-2 bg-white text-black font-bold hover:bg-gray-300 uppercase tracking-wider"
                         >
                           JOIN
@@ -1211,23 +1230,25 @@
               </div>
             </div>
 
-            {/* Error Log - Bottom Left */}
-            {errorLog.length > 0 && (
-              <div className="fixed bottom-4 left-4 bg-black border-2 border-red-500 p-3 z-50 max-w-md max-h-48 overflow-y-auto">
-                <div className="text-red-500 text-xs font-bold uppercase tracking-wider mb-2">ERROR LOG</div>
-                {errorLog.map((log, idx) => (
-                  <div key={idx} className="text-red-400 text-xs font-mono mb-1">
-                    {log}
+            {/* Activity Log - Bottom Left (Always Visible) */}
+            <div className="fixed bottom-4 left-4 bg-black border-2 border-white p-3 z-50 max-w-md max-h-64 overflow-y-auto">
+              <div className="text-white text-xs font-bold uppercase tracking-wider mb-2">ACTIVITY LOG</div>
+              {errorLog.length === 0 ? (
+                <div className="text-gray-500 text-xs">No activity yet...</div>
+              ) : (
+                errorLog.map((log, idx) => (
+                  <div key={idx} className={`text-xs font-mono mb-1 ${log.isError ? 'text-red-400' : 'text-green-400'}`}>
+                    {log.msg}
                   </div>
-                ))}
-                <button
-                  onClick={() => setErrorLog([])}
-                  className="mt-2 px-2 py-1 bg-red-500 text-black text-xs uppercase hover:bg-red-400"
-                >
-                  CLEAR
-                </button>
-              </div>
-            )}
+                ))
+              )}
+              <button
+                onClick={() => setErrorLog([])}
+                className="mt-2 px-2 py-1 bg-white text-black text-xs uppercase hover:bg-gray-300"
+              >
+                CLEAR
+              </button>
+            </div>
           </>
         );
       };
