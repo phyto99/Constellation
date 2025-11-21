@@ -404,7 +404,7 @@
           
           // Wait a tick to ensure state is updated before loading lobbies
           setTimeout(() => {
-            loadLobbies();
+            loadLobbies(true); // Silent initial load
           }, 100);
         } catch (error) {
           console.error('✗ Failed to connect:', error);
@@ -515,16 +515,24 @@
           
           console.log('Created lobby:', newLobby);
           console.log('Room has', roomInstance.state.players.size, 'players');
+          console.log('My session ID:', roomInstance.sessionId);
+          console.log('Host ID from state:', roomInstance.state.hostId);
+          
+          // Log host status
+          const hostId = roomInstance.state.hostId || roomInstance.sessionId;
+          logActivity('Host', `👑 You are the host (${playerName})`, 'success');
           
           const initialPlayers = [];
           roomInstance.state.players.forEach((player, sessionId) => {
-            console.log('Initial player:', sessionId, player.name);
+            const isHostPlayer = player.isHost || sessionId === hostId || sessionId === roomInstance.sessionId;
+            console.log('Initial player:', sessionId, player.name, 'isHost:', isHostPlayer, 'player.isHost:', player.isHost);
             initialPlayers.push({
               id: sessionId,
               name: player.name || playerName,
               teamIndex: player.team !== null ? player.team : 0,
-              isHost: sessionId === roomInstance.sessionId,
-              isAI: false
+              isHost: isHostPlayer,
+              isAI: false,
+              ready: player.ready || false
             });
           });
           
@@ -545,12 +553,13 @@
           setCurrentLobby(newLobby);
           setupRoomListeners(roomInstance);
           
-          // Update players after a short delay to ensure sync
-          setTimeout(() => {
-            updatePlayersFromRoomState(roomInstance);
-          }, 200);
-          
+          // Switch to lobby view
           setView('lobby');
+          
+          // Multiple syncs to ensure state is caught
+          setTimeout(() => updatePlayersFromRoomState(roomInstance), 100);
+          setTimeout(() => updatePlayersFromRoomState(roomInstance), 300);
+          setTimeout(() => updatePlayersFromRoomState(roomInstance), 500);
         } catch (error) {
           console.error('✗ Failed to create lobby:', error);
           logActivity('Create Lobby', `✗ ERROR: ${error.message}`, 'error');
@@ -603,14 +612,22 @@
           });
           setViewAsPlayer(roomInstance.sessionId);
           
-          // Setup listeners
+          // Setup listeners first
           setupRoomListeners(roomInstance);
           
-          // Initialize players and switch to lobby view
+          // Initialize players immediately
+          updatePlayersFromRoomState(roomInstance);
+          
+          // Switch to lobby view and sync again
           setTimeout(() => {
             updatePlayersFromRoomState(roomInstance);
             setView('lobby');
           }, 100);
+          
+          // One more sync after a short delay to catch any late updates
+          setTimeout(() => {
+            updatePlayersFromRoomState(roomInstance);
+          }, 500);
           
         } catch (error) {
           console.error('✗ Failed to join lobby:', error);
@@ -635,69 +652,150 @@
 
       const setupRoomListeners = (roomInstance) => {
         try {
+          console.log('Setting up room listeners for room:', roomInstance.roomId);
+          console.log('Current session ID:', roomInstance.sessionId);
+          
+          // Periodic sync to ensure state consistency (every 2 seconds)
+          const syncInterval = setInterval(() => {
+            if (view === 'lobby' && roomInstance && roomInstance.connection?.isOpen) {
+              updatePlayersFromRoomState(roomInstance);
+            } else if (view !== 'lobby') {
+              clearInterval(syncInterval);
+            }
+          }, 2000);
+          
+          // Store interval for cleanup
+          if (!roomInstance._syncInterval) {
+            roomInstance._syncInterval = syncInterval;
+          }
+          
+          // Listen for hostId changes
+          roomInstance.state.listen('hostId', (value) => {
+            console.log('Host ID changed to:', value);
+            if (value === roomInstance.sessionId) {
+              logActivity('Host', '👑 You are now the host', 'success');
+            }
+            updatePlayersFromRoomState(roomInstance);
+          });
+          
           // Listen for player state changes
           roomInstance.state.players.onAdd = (player, sessionId) => {
-            console.log('Player added:', sessionId, player.name);
-            logActivity('Player', `${player.name} joined the room`, 'player');
+            console.log('🔔 Player added event:', sessionId, player.name, 'isHost:', player.isHost);
+            
+            // Listen for changes to this specific player
+            player.listen('isHost', (value) => {
+              console.log(`Player ${sessionId} isHost changed to:`, value);
+              updatePlayersFromRoomState(roomInstance);
+            });
+            
+            player.listen('ready', (value) => {
+              console.log(`Player ${sessionId} ready changed to:`, value);
+              updatePlayersFromRoomState(roomInstance);
+            });
+            
+            player.listen('team', (value) => {
+              console.log(`Player ${sessionId} team changed to:`, value);
+              updatePlayersFromRoomState(roomInstance);
+            });
+            
+            // Immediate update - multiple attempts
+            updatePlayersFromRoomState(roomInstance);
             setTimeout(() => updatePlayersFromRoomState(roomInstance), 50);
+            setTimeout(() => updatePlayersFromRoomState(roomInstance), 150);
           };
           
           roomInstance.state.players.onRemove = (player, sessionId) => {
-            console.log('Player removed:', sessionId);
+            console.log('🔔 Player removed event:', sessionId);
             const playerName = player?.name || sessionId.substring(0, 6);
             logActivity('Player', `${playerName} left the room`, 'warning');
-            setTimeout(() => updatePlayersFromRoomState(roomInstance), 50);
+            updatePlayersFromRoomState(roomInstance);
           };
           
           roomInstance.state.players.onChange = (player, sessionId) => {
-            console.log('Player changed:', sessionId, player.name);
-            setTimeout(() => updatePlayersFromRoomState(roomInstance), 50);
+            console.log('🔔 Player changed event:', sessionId, player.name, 'isHost:', player.isHost);
+            updatePlayersFromRoomState(roomInstance);
           };
+
+          // Listen for player joined broadcast (redundant but ensures sync)
+          roomInstance.onMessage('player_joined', (data) => {
+            console.log('📢 Player joined broadcast:', data);
+            
+            // Log to activity log with host indicator
+            const hostIndicator = data.isHost ? ' 👑' : '';
+            logActivity('Player', `${data.playerName}${hostIndicator} joined (${data.totalPlayers} total)`, 'player');
+            
+            // Force immediate update - multiple attempts to ensure it catches
+            updatePlayersFromRoomState(roomInstance);
+            setTimeout(() => updatePlayersFromRoomState(roomInstance), 50);
+            setTimeout(() => updatePlayersFromRoomState(roomInstance), 150);
+          });
         
-        // Listen for cursor movements
-        roomInstance.onMessage('cursor_move', (data) => {
-          setPlayerCursors(prev => ({
-            ...prev,
-            [data.sessionId]: {
-              x: data.x,
-              y: data.y,
-              color: data.color,
-              name: data.name
+          // Listen for cursor movements
+          roomInstance.onMessage('cursor_move', (data) => {
+            setPlayerCursors(prev => ({
+              ...prev,
+              [data.sessionId]: {
+                x: data.x,
+                y: data.y,
+                color: data.color,
+                name: data.name
+              }
+            }));
+          });
+        
+          // Listen for team changes
+          roomInstance.onMessage('player_team_changed', (data) => {
+            console.log('Team changed:', data);
+            logActivity('Team', `Player moved to team ${data.newTeam}`, 'info');
+            updatePlayersFromRoomState(roomInstance);
+          });
+
+          // Listen for ready status changes
+          roomInstance.onMessage('player_ready_changed', (data) => {
+            console.log('Ready status changed:', data);
+            setReadyPlayers(prev => {
+              const newSet = new Set(prev);
+              if (data.ready) {
+                newSet.add(data.playerId);
+              } else {
+                newSet.delete(data.playerId);
+              }
+              return newSet;
+            });
+            logActivity('Ready', `Player ${data.ready ? 'ready' : 'not ready'}`, 'info');
+          });
+        
+          // Listen for game start
+          roomInstance.onMessage('game_started', (data) => {
+            console.log('Game started:', data);
+            logActivity('Game', 'Game started!', 'success');
+            setView('game');
+          });
+
+          // Listen for room errors
+          roomInstance.onError = (code, message) => {
+            console.error('Room error:', code, message);
+            logActivity('Room Error', `${message} (code: ${code})`, 'error');
+          };
+
+          // Listen for room leave
+          roomInstance.onLeave = (code) => {
+            console.log('Left room with code:', code);
+            
+            // Clean up sync interval
+            if (roomInstance._syncInterval) {
+              clearInterval(roomInstance._syncInterval);
+              roomInstance._syncInterval = null;
             }
-          }));
-        });
-        
-        // Listen for team changes
-        roomInstance.onMessage('player_team_changed', (data) => {
-          console.log('Team changed:', data);
-          logActivity('Team', `Player moved to team ${data.newTeam}`, 'info');
-          updatePlayersFromRoomState(roomInstance);
-        });
-        
-        // Listen for game start
-        roomInstance.onMessage('game_started', (data) => {
-          console.log('Game started:', data);
-          logActivity('Game', 'Game started!', 'success');
-          setView('game');
-        });
-
-        // Listen for room errors
-        roomInstance.onError = (code, message) => {
-          console.error('Room error:', code, message);
-          logActivity('Room Error', `${message} (code: ${code})`, 'error');
-        };
-
-        // Listen for room leave
-        roomInstance.onLeave = (code) => {
-          console.log('Left room with code:', code);
-          if (code === 1000) {
-            logActivity('Session', 'Left room normally', 'info');
-          } else if (code === 4000) {
-            logActivity('Session', 'Session expired - disconnected', 'error');
-          } else {
-            logActivity('Session', `Disconnected (code: ${code})`, 'warning');
-          }
-        };
+            
+            if (code === 1000) {
+              logActivity('Session', 'Left room normally', 'info');
+            } else if (code === 4000) {
+              logActivity('Session', 'Session expired - disconnected', 'error');
+            } else {
+              logActivity('Session', `Disconnected (code: ${code})`, 'warning');
+            }
+          };
         } catch (error) {
           console.error('Error setting up room listeners:', error);
           logActivity('Error', `Failed to setup listeners: ${error.message}`, 'error');
@@ -711,28 +809,60 @@
             return;
           }
           
+          const hostId = roomInstance.state.hostId;
+          const playerCount = roomInstance.state.players.size;
+          console.log(`Updating players - Count: ${playerCount}, Host ID: ${hostId}, My session: ${roomInstance.sessionId}`);
+          
           const players = [];
+          const newReadySet = new Set();
+          let foundHost = false;
+          
           roomInstance.state.players.forEach((player, sessionId) => {
+            const isHostPlayer = player.isHost || sessionId === hostId;
+            if (isHostPlayer) {
+              foundHost = true;
+              console.log('✓ Found host:', player.name, sessionId);
+            }
+            
             const playerData = {
               id: sessionId,
               name: player.name || `Player ${sessionId.substring(0, 6)}`,
               teamIndex: player.team !== null && player.team !== undefined ? player.team : 0,
-              isHost: sessionId === roomInstance.sessionId,
+              isHost: isHostPlayer,
               isAI: false,
               ready: player.ready || false
             };
             players.push(playerData);
+            
+            // Update ready status
+            if (player.ready) {
+              newReadySet.add(sessionId);
+            }
+            
             console.log('Player synced:', playerData);
           });
           
-          console.log(`Total players synced: ${players.length}`);
-          setLobbyPlayers(players);
+          if (!foundHost) {
+            console.warn('⚠ No host found! Setting first player as host');
+            if (players.length > 0) {
+              players[0].isHost = true;
+            }
+          }
           
-          // Update current lobby player count
+          console.log(`Total players synced: ${players.length}, Host ID: ${hostId}`);
+          
+          // Force new array reference to trigger React re-render
+          setLobbyPlayers([...players]);
+          setReadyPlayers(newReadySet);
+          
+          // Update current lobby player count and host
           if (currentLobby) {
+            const hostPlayer = players.find(p => p.isHost);
             setCurrentLobby(prev => ({
               ...prev,
-              players: players.length
+              players: players.length,
+              host: hostPlayer?.name || prev.host,
+              lastUpdate: Date.now() // Force update
             }));
           }
         } catch (error) {
@@ -815,7 +945,8 @@
 
       const handleDragStart = (e, player) => {
         try {
-          const isHostUser = mySessionId === room?.sessionId;
+          const currentPlayer = lobbyPlayers.find(p => p.id === mySessionId);
+          const isHostUser = currentPlayer?.isHost || false;
           const canDrag = isHostUser || (player.id === mySessionId && canSwitchTeams());
           
           if (!canDrag) {
@@ -851,7 +982,7 @@
           }
           
           const currentPlayer = lobbyPlayers.find(p => p.id === mySessionId);
-          const isHostUser = mySessionId === room?.sessionId;
+          const isHostUser = currentPlayer?.isHost || false;
           
           // Check if user can move this player
           const canMove = isHostUser || (draggedPlayer.id === mySessionId && canSwitchTeams());
@@ -870,19 +1001,24 @@
         }
       };
 
-      const isHost = () => viewAsPlayer === mySessionId || viewAsPlayer === 'host';
+      const isHost = () => {
+        const currentPlayer = lobbyPlayers.find(p => p.id === mySessionId);
+        return currentPlayer?.isHost || false;
+      };
+      
       const canSwitchTeams = () => lobbyConfig.allowTeamSwitching || isHost();
 
       const toggleReady = (playerId) => {
-        setReadyPlayers(prev => {
-          const newSet = new Set(prev);
-          if (newSet.has(playerId)) {
-            newSet.delete(playerId);
-          } else {
-            newSet.add(playerId);
+        try {
+          if (room && playerId === mySessionId) {
+            // Send toggle ready message to server
+            room.send('toggle_ready');
+            console.log('Sent toggle_ready to server');
           }
-          return newSet;
-        });
+        } catch (error) {
+          console.error('Error toggling ready:', error);
+          logActivity('Error', `Failed to toggle ready: ${error.message}`, 'error');
+        }
       };
 
       // Main Menu
@@ -976,11 +1112,13 @@
       // Browse Lobbies
       const BrowseLobbiesView = () => {
         const [isRefreshing, setIsRefreshing] = useState(false);
+        const hasLoadedRef = useRef(false);
         
-        // Auto-refresh when view opens
+        // Auto-refresh when view opens (only once)
         useEffect(() => {
-          if (view === 'browse') {
-            loadLobbies();
+          if (view === 'browse' && !hasLoadedRef.current) {
+            hasLoadedRef.current = true;
+            loadLobbies(true); // Silent load on mount
           }
         }, [view]);
 
@@ -1064,10 +1202,7 @@
                         </div>
                         {lobby.status === 'waiting' && (
                           <button
-                            onClick={() => {
-                              logActivity('Join', `Attempting to join ${lobby.name}...`, 'info');
-                              joinLobby(lobby);
-                            }}
+                            onClick={() => joinLobby(lobby)}
                             style={{ position: 'relative', zIndex: 100 }}
                             className="px-6 py-2 bg-white text-black font-bold hover:bg-gray-300 uppercase tracking-wider cursor-pointer"
                           >
@@ -1106,28 +1241,15 @@
                   ← LEAVE
                 </button>
                 <div className="flex-1" />
-                {mySessionId && (
-                  <div className="flex gap-2 border border-white p-2">
-                    <span className="text-white text-xs uppercase tracking-wider mr-2">VIEW AS:</span>
-                    {lobbyPlayers.map(player => (
-                      <button
-                        key={player.id}
-                        onClick={() => setViewAsPlayer(player.id)}
-                        className={`px-3 py-1 text-xs uppercase tracking-wider ${
-                          viewAsPlayer === player.id
-                            ? 'bg-white text-black'
-                            : 'text-white hover:bg-white hover:bg-opacity-10'
-                        }`}
-                      >
-                        {player.id === mySessionId ? 'YOU' : player.name}
-                      </button>
-                    ))}
+                {currentPlayer && (
+                  <div className="text-white text-xs uppercase tracking-wider">
+                    {currentPlayer.isHost ? '👑 YOU ARE HOST' : `HOST: ${lobbyPlayers.find(p => p.isHost)?.name || 'Unknown'}`}
                   </div>
                 )}
               </div>
 
               <div className="grid lg:grid-cols-4 gap-6">
-                {isHost() && (
+                {currentPlayer?.isHost && (
                   <div className="lg:col-span-1 border border-white p-6 space-y-6">
                     <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-4">ROOM SETTINGS</h3>
                     
@@ -1340,7 +1462,7 @@
                   </div>
                 )}
 
-                <div className={isHost() ? 'lg:col-span-3' : 'lg:col-span-4'}>
+                <div className={currentPlayer?.isHost ? 'lg:col-span-3' : 'lg:col-span-4'}>
                   <div className="border border-white p-6">
                     <div className="mb-6">
                       <div className="flex justify-between items-center mb-2">
@@ -1412,7 +1534,7 @@
 
                               <div className="flex-1 flex gap-2 flex-wrap items-center min-h-[88px]">
                                 {teamPlayers.map(player => {
-                                  const canDrag = isHost() || (player.id === currentPlayer?.id && canSwitchTeams());
+                                  const canDrag = currentPlayer?.isHost || (player.id === currentPlayer?.id && canSwitchTeams());
                                   const isBeingDragged = draggedPlayer?.id === player.id;
                                   
                                   return (
@@ -1468,7 +1590,7 @@
                       })}
                     </div>
 
-                    {(!isHost() && lobbyConfig.showSettingsToPlayers) && (
+                    {(!currentPlayer?.isHost && lobbyConfig.showSettingsToPlayers) && (
                       <div className="border-t border-white pt-6 mt-6">
                         <h3 className="text-lg font-bold text-white uppercase tracking-wider mb-4">GAME SETTINGS</h3>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-white text-xs uppercase tracking-wider">
@@ -1520,7 +1642,7 @@
                       </div>
                     )}
                     
-                    {(!isHost() && !lobbyConfig.showSettingsToPlayers) && (
+                    {(!currentPlayer?.isHost && !lobbyConfig.showSettingsToPlayers) && (
                       <div className="border-t border-white pt-6 mt-6">
                         <div className="text-center text-white text-sm uppercase tracking-wider">
                           WAITING FOR HOST TO START GAME
@@ -1528,7 +1650,7 @@
                       </div>
                     )}
 
-                    {!isHost() && currentPlayer && (
+                    {!currentPlayer?.isHost && currentPlayer && (
                       <div className="border-t border-white pt-6 mt-6">
                         <button
                           onClick={() => toggleReady(currentPlayer.id)}
@@ -1781,7 +1903,7 @@
         return (
           <>
             {/* Server Status - Bottom Right */}
-            <div className="fixed bottom-4 right-4 bg-black border-2 border-white p-3 z-50" style={{ minWidth: '300px' }}>
+            <div className="fixed bottom-4 right-4 bg-black p-3 z-50" style={{ minWidth: '300px' }}>
               <div className="flex items-center gap-2 mb-2">
                 <div className={`w-2 h-2 rounded-full ${getStatusColor()} animate-pulse`} />
                 <span className="text-white text-xs font-bold uppercase tracking-wider">
@@ -1830,7 +1952,7 @@
             </div>
 
             {/* Activity Log - Bottom Left (Always Visible) */}
-            <div className="fixed bottom-4 left-4 bg-black border-2 border-white p-3 z-50 max-w-md flex flex-col" style={{ maxHeight: '350px', minWidth: '400px' }}>
+            <div className="fixed bottom-4 left-4 bg-black p-3 z-50 max-w-md flex flex-col" style={{ maxHeight: '350px', minWidth: '400px' }}>
               <div className="flex justify-between items-center mb-2">
                 <div className="text-white text-xs font-bold uppercase tracking-wider">ACTIVITY LOG</div>
                 <div className="text-gray-500 text-xs">{errorLog.length} entries</div>
