@@ -557,7 +557,6 @@
             constructor(serverUrl = window.location.origin) {
                 this.serverUrl = serverUrl;
                 this.client = null;
-                this.adminRoom = null;
                 this.gameRooms = new Map();
                 this.isConnected = false;
                 this.isConnecting = false;
@@ -565,8 +564,7 @@
                 this.maxReconnectAttempts = 5;
                 this.reconnectTimeout = null;
                 this.connectionTimeout = null;
-                this.heartbeatInterval = null;
-                this.lastHeartbeat = null;
+                this.pollingInterval = null;
                 
                 // Connection state tracking
                 this.connectionState = 'disconnected'; // 'disconnected', 'connecting', 'connected', 'reconnecting', 'failed'
@@ -575,8 +573,6 @@
                 
                 // Timeout configurations
                 this.CONNECTION_TIMEOUT = 10000; // 10 seconds
-                this.HEARTBEAT_INTERVAL = 30000; // 30 seconds
-                this.HEARTBEAT_TIMEOUT = 5000; // 5 seconds
                 this.RECONNECT_BASE_DELAY = 1000; // 1 second base delay
                 this.RECONNECT_MAX_DELAY = 30000; // 30 seconds max delay
 
@@ -633,15 +629,14 @@
             }
 
             async attemptConnection() {
-                // Create new client instance
-                this.client = new Colyseus.Client(this.serverUrl);
+                // Create new client instance - use ws:// protocol like other.html
+                this.client = new Colyseus.Client('ws://localhost:2567');
 
-                // Connect to admin room for managing game sessions
-                this.adminRoom = await this.client.joinOrCreate('admin', {
-                    role: 'admin'
-                });
-
-                this.setupAdminRoomListeners();
+                // Test connection by getting available rooms (like other.html does)
+                await this.client.getAvailableRooms('constellation');
+                
+                // Start polling for room updates
+                this.startRoomPolling();
             }
 
             onConnectionSuccess() {
@@ -651,9 +646,11 @@
                 this.lastError = null;
                 this.connectionStartTime = null;
                 
-                console.log('Successfully connected to admin room');
+                console.log('Successfully connected to Colyseus server');
                 this.updateConnectionStatus();
-                this.startHeartbeat();
+                
+                // Load rooms immediately
+                this.loadRooms();
             }
 
             onConnectionError(error) {
@@ -700,40 +697,43 @@
                 });
             }
 
-            setupAdminRoomListeners() {
-                if (!this.adminRoom) return;
-
-                // Listen for room list updates
-                this.adminRoom.onMessage('rooms_update', (rooms) => {
+            startRoomPolling() {
+                // Poll for room updates every 3 seconds (like other.html does)
+                this.loadRooms();
+                
+                if (this.pollingInterval) {
+                    clearInterval(this.pollingInterval);
+                }
+                
+                this.pollingInterval = setInterval(() => {
+                    if (this.isConnected) {
+                        this.loadRooms();
+                    }
+                }, 3000);
+            }
+            
+            async loadRooms() {
+                if (!this.client || !this.isConnected) return;
+                
+                try {
+                    const availableRooms = await this.client.getAvailableRooms('constellation');
+                    
+                    const rooms = availableRooms.map(room => ({
+                        roomId: room.roomId,
+                        metadata: room.metadata,
+                        clients: room.clients,
+                        maxClients: room.maxClients,
+                        state: room.metadata?.gameState || 'waiting',
+                        players: [], // Will be populated if we join the room
+                        createdAt: room.createdAt || new Date().toISOString()
+                    }));
+                    
                     this.updateGamesList(rooms);
-                });
-
-                // Listen for room state changes
-                this.adminRoom.onMessage('room_state_change', (data) => {
-                    this.updateRoomState(data.roomId, data.state);
-                });
-
-                // Listen for player updates
-                this.adminRoom.onMessage('player_update', (data) => {
-                    this.updateRoomPlayers(data.roomId, data.players);
-                });
-
-                // Listen for heartbeat responses
-                this.adminRoom.onMessage('heartbeat_response', () => {
-                    this.lastHeartbeat = Date.now();
-                });
-
-                this.adminRoom.onError((code, message) => {
-                    console.error('Admin room error:', code, message);
-                    const errorMsg = this.getErrorMessage(code, message);
-                    this.handleConnectionError(new Error(errorMsg));
-                });
-
-                this.adminRoom.onLeave((code) => {
-                    console.log('Left admin room with code:', code);
-                    const reason = this.getLeaveReason(code);
-                    this.handleDisconnection(reason);
-                });
+                    
+                } catch (error) {
+                    console.error('Failed to load rooms:', error);
+                    // Don't disconnect on failed room load, just log it
+                }
             }
 
             getErrorMessage(code, message) {
@@ -774,7 +774,7 @@
             handleDisconnection(reason = 'Unknown reason') {
                 this.isConnected = false;
                 this.connectionState = 'disconnected';
-                this.stopHeartbeat();
+                this.stopPolling();
                 
                 console.log('Disconnected:', reason);
                 this.updateConnectionStatus(`Disconnected: ${reason}`);
@@ -794,7 +794,7 @@
                 this.isConnected = false;
                 this.connectionState = 'failed';
                 this.lastError = error;
-                this.stopHeartbeat();
+                this.stopPolling();
                 
                 console.error('Connection error:', error);
                 this.updateConnectionStatus(`Error: ${error.message}`);
@@ -864,34 +864,13 @@
                     this.connectionTimeout = null;
                 }
                 
-                this.stopHeartbeat();
+                this.stopPolling();
             }
 
-            startHeartbeat() {
-                this.stopHeartbeat(); // Clear any existing heartbeat
-                
-                this.heartbeatInterval = setInterval(() => {
-                    if (this.isConnected && this.adminRoom) {
-                        try {
-                            this.adminRoom.send('heartbeat');
-                            
-                            // Check if we received a response to the last heartbeat
-                            if (this.lastHeartbeat && (Date.now() - this.lastHeartbeat) > this.HEARTBEAT_TIMEOUT * 2) {
-                                console.warn('Heartbeat timeout detected');
-                                this.handleConnectionError(new Error('Heartbeat timeout - connection may be unstable'));
-                            }
-                        } catch (error) {
-                            console.error('Failed to send heartbeat:', error);
-                            this.handleConnectionError(error);
-                        }
-                    }
-                }, this.HEARTBEAT_INTERVAL);
-            }
-
-            stopHeartbeat() {
-                if (this.heartbeatInterval) {
-                    clearInterval(this.heartbeatInterval);
-                    this.heartbeatInterval = null;
+            stopPolling() {
+                if (this.pollingInterval) {
+                    clearInterval(this.pollingInterval);
+                    this.pollingInterval = null;
                 }
             }
 
@@ -924,53 +903,36 @@
                     // Ensure we have a valid connection
                     await this.ensureConnection();
 
-                    console.log('Sending create_room request with config:', gameConfig);
+                    console.log('Creating room with config:', gameConfig);
 
                     // Validate game config
                     if (!gameConfig.name || gameConfig.name.trim() === '') {
                         throw new Error('Game name is required');
                     }
 
-                    // Send create room request
-                    this.adminRoom.send('create_room', {
-                        roomType: gameConfig.type || 'constellation',
-                        options: gameConfig
+                    // Create room directly using Colyseus client (like other.html does)
+                    const room = await this.client.create('constellation', {
+                        roomName: gameConfig.name,
+                        maxPlayers: gameConfig.maxPlayers || 4,
+                        gameMode: gameConfig.gameMode || 'competitive',
+                        hostName: 'Admin',
+                        ...gameConfig
                     });
 
-                    return new Promise((resolve, reject) => {
-                        const timeout = setTimeout(() => {
-                            console.error('Room creation timeout after 15 seconds');
-                            reject(new Error('Room creation timed out. The server may be overloaded or unresponsive.'));
-                        }, 15000);
-
-                        const handler = (data) => {
-                            console.log('Received room_created response:', data);
-                            clearTimeout(timeout);
-                            this.adminRoom.off('room_created', handler);
-
-                            if (data.success) {
-                                console.log('Room created successfully:', data.roomId);
-                                resolve({
-                                    roomId: data.roomId,
-                                    gameUrl: `/game/${data.roomId}`,
-                                    fullUrl: `${window.location.origin}/game/${data.roomId}`
-                                });
-                            } else {
-                                const errorMsg = this.getCreateRoomErrorMessage(data.error);
-                                console.error('Room creation failed:', errorMsg);
-                                reject(new Error(errorMsg));
-                            }
-                        };
-
-                        const errorHandler = (error) => {
-                            clearTimeout(timeout);
-                            this.adminRoom.off('room_created', handler);
-                            reject(new Error(`Connection error during room creation: ${error.message}`));
-                        };
-
-                        this.adminRoom.onMessage('room_created', handler);
-                        this.adminRoom.onError(errorHandler);
-                    });
+                    console.log('Room created successfully:', room.roomId);
+                    
+                    // Store room reference
+                    this.gameRooms.set(room.roomId, room);
+                    
+                    // Reload rooms to show the new one
+                    await this.loadRooms();
+                    
+                    return {
+                        roomId: room.roomId,
+                        gameUrl: `/index.html?room=${room.roomId}`,
+                        fullUrl: `${window.location.origin}/index.html?room=${room.roomId}`
+                    };
+                    
                 } catch (error) {
                     console.error('Error creating game room:', error);
                     
@@ -1008,37 +970,26 @@
                     }
 
                     console.log('Starting game:', roomId);
-                    this.adminRoom.send('start_game', { roomId });
-
-                    return new Promise((resolve, reject) => {
-                        const timeout = setTimeout(() => {
-                            reject(new Error('Game start timed out. The server may be processing other requests.'));
-                        }, 15000);
-
-                        const handler = (data) => {
-                            if (data.roomId === roomId) {
-                                clearTimeout(timeout);
-                                this.adminRoom.off('game_started', handler);
-                                if (data.success) {
-                                    console.log('Game started successfully:', roomId);
-                                    resolve(data);
-                                } else {
-                                    const errorMsg = this.getStartGameErrorMessage(data.error);
-                                    console.error('Game start failed:', errorMsg);
-                                    reject(new Error(errorMsg));
-                                }
-                            }
-                        };
-
-                        const errorHandler = (error) => {
-                            clearTimeout(timeout);
-                            this.adminRoom.off('game_started', handler);
-                            reject(new Error(`Connection error during game start: ${error.message}`));
-                        };
-
-                        this.adminRoom.onMessage('game_started', handler);
-                        this.adminRoom.onError(errorHandler);
-                    });
+                    
+                    // Get or join the room to send start command
+                    let room = this.gameRooms.get(roomId);
+                    
+                    if (!room) {
+                        // Join the room if we don't have a reference
+                        room = await this.client.joinById(roomId, { name: 'Admin' });
+                        this.gameRooms.set(roomId, room);
+                    }
+                    
+                    // Send start game message
+                    room.send('start_game');
+                    
+                    console.log('Game start command sent:', roomId);
+                    
+                    // Reload rooms to update status
+                    setTimeout(() => this.loadRooms(), 500);
+                    
+                    return { success: true, roomId };
+                    
                 } catch (error) {
                     console.error('Error starting game:', error);
                     
@@ -1074,37 +1025,24 @@
                     }
 
                     console.log('Deleting game:', roomId);
-                    this.adminRoom.send('delete_room', { roomId });
-
-                    return new Promise((resolve, reject) => {
-                        const timeout = setTimeout(() => {
-                            reject(new Error('Game deletion timed out. The server may be processing other requests.'));
-                        }, 15000);
-
-                        const handler = (data) => {
-                            if (data.roomId === roomId) {
-                                clearTimeout(timeout);
-                                this.adminRoom.off('room_deleted', handler);
-                                if (data.success) {
-                                    console.log('Game deleted successfully:', roomId);
-                                    resolve(data);
-                                } else {
-                                    const errorMsg = this.getDeleteGameErrorMessage(data.error);
-                                    console.error('Game deletion failed:', errorMsg);
-                                    reject(new Error(errorMsg));
-                                }
-                            }
-                        };
-
-                        const errorHandler = (error) => {
-                            clearTimeout(timeout);
-                            this.adminRoom.off('room_deleted', handler);
-                            reject(new Error(`Connection error during game deletion: ${error.message}`));
-                        };
-
-                        this.adminRoom.onMessage('room_deleted', handler);
-                        this.adminRoom.onError(errorHandler);
-                    });
+                    
+                    // Get or join the room to send disconnect/leave
+                    let room = this.gameRooms.get(roomId);
+                    
+                    if (room) {
+                        // Leave the room which will trigger cleanup
+                        await room.leave();
+                        this.gameRooms.delete(roomId);
+                    }
+                    
+                    console.log('Game room left:', roomId);
+                    
+                    // Note: Actual room deletion happens server-side when all players leave
+                    // Reload rooms to update the list
+                    setTimeout(() => this.loadRooms(), 500);
+                    
+                    return { success: true, roomId };
+                    
                 } catch (error) {
                     console.error('Error deleting game:', error);
                     
@@ -1139,14 +1077,24 @@
                     }
 
                     console.log(`Assigning player ${playerId} to team ${teamIndex} in room ${roomId}`);
-                    this.adminRoom.send('assign_team', {
-                        roomId,
-                        playerId,
-                        teamIndex
+                    
+                    // Get or join the room
+                    let room = this.gameRooms.get(roomId);
+                    
+                    if (!room) {
+                        // Join the room if we don't have a reference
+                        room = await this.client.joinById(roomId, { name: 'Admin' });
+                        this.gameRooms.set(roomId, room);
+                    }
+                    
+                    // Send team assignment message
+                    room.send('join_team', { 
+                        playerId: playerId,
+                        teamIndex: teamIndex 
                     });
-
-                    // Note: This operation typically doesn't have a response, 
-                    // so we rely on the player_update message for confirmation
+                    
+                    console.log('Team assignment sent');
+                    
                 } catch (error) {
                     console.error('Error assigning player to team:', error);
                     
@@ -1163,15 +1111,17 @@
             updateGamesList(rooms) {
                 const updatedGames = rooms.map(room => ({
                     id: room.roomId,
-                    name: room.metadata?.name || `Game ${room.roomId}`,
+                    name: room.metadata?.roomName || room.metadata?.name || `Room ${room.roomId.substring(0, 6)}`,
                     type: room.metadata?.type || 'Constellation',
-                    state: room.state || 'waiting',
+                    state: room.metadata?.gameState || room.state || 'waiting',
                     players: room.players || [],
                     roomId: room.roomId,
-                    gameUrl: `/game/${room.roomId}`,
-                    fullUrl: `${window.location.origin}/game/${room.roomId}`,
-                    config: room.metadata?.config || {},
+                    gameUrl: `/index.html?room=${room.roomId}`,
+                    fullUrl: `${window.location.origin}/index.html?room=${room.roomId}`,
+                    config: room.metadata || {},
                     playerCount: room.clients || 0,
+                    maxPlayers: room.maxClients || 4,
+                    hostName: room.metadata?.hostName || 'Unknown',
                     createdAt: room.createdAt || new Date().toISOString()
                 }));
 
@@ -1204,16 +1154,6 @@
                 
                 // Clear all timeouts and intervals
                 this.resetConnection();
-                
-                // Close admin room connection
-                if (this.adminRoom) {
-                    try {
-                        this.adminRoom.leave();
-                    } catch (error) {
-                        console.warn('Error leaving admin room:', error);
-                    }
-                    this.adminRoom = null;
-                }
 
                 // Close all game room connections
                 this.gameRooms.forEach(room => {
