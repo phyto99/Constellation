@@ -15,6 +15,7 @@ class Player extends Schema {
         this.ready = false;
         this.connected = true;
         this.connectedAt = 0;
+        this.isHost = false;
     }
 }
 
@@ -24,6 +25,7 @@ type('number')(Player.prototype, 'team');
 type('boolean')(Player.prototype, 'ready');
 type('boolean')(Player.prototype, 'connected');
 type('number')(Player.prototype, 'connectedAt');
+type('boolean')(Player.prototype, 'isHost');
 
 class RoomState extends Schema {
     constructor() {
@@ -31,12 +33,14 @@ class RoomState extends Schema {
         this.players = new MapSchema();
         this.gameState = 'waiting';
         this.teams = new MapSchema();
+        this.hostId = '';
     }
 }
 
 type({ map: Player })(RoomState.prototype, 'players');
 type('string')(RoomState.prototype, 'gameState');
 type({ map: 'any' })(RoomState.prototype, 'teams');
+type('string')(RoomState.prototype, 'hostId');
 
 // Game room classes
 class ConstellationRoom extends Room {
@@ -45,6 +49,7 @@ class ConstellationRoom extends Room {
         
         const state = new RoomState();
         state.gameState = 'waiting';
+        state.hostId = ''; // Will be set when first player joins
         this.setState(state);
 
         this.maxClients = options.maxPlayers || 20;
@@ -67,6 +72,10 @@ class ConstellationRoom extends Room {
 
         this.onMessage('join_team', (client, data) => {
             this.assignPlayerToTeam(client.sessionId, data.teamIndex);
+        });
+
+        this.onMessage('toggle_ready', (client, data) => {
+            this.togglePlayerReady(client.sessionId);
         });
 
         this.onMessage('start_game', (client, data) => {
@@ -93,6 +102,13 @@ class ConstellationRoom extends Room {
     onJoin(client, options) {
         console.log(`Player ${client.sessionId} joined room ${this.roomId}`);
         
+        // Set host if this is the first player
+        const isFirstPlayer = this.state.players.size === 0;
+        if (isFirstPlayer) {
+            this.state.hostId = client.sessionId;
+            console.log(`✓ ${client.sessionId} is now the host`);
+        }
+        
         const player = new Player();
         player.id = client.sessionId;
         player.name = options.name || `Player ${client.sessionId.substring(0, 6)}`;
@@ -100,10 +116,19 @@ class ConstellationRoom extends Room {
         player.ready = false;
         player.connected = true;
         player.connectedAt = Date.now();
+        player.isHost = isFirstPlayer;
 
         this.state.players.set(client.sessionId, player);
         
-        console.log(`✓ Player joined: ${player.name}`);
+        console.log(`✓ Player joined: ${player.name} (Host: ${player.isHost})`);
+        
+        // Broadcast player list update to all clients
+        this.broadcast('player_joined', {
+            playerId: client.sessionId,
+            playerName: player.name,
+            isHost: player.isHost,
+            totalPlayers: this.state.players.size
+        });
         
         // Enhanced admin room notification
         this.updateAdminRoom();
@@ -134,6 +159,24 @@ class ConstellationRoom extends Room {
                 playerId,
                 oldTeam,
                 newTeam: teamIndex,
+                timestamp: Date.now()
+            });
+            
+            this.updateAdminRoom();
+        }
+    }
+
+    togglePlayerReady(playerId) {
+        const player = this.state.players.get(playerId);
+        if (player) {
+            player.ready = !player.ready;
+            
+            console.log(`Player ${playerId} ready status: ${player.ready}`);
+            
+            // Broadcast to all clients in the room
+            this.broadcast('player_ready_changed', {
+                playerId,
+                ready: player.ready,
                 timestamp: Date.now()
             });
             
