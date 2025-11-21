@@ -61,7 +61,13 @@
 
       // Activity logging helper with condensing - logs everything with color coding
       const logActivity = (context, message, type = 'info') => {
-        const timestamp = new Date().toLocaleTimeString();
+        const now = new Date();
+        const timestamp = now.toLocaleTimeString('en-US', { 
+          hour12: false, 
+          hour: '2-digit', 
+          minute: '2-digit', 
+          second: '2-digit' 
+        });
         const logMsg = `${context}: ${message}`;
         console.log(`[${timestamp}] ${logMsg}`);
         
@@ -389,13 +395,17 @@
           
           const connectTime = Date.now() - startTime;
           
+          // Set client FIRST before logging success
           setColyseusClient(client);
           setIsConnected(true);
-          console.log(`✓ Connected successfully in ${connectTime}ms`);
-          logActivity('Connect', `✓ Connected successfully (${connectTime}ms)`, 'success');
           
-          // Load lobbies after successful connection
-          await loadLobbies();
+          console.log(`✓ Connected successfully in ${connectTime}ms`);
+          logActivity('Connect', `✓ Connected to Colyseus (${connectTime}ms)`, 'success');
+          
+          // Wait a tick to ensure state is updated before loading lobbies
+          setTimeout(() => {
+            loadLobbies();
+          }, 100);
         } catch (error) {
           console.error('✗ Failed to connect:', error);
           
@@ -412,17 +422,19 @@
           logActivity('Connect', `✗ ERROR: ${errorMsg}`, 'error');
           setErrorMessage(errorMsg);
           setIsConnected(false);
+          setColyseusClient(null);
         }
       };
 
-      const loadLobbies = async () => {
+      const loadLobbies = async (silent = false) => {
         if (!colyseusClient) {
-          logActivity('Load Lobbies', '✗ ERROR: Not connected to server', 'error');
+          if (!silent) {
+            logActivity('Lobbies', '✗ Not connected to server', 'error');
+          }
           return;
         }
         
         try {
-          logActivity('Load Lobbies', 'Fetching available rooms...', 'info');
           const availableRooms = await colyseusClient.getAvailableRooms('constellation');
           
           const formattedLobbies = availableRooms.map(room => ({
@@ -437,14 +449,18 @@
           
           setLobbies(formattedLobbies);
           
-          if (formattedLobbies.length === 0) {
-            logActivity('Load Lobbies', 'No lobbies found', 'info');
-          } else {
-            logActivity('Load Lobbies', `✓ Found ${formattedLobbies.length} lobby(ies)`, 'success');
+          if (!silent) {
+            if (formattedLobbies.length === 0) {
+              logActivity('Lobbies', 'No lobbies available', 'info');
+            } else {
+              logActivity('Lobbies', `Found ${formattedLobbies.length} lobby(ies)`, 'success');
+            }
           }
         } catch (error) {
           console.error('Failed to load lobbies:', error);
-          logActivity('Load Lobbies', `✗ ERROR: ${error.message}`, 'error');
+          if (!silent) {
+            logActivity('Lobbies', `✗ Failed to load: ${error.message}`, 'error');
+          }
           setLobbies([]);
         }
       };
@@ -546,80 +562,73 @@
         try {
           setErrorMessage('');
           
-          // Validation checks with immediate feedback
+          // Validation checks
           if (!colyseusClient) {
-            const msg = 'Not connected to server. Go back and click CONNECT first.';
-            logActivity('Join Lobby', `✗ ERROR: ${msg}`, 'error');
+            const msg = 'Not connected. Click CONNECT first.';
+            logActivity('Join', `✗ ${msg}`, 'error');
             setErrorMessage(msg);
             return;
           }
           
           if (!playerName) {
-            const msg = 'No player name set. Refresh and enter your name.';
-            logActivity('Join Lobby', `✗ ERROR: ${msg}`, 'error');
+            const msg = 'Enter your name first.';
+            logActivity('Join', `✗ ${msg}`, 'error');
             setErrorMessage(msg);
             return;
           }
           
           if (lobby.players >= lobby.maxPlayers) {
-            const msg = 'Lobby is full. Cannot join.';
-            logActivity('Join Lobby', `✗ ERROR: ${msg}`, 'error');
+            const msg = 'Lobby is full.';
+            logActivity('Join', `✗ ${msg}`, 'error');
             setErrorMessage(msg);
             return;
           }
           
-          logActivity('Join Lobby', `Joining "${lobby.name}" (${lobby.id.substring(0, 8)}...)`, 'info');
-          console.log('Joining lobby:', lobby.id, 'with name:', playerName);
+          logActivity('Join', `Joining "${lobby.name}"...`, 'info');
           
-          // Show immediate feedback
           const joinStartTime = Date.now();
-          
           const roomInstance = await colyseusClient.joinById(lobby.id, { name: playerName });
-          
           const joinDuration = Date.now() - joinStartTime;
-          console.log(`✓ Joined room in ${joinDuration}ms:`, roomInstance.sessionId);
-          console.log('Room state players:', roomInstance.state.players.size);
-          logActivity('Join Lobby', `✓ Successfully joined as ${playerName} (${joinDuration}ms)`, 'success');
           
+          console.log(`✓ Joined room in ${joinDuration}ms:`, roomInstance.sessionId);
+          logActivity('Join', `✓ Joined as ${playerName}`, 'success');
+          
+          // Set room state
           setRoom(roomInstance);
           setMySessionId(roomInstance.sessionId);
-          
-          // Update lobby with accurate data from room
-          const updatedLobby = {
+          setCurrentLobby({
             ...lobby,
             players: roomInstance.state.players.size,
             host: roomInstance.metadata?.hostName || lobby.host
-          };
-          setCurrentLobby(updatedLobby);
+          });
           setViewAsPlayer(roomInstance.sessionId);
           
+          // Setup listeners
           setupRoomListeners(roomInstance);
           
-          // Wait for room state to fully initialize
+          // Initialize players and switch to lobby view
           setTimeout(() => {
             updatePlayersFromRoomState(roomInstance);
-            logActivity('Lobby', `Room synchronized - ${roomInstance.state.players.size} player(s) present`, 'info');
-          }, 200);
+            setView('lobby');
+          }, 100);
           
-          setView('lobby');
         } catch (error) {
           console.error('✗ Failed to join lobby:', error);
           
-          // Provide specific error messages
-          let msg = 'Failed to join lobby';
+          let msg = 'Failed to join';
           if (error.message.includes('not found')) {
-            msg = 'Lobby no longer exists. It may have been deleted.';
+            msg = 'Lobby no longer exists';
           } else if (error.message.includes('full')) {
-            msg = 'Lobby is full. Try another lobby.';
+            msg = 'Lobby is full';
           } else if (error.message.includes('timeout')) {
-            msg = 'Connection timeout. Server may be slow or unreachable.';
+            msg = 'Connection timeout';
           } else if (error.message.includes('denied')) {
-            msg = 'Access denied. Lobby may be private or started.';
+            msg = 'Access denied';
           } else {
-            msg = `Failed to join: ${error.message}`;
+            msg = error.message;
           }
           
-          logActivity('Join Lobby', `✗ ERROR: ${msg}`, 'error');
+          logActivity('Join', `✗ ${msg}`, 'error');
           setErrorMessage(msg);
         }
       };
@@ -971,26 +980,22 @@
         // Auto-refresh when view opens
         useEffect(() => {
           if (view === 'browse') {
-            logActivity('Browse', 'Loading available lobbies...', 'info');
             loadLobbies();
           }
         }, [view]);
 
         const handleRefresh = async () => {
           setIsRefreshing(true);
-          logActivity('Refresh', 'Refreshing lobby list...', 'info');
           try {
-            await loadLobbies();
-            logActivity('Refresh', `✓ Found ${lobbies.length} lobbies`, 'success');
+            await loadLobbies(false); // Not silent, will log results
           } catch (error) {
-            logActivity('Refresh', `✗ ERROR: ${error.message}`, 'error');
+            logActivity('Refresh', `✗ ${error.message}`, 'error');
           } finally {
             setIsRefreshing(false);
           }
         };
 
         const handleBack = () => {
-          logActivity('Navigation', 'Returning to main menu', 'info');
           setView('main');
         };
 
@@ -1090,10 +1095,9 @@
               <div className="mb-6 flex items-center gap-4">
                 <button
                   onClick={() => { 
-                    logActivity('Navigation', 'Leaving lobby...', 'info');
                     if (room) {
                       room.leave();
-                      logActivity('Session', '✓ Left room successfully', 'success');
+                      logActivity('Lobby', 'Left room', 'info');
                     }
                     setView('browse');
                   }}
