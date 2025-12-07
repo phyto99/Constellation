@@ -80,18 +80,6 @@
             border-color: #999;
         }
 
-        .game-item .status-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            margin-right: 6px;
-        }
-
-        .game-item .timestamp {
-            font-size: 11px;
-            color: #666;
-        }
-
         .create-section {
             padding: 10px;
             background: #f5f5f5;
@@ -354,6 +342,92 @@
         .game-link:hover {
             text-decoration: underline;
         }
+
+        /* AI Bot Styles */
+        .ai-bot-item {
+            background: #fff;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            padding: 10px 12px; /* more breathing room */
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px; /* larger gaps for readability */
+            flex-wrap: wrap; /* allow wrapping across the row */
+            white-space: normal; /* allow natural breaks */
+        }
+
+        .ai-bot-select,
+        .ai-team-select,
+        .ai-aggression-select {
+            padding: 6px 8px;
+            border: 1px solid #d1d5db;
+            background: white;
+            color: black;
+            border-radius: 4px;
+            font-size: 12px;
+            flex: 1 1 180px; /* grow and wrap nicely */
+            min-width: 160px;
+        }
+
+        .ai-bot-cube {
+            width: 22px;
+            height: 22px;
+            border-radius: 3px;
+            display: inline-block;
+            position: relative;
+            flex: 0 0 auto;
+            margin-left: 4px;
+        }
+
+        .ai-bot-cube::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            right: 2px;
+            bottom: 2px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 1px;
+        }
+
+        .remove-bot-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .remove-bot-btn:hover {
+            background: #dc2626;
+        }
+
+        .add-bot-btn {
+            padding: 6px 12px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .add-bot-btn:hover {
+            background: #2563eb;
+        }
+
+        .ai-bots-empty {
+            color: #9ca3af;
+            font-size: 12px;
+            font-style: italic;
+            padding: 10px;
+            text-align: center;
+        }
     </style>
 </head>
 
@@ -393,8 +467,8 @@
                 </div>
                 <div style="margin-top: 8px; font-size: 11px; text-align: center;">
                     Status: <span id="connection-status" style="font-weight: bold;">Connecting...</span>
-                    <button id="reconnect-btn" onclick="manualReconnect()" 
-                            style="display: none; margin-left: 5px; padding: 2px 6px; font-size: 10px; background: #007bff; color: white; border: none; border-radius: 2px; cursor: pointer;">
+                    <button id="reconnect-btn" onclick="manualReconnect()"
+                        style="display: none; margin-left: 5px; padding: 2px 6px; font-size: 10px; background: #007bff; color: white; border: none; border-radius: 2px; cursor: pointer;">
                         Reconnect
                     </button>
                 </div>
@@ -468,10 +542,10 @@
                             </div>
                             <div class="form-group">
                                 <label>AI Bots <span class="sublabel">(Add AI players to the game)</span></label>
-                                <div id="admin-ai-bots" style="margin-bottom: 10px;"></div>
-                                <button type="button" onclick="addAdminAIBot()"
-                                    style="padding: 4px 8px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Add
-                                    AI Bot</button>
+                                <div id="admin-ai-bots">
+                                    <div class="ai-bots-empty">No AI bots added yet</div>
+                                </div>
+                                <button type="button" class="add-bot-btn" onclick="addAdminAIBot()">Add AI Bot</button>
                             </div>
                         </div>
                     </div>
@@ -503,14 +577,564 @@
                 </div>
             </div>
         </div>
-        <div id="active-game-banner" class="active-game-banner" style="display: none;">
-            <h3>Active Game: <span id="active-game-id"></span></h3>
-            <p>Game URL: <a href="#" id="active-game-url" target="_blank">Click to join</a></p>
-        </div>
     </div>
 
     <script src="https://unpkg.com/colyseus.js@0.15.24/dist/colyseus.js"></script>
-    <script src="admin_new.js"></script>
+    <script>
+        // AI Bot Types Configuration (same as index.html)
+        const AI_BOT_TYPES = {
+            HAL: {
+                name: 'HAL',
+                description: 'Steady, logical, and dispassionate',
+                icon: '🤖',
+                strategy: 'defensive'
+            },
+            CAESAR: {
+                name: 'Caesar',
+                description: 'Thoughtful and tactical',
+                icon: '👑',
+                strategy: 'tactical'
+            },
+            ATHENA: {
+                name: 'Athena',
+                description: 'Hits hard and fast',
+                icon: '⚡',
+                strategy: 'aggressive'
+            },
+            ROBIN_HOOD: {
+                name: 'Robin Hood',
+                description: 'Steals from the rich',
+                icon: '🏹',
+                strategy: 'opportunistic'
+            },
+            EINSTEIN: {
+                name: 'Einstein',
+                description: 'Loves to study worm-holes',
+                icon: '🧠',
+                strategy: 'wormhole'
+            },
+            LORENZ: {
+                name: 'Lorenz',
+                description: 'An advocate of chaos',
+                icon: '🌪️',
+                strategy: 'chaotic'
+            }
+        };
+
+        // Team Configuration (same as index.html)
+        const TEAM_CONFIGS = [
+            { color: 0x00FFFF, name: 'cyan', displayName: 'Cyan' },
+            { color: 0xFF00FF, name: 'magenta', displayName: 'Magenta' },
+            { color: 0x00FF00, name: 'lime', displayName: 'Lime' },
+            { color: 0xFFD700, name: 'gold', displayName: 'Gold' },
+            { color: 0x0000FF, name: 'blue', displayName: 'Blue' },
+            { color: 0xFF0000, name: 'red', displayName: 'Red' },
+            { color: 0x006400, name: 'dark green', displayName: 'Dark Green' }
+        ];
+
+        // AI Bot Management
+        let aiBotCounter = 0;
+
+        function addAdminAIBot() {
+            const container = document.getElementById('admin-ai-bots');
+
+            // Remove empty message
+            const emptyMsg = container.querySelector('.ai-bots-empty');
+            if (emptyMsg) emptyMsg.remove();
+
+            // Auto-cycle through bot types and teams
+            const existingBots = container.querySelectorAll('.ai-bot-item').length;
+            const botTypes = Object.keys(AI_BOT_TYPES);
+            const nextBotType = botTypes[existingBots % botTypes.length];
+            const nextTeamIndex = existingBots % TEAM_CONFIGS.length;
+
+            const botId = `adminAiBot_${aiBotCounter++}`;
+            const botDiv = document.createElement('div');
+            botDiv.className = 'ai-bot-item';
+            botDiv.id = botId;
+
+            botDiv.innerHTML = `
+                <select class="ai-bot-select" onchange="updateAdminAIBotDisplay('${botId}')">
+                    ${Object.keys(AI_BOT_TYPES).map(key =>
+                `<option value="${key}" ${key === nextBotType ? 'selected' : ''}>${AI_BOT_TYPES[key].name} - ${AI_BOT_TYPES[key].description}</option>`
+            ).join('')}
+                </select>
+                <select class="ai-team-select">
+                    ${TEAM_CONFIGS.map((team, index) =>
+                `<option value="${index}" ${index === nextTeamIndex ? 'selected' : ''} style="color: #${team.color.toString(16).padStart(6, '0')}">${team.displayName}</option>`
+            ).join('')}
+                </select>
+                <select class="ai-aggression-select">
+                    <option value="1">Level 1 - Very Passive</option>
+                    <option value="2">Level 2 - Passive</option>
+                    <option value="3">Level 3 - Conservative</option>
+                    <option value="4">Level 4 - Cautious</option>
+                    <option value="5">Level 5 - Balanced</option>
+                    <option value="6">Level 6 - Active</option>
+                    <option value="7">Level 7 - Aggressive</option>
+                    <option value="8">Level 8 - Very Aggressive</option>
+                    <option value="9" selected>Level 9 - Maximum Aggression</option>
+                </select>
+                <div class="ai-bot-cube" style="background: #00FFFF; opacity: 0.8;"></div>
+                <button class="remove-bot-btn" onclick="removeAdminAIBot('${botId}')">Remove</button>
+            `;
+
+            container.appendChild(botDiv);
+            updateAdminAIBotDisplay(botId);
+        }
+
+        function removeAdminAIBot(botId) {
+            const botDiv = document.getElementById(botId);
+            if (botDiv) {
+                botDiv.remove();
+
+                // Add empty message if no bots left
+                const container = document.getElementById('admin-ai-bots');
+                if (container.querySelectorAll('.ai-bot-item').length === 0) {
+                    container.innerHTML = '<div class="ai-bots-empty">No AI bots added yet</div>';
+                }
+            }
+        }
+
+        function updateAdminAIBotDisplay(botId) {
+            const botDiv = document.getElementById(botId);
+            if (!botDiv) return;
+
+            const botSelect = botDiv.querySelector('.ai-bot-select');
+            const teamSelect = botDiv.querySelector('.ai-team-select');
+            const aggressionSelect = botDiv.querySelector('.ai-aggression-select');
+            const cube = botDiv.querySelector('.ai-bot-cube');
+
+            const botType = botSelect.value;
+            const teamIndex = parseInt(teamSelect.value);
+            const aggression = parseInt(aggressionSelect.value);
+
+            // Update cube appearance
+            const teamColor = `#${TEAM_CONFIGS[teamIndex].color.toString(16).padStart(6, '0')}`;
+            const opacity = 0.3 + ((aggression - 1) / 8 * 0.7);
+
+            cube.style.background = teamColor;
+            cube.style.opacity = opacity;
+            cube.title = `${AI_BOT_TYPES[botType].name} on ${TEAM_CONFIGS[teamIndex].displayName} team (Level ${aggression} aggression)`;
+        }
+
+        function getAdminAIBots() {
+            const container = document.getElementById('admin-ai-bots');
+            const botDivs = container.querySelectorAll('.ai-bot-item');
+            const aiBots = [];
+
+            botDivs.forEach(botDiv => {
+                const botSelect = botDiv.querySelector('.ai-bot-select');
+                const teamSelect = botDiv.querySelector('.ai-team-select');
+                const aggressionSelect = botDiv.querySelector('.ai-aggression-select');
+
+                aiBots.push({
+                    type: botSelect.value,
+                    teamIndex: parseInt(teamSelect.value),
+                    aggression: parseInt(aggressionSelect.value)
+                });
+            });
+
+            return aiBots;
+        }
+
+        // Initialize AI bot display updates
+        document.addEventListener('change', function (e) {
+            if (e.target.classList.contains('ai-team-select') || e.target.classList.contains('ai-aggression-select')) {
+                const botDiv = e.target.closest('.ai-bot-item');
+                if (botDiv) {
+                    updateAdminAIBotDisplay(botDiv.id);
+                }
+            }
+        });
+
+        // Colyseus Connection
+        let client = null;
+        let currentRoom = null;
+        let selectedRoomId = null;
+
+        function getServerUrl() {
+            // Use WebSocket protocol
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host || 'localhost:2567';
+            return `${protocol}//${host}`;
+        }
+
+        function updateConnectionStatus(status) {
+            const statusElement = document.getElementById('connection-status');
+            const reconnectBtn = document.getElementById('reconnect-btn');
+
+            if (statusElement) {
+                statusElement.textContent = status;
+                statusElement.style.color = status === 'Connected' ? '#00ff00' : '#ff0000';
+            }
+
+            if (reconnectBtn) {
+                reconnectBtn.style.display = status === 'Connected' ? 'none' : 'inline-block';
+            }
+        }
+
+        function manualReconnect() {
+            updateConnectionStatus('Connecting...');
+            initializeColyseus();
+        }
+
+        function updateRoomPlayers(data) {
+            // Render and manage connected players for the selected room
+            if (!data || data.roomId !== selectedRoomId) return;
+
+            const container = document.getElementById('unassigned-players');
+            if (!container) return;
+
+            const players = Array.isArray(data.players) ? data.players : [];
+            if (players.length === 0) {
+                container.innerHTML = '<div style="color:#888;font-size:12px;">No players connected</div>';
+                return;
+            }
+
+            const TEAM_OPTIONS = TEAM_CONFIGS.map((team, index) => `<option value="${index}" style="color:#${team.color.toString(16).padStart(6,'0')}">${team.displayName}</option>`).join('');
+
+            container.innerHTML = players.map(p => {
+                const name = p.name || (p.id ? `Player ${p.id.substring(0,6)}` : 'Player');
+                const teamIndex = Number.isFinite(p.team) ? p.team : '';
+                const isHost = !!p.isHost;
+                return `
+                    <div class="player-row" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid #e5e7eb;border-radius:4px;margin-bottom:6px;background:#fff;">
+                        <span style="flex:1;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}${isHost ? ' <span style="color:#10b981;font-size:11px;">(host)</span>' : ''}</span>
+                        <select onchange="assignPlayerTeam('${p.id}', this.value)" style="flex:0 0 150px;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;">
+                            <option value="">No Team</option>
+                            ${TEAM_OPTIONS}
+                        </select>
+                        <button onclick="kickPlayer('${p.id}')" style="flex:0 0 auto;background:#ef4444;color:#fff;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:12px;">Kick</button>
+                    </div>
+                `;
+            }).join('');
+
+            // Pre-select current team values
+            const rows = container.querySelectorAll('.player-row');
+            players.forEach((p, idx) => {
+                const select = rows[idx]?.querySelector('select');
+                if (select && Number.isFinite(p.team)) {
+                    select.value = String(p.team);
+                } else if (select) {
+                    select.value = '';
+                }
+            });
+        }
+
+        async function initializeColyseus() {
+            try {
+                const serverUrl = getServerUrl();
+                console.log('Connecting to Colyseus server:', serverUrl);
+
+                client = new Colyseus.Client(serverUrl);
+
+                // Join or create admin room
+                try {
+                    currentRoom = await client.joinOrCreate('admin');
+                    console.log('Connected to admin room:', currentRoom.roomId);
+
+                    // Setup admin room listeners
+                    setupAdminRoomListeners();
+
+                    updateConnectionStatus('Connected');
+                    console.log('Successfully connected to Colyseus server');
+                } catch (error) {
+                    console.error('Failed to join admin room:', error);
+                    throw error;
+                }
+            } catch (error) {
+                console.error('Failed to connect to Colyseus server:', error);
+                updateConnectionStatus('Disconnected');
+                document.getElementById('reconnect-btn').style.display = 'inline-block';
+            }
+        }
+
+        function setupAdminRoomListeners() {
+            if (!currentRoom) return;
+
+            // Listen for room updates
+            currentRoom.onMessage('rooms_update', (rooms) => {
+                console.log('Rooms update received:', rooms);
+                updateRoomsList(rooms);
+            });
+
+            currentRoom.onMessage('room_created', (data) => {
+                console.log('Room created response:', data);
+                if (data.success) {
+                    alert(`Game created! Room ID: ${data.roomId}`);
+                    // Request updated rooms list
+                    setTimeout(() => {
+                        currentRoom.send('request_rooms_list');
+                    }, 200);
+                } else {
+                    alert(`Failed to create game: ${data.error}`);
+                }
+            });
+
+            currentRoom.onMessage('game_started', (data) => {
+                console.log('Game started:', data);
+                if (data.success) {
+                    alert(`Game ${data.roomId} started!`);
+                }
+            });
+
+            currentRoom.onMessage('room_deleted', (data) => {
+                console.log('Room deleted:', data);
+                if (data.success) {
+                    alert(`Game ${data.roomId} deleted!`);
+                }
+            });
+
+            currentRoom.onMessage('player_update', (data) => {
+                console.log('Player update:', data);
+                // Update UI for specific room
+                updateRoomPlayers(data);
+            });
+
+            currentRoom.onError((code, message) => {
+                console.error('Admin room error:', code, message);
+            });
+
+            currentRoom.onLeave((code) => {
+                console.log('Left admin room:', code);
+                currentRoom = null;
+                updateConnectionStatus('Disconnected');
+            });
+        }
+
+        function updateRoomsList(rooms) {
+            const pendingGames = document.getElementById('pending-games');
+            const activeGames = document.getElementById('active-games');
+            const pastGames = document.getElementById('past-games');
+
+            // Clear existing content
+            pendingGames.innerHTML = '';
+            activeGames.innerHTML = '';
+            pastGames.innerHTML = '';
+
+            let pendingCount = 0;
+            let activeCount = 0;
+            let pastCount = 0;
+
+            rooms.forEach(room => {
+                const roomEl = createRoomElement(room);
+
+                if (room.state === 'waiting') {
+                    pendingGames.appendChild(roomEl);
+                    pendingCount++;
+                } else if (room.state === 'playing') {
+                    activeGames.appendChild(roomEl);
+                    activeCount++;
+                } else if (room.state === 'finished') {
+                    pastGames.appendChild(roomEl);
+                    pastCount++;
+                }
+            });
+
+            // Update counts
+            document.getElementById('pending-count').textContent = pendingCount;
+            document.getElementById('active-count').textContent = activeCount;
+            document.getElementById('past-count').textContent = pastCount;
+
+            // Show empty messages if needed
+            if (pendingCount === 0) {
+                pendingGames.innerHTML = '<p>No games pending start</p>';
+            }
+            if (activeCount === 0) {
+                activeGames.innerHTML = '<p>No currently active games</p>';
+            }
+            if (pastCount === 0) {
+                pastGames.innerHTML = '<p>No recorded past games</p>';
+            }
+        }
+
+        function createRoomElement(room) {
+            const div = document.createElement('div');
+            div.className = 'game-item';
+            div.onclick = () => selectRoom(room.roomId);
+
+            const name = room.metadata?.name || `Game ${room.roomId.substring(0, 6)}`;
+            const playerCount = room.clients || 0;
+
+            // Generate proper game URL
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+            const port = window.location.port ? `:${window.location.port}` : '';
+            const gameUrl = `${protocol}//${hostname}${port}/game/${room.roomId}`;
+
+            div.innerHTML = `
+        <div style="flex: 1;">
+            <strong>${name}</strong>
+            <a href="${gameUrl}" class="game-link" target="_blank" onclick="event.stopPropagation();">Join Game</a>
+        </div>
+        <span style="color: #999; font-size: 12px;">${playerCount} players</span>
+    `;
+
+            return div;
+        }
+
+        function selectRoom(roomId) {
+            console.log('Selected room:', roomId);
+            selectedRoomId = roomId;
+
+            // Request detailed room information
+            if (currentRoom) {
+                // Optional: if AdminRoom supports request_room_state
+                // currentRoom.send('request_room_state', { roomId });
+            }
+
+            // Show game content panel
+            document.getElementById('no-game-selected').style.display = 'none';
+            document.getElementById('game-content').style.display = 'block';
+
+            // Update game link - CRITICAL: Use window.location for correct URL
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+            const port = window.location.port ? `:${window.location.port}` : '';
+            const gameUrl = `${protocol}//${hostname}${port}/game/${roomId}`;
+
+            console.log('Generated game URL:', gameUrl);
+
+            const linkElement = document.getElementById('game-direct-link');
+            linkElement.href = gameUrl;
+            linkElement.textContent = 'Join Game';
+
+            document.getElementById('scenario-name').textContent = `Game ${roomId.substring(0, 8)}`;
+        }
+
+        async function createGame() {
+            if (!client || !currentRoom) {
+                alert('Not connected to server. Please wait or click Reconnect.');
+                return;
+            }
+
+            const gameName = document.getElementById('game-name').value.trim() || 'Unnamed Game';
+            const gameType = document.getElementById('game-type').value;
+            const aiBots = getAdminAIBots();
+
+            console.log('Creating game with settings:', {
+                name: gameName,
+                gameType: gameType,
+                aiBots: aiBots
+            });
+
+            try {
+                const roomOptions = {
+                    name: gameName,
+                    gameType: gameType,
+                    maxPlayers: 20
+                };
+
+                if (aiBots.length > 0) {
+                    roomOptions.aiBots = aiBots;
+                }
+
+                // Use official Colyseus client.create() to create the room
+                const room = await client.create('constellation', roomOptions);
+                console.log('✓ Room created:', room.roomId);
+
+                // Clear the game name input
+                document.getElementById('game-name').value = '';
+
+                // Select the newly created room and update rooms list
+                selectRoom(room.roomId);
+                if (currentRoom) {
+                    setTimeout(() => currentRoom.send('request_rooms_list'), 200);
+                }
+            } catch (error) {
+                console.error('Failed to create game:', error);
+                alert(`Failed to create game: ${error.message}`);
+            }
+        }
+        function setupRoomListeners(room) {
+            room.onStateChange((state) => {
+                console.log('Room state changed:', state);
+                // Update UI based on state changes
+            });
+
+            room.onMessage('player_joined', (data) => {
+                console.log('Player joined:', data);
+                // Update player list
+            });
+
+            room.onError((code, message) => {
+                console.error('Room error:', code, message);
+            });
+
+            room.onLeave((code) => {
+                console.log('Left room:', code);
+                currentRoom = null;
+            });
+        }
+
+        function toggleScenario() {
+            const content = document.getElementById('scenario-content');
+            const toggle = document.getElementById('scenario-toggle');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                toggle.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                toggle.textContent = '▶';
+            }
+        }
+
+        function updateTeamCount() {
+            // Placeholder for team count update logic
+            console.log('Team count updated');
+        }
+
+        function autoSetupTeams() {
+            // Placeholder for auto team setup
+            console.log('Auto setup teams');
+        }
+
+        async function startGame() {
+            if (!selectedRoomId) {
+                alert('Select a game first');
+                return;
+            }
+            try {
+                // Join the game room directly and send start command
+                const room = await client.joinById(selectedRoomId, { name: 'Admin' });
+                room.send('start_game');
+                console.log('✓ Game start command sent');
+                // Leave shortly after sending command
+                setTimeout(() => { try { room.leave(); } catch (e) { console.warn('Leave failed:', e); } }, 1000);
+                // Refresh rooms list
+                if (currentRoom) { setTimeout(() => currentRoom.send('request_rooms_list'), 500); }
+            } catch (error) {
+                console.error('Failed to start game:', error);
+                alert(`Failed to start game: ${error.message}`);
+            }
+        }
+
+        async function deleteGame() {
+            if (!selectedRoomId) {
+                alert('Select a game first');
+                return;
+            }
+            try {
+                // Join the game room directly and send force_dispose command
+                const room = await client.joinById(selectedRoomId, { name: 'Admin' });
+                room.send('force_dispose');
+                console.log('✓ Room delete (force dispose) command sent');
+                // Leave shortly after sending command
+                setTimeout(() => { try { room.leave(); } catch (e) { console.warn('Leave failed:', e); } }, 500);
+                // Refresh rooms list
+                if (currentRoom) { setTimeout(() => currentRoom.send('request_rooms_list'), 500); }
+            } catch (error) {
+                console.error('Failed to delete game:', error);
+                alert(`Failed to delete game: ${error.message}`);
+            }
+        }
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            initializeColyseus();
+        });
+    </script>
 </body>
 
 </html>

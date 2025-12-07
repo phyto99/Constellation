@@ -8,15 +8,22 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
-    "colyseus": "^0.15.0",
+    "@colyseus/monitor": "^0.16.7",
     "@colyseus/schema": "^2.0.0",
+    "colyseus": "^0.15.0",
+    "cors": "^2.8.5",
     "express": "^4.18.2",
-    "cors": "^2.8.5"
+    "express-basic-auth": "^1.2.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
   },
-  "keywords": ["colyseus", "game", "admin", "constellation"],
+  "keywords": [
+    "colyseus",
+    "game",
+    "admin",
+    "constellation"
+  ],
   "author": "",
   "license": "MIT"
 }

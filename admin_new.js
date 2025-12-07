@@ -31,8 +31,10 @@ async function connectToColyseus() {
         console.log('Connecting to Colyseus...');
         updateStatus('Connecting...', '#f59e0b');
         
-        // Create client - EXACT same as other.html
-        colyseusClient = new Colyseus.Client('ws://localhost:2567');
+        // Create client - dynamic URL based on current host
+        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const host = window.location.host;
+        colyseusClient = new Colyseus.Client(`${protocol}://${host}`);
         
         // Test connection - EXACT same as other.html
         await colyseusClient.getAvailableRooms('constellation');
