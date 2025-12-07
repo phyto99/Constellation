@@ -3965,26 +3965,92 @@
         let gameClientManager = null;
 
         // Check if we're in a game room (URL contains /game/)
-        function initializeMultiplayer() {
+        async function initializeMultiplayer() {
             const path = window.location.pathname;
-            const roomIdMatch = path.match(/\/game\/(.+)/);
+            const roomIdMatch = path.match(/\/game\/([^/]+)/);
 
             if (roomIdMatch) {
                 const roomId = roomIdMatch[1];
                 console.log('Detected game room ID:', roomId);
 
-                // Initialize the game client manager
-                gameClientManager = new ColyseusGameManager();
-                gameClientManager.connectToRoom(roomId);
-
-                // Update the header with room info
+                // Show header immediately
                 const gameHeader = document.getElementById('gameHeader');
                 const titleLine = document.getElementById('titleLine');
                 if (gameHeader && titleLine) {
-                    titleLine.textContent = `Game Room: ${roomId}`;
+                    titleLine.textContent = `Connecting to Game Room...`;
                     gameHeader.style.display = 'block';
                 }
+
+                // Initialize the game client manager
+                gameClientManager = new ColyseusGameManager();
+                const connected = await gameClientManager.connectToRoom(roomId);
+
+                if (connected) {
+                    if (titleLine) {
+                        titleLine.textContent = `Game Room: ${roomId.substring(0, 8)}`;
+                    }
+                } else {
+                    if (titleLine) {
+                        titleLine.textContent = `Failed to connect to room`;
+                    }
+                }
             }
+        }
+
+        // Update the ColyseusGameManager constructor
+        class ColyseusGameManager {
+            constructor() {
+                // Use WebSocket protocol
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const hostname = window.location.hostname || 'localhost';
+                const port = '2567';
+                this.serverUrl = `${protocol}//${hostname}:${port}`;
+
+                this.client = null;
+                this.room = null;
+                this.isConnected = false;
+                this.reconnectAttempts = 0;
+                this.maxReconnectAttempts = 5;
+                this.roomId = null;
+            }
+
+            async connectToRoom(roomId) {
+                try {
+                    console.log('Attempting to connect to game room:', roomId);
+                    console.log('Server URL:', this.serverUrl);
+
+                    this.roomId = roomId;
+                    this.client = new Colyseus.Client(this.serverUrl);
+
+                    // Try to join the specific room
+                    this.room = await this.client.joinById(roomId, {
+                        name: `Player ${Date.now().toString().slice(-6)}`
+                    });
+
+                    this.setupRoomListeners();
+                    this.isConnected = true;
+                    this.reconnectAttempts = 0;
+
+                    console.log('Successfully connected to game room');
+                    this.updateConnectionStatus(true);
+
+                    return true;
+                } catch (error) {
+                    console.error('Failed to connect to game room:', error);
+                    this.isConnected = false;
+                    this.updateConnectionStatus(false);
+
+                    if (error.code === 4212) {
+                        alert('Game room not found. The room may have been deleted or the link is invalid.');
+                    } else {
+                        this.handleDisconnection();
+                    }
+
+                    return false;
+                }
+            }
+
+            // ... rest of the class remains the same
         }
 
         window.addEventListener('load', () => {
