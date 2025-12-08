@@ -202,6 +202,26 @@ class ConstellationRoom extends Room {
             }
         });
 
+        // Broadcast cursor movements to all other players
+        this.onMessage('cursor_move', (client, data) => {
+            this.broadcast('cursor_move', {
+                playerId: client.sessionId,
+                x: data.x,
+                y: data.y,
+                teamIndex: data.teamIndex
+            }, { except: client });
+        });
+
+        // Broadcast pointer effects to all other players
+        this.onMessage('pointer_effect', (client, data) => {
+            this.broadcast('pointer_effect', {
+                playerId: client.sessionId,
+                x: data.x,
+                y: data.y,
+                teamIndex: data.teamIndex
+            }, { except: client });
+        });
+
         // Allow admin-side deletion by forcing all clients to leave (room will auto-dispose)
         this.onMessage('force_dispose', () => {
             try {
