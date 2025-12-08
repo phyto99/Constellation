@@ -1281,7 +1281,7 @@
                 }
 
                 Object.assign(this, { G: 20, S: s.steals || 50, HM: s.headquarters || 2, RT: s.roundLength || 30, TR: s.rounds || 10, PT: s.countdownLength || 5, MW: 64, MH: 36 });
-                Object.assign(this, { r: 1, t: this.RT, go: false, p: true, pt: this.PT, tm: 0, pu: 0, bhr: 0, ml: false });
+                Object.assign(this, { r: 1, t: this.RT, go: false, p: true, pt: this.PT, tm: 0, pu: 0, bhr: 0, ml: false, notStarted: true });
                 this.st = []; this.ln = []; this.pr = new Set(); this.fx = []; this.cm = s.customMap || null;
                 this.wormholeWinner = null; // Track which team won by connecting wormholes
 
@@ -1362,6 +1362,11 @@
                 this.aiUpdateInterval = 150; // Check AI every 150ms for better performance
                 this.aiBotsPerUpdate = Math.max(1, Math.floor(this.aiBots.length / 3)); // Spread load
                 this.currentAIBotIndex = 0; // Round-robin bot updates
+
+                // Multiplayer cursor tracking
+                this.playerCursors = new Map(); // playerId -> { x, y, teamIndex, lastUpdate }
+                this.lastCursorSend = 0;
+                this.cursorSendInterval = 50; // Send cursor updates every 50ms
 
                 this.init();
             }
@@ -1669,6 +1674,16 @@
                 this.cursorPos = { x, y };
                 this.showCursorInfo = !this.p && !this.go;
 
+                // Send cursor position to multiplayer (throttled)
+                const now = Date.now();
+                if (gameClientManager && gameClientManager.isConnected && now - this.lastCursorSend > this.cursorSendInterval) {
+                    // Convert screen coordinates to world coordinates
+                    const wx = (x - this.cam.x) / this.cam.z;
+                    const wy = (y - this.cam.y) / this.cam.z;
+                    gameClientManager.room.send('cursor_move', { x: wx, y: wy, teamIndex: this.tm });
+                    this.lastCursorSend = now;
+                }
+
                 if (!this.d.a) return;
                 const dx = x - this.d.sx, dy = y - this.d.sy;
                 if (Math.abs(dx) > 3 || Math.abs(dy) > 3) this.d.m = true;
@@ -1679,7 +1694,13 @@
                 if (!this.d.a) return;
                 if (!this.d.m && this.ml) {
                     const x = e.clientX || e.pageX, y = e.clientY || e.pageY, wx = (x - this.cam.x) / this.cam.z, wy = (y - this.cam.y) / this.cam.z;
-                    if (this.d.b === 2) this.addFx(wx, wy, 'pointer');
+                    if (this.d.b === 2) {
+                        this.addFx(wx, wy, 'pointer');
+                        // Send pointer effect to multiplayer
+                        if (gameClientManager && gameClientManager.isConnected) {
+                            gameClientManager.room.send('pointer_effect', { x: wx, y: wy, teamIndex: this.tm });
+                        }
+                    }
                     else if (!this.p && !this.go) { const s = this.findStar({ x: wx, y: wy }); if (s !== -1) this.clickStar(s); }
                 }
                 this.d.a = this.d.m = false;
@@ -1896,23 +1917,32 @@
                 dt /= 60;
 
                 if (this.p) {
-                    // Use real-time for smooth planning countdown
-                    const elapsedTime = (currentTime - this.gameStartTime) / 1000;
-                    const remainingTime = Math.max(0, this.PT - elapsedTime);
-                    const newPt = Math.ceil(remainingTime);
-
-                    // Only update planning text if the displayed seconds changed
-                    if (!this.lastPlanningTime || this.lastPlanningTime !== newPt) {
+                    if (this.notStarted) {
+                        // Game hasn't started yet - show waiting message
                         const planningEl = document.getElementById('planning');
-                        planningEl.textContent = `Planning Stage: ${newPt}s`;
-                        // Default to team color if assigned
-                        if (this.tm < this.tms.length) {
-                            planningEl.style.color = `#${this.tms[this.tm].c.toString(16).padStart(6, '0')}`;
+                        if (planningEl.textContent !== 'Waiting to start... Click "Start New Game"') {
+                            planningEl.textContent = 'Waiting to start... Click "Start New Game"';
+                            planningEl.style.color = '#ff0';
                         }
-                        this.lastPlanningTime = newPt;
-                    }
+                    } else {
+                        // Use real-time for smooth planning countdown
+                        const elapsedTime = (currentTime - this.gameStartTime) / 1000;
+                        const remainingTime = Math.max(0, this.PT - elapsedTime);
+                        const newPt = Math.ceil(remainingTime);
 
-                    if (remainingTime <= 0) this.startGame();
+                        // Only update planning text if the displayed seconds changed
+                        if (!this.lastPlanningTime || this.lastPlanningTime !== newPt) {
+                            const planningEl = document.getElementById('planning');
+                            planningEl.textContent = `Planning Stage: ${newPt}s`;
+                            // Default to team color if assigned
+                            if (this.tm < this.tms.length) {
+                                planningEl.style.color = `#${this.tms[this.tm].c.toString(16).padStart(6, '0')}`;
+                            }
+                            this.lastPlanningTime = newPt;
+                        }
+
+                        if (remainingTime <= 0) this.startGame();
+                    }
                 } else if (!this.go) {
                     // Use real-time for ultra-smooth timer bar
                     const elapsedTime = (currentTime - this.roundStartTime) / 1000;
@@ -1998,6 +2028,9 @@
                 if (this.needsAnimatedLineRedraw) { this.renderAnimatedLines(); this.needsAnimatedLineRedraw = false; }
                 if (this.needsStarRedraw || this.dirtyRegions.size > 0 || this.dirtyStars.size > 0) { this.renderStars(); this.needsStarRedraw = false; }
                 if (this.needsFxRedraw) { this.renderFx(); this.needsFxRedraw = false; }
+
+                // Render multiplayer cursors
+                this.renderPlayerCursors();
 
                 // Update cursor info display
                 this.updateCursorDisplay();
@@ -2651,6 +2684,37 @@
             }
 
 
+            renderPlayerCursors() {
+                // Clear old cursors (they're redrawn every frame)
+                const now = Date.now();
+                const cursorTimeout = 2000; // Remove cursors after 2 seconds of inactivity
+
+                // Remove stale cursors
+                for (const [playerId, cursor] of this.playerCursors.entries()) {
+                    if (now - cursor.lastUpdate > cursorTimeout) {
+                        this.playerCursors.delete(playerId);
+                    }
+                }
+
+                // Draw each player's cursor
+                for (const [playerId, cursor] of this.playerCursors.entries()) {
+                    const teamColor = cursor.teamIndex < this.tms.length ?
+                        this.tms[cursor.teamIndex].c : 0xFFFFFF;
+
+                    // Draw cursor as a circle with team color
+                    this.fxGfx.lineStyle(2, teamColor);
+                    this.fxGfx.beginFill(teamColor, 0.3);
+                    this.fxGfx.drawCircle(cursor.x * this.G, cursor.y * this.G, 8);
+                    this.fxGfx.endFill();
+
+                    // Draw a small crosshair
+                    this.fxGfx.lineStyle(1, teamColor);
+                    this.fxGfx.moveTo(cursor.x * this.G - 12, cursor.y * this.G);
+                    this.fxGfx.lineTo(cursor.x * this.G + 12, cursor.y * this.G);
+                    this.fxGfx.moveTo(cursor.x * this.G, cursor.y * this.G - 12);
+                    this.fxGfx.lineTo(cursor.x * this.G, cursor.y * this.G + 12);
+                }
+            }
 
             updateCursorDisplay() {
                 // Remove existing cursor display
@@ -3604,7 +3668,13 @@
             if (existing) existing.remove();
 
             if (currentGame && currentGame.app) currentGame.app.destroy(true);
-            document.getElementById('gameContainer').innerHTML = ''; currentGame = new Game(settings);
+            document.getElementById('gameContainer').innerHTML = '';
+            currentGame = new Game(settings);
+
+            // Actually start the game countdown
+            currentGame.notStarted = false;
+            currentGame.gameStartTime = Date.now();
+
             document.getElementById('settingsPanel').classList.add('hidden');
         }
 
@@ -3835,6 +3905,29 @@
 
                 this.room.onMessage('player_left', (data) => {
                     console.log('👋 Player left:', data);
+                    // Remove cursor when player leaves
+                    if (currentGame && data.playerId) {
+                        currentGame.playerCursors.delete(data.playerId);
+                    }
+                });
+
+                // Listen for cursor movements from other players
+                this.room.onMessage('cursor_move', (data) => {
+                    if (currentGame && data.playerId !== this.room.sessionId) {
+                        currentGame.playerCursors.set(data.playerId, {
+                            x: data.x,
+                            y: data.y,
+                            teamIndex: data.teamIndex,
+                            lastUpdate: Date.now()
+                        });
+                    }
+                });
+
+                // Listen for pointer effects from other players
+                this.room.onMessage('pointer_effect', (data) => {
+                    if (currentGame && data.playerId !== this.room.sessionId) {
+                        currentGame.addFx(data.x, data.y, 'pointer');
+                    }
                 });
 
                 // Handle errors and disconnections
