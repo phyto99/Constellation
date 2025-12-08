@@ -170,6 +170,44 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .settings-grid .full-width {
+            grid-column: 1 / -1;
+        }
+
+        #admin-ai-bots {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .ai-bot-item {
+            flex: 1 1 auto;
+            /* Compress/expand but don't force new lines aggressively */
+            min-width: 200px;
+            /* Minimum width before wrapping */
+        }
+
+        .notification-toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #4caf50;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        .notification-toast.show {
+            opacity: 1;
         }
 
         .form-group {
@@ -348,13 +386,17 @@
             background: #fff;
             border: 1px solid #d1d5db;
             border-radius: 4px;
-            padding: 10px 12px; /* more breathing room */
+            padding: 10px 12px;
+            /* more breathing room */
             margin-bottom: 10px;
             display: flex;
             align-items: center;
-            gap: 10px; /* larger gaps for readability */
-            flex-wrap: wrap; /* allow wrapping across the row */
-            white-space: normal; /* allow natural breaks */
+            gap: 10px;
+            /* larger gaps for readability */
+            flex-wrap: wrap;
+            /* allow wrapping across the row */
+            white-space: normal;
+            /* allow natural breaks */
         }
 
         .ai-bot-select,
@@ -366,7 +408,8 @@
             color: black;
             border-radius: 4px;
             font-size: 12px;
-            flex: 1 1 180px; /* grow and wrap nicely */
+            flex: 1 1 180px;
+            /* grow and wrap nicely */
             min-width: 160px;
         }
 
@@ -499,54 +542,69 @@
                             <div class="form-group">
                                 <label>Map JSON Data <span class="sublabel">(Paste JSON or leave empty for random
                                         map)</span></label>
-                                <textarea id="edit-mapJson" placeholder="Paste map JSON data here"></textarea>
+                                <div style="display: flex; flex-direction: column; gap: 5px;">
+                                    <select id="map-selector" onchange="loadMapFromDropdown()"
+                                        style="padding: 8px; border-radius: 4px; border: 1px solid #d1d5db; width: 100%;">
+                                        <option value="">-- Load Map from File --</option>
+                                    </select>
+                                    <textarea id="edit-mapJson" placeholder="Paste map JSON data here"
+                                        onchange="sendSettingsUpdate()"></textarea>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label>Moves <span class="sublabel">(Number of moves per round)</span></label>
-                                <input type="number" id="edit-movesPerRound" value="15">
+                                <input type="number" id="edit-movesPerRound" value="15" onchange="sendSettingsUpdate()">
                             </div>
                             <div class="form-group">
                                 <label>Rounds <span class="sublabel">(Number of rounds)</span></label>
-                                <input type="number" id="edit-rounds" value="10">
+                                <input type="number" id="edit-rounds" value="10" onchange="sendSettingsUpdate()">
                             </div>
                             <div class="form-group">
                                 <label>Round Length <span class="sublabel">(Seconds per round)</span></label>
-                                <input type="number" id="edit-roundTime" value="30">
+                                <input type="number" id="edit-roundTime" value="30" onchange="sendSettingsUpdate()">
                             </div>
                             <div class="form-group">
                                 <label>Countdown Length <span class="sublabel">(Seconds before game
                                         starts)</span></label>
-                                <input type="number" id="edit-countdownTime" value="5">
+                                <input type="number" id="edit-countdownTime" value="5" onchange="sendSettingsUpdate()">
                             </div>
                             <div class="form-group">
                                 <label>Steals <span class="sublabel">(Number of steals allowed)</span></label>
-                                <input type="number" id="edit-stealLimit" value="15">
+                                <input type="number" id="edit-stealLimit" value="15" onchange="sendSettingsUpdate()">
                             </div>
                             <div class="form-group">
                                 <label>Headquarters <span class="sublabel">(Number of Headquarters)</span></label>
-                                <input type="number" id="edit-hqMax" value="2">
+                                <input type="number" id="edit-hqMax" value="2" onchange="sendSettingsUpdate()">
                             </div>
                             <div class="form-group">
                                 <label>Score Multipliers <span class="sublabel">(Count, Distance, HQ,
                                         Destruction)</span></label>
                                 <div style="display: flex; gap: 5px;">
                                     <input type="number" id="edit-countMultiplier" value="500" placeholder="Count"
-                                        style="width: 25%;">
+                                        style="width: 25%;" onchange="sendSettingsUpdate()">
                                     <input type="number" id="edit-distanceMultiplier" value="1" placeholder="Distance"
-                                        style="width: 25%;">
+                                        style="width: 25%;" onchange="sendSettingsUpdate()">
                                     <input type="number" id="edit-hqMultiplier" value="10" placeholder="HQ"
-                                        style="width: 25%;">
+                                        style="width: 25%;" onchange="sendSettingsUpdate()">
                                     <input type="number" id="edit-destructionMultiplier" value="1"
-                                        placeholder="Destruction" style="width: 25%;">
+                                        placeholder="Destruction" style="width: 25%;" onchange="sendSettingsUpdate()">
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label>AI Bots <span class="sublabel">(Add AI players to the game)</span></label>
-                                <div id="admin-ai-bots">
-                                    <div class="ai-bots-empty">No AI bots added yet</div>
-                                </div>
-                                <button type="button" class="add-bot-btn" onclick="addAdminAIBot()">Add AI Bot</button>
+                        </div>
+
+                        <!-- AI Bots Section moved below standard settings -->
+                        <div class="form-group full-width"
+                            style="margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+                            <label>AI Bots <span class="sublabel">(Add AI players to the game)</span></label>
+                            <div id="admin-ai-bots">
+                                <div class="ai-bots-empty">No AI bots added yet</div>
                             </div>
+                            <button type="button" class="add-bot-btn" onclick="addAdminAIBot()">Add AI Bot</button>
+                        </div>
+
+                        <div
+                            style="margin-top: 10px; font-size: 12px; color: #666; display: flex; align-items: center;">
+                            <span id="settings-status">Settings are saved automatically</span>
                         </div>
                     </div>
                     <div class="team-section">
@@ -792,15 +850,16 @@
                 return;
             }
 
-            const TEAM_OPTIONS = TEAM_CONFIGS.map((team, index) => `<option value="${index}" style="color:#${team.color.toString(16).padStart(6,'0')}">${team.displayName}</option>`).join('');
+            const TEAM_OPTIONS = TEAM_CONFIGS.map((team, index) => `<option value="${index}" style="color:#${team.color.toString(16).padStart(6, '0')}">${team.displayName}</option>`).join('');
 
             container.innerHTML = players.map(p => {
-                const name = p.name || (p.id ? `Player ${p.id.substring(0,6)}` : 'Player');
+                const name = p.name || (p.id ? `Player ${p.id.substring(0, 6)}` : 'Player');
+                const idDisplay = p.studentId ? ` <span style="color:#666;font-size:11px;">(ID: ${p.studentId})</span>` : '';
                 const teamIndex = Number.isFinite(p.team) ? p.team : '';
                 const isHost = !!p.isHost;
                 return `
                     <div class="player-row" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid #e5e7eb;border-radius:4px;margin-bottom:6px;background:#fff;">
-                        <span style="flex:1;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}${isHost ? ' <span style="color:#10b981;font-size:11px;">(host)</span>' : ''}</span>
+                        <span style="flex:1;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}${idDisplay}${isHost ? ' <span style="color:#10b981;font-size:11px;">(host)</span>' : ''}</span>
                         <select onchange="assignPlayerTeam('${p.id}', this.value)" style="flex:0 0 150px;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;">
                             <option value="">No Team</option>
                             ${TEAM_OPTIONS}
@@ -903,7 +962,10 @@
             });
         }
 
+        let latestRoomsData = [];
+
         function updateRoomsList(rooms) {
+            latestRoomsData = rooms || [];
             const pendingGames = document.getElementById('pending-games');
             const activeGames = document.getElementById('active-games');
             const pastGames = document.getElementById('past-games');
@@ -979,9 +1041,83 @@
             selectedRoomId = roomId;
 
             // Request detailed room information
-            if (currentRoom) {
-                // Optional: if AdminRoom supports request_room_state
-                // currentRoom.send('request_room_state', { roomId });
+            // Optional: if AdminRoom supports request_room_state
+            // currentRoom.send('request_room_state', { roomId });
+
+            // Populate settings if available
+            const roomData = latestRoomsData.find(r => r.roomId === roomId);
+            if (roomData && roomData.config) {
+                const cfg = roomData.config;
+                // Regular settings
+                if (cfg.rounds) document.getElementById('edit-rounds').value = cfg.rounds;
+                if (cfg.roundLength) document.getElementById('edit-roundTime').value = cfg.roundLength;
+                if (cfg.countdownLength) document.getElementById('edit-countdownTime').value = cfg.countdownLength;
+                if (cfg.steals) document.getElementById('edit-stealLimit').value = cfg.steals;
+                if (cfg.headquarters) document.getElementById('edit-hqMax').value = cfg.headquarters;
+                // Game usually has 'movesPerRound' stored as 'steals' count or custom prop? 
+                // Server code doesn't explicitly save 'moves', assumes defaults. client 'S' is moves.
+                // We'll leave moves default for now if not in config.
+
+                // Multipliers
+                if (cfg.multipliers) {
+                    if (cfg.multipliers.count) document.getElementById('edit-countMultiplier').value = cfg.multipliers.count;
+                    if (cfg.multipliers.distance) document.getElementById('edit-distanceMultiplier').value = cfg.multipliers.distance;
+                    if (cfg.multipliers.hq) document.getElementById('edit-hqMultiplier').value = cfg.multipliers.hq;
+                    if (cfg.multipliers.destruction) document.getElementById('edit-destructionMultiplier').value = cfg.multipliers.destruction;
+                }
+
+                // AI Bots logic
+                const container = document.getElementById('admin-ai-bots');
+                if (container) {
+                    container.innerHTML = '<div class="ai-bots-empty">No AI bots added yet</div>';
+                    if (Array.isArray(cfg.aiBots) && cfg.aiBots.length > 0) {
+                        // Clear empty message
+                        const emptyMsg = container.querySelector('.ai-bots-empty');
+                        if (emptyMsg) emptyMsg.remove();
+
+                        // We need to sync the UI counter or just append
+                        cfg.aiBots.forEach(bot => {
+                            // Recreate bot UI
+                            const botId = `adminAiBot_${aiBotCounter++}`; // Use global counter
+                            const botDiv = document.createElement('div');
+                            botDiv.className = 'ai-bot-item';
+                            botDiv.id = botId;
+
+                            // Determine next team/type for selection state
+                            // We need to reconstruct the select values
+                            // This is a bit verbose to inline, but manageable
+
+                            const botTypesHtml = Object.keys(AI_BOT_TYPES).map(key =>
+                                `<option value="${key}" ${key === bot.type ? 'selected' : ''}>${AI_BOT_TYPES[key].name} - ${AI_BOT_TYPES[key].description}</option>`
+                            ).join('');
+
+                            const teamsHtml = TEAM_CONFIGS.map((team, index) =>
+                                `<option value="${index}" ${index === bot.teamIndex ? 'selected' : ''} style="color: #${team.color.toString(16).padStart(6, '0')}">${team.displayName}</option>`
+                            ).join('');
+
+                            // Aggression select
+                            let aggHtml = '';
+                            for (let i = 1; i <= 9; i++) {
+                                aggHtml += `<option value="${i}" ${i === bot.aggression ? 'selected' : ''}>Level ${i} - ${i === 9 ? 'Maximum Aggression' : i === 1 ? 'Very Passive' : ''}</option>`;
+                            }
+
+                            botDiv.innerHTML = `
+                                <select class="ai-bot-select" onchange="updateAdminAIBotDisplay('${botId}')">${botTypesHtml}</select>
+                                <select class="ai-team-select" onchange="updateAdminAIBotDisplay('${botId}')">${teamsHtml}</select>
+                                <select class="ai-aggression-select" onchange="updateAdminAIBotDisplay('${botId}')">${aggHtml}</select>
+                                <div class="ai-bot-cube" style="background: #00FFFF; opacity: 0.8;"></div>
+                                <button class="remove-bot-btn" onclick="removeAdminAIBot('${botId}')">Remove</button>
+                            `;
+                            container.appendChild(botDiv);
+                            updateAdminAIBotDisplay(botId);
+                        });
+                    }
+                }
+
+                // Map? 
+                if (cfg.customMap) {
+                    document.getElementById('edit-mapJson').value = JSON.stringify(cfg.customMap, null, 2);
+                }
             }
 
             // Show game content panel
@@ -1090,20 +1226,51 @@
             console.log('Auto setup teams');
         }
 
+        // Assign a player's team via AdminRoom (no need to join the game room)
+        function assignPlayerTeam(playerId, teamIndex) {
+            if (!currentRoom || !selectedRoomId) {
+                alert('Connect to admin and select a game first');
+                return;
+            }
+            const payload = {
+                roomId: selectedRoomId,
+                playerId,
+                teamIndex: teamIndex === '' ? null : parseInt(teamIndex, 10)
+            };
+            try {
+                currentRoom.send('assign_team', payload);
+                console.log('✓ Sent assign_team', payload);
+            } catch (e) {
+                console.error('Failed to assign team:', e);
+                alert('Failed to assign team. See console for details.');
+            }
+        }
+
+        // Kick a player from the selected game via AdminRoom
+        function kickPlayer(playerId) {
+            if (!currentRoom || !selectedRoomId) {
+                alert('Connect to admin and select a game first');
+                return;
+            }
+            const payload = { roomId: selectedRoomId, playerId };
+            try {
+                currentRoom.send('kick_player', payload);
+                console.log('✓ Sent kick_player', payload);
+            } catch (e) {
+                console.error('Failed to kick player:', e);
+                alert('Failed to kick player. See console for details.');
+            }
+        }
+
         async function startGame() {
             if (!selectedRoomId) {
                 alert('Select a game first');
                 return;
             }
             try {
-                // Join the game room directly and send start command
-                const room = await client.joinById(selectedRoomId, { name: 'Admin' });
-                room.send('start_game');
-                console.log('✓ Game start command sent');
-                // Leave shortly after sending command
-                setTimeout(() => { try { room.leave(); } catch (e) { console.warn('Leave failed:', e); } }, 1000);
-                // Refresh rooms list
-                if (currentRoom) { setTimeout(() => currentRoom.send('request_rooms_list'), 500); }
+                // Send start command via AdminRoom
+                currentRoom.send('start_game', { roomId: selectedRoomId });
+                console.log('✓ Game start command sent via AdminRoom');
             } catch (error) {
                 console.error('Failed to start game:', error);
                 alert(`Failed to start game: ${error.message}`);
@@ -1116,23 +1283,128 @@
                 return;
             }
             try {
-                // Join the game room directly and send force_dispose command
-                const room = await client.joinById(selectedRoomId, { name: 'Admin' });
-                room.send('force_dispose');
-                console.log('✓ Room delete (force dispose) command sent');
-                // Leave shortly after sending command
-                setTimeout(() => { try { room.leave(); } catch (e) { console.warn('Leave failed:', e); } }, 500);
-                // Refresh rooms list
-                if (currentRoom) { setTimeout(() => currentRoom.send('request_rooms_list'), 500); }
+                if (confirm('Are you sure you want to delete this game?')) {
+                    // Send delete command via AdminRoom
+                    currentRoom.send('delete_room', { roomId: selectedRoomId });
+                    console.log('✓ Room delete command sent via AdminRoom');
+
+                    // Clear selection
+                    document.getElementById('no-game-selected').style.display = 'block';
+                    document.getElementById('game-content').style.display = 'none';
+                    selectedRoomId = null;
+                }
             } catch (error) {
                 console.error('Failed to delete game:', error);
                 alert(`Failed to delete game: ${error.message}`);
             }
         }
 
+        function sendSettingsUpdate() {
+            if (!currentRoom || !selectedRoomId) return;
+
+            const multipliers = {
+                count: parseInt(document.getElementById('edit-countMultiplier').value) || 0,
+                distance: parseInt(document.getElementById('edit-distanceMultiplier').value) || 0,
+                hq: parseInt(document.getElementById('edit-hqMultiplier').value) || 0,
+                destruction: parseInt(document.getElementById('edit-destructionMultiplier').value) || 0
+            };
+
+            const settings = {
+                // movesPerRound is usually hardcoded in game or passed, checking server it's not in gameConfig top level but passed... 
+                // wait, ConstellationRoom gameConfig doesn't show movesPerRound explicitly in default but let's send it.
+                // Looking at server.js gameConfig: roundLength, rounds, countdownLength, steals, headquarters, multipliers
+                // 'moves' is often client side or part of validation. Admin UI has 'edit-movesPerRound'.
+                // I will include it.
+                moves: parseInt(document.getElementById('edit-movesPerRound').value) || 15,
+                rounds: parseInt(document.getElementById('edit-rounds').value) || 10,
+                roundLength: parseInt(document.getElementById('edit-roundTime').value) || 30,
+                countdownLength: parseInt(document.getElementById('edit-countdownTime').value) || 5,
+                steals: parseInt(document.getElementById('edit-stealLimit').value) || 15,
+                headquarters: parseInt(document.getElementById('edit-hqMax').value) || 2,
+                customMap: document.getElementById('edit-mapJson').value ? JSON.parse(document.getElementById('edit-mapJson').value) : null,
+                multipliers: multipliers,
+                aiBots: getAdminAIBots()
+            };
+
+            try {
+                // Send update command via AdminRoom
+                currentRoom.send('update_settings', { roomId: selectedRoomId, settings: settings });
+                console.log('✓ Settings update sent', settings);
+                showNotification('Game settings updated');
+            } catch (e) {
+                console.error('Failed to send settings update:', e);
+            }
+        }
+
+        async function loadMapList() {
+            try {
+                const response = await fetch('/api/maps');
+                const maps = await response.json();
+                const selector = document.getElementById('map-selector');
+
+                // Keep the default option
+                selector.innerHTML = '<option value="">-- Load Map from File --</option>';
+
+                if (Array.isArray(maps)) {
+                    maps.forEach(mapFile => {
+                        const option = document.createElement('option');
+                        option.value = mapFile;
+                        // Format nice name from filename
+                        let name = mapFile.replace('.json', '');
+                        name = name.replace(/Untitled Map\(\d+\)\s?-?/, '').trim();
+                        if (!name) name = mapFile;
+
+                        option.textContent = name + ` (${mapFile})`;
+                        selector.appendChild(option);
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to load map list:', err);
+            }
+        }
+
+        async function loadMapFromDropdown() {
+            const filename = document.getElementById('map-selector').value;
+            if (!filename) return;
+
+            try {
+                const response = await fetch(`/api/maps/${encodeURIComponent(filename)}`);
+                const mapData = await response.json();
+
+                // Format nicely in the textarea
+                const mapJsonString = JSON.stringify(mapData, null, 2);
+                document.getElementById('edit-mapJson').value = mapJsonString;
+
+                // Trigger update
+                sendSettingsUpdate();
+                console.log(`Loaded map: ${filename}`);
+            } catch (err) {
+                console.error('Failed to load map data:', err);
+                alert('Failed to load map data');
+            }
+        }
+
+        function showNotification(message) {
+            let toast = document.getElementById('notification-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'notification-toast';
+                toast.className = 'notification-toast';
+                document.body.appendChild(toast);
+            }
+
+            toast.textContent = message;
+            toast.classList.add('show');
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
         // Initialize on load
         window.addEventListener('load', () => {
             initializeColyseus();
+            loadMapList();
         });
     </script>
 </body>

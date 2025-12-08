@@ -6,6 +6,55 @@ const cors = require('cors');
 const path = require('path');
 const basicAuth = require('express-basic-auth');
 const { monitor } = require('@colyseus/monitor');
+const fs = require('fs');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// Map endpoints
+const MAPS_DIR = path.join(__dirname, 'CONSTELLATION MAPS');
+
+app.get('/api/maps', (req, res) => {
+    if (!fs.existsSync(MAPS_DIR)) {
+        return res.json([]);
+    }
+    fs.readdir(MAPS_DIR, (err, files) => {
+        if (err) {
+            console.error('Error reading maps directory:', err);
+            return res.status(500).json({ error: 'Failed to list maps' });
+        }
+        // Filter for .json files
+        const maps = files.filter(f => f.endsWith('.json'));
+        res.json(maps);
+    });
+});
+
+app.get('/api/maps/:filename', (req, res) => {
+    const filename = req.params.filename;
+    // Basic security to prevent directory traversal
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+        return res.status(400).json({ error: 'Invalid filename' });
+    }
+
+    const filePath = path.join(MAPS_DIR, filename);
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'Map not found' });
+    }
+
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+            console.error('Error reading map file:', err);
+            return res.status(500).json({ error: 'Failed to read map' });
+        }
+        try {
+            const json = JSON.parse(data);
+            res.json(json);
+        } catch (e) {
+            res.status(500).json({ error: 'Invalid JSON in map file' });
+        }
+    });
+});
 
 // Schema definitions
 class Player extends Schema {
@@ -27,7 +76,7 @@ type('number')(Player.prototype, 'team');
 type('boolean')(Player.prototype, 'ready');
 type('boolean')(Player.prototype, 'connected');
 type('number')(Player.prototype, 'connectedAt');
-type('boolean')(Player.prototype, 'isHost');
+type('string')(Player.prototype, 'studentId');
 
 class RoomState extends Schema {
     constructor() {
@@ -54,12 +103,26 @@ class ConstellationRoom extends Room {
         state.hostId = '';
         this.setState(state);
 
+        // Prevent room from disappearing when page is refreshed (empty room)
+        this.autoDispose = false;
+
         this.maxClients = options.maxPlayers || 20;
-        this.gameConfig = options || {};
+        // Ensure gameConfig has defaults so clients receive full settings
+        this.gameConfig = {
+            name: options.name || `Game ${this.roomId.substring(0, 6)}`,
+            gameType: options.gameType || 'Constellation',
+            roundLength: options.roundLength || 30,
+            rounds: options.rounds || 10,
+            countdownLength: options.countdownLength || 5,
+            steals: options.steals || 50,
+            headquarters: options.headquarters || 2,
+            multipliers: options.multipliers || { count: 500, distance: 1, hq: 10, destruction: 1 },
+            aiBots: options.aiBots || []
+        };
 
         this.setMetadata({
-            name: options.name || `Game ${this.roomId.substring(0, 6)}`,
-            type: options.gameType || 'Constellation',
+            name: this.gameConfig.name,
+            type: this.gameConfig.gameType,
             gameState: 'waiting',
             createdAt: new Date().toISOString(),
             maxPlayers: this.maxClients,
@@ -74,7 +137,7 @@ class ConstellationRoom extends Room {
                     if (msg.type === 'start_game') {
                         if (this.state.gameState === 'waiting') {
                             this.state.gameState = 'playing';
-                            this.broadcast('game_started', { gameState: 'playing' });
+                            this.broadcast('game_started', { gameState: 'playing', config: this.gameConfig, currentRound: 1 });
                             this.setMetadata({ ...this.metadata, gameState: 'playing' });
                             this.updateAdminRoom();
                         }
@@ -86,7 +149,7 @@ class ConstellationRoom extends Room {
                     } else if (msg.type === 'assign_team') {
                         const player = this.state.players.get(msg.playerId);
                         if (player) {
-                            player.team = (msg.teamIndex === null || msg.teamIndex === undefined) ? null : parseInt(msg.teamIndex, 10);
+                            player.team = (msg.teamIndex === null || msg.teamIndex === undefined || msg.teamIndex === '') ? null : parseInt(msg.teamIndex, 10);
                             this.updateAdminRoom();
                         }
                     } else if (msg.type === 'kick_player') {
@@ -99,6 +162,21 @@ class ConstellationRoom extends Room {
                             this.state.players.delete(msg.playerId);
                         }
                         this.updateAdminRoom();
+                    } else if (msg.type === 'update_settings') {
+                        // Merge provided settings into gameConfig
+                        if (msg.settings) {
+                            // Deep merge multipliers if provided
+                            if (msg.settings.multipliers) {
+                                this.gameConfig.multipliers = { ...this.gameConfig.multipliers, ...msg.settings.multipliers };
+                                delete msg.settings.multipliers;
+                            }
+                            // Merge other top-level settings
+                            Object.assign(this.gameConfig, msg.settings);
+
+                            // Broadcast update to all clients in the room
+                            this.broadcast('settings_update', { config: this.gameConfig });
+                            console.log(`Settings updated for room ${this.roomId}:`, this.gameConfig);
+                        }
                     }
                 } catch (e) {
                     console.error('Error handling presence message for room', this.roomId, e);
@@ -117,7 +195,7 @@ class ConstellationRoom extends Room {
         this.onMessage('start_game', (client, data) => {
             if (this.state.gameState === 'waiting') {
                 this.state.gameState = 'playing';
-                this.broadcast('game_started', { gameState: 'playing' });
+                this.broadcast('game_started', { gameState: 'playing', config: this.gameConfig, currentRound: 1 });
                 // update monitor metadata to reflect new state
                 this.setMetadata({ ...this.metadata, gameState: 'playing' });
                 this.updateAdminRoom();
@@ -152,6 +230,7 @@ class ConstellationRoom extends Room {
         const player = new Player();
         player.id = client.sessionId;
         player.name = options.name || `Player ${client.sessionId.substring(0, 6)}`;
+        player.studentId = options.studentId || '';
         player.team = null;
         player.ready = false;
         player.connected = true;
@@ -174,12 +253,14 @@ class ConstellationRoom extends Room {
 
     updateAdminRoom() {
         if (this.presence) {
+            console.log(`📡 Room ${this.roomId} publishing admin_update (Players: ${this.clients.length})`);
             this.presence.publish('admin_update', {
                 roomId: this.roomId,
                 players: Array.from(this.state.players.values()),
                 state: this.state.gameState,
                 playerCount: this.clients.length,
-                metadata: this.metadata || {}
+                metadata: this.metadata || {},
+                config: this.gameConfig
             });
         }
     }
@@ -205,7 +286,7 @@ class AdminRoom extends Room {
 
                 // Use the imported matchMaker directly
                 const room = await matchMaker.createRoom('constellation', data.options);
-                
+
                 console.log('✓ Room created:', room.roomId);
 
                 client.send('room_created', {
@@ -248,6 +329,31 @@ class AdminRoom extends Room {
             }
         });
 
+        // NEW: team assignment and kicking via admin room
+        this.onMessage('assign_team', async (client, data) => {
+            try {
+                await this.presence.publish(`room_${data.roomId}`, { type: 'assign_team', playerId: data.playerId, teamIndex: data.teamIndex });
+            } catch (error) {
+                console.error('Error assigning team via AdminRoom:', error);
+            }
+        });
+
+        this.onMessage('kick_player', async (client, data) => {
+            try {
+                await this.presence.publish(`room_${data.roomId}`, { type: 'kick_player', playerId: data.playerId });
+            } catch (error) {
+                console.error('Error kicking player via AdminRoom:', error);
+            }
+        });
+
+        this.onMessage('update_settings', async (client, data) => {
+            try {
+                await this.presence.publish(`room_${data.roomId}`, { type: 'update_settings', settings: data.settings });
+            } catch (error) {
+                console.error('Error updating settings via AdminRoom:', error);
+            }
+        });
+
         // Listen for room updates
         this.presence.subscribe('admin_update', (data) => {
             this.roomStates.set(data.roomId, data);
@@ -270,7 +376,8 @@ class AdminRoom extends Room {
                     metadata: room.metadata || {},
                     state: roomState?.state || 'waiting',
                     players: roomState?.players || [],
-                    playerCount: roomState?.playerCount || 0
+                    playerCount: roomState?.playerCount || 0,
+                    config: roomState?.config || {}
                 };
             });
 
@@ -296,10 +403,7 @@ class AdminRoom extends Room {
     }
 }
 
-// Express setup
-const app = express();
-app.use(cors());
-app.use(express.json());
+
 
 // Add Colyseus Monitor with basic auth and custom columns for metadata
 const basicAuthMiddleware = basicAuth({
