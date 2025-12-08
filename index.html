@@ -425,9 +425,9 @@
     </div>
     <div class="header" id="gameHeader" style="display:none;">
         <div id="titleLine"></div>
-        <div class="info-line">Game ID: Placeholder.⠀ Player: <span id="playerIdDisplay"
-                style="font-weight:bold;">Guest</span>.⠀ Team: <span id="teamColor">cyan</span>.⠀ Status: <span
-                id="connection-status" style="font-weight: bold;">Connecting...</span></div>
+        <div class="info-line">Game ID: <span id="gameIdDisplay" style="font-weight:bold;">-</span>.⠀ Player ID: <span
+                id="playerIdDisplay" style="font-weight:bold;">Guest</span>.⠀ Team: <span id="teamColor">cyan</span>.⠀
+            Status: <span id="connection-status" style="font-weight: bold;">Connecting...</span></div>
     </div>
     <div class="ui">
         <div id="round" class="round">Round #1</div>
@@ -1740,6 +1740,12 @@
 
                                 if (!isNaN(teamIndex) && teamIndex >= 0 && teamIndex < this.tms.length) {
                                     this.tm = teamIndex;
+
+                                    // Notify server of team change in multiplayer
+                                    if (gameClientManager && gameClientManager.isConnected) {
+                                        gameClientManager.room.send('join_team', { teamIndex });
+                                    }
+
                                     // Force immediate leaderboard visual update
                                     this.needsFullUIUpdate = true;
                                     this.updateUI();
@@ -1756,12 +1762,13 @@
                 }, 100);
             }
 
-            addFx(x, y, ty) {
+            addFx(x, y, ty, teamColor = null) {
                 const currentTime = Date.now() / 1000;
                 this.fx.push({
                     x, y, ty,
                     startTime: currentTime,
-                    mt: ty === 'steal' ? 0.8 : 0.6
+                    mt: ty === 'steal' ? 0.8 : 0.6,
+                    teamColor: teamColor // Store team color for rendering
                 });
                 this.needsFxRedraw = true;
             }
@@ -1920,8 +1927,13 @@
                     if (this.notStarted) {
                         // Game hasn't started yet - show waiting message
                         const planningEl = document.getElementById('planning');
-                        if (planningEl.textContent !== 'Waiting to start... Click "Start New Game"') {
-                            planningEl.textContent = 'Waiting to start... Click "Start New Game"';
+                        // Check if in multiplayer mode
+                        const isMultiplayer = gameClientManager && gameClientManager.isConnected;
+                        const waitMessage = isMultiplayer ?
+                            'Waiting to start... Click "Start Game" in Admin Panel' :
+                            'Waiting to start... Click "Start New Game"';
+                        if (planningEl.textContent !== waitMessage) {
+                            planningEl.textContent = waitMessage;
                             planningEl.style.color = '#ff0';
                         }
                     } else {
@@ -3588,7 +3600,10 @@
                         if (p < 0.5) { const ir = p * 60, ia = (1 - p * 2) * 0.5; this.fxGfx.lineStyle(6, 0xFFFF00, ia).drawCircle(e.x, e.y, ir); }
                     } else if (e.ty === 'pointer') {
                         const p = e.t / e.mt;
-                        const pointerColor = this.tm < this.tms.length ? this.tms[this.tm].c : 0x00FFFF;
+                        // Use teamColor from effect if provided (multiplayer), otherwise use current player's color
+                        const pointerColor = e.teamColor !== null && e.teamColor !== undefined ?
+                            e.teamColor :
+                            (this.tm < this.tms.length ? this.tms[this.tm].c : 0x00FFFF);
                         const r = (1 - p) * 120, a = 1 - p; this.fxGfx.lineStyle(9, pointerColor, a).drawCircle(e.x, e.y, r);
                         if (p > 0.3) { const dr = (p - 0.3) * 24, da = 1 - p; this.fxGfx.lineStyle(0).beginFill(pointerColor, da).drawCircle(e.x, e.y, dr).endFill(); }
                     } else if (e.type === 'blackhole_destruction') {
@@ -3839,6 +3854,18 @@
                     console.log('Successfully connected to game room');
                     this.updateConnectionStatus(true);
 
+                    // Update Game ID display
+                    const gameIdDisplay = document.getElementById('gameIdDisplay');
+                    if (gameIdDisplay) {
+                        gameIdDisplay.textContent = roomId.substring(0, 8);
+                    }
+
+                    // Update Player ID display
+                    const playerIdDisplay = document.getElementById('playerIdDisplay');
+                    if (playerIdDisplay) {
+                        playerIdDisplay.textContent = this.room.sessionId.substring(0, 8);
+                    }
+
                     return true;
                 } catch (error) {
                     console.error('Failed to connect to game room:', error);
@@ -3926,7 +3953,10 @@
                 // Listen for pointer effects from other players
                 this.room.onMessage('pointer_effect', (data) => {
                     if (currentGame && data.playerId !== this.room.sessionId) {
-                        currentGame.addFx(data.x, data.y, 'pointer');
+                        // Get team color from team index
+                        const teamColor = data.teamIndex < currentGame.tms.length ?
+                            currentGame.tms[data.teamIndex].c : 0xFFFFFF;
+                        currentGame.addFx(data.x, data.y, 'pointer', teamColor);
                     }
                 });
 
