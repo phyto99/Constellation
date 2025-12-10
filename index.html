@@ -425,7 +425,7 @@
     </div>
     <div class="header" id="gameHeader" style="display:none;">
         <div id="titleLine"></div>
-        <div class="info-line">Game ID: <span id="gameIdDisplay" style="font-weight:bold;">-</span>.⠀ Player ID: <span
+        <div class="info-line">Game ID: <span id="gameIdDisplay" style="font-weight:bold;">-</span>.⠀ Player: <span
                 id="playerIdDisplay" style="font-weight:bold;">Guest</span>.⠀ Team: <span id="teamColor">cyan</span>.⠀
             Status: <span id="connection-status" style="font-weight: bold;">Connecting...</span></div>
     </div>
@@ -1317,9 +1317,9 @@
                 this.showCursorInfo = false;
 
                 this.c = new PIXI.Container(); this.app.stage.addChild(this.c);
-                const g = ['bgGfx', 'destroyedGfx', 'staticLineGfx', 'animatedLineGfx', 'starGfx', 'fxGfx'].map(n => this[n] = new PIXI.Graphics());
+                const g = ['bgGfx', 'destroyedGfx', 'staticLineGfx', 'animatedLineGfx', 'starGfx', 'fxGfx', 'cursorGfx'].map(n => this[n] = new PIXI.Graphics());
                 this.llc = new PIXI.Container(); this.tc = new PIXI.Container();
-                [this.bgGfx, this.destroyedGfx, this.staticLineGfx, this.animatedLineGfx, this.llc, this.starGfx, this.fxGfx, this.tc].forEach(x => this.c.addChild(x));
+                [this.bgGfx, this.destroyedGfx, this.staticLineGfx, this.animatedLineGfx, this.llc, this.starGfx, this.fxGfx, this.cursorGfx, this.tc].forEach(x => this.c.addChild(x));
 
                 this.cam = { x: 0, y: 0, z: 1 }; this.d = { a: false, sx: 0, sy: 0, cx: 0, cy: 0, m: false };
                 this.to = []; this.ti = 0; this.lto = []; this.lti = 0;
@@ -1678,8 +1678,8 @@
                 const now = Date.now();
                 if (gameClientManager && gameClientManager.isConnected && now - this.lastCursorSend > this.cursorSendInterval) {
                     // Convert screen coordinates to world coordinates
-                    const wx = (x - this.cam.x) / this.cam.z;
-                    const wy = (y - this.cam.y) / this.cam.z;
+                    const wx = (x - this.cam.x) / this.cam.z / this.G;
+                    const wy = (y - this.cam.y) / this.cam.z / this.G;
                     gameClientManager.room.send('cursor_move', { x: wx, y: wy, teamIndex: this.tm });
                     this.lastCursorSend = now;
                 }
@@ -2042,6 +2042,7 @@
                 if (this.needsFxRedraw) { this.renderFx(); this.needsFxRedraw = false; }
 
                 // Render multiplayer cursors
+                // Always render cursors every frame so they update smoothly
                 this.renderPlayerCursors();
 
                 // Update cursor info display
@@ -2697,37 +2698,52 @@
 
 
             renderPlayerCursors() {
-                // Clear old cursors (they're redrawn every frame)
                 const now = Date.now();
-                const cursorTimeout = 2000; // Remove cursors after 2 seconds of inactivity
+                const cursorTimeout = 2000;
 
-                // Remove stale cursors
+                // Clear ONLY the cursor graphics layer
+                this.cursorGfx.clear();
+
+                // Remove stale cursors from data
                 for (const [playerId, cursor] of this.playerCursors.entries()) {
                     if (now - cursor.lastUpdate > cursorTimeout) {
                         this.playerCursors.delete(playerId);
                     }
                 }
 
-                // Draw each player's cursor
+                // Draw each player's cursor on the dedicated cursor layer
                 for (const [playerId, cursor] of this.playerCursors.entries()) {
                     const teamColor = cursor.teamIndex < this.tms.length ?
                         this.tms[cursor.teamIndex].c : 0xFFFFFF;
 
-                    // Draw cursor as a circle with team color
-                    this.fxGfx.lineStyle(2, teamColor);
-                    this.fxGfx.beginFill(teamColor, 0.3);
-                    this.fxGfx.drawCircle(cursor.x * this.G, cursor.y * this.G, 8);
-                    this.fxGfx.endFill();
+                    const x = cursor.x * this.G;
+                    const y = cursor.y * this.G;
 
-                    // Draw a small crosshair
-                    this.fxGfx.lineStyle(1, teamColor);
-                    this.fxGfx.moveTo(cursor.x * this.G - 12, cursor.y * this.G);
-                    this.fxGfx.lineTo(cursor.x * this.G + 12, cursor.y * this.G);
-                    this.fxGfx.moveTo(cursor.x * this.G, cursor.y * this.G - 12);
-                    this.fxGfx.lineTo(cursor.x * this.G, cursor.y * this.G + 12);
+                    // Draw cursor matching reference - classic arrow pointer
+                    const size = 24;
+
+                    this.cursorGfx.lineStyle(0); // No outline
+                    this.cursorGfx.beginFill(teamColor, 1);
+
+                    // Dart / Arrowhead shape matching the references
+                    this.cursorGfx.moveTo(x, y); // 1. Top Tip (Origin)
+
+                    // 2. Bottom Left Tip (Long tail)
+                    this.cursorGfx.lineTo(x + size * 0.35, y + size * 1.0);
+
+                    // 3. Inner Notch
+                    // This cuts into the body of the arrow
+                    this.cursorGfx.lineTo(x + size * 0.55, y + size * 0.7);
+
+                    // 4. Right Wing Tip
+                    this.cursorGfx.lineTo(x + size * 1.0, y + size * 0.55);
+
+                    // 5. Back to Top to close the shape
+                    this.cursorGfx.lineTo(x, y);
+
+                    this.cursorGfx.endFill();
                 }
             }
-
             updateCursorDisplay() {
                 // Remove existing cursor display
                 const existing = document.getElementById('cursorInfo');
@@ -4266,7 +4282,7 @@
                 // Update UI to show connection status
                 const statusElement = document.getElementById('connection-status');
                 if (statusElement) {
-                    statusElement.textContent = connected ? 'Connected' : 'Disconnected';
+                    statusElement.textContent = connected ? 'connected' : 'disconnected';
                     statusElement.style.color = connected ? '#00ff00' : '#ff0000';
                 }
             }
