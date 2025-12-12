@@ -322,32 +322,46 @@ class ConstellationRoom extends Room {
 
         // Initialize game state when game starts
         this.onMessage('init_game_state', (client, data) => {
-            if (!this.state.game.initialized && data.stars && data.teams) {
-                // Initialize stars
-                data.stars.forEach(starData => {
-                    const star = new StarSchema();
-                    star.x = starData.x;
-                    star.y = starData.y;
-                    star.ty = starData.ty;
-                    star.tm = starData.tm !== null ? starData.tm : -1;
-                    star.hq = starData.hq || false;
-                    star.pr = starData.pr || false;
-                    star.destroyed = starData.destroyed || false;
-                    star.req = starData.req || 0;
-                    this.state.game.stars.push(star);
+            try {
+                console.log(`📥 Received init_game_state from ${client.sessionId}:`, {
+                    starsCount: data.stars?.length,
+                    teamsCount: data.teams?.length,
+                    initialized: this.state.game.initialized
                 });
 
-                // Initialize teams
-                data.teams.forEach(teamData => {
-                    const team = new TeamSchema();
-                    team.movesLeft = teamData.movesLeft;
-                    team.stealsLeft = teamData.stealsLeft;
-                    team.hqCount = teamData.hqCount || 0;
-                    this.state.game.teams.push(team);
-                });
+                if (!this.state.game.initialized && data.stars && data.teams) {
+                    // Initialize stars
+                    data.stars.forEach((starData, index) => {
+                        const star = new StarSchema();
+                        star.x = starData.x;
+                        star.y = starData.y;
+                        star.ty = starData.ty;
+                        star.tm = starData.tm !== null && starData.tm !== undefined ? starData.tm : -1;
+                        star.hq = starData.hq || false;
+                        star.pr = starData.pr || false;
+                        star.destroyed = starData.destroyed || false;
+                        star.req = starData.req || 0;
+                        this.state.game.stars.push(star);
+                    });
 
-                this.state.game.initialized = true;
-                console.log(`Game state initialized for room ${this.roomId}: ${this.state.game.stars.length} stars, ${this.state.game.teams.length} teams`);
+                    // Initialize teams
+                    data.teams.forEach((teamData, index) => {
+                        const team = new TeamSchema();
+                        team.movesLeft = teamData.movesLeft || 0;
+                        team.stealsLeft = teamData.stealsLeft || 0;
+                        team.hqCount = teamData.hqCount || 0;
+                        this.state.game.teams.push(team);
+                    });
+
+                    this.state.game.initialized = true;
+                    console.log(`✅ Game state initialized for room ${this.roomId}: ${this.state.game.stars.length} stars, ${this.state.game.teams.length} teams`);
+                } else {
+                    console.log(`⚠️ Game state already initialized or invalid data for room ${this.roomId}`);
+                }
+            } catch (error) {
+                console.error(`❌ Error initializing game state for room ${this.roomId}:`, error);
+                console.error('Error stack:', error.stack);
+                // Don't disconnect client, just log the error
             }
         });
 
