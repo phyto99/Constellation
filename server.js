@@ -141,9 +141,18 @@ class ConstellationRoom extends Room {
                     if (msg.type === 'start_game') {
                         if (this.state.gameState === 'waiting') {
                             this.state.gameState = 'playing';
-                            // CRITICAL: Distribute moves when started via Admin presence
-                            this.distributeMoves();
+
+                            // Initialize Round State
+                            this.state.game.round = 1;
+
+                            // CRITICAL: Distribute moves when started via Admin presence (isGameStart = true)
+                            this.distributeMoves(true);
+
                             this.broadcast('game_started', { gameState: 'playing', config: this.gameConfig, currentRound: 1 });
+
+                            // Start the Game Loop
+                            this.startGameLoop();
+
                             this.setMetadata({ ...this.metadata, gameState: 'playing' });
                             this.updateAdminRoom();
                         }
@@ -206,15 +215,76 @@ class ConstellationRoom extends Room {
             if (this.state.gameState === 'waiting') {
                 this.state.gameState = 'playing';
 
-                // Distribute Initial Moves
-                this.distributeMoves();
+                // Distribute Initial Moves (isGameStart = true)
+                this.distributeMoves(true);
 
+                // Initialize Round State
+                this.state.game.round = 1;
                 this.broadcast('game_started', { gameState: 'playing', config: this.gameConfig, currentRound: 1 });
+
+                // Start the Game Loop
+                this.startGameLoop();
+
                 // update monitor metadata to reflect new state
                 this.setMetadata({ ...this.metadata, gameState: 'playing' });
                 this.updateAdminRoom();
             }
         });
+
+        // Game Loop Logic
+        this.startGameLoop = () => {
+            if (this.gameLoopInterval) clearInterval(this.gameLoopInterval);
+
+            // Config
+            const roundLength = (this.gameConfig.roundLength || 30) * 1000;
+            const rounds = this.gameConfig.rounds || 10;
+
+            let timeRemaining = roundLength;
+            let inIntermission = false;
+
+            console.log(`⏱️ Game loop started for room ${this.roomId}. Round length: ${roundLength}ms`);
+
+            this.gameLoopInterval = setInterval(() => {
+                // Check if game ended or disposed
+                if (this.locked) {
+                    clearInterval(this.gameLoopInterval);
+                    return;
+                }
+
+                timeRemaining -= 1000;
+                if (timeRemaining % 5000 === 0) console.log(`⏱️ Room ${this.roomId} Tick: ${timeRemaining}ms, Round: ${this.state.game.round}`);
+
+                if (timeRemaining < 0) {
+                    // Check game over (Round Limit Reached)
+                    if (this.state.game.round >= rounds) {
+                        console.log(`🏁 Game ended for room ${this.roomId}`);
+                        this.broadcast('game_ended', { finalRound: this.state.game.round });
+                        clearInterval(this.gameLoopInterval);
+                        return;
+                    }
+
+                    // INSTANT ROUND TRANSITION (No Intermission)
+                    this.state.game.round++;
+                    timeRemaining = roundLength;
+                    console.log(`🚀 Round ${this.state.game.round} starting. Replenishing moves.`);
+
+                    // REPLENISH MOVES
+                    this.distributeMoves(false);
+
+                    // Broadcast new round immediately
+                    this.broadcast('round_started', { currentRound: this.state.game.round });
+
+                } else {
+                    // Timer Update
+                    this.broadcast('time_update', {
+                        timeRemaining: timeRemaining,
+                        currentRound: this.state.game.round,
+                        state: 'playing' // Always playing
+                    });
+                }
+            }, 1000);
+        };
+
 
         // Broadcast cursor movements to all other players
         this.onMessage('cursor_move', (client, data) => {
@@ -273,9 +343,15 @@ class ConstellationRoom extends Room {
                     if (team) team.hqCount++;
                 }
 
+                // Prepare update objects
+                const teamUpdate = { index: teamIndex, movesLeft: -1 };
+                if (isHQ) {
+                    teamUpdate.hqCount = 1; // Increment client count
+                }
+
                 this.broadcast('state_changed', {
                     stars: [starUpdate],
-                    teams: [{ index: teamIndex, movesLeft: -1, hqCount: isHQ ? 1 : 0 }] // 1 = increment hq count
+                    teams: [teamUpdate]
                 });
 
                 console.log(`✅ Star ${data.starIndex} claimed by team ${teamIndex}${isHQ ? ' (HQ)' : ''}`);
@@ -326,9 +402,15 @@ class ConstellationRoom extends Room {
                     if (team) team.hqCount++;
                 }
 
+                // Prepare update objects
+                const teamUpdate = { index: teamIndex, movesLeft: -1, stealsLeft: -1 };
+                if (isHQ) {
+                    teamUpdate.hqCount = 1; // Increment client count
+                }
+
                 this.broadcast('state_changed', {
                     stars: [starUpdate],
-                    teams: [{ index: teamIndex, movesLeft: -1, stealsLeft: -1, hqCount: isHQ ? 1 : 0 }]
+                    teams: [teamUpdate]
                 });
 
                 console.log(`✅ Star ${data.starIndex} stolen by team ${teamIndex}${isHQ ? ' (HQ)' : ''}`);
@@ -442,7 +524,14 @@ class ConstellationRoom extends Room {
         setTimeout(() => this.updateAdminRoom(), 100);
     }
 
-    distributeMoves() {
+    onDispose() {
+        if (this.gameLoopInterval) {
+            clearInterval(this.gameLoopInterval);
+        }
+        console.log(`Room ${this.roomId} disposed`);
+    }
+
+    distributeMoves(isGameStart = false) {
         try {
             // Distribute moves for ALL teams
             const teams = {}; // teamIndex -> [players]
@@ -472,10 +561,13 @@ class ConstellationRoom extends Room {
                 // Reset team moves sum and resources
                 if (this.state.game.teams[teamIdx]) {
                     this.state.game.teams[teamIdx].movesLeft = totalMoves;
-                    // Properly reset shared resources on game start
-                    this.state.game.teams[teamIdx].hqCount = 0;
-                    const stealLimit = parseInt(this.gameConfig.steals || 15, 10);
-                    this.state.game.teams[teamIdx].stealsLeft = stealLimit;
+
+                    // ON GAME START ONLY: Reset shared resources
+                    if (isGameStart) {
+                        this.state.game.teams[teamIdx].hqCount = 0;
+                        const stealLimit = parseInt(this.gameConfig.steals || 15, 10);
+                        this.state.game.teams[teamIdx].stealsLeft = stealLimit;
+                    }
                 }
 
                 const base = Math.floor(totalMoves / players.length);
