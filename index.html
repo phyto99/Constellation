@@ -1215,6 +1215,63 @@
                 // Check if we have moves left
                 if (game.tms[this.teamIndex].movesLeft <= 0) return false;
 
+                // In multiplayer mode, send moves to server for validation
+                if (game.ml && gameClientManager && gameClientManager.room && gameClientManager.isConnected) {
+                    try {
+                        if (move.type === 'steal' && star.tm !== null && star.tm !== this.teamIndex) {
+                            // Validate locally first to avoid unnecessary server calls
+                            if (star.hq || star.pr || game.tms[this.teamIndex].st <= 0) return false;
+                            if (star.ty === T.C || star.ty === T.B) return false;
+
+                            gameClientManager.room.send('steal_star', { starIndex: move.target });
+
+                            // Optimistic update - will be rolled back if server rejects
+                            game.tms[this.teamIndex].st--;
+                            game.tms[this.teamIndex].movesLeft--;
+                            star.tm = this.teamIndex;
+                            this.stealsUsed++;
+                            this.totalStealsThisRound++;
+                            game.addFx(star.x * game.G, star.y * game.G, 'steal');
+                        } else if (move.type === 'hq' && star.tm === null) {
+                            if (game.tms[this.teamIndex].h >= game.HM) return false;
+
+                            gameClientManager.room.send('place_hq', { starIndex: move.target });
+
+                            // Optimistic update
+                            star.tm = this.teamIndex;
+                            star.hq = true;
+                            game.tms[this.teamIndex].h++;
+                            game.tms[this.teamIndex].movesLeft--;
+                            this.hqPlaced = true;
+                        } else if (move.type === 'capture' && (star.tm === null || star.tm === this.teamIndex)) {
+                            if (star.tm === this.teamIndex) return false;
+
+                            gameClientManager.room.send('claim_star', { starIndex: move.target });
+
+                            // Optimistic update
+                            star.tm = this.teamIndex;
+                            game.tms[this.teamIndex].movesLeft--;
+                        } else {
+                            return false;
+                        }
+
+                        // Update visual immediately (optimistic)
+                        game.drawStar(star, move.target);
+                        game.renderConnectedLines(move.target);
+                        game.markStarDirty(move.target);
+                        game.changedTeams.add(this.teamIndex);
+                        game.deferredScoreUpdate = true;
+                        game.deferredSpecialCheck = true;
+                        game.deferredNetworkAnalysis = true;
+
+                        return true;
+                    } catch (error) {
+                        console.error('Error sending move to server:', error);
+                        return false;
+                    }
+                }
+
+                // Fallback for local/offline mode - keep existing logic
                 // Execute the move
                 if (move.type === 'steal' && star.tm !== null && star.tm !== this.teamIndex) {
                     // Stealing logic - validate all conditions
@@ -1698,7 +1755,10 @@
                         this.addFx(wx, wy, 'pointer');
                         // Send pointer effect to multiplayer
                         if (gameClientManager && gameClientManager.isConnected) {
-                            gameClientManager.room.send('pointer_effect', { x: wx, y: wy, teamIndex: this.tm });
+                            gameClientManager.room.send('pointer_effect', {
+                                x: wx, y: wy, teamIndex: this.tm,
+                                zoom: this.cam.z
+                            });
                         }
                     }
                     else if (!this.p && !this.go) { const s = this.findStar({ x: wx, y: wy }); if (s !== -1) this.clickStar(s); }
@@ -1762,13 +1822,14 @@
                 }, 100);
             }
 
-            addFx(x, y, ty, teamColor = null) {
+            addFx(x, y, ty, teamColor = null, zoom = null) {
                 const currentTime = Date.now() / 1000;
                 this.fx.push({
                     x, y, ty,
                     startTime: currentTime,
                     mt: ty === 'steal' ? 0.8 : 0.6,
-                    teamColor: teamColor // Store team color for rendering
+                    teamColor: teamColor, // Store team color for rendering
+                    zoom: zoom
                 });
                 this.needsFxRedraw = true;
             }
@@ -3620,8 +3681,35 @@
                         const pointerColor = e.teamColor !== null && e.teamColor !== undefined ?
                             e.teamColor :
                             (this.tm < this.tms.length ? this.tms[this.tm].c : 0x00FFFF);
-                        const r = (1 - p) * 120, a = 1 - p; this.fxGfx.lineStyle(9, pointerColor, a).drawCircle(e.x, e.y, r);
-                        if (p > 0.3) { const dr = (p - 0.3) * 24, da = 1 - p; this.fxGfx.lineStyle(0).beginFill(pointerColor, da).drawCircle(e.x, e.y, dr).endFill(); }
+
+                        // Calculate scale factor to maintain consistent visual size
+                        // Base sizes at zoom level 1.0
+                        const baseRadius = 120;
+                        const baseDotRadius = 24;
+                        const baseLineWidth = 9;
+
+                        // Scale inversely with current zoom to maintain screen-space size for own pointer
+                        // But use creator's zoom for other players' pointers
+                        let scaleFactor = 1;
+                        if (e.zoom !== null && e.zoom !== undefined) {
+                            // This is someone else's pointer - scale it by the ratio of their zoom to ours
+                            scaleFactor = e.zoom / this.cam.z;
+                        } else {
+                            // This is our own pointer - keep it constant screen size
+                            scaleFactor = 1 / this.cam.z;
+                        }
+
+                        const r = (1 - p) * baseRadius * scaleFactor;
+                        const lineWidth = baseLineWidth * scaleFactor;
+                        const a = 1 - p;
+
+                        this.fxGfx.lineStyle(lineWidth, pointerColor, a).drawCircle(e.x, e.y, r);
+
+                        if (p > 0.3) {
+                            const dr = (p - 0.3) * baseDotRadius * scaleFactor;
+                            const da = 1 - p;
+                            this.fxGfx.lineStyle(0).beginFill(pointerColor, da).drawCircle(e.x, e.y, dr).endFill();
+                        }
                     } else if (e.type === 'blackhole_destruction') {
                         // Render blackhole destruction particle effect
                         const progress = 1 - e.life;
@@ -3641,8 +3729,6 @@
                     }
                 });
             }
-
-
         }
 
         let currentGame = null;
@@ -3972,8 +4058,74 @@
                         // Get team color from team index
                         const teamColor = data.teamIndex < currentGame.tms.length ?
                             currentGame.tms[data.teamIndex].c : 0xFFFFFF;
-                        currentGame.addFx(data.x, data.y, 'pointer', teamColor);
+                        currentGame.addFx(data.x, data.y, 'pointer', teamColor, data.zoom);
                     }
+                });
+
+                // Server-authoritative game state synchronization
+                this.room.onMessage('state_changed', (delta) => {
+                    if (!currentGame) return;
+
+                    console.log('📡 State changed from server:', delta);
+
+                    // Apply star changes
+                    if (delta.stars) {
+                        delta.stars.forEach(change => {
+                            if (change.index < 0 || change.index >= currentGame.st.length) return;
+
+                            const star = currentGame.st[change.index];
+                            if (change.tm !== undefined) star.tm = change.tm;
+                            if (change.hq !== undefined) star.hq = change.hq;
+                            if (change.pr !== undefined) star.pr = change.pr;
+                            if (change.destroyed !== undefined) star.destroyed = change.destroyed;
+
+                            // Redraw the star
+                            currentGame.drawStar(star, change.index);
+                            currentGame.renderConnectedLines(change.index);
+                            currentGame.markStarDirty(change.index);
+                        });
+                    }
+
+                    // Apply team changes
+                    if (delta.teams) {
+                        delta.teams.forEach(change => {
+                            if (change.index < 0 || change.index >= currentGame.tms.length) return;
+
+                            const team = currentGame.tms[change.index];
+                            if (change.movesLeft !== undefined) team.movesLeft = change.movesLeft;
+                            if (change.stealsLeft !== undefined) team.st = change.stealsLeft;
+                            if (change.hqCount !== undefined) team.h = change.hqCount;
+
+                            currentGame.changedTeams.add(change.index);
+                        });
+                    }
+
+                    // Update UI and recalculate scores
+                    currentGame.deferredScoreUpdate = true;
+                    currentGame.deferredSpecialCheck = true;
+                    currentGame.deferredNetworkAnalysis = true;
+                    currentGame.updateUI();
+                });
+
+                // Handle move rejections with resource refunding
+                this.room.onMessage('move_rejected', (data) => {
+                    if (!currentGame) return;
+
+                    console.warn('❌ Move rejected by server:', data.reason);
+
+                    // Refund resources
+                    if (data.refund) {
+                        if (data.refund.moves && currentGame.tm < currentGame.tms.length) {
+                            currentGame.tms[currentGame.tm].movesLeft += data.refund.moves;
+                        }
+                        if (data.refund.steals && currentGame.tm < currentGame.tms.length) {
+                            currentGame.tms[currentGame.tm].st += data.refund.steals;
+                        }
+                    }
+
+                    // Show error notification
+                    showNotification(`Move rejected: ${data.reason}`);
+                    currentGame.updateUI();
                 });
 
                 // Handle errors and disconnections
@@ -4076,223 +4228,254 @@
                     if (typeof cfg.roundLength === 'number') currentGame.roundLength = cfg.roundLength;
                     if (typeof cfg.rounds === 'number') currentGame.rounds = cfg.rounds;
                     if (typeof cfg.countdownLength === 'number') currentGame.countdownLength = cfg.countdownLength;
-                    if (cfg.customMap) currentGame.customMap = cfg.customMap;
-                    if (Array.isArray(cfg.aiBots)) currentGame.aiBots = cfg.aiBots;
-                }
 
-                // Trigger game start logic
-                if (currentGame) {
-                    currentGame.startGame();
-                }
+                    // Initialize server game state with current client state
+                    if (this.room && this.isConnected && currentGame.st && currentGame.tms) {
+                        const starsData = currentGame.st.map(star => ({
+                            x: star.x,
+                            y: star.y,
+                            ty: star.ty,
+                            tm: star.tm !== null ? star.tm : -1,
+                            hq: star.hq || false,
+                            pr: star.pr || false,
+                            destroyed: star.destroyed || false,
+                            req: star.req || 0
+                        }));
 
-                // Update UI to show game has started
-                const planningElement = document.getElementById('planning');
-                if (planningElement) {
-                    planningElement.style.display = 'none';
-                }
+                        const teamsData = currentGame.tms.map(team => ({
+                            movesLeft: team.movesLeft,
+                            stealsLeft: team.st,
+                            hqCount: team.h || 0
+                        }));
 
-                const roundElement = document.getElementById('round');
-                if (roundElement) {
-                    const roundNum = (data && typeof data.currentRound === 'number') ? data.currentRound : 1;
-                    roundElement.textContent = `Round #${roundNum}`;
+                        this.room.send('init_game_state', {
+                            stars: starsData,
+                            teams: teamsData
+                        });
+
+                        console.log('📤 Sent game state initialization to server:', {
+                            stars: starsData.length,
+                            teams: teamsData.length
+                        });
+                    }
                 }
+                if (cfg.customMap) currentGame.customMap = cfg.customMap;
+                if (Array.isArray(cfg.aiBots)) currentGame.aiBots = cfg.aiBots;
             }
 
-            handleGameAction(data) {
-                // Handle actions from other players
-                if (currentGame && data.playerId !== this.room.sessionId) {
-                    console.log('🎯 Applying action from player:', data.playerId, data.action);
-
-                    // Apply the action to the local game state
-                    // This would integrate with the existing game action system
-                }
+            // Trigger game start logic
+            if(currentGame) {
+                currentGame.startGame();
             }
 
-            handleSettingsUpdate(data) {
-                if (currentGame && data.config) {
-                    console.log('🔄 Received real-time settings update:', data.config);
+            // Update UI to show game has started
+            const planningElement = document.getElementById('planning');
+            if(planningElement) {
+                planningElement.style.display = 'none';
+            }
 
-                    // Update multipliers
-                    if (data.config.multipliers) {
-                        Object.assign(MULTIPLIERS, data.config.multipliers);
-                        currentGame.recalculateAllScores(); // Recalculate with new multipliers
-                    }
+            const roundElement = document.getElementById('round');
+            if(roundElement) {
+                const roundNum = (data && typeof data.currentRound === 'number') ? data.currentRound : 1;
+                roundElement.textContent = `Round #${roundNum}`;
+            }
+        }
 
-                    // Update other settings
-                    if (data.config.moves) currentGame.S = data.config.moves; // Assuming moves -> S (moves per round)
-                    if (data.config.rounds) currentGame.TR = data.config.rounds;
-                    if (data.config.roundLength) currentGame.RT = data.config.roundLength;
-                    if (data.config.countdownLength) currentGame.PT = data.config.countdownLength;
-                    if (data.config.aiBots) {
-                        currentGame.aiBots = Array.isArray(data.config.aiBots) ?
-                            data.config.aiBots.map(b => AIBot.fromData(b)) : [];
-                    }
+        handleGameAction(data) {
+            // Handle actions from other players
+            if (currentGame && data.playerId !== this.room.sessionId) {
+                console.log('🎯 Applying action from player:', data.playerId, data.action);
 
-                    // Force UI update
-                    currentGame.needsFullUIUpdate = true;
-                    currentGame.updateUI();
+                // Apply the action to the local game state
+                // This would integrate with the existing game action system
+            }
+        }
 
-                    // Handle map update
-                    if (data.config.customMap) {
-                        // Only update if map is different (simplified check: compare title or just assume update if provided)
-                        // Deep compare or just overwrite? Let's check title or structure length to avoid heavy stringify if possible, but stringify is safest for now
-                        const currentMapStr = JSON.stringify(currentGame.cm);
-                        const newMapStr = JSON.stringify(data.config.customMap);
+        handleSettingsUpdate(data) {
+            if (currentGame && data.config) {
+                console.log('🔄 Received real-time settings update:', data.config);
 
-                        if (currentMapStr !== newMapStr) {
-                            currentGame.cm = data.config.customMap;
-                            // Trigger map reload/regen
-                            if (currentGame.initMap) {
-                                currentGame.initMap();
-                                console.log('Map updated from settings');
-                            } else {
-                                // unexpected fallback if initMap isn't exposed or valid
-                                console.warn('initMap not available, reloading game instance');
-                                const container = document.getElementById('gameContainer');
-                                if (container) container.innerHTML = '';
-                                const settings = { ...data.config, customMap: data.config.customMap };
-                                currentGame = new Game(settings);
-                                currentGame.startGame();
-                            }
+                // Update multipliers
+                if (data.config.multipliers) {
+                    Object.assign(MULTIPLIERS, data.config.multipliers);
+                    currentGame.recalculateAllScores(); // Recalculate with new multipliers
+                }
+
+                // Update other settings
+                if (data.config.moves) currentGame.S = data.config.moves; // Assuming moves -> S (moves per round)
+                if (data.config.rounds) currentGame.TR = data.config.rounds;
+                if (data.config.roundLength) currentGame.RT = data.config.roundLength;
+                if (data.config.countdownLength) currentGame.PT = data.config.countdownLength;
+                if (data.config.aiBots) {
+                    currentGame.aiBots = Array.isArray(data.config.aiBots) ?
+                        data.config.aiBots.map(b => AIBot.fromData(b)) : [];
+                }
+
+                // Force UI update
+                currentGame.needsFullUIUpdate = true;
+                currentGame.updateUI();
+
+                // Handle map update
+                if (data.config.customMap) {
+                    // Only update if map is different (simplified check: compare title or just assume update if provided)
+                    // Deep compare or just overwrite? Let's check title or structure length to avoid heavy stringify if possible, but stringify is safest for now
+                    const currentMapStr = JSON.stringify(currentGame.cm);
+                    const newMapStr = JSON.stringify(data.config.customMap);
+
+                    if (currentMapStr !== newMapStr) {
+                        currentGame.cm = data.config.customMap;
+                        // Trigger map reload/regen
+                        if (currentGame.initMap) {
+                            currentGame.initMap();
+                            console.log('Map updated from settings');
+                        } else {
+                            // unexpected fallback if initMap isn't exposed or valid
+                            console.warn('initMap not available, reloading game instance');
+                            const container = document.getElementById('gameContainer');
+                            if (container) container.innerHTML = '';
+                            const settings = { ...data.config, customMap: data.config.customMap };
+                            currentGame = new Game(settings);
+                            currentGame.startGame();
                         }
                     }
+                }
 
-                    // Update debug display
-                    const debugEl = document.getElementById('debug-settings');
-                    if (debugEl) {
-                        debugEl.textContent = 'Last Sync: ' + new Date().toLocaleTimeString() + '\n' +
-                            JSON.stringify(data.config, null, 2);
-                    }
+                // Update debug display
+                const debugEl = document.getElementById('debug-settings');
+                if (debugEl) {
+                    debugEl.textContent = 'Last Sync: ' + new Date().toLocaleTimeString() + '\n' +
+                        JSON.stringify(data.config, null, 2);
+                }
 
-                    if (typeof showNotification === 'function') {
-                        showNotification('Game settings updated');
-                    }
+                if (typeof showNotification === 'function') {
+                    showNotification('Game settings updated');
                 }
             }
+        }
 
 
-            updateGameUI(state) {
-                // Update round display
-                const roundElement = document.getElementById('round');
-                if (roundElement && state.currentRound) {
-                    roundElement.textContent = `Round #${state.currentRound}`;
-                }
-
-                // Update timer display
-                if (state.timeRemaining !== undefined) {
-                    const seconds = Math.ceil(state.timeRemaining / 1000);
-                    const timerElement = document.getElementById('timer');
-                    if (timerElement) {
-                        const percentage = (state.timeRemaining / (30 * 1000)) * 100; // Assuming 30s rounds
-                        timerElement.style.width = `${percentage}%`;
-                        timerElement.style.display = state.gameState === 'playing' ? 'block' : 'none';
-                    }
-                }
-
-                // Update game header
-                const titleLine = document.getElementById('titleLine');
-                if (titleLine) {
-                    const stateText = state.gameState === 'playing' ? 'In Progress' :
-                        state.gameState === 'finished' ? 'Finished' : 'Waiting';
-                    titleLine.textContent = `Game Room: ${this.roomId} (${stateText})`;
-                }
+        updateGameUI(state) {
+            // Update round display
+            const roundElement = document.getElementById('round');
+            if (roundElement && state.currentRound) {
+                roundElement.textContent = `Round #${state.currentRound}`;
             }
 
-            handleTimeUpdate(data) {
-                // Update timer display smoothly
-                const seconds = Math.ceil(data.timeRemaining / 1000);
+            // Update timer display
+            if (state.timeRemaining !== undefined) {
+                const seconds = Math.ceil(state.timeRemaining / 1000);
                 const timerElement = document.getElementById('timer');
                 if (timerElement) {
-                    const percentage = (data.timeRemaining / (30 * 1000)) * 100;
+                    const percentage = (state.timeRemaining / (30 * 1000)) * 100; // Assuming 30s rounds
                     timerElement.style.width = `${percentage}%`;
-                }
-
-                // Update round display
-                const roundElement = document.getElementById('round');
-                if (roundElement) {
-                    roundElement.textContent = `Round #${data.currentRound} (${seconds}s)`;
+                    timerElement.style.display = state.gameState === 'playing' ? 'block' : 'none';
                 }
             }
 
-            handleRoundEnd(data) {
-                const planningElement = document.getElementById('planning');
-                if (planningElement) {
-                    planningElement.textContent = `Round ${data.currentRound - 1} Complete! Next round starting...`;
-                    planningElement.style.display = 'block';
-                }
+            // Update game header
+            const titleLine = document.getElementById('titleLine');
+            if (titleLine) {
+                const stateText = state.gameState === 'playing' ? 'In Progress' :
+                    state.gameState === 'finished' ? 'Finished' : 'Waiting';
+                titleLine.textContent = `Game Room: ${this.roomId} (${stateText})`;
+            }
+        }
+
+        handleTimeUpdate(data) {
+            // Update timer display smoothly
+            const seconds = Math.ceil(data.timeRemaining / 1000);
+            const timerElement = document.getElementById('timer');
+            if (timerElement) {
+                const percentage = (data.timeRemaining / (30 * 1000)) * 100;
+                timerElement.style.width = `${percentage}%`;
             }
 
-            handleRoundStart(data) {
-                const planningElement = document.getElementById('planning');
-                if (planningElement) {
-                    planningElement.style.display = 'none';
-                }
+            // Update round display
+            const roundElement = document.getElementById('round');
+            if (roundElement) {
+                roundElement.textContent = `Round #${data.currentRound} (${seconds}s)`;
+            }
+        }
 
-                const roundElement = document.getElementById('round');
-                if (roundElement) {
-                    roundElement.textContent = `Round #${data.currentRound}`;
-                }
+        handleRoundEnd(data) {
+            const planningElement = document.getElementById('planning');
+            if (planningElement) {
+                planningElement.textContent = `Round ${data.currentRound - 1} Complete! Next round starting...`;
+                planningElement.style.display = 'block';
+            }
+        }
+
+        handleRoundStart(data) {
+            const planningElement = document.getElementById('planning');
+            if (planningElement) {
+                planningElement.style.display = 'none';
             }
 
-            handleGameEnd(data) {
-                const planningElement = document.getElementById('planning');
-                if (planningElement) {
-                    planningElement.textContent = `Game Complete! Final Round: ${data.finalRound}`;
-                    planningElement.style.display = 'block';
-                    planningElement.style.color = '#00ff00';
-                }
+            const roundElement = document.getElementById('round');
+            if (roundElement) {
+                roundElement.textContent = `Round #${data.currentRound}`;
+            }
+        }
 
-                const timerElement = document.getElementById('timer');
-                if (timerElement) {
-                    timerElement.style.display = 'none';
-                }
+        handleGameEnd(data) {
+            const planningElement = document.getElementById('planning');
+            if (planningElement) {
+                planningElement.textContent = `Game Complete! Final Round: ${data.finalRound}`;
+                planningElement.style.display = 'block';
+                planningElement.style.color = '#00ff00';
             }
 
-            sendGameAction(action) {
-                if (this.room && this.isConnected) {
-                    this.room.send('game_action', action);
-                }
+            const timerElement = document.getElementById('timer');
+            if (timerElement) {
+                timerElement.style.display = 'none';
             }
+        }
 
-            joinTeam(teamIndex) {
-                if (this.room && this.isConnected) {
-                    this.room.send('join_team', { teamIndex });
-                }
+        sendGameAction(action) {
+            if (this.room && this.isConnected) {
+                this.room.send('game_action', action);
             }
+        }
 
-            handleDisconnection() {
-                this.updateConnectionStatus(false);
-
-                if (this.reconnectAttempts < this.maxReconnectAttempts) {
-                    this.reconnectAttempts++;
-                    console.log(`Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-
-                    setTimeout(() => {
-                        if (this.roomId) {
-                            this.connectToRoom(this.roomId);
-                        }
-                    }, 2000 * this.reconnectAttempts);
-                } else {
-                    console.error('Max reconnection attempts reached');
-                    alert('Connection lost. Please refresh the page to reconnect.');
-                }
+        joinTeam(teamIndex) {
+            if (this.room && this.isConnected) {
+                this.room.send('join_team', { teamIndex });
             }
+        }
 
-            updateConnectionStatus(connected) {
-                // Update UI to show connection status
-                const statusElement = document.getElementById('connection-status');
-                if (statusElement) {
-                    statusElement.textContent = connected ? 'connected' : 'disconnected';
-                    statusElement.style.color = connected ? '#00ff00' : '#ff0000';
-                }
-            }
+        handleDisconnection() {
+            this.updateConnectionStatus(false);
 
-            disconnect() {
-                if (this.room) {
-                    this.room.leave();
-                }
-                this.isConnected = false;
+            if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                this.reconnectAttempts++;
+                console.log(`Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+
+                setTimeout(() => {
+                    if (this.roomId) {
+                        this.connectToRoom(this.roomId);
+                    }
+                }, 2000 * this.reconnectAttempts);
+            } else {
+                console.error('Max reconnection attempts reached');
+                alert('Connection lost. Please refresh the page to reconnect.');
             }
+        }
+
+        updateConnectionStatus(connected) {
+            // Update UI to show connection status
+            const statusElement = document.getElementById('connection-status');
+            if (statusElement) {
+                statusElement.textContent = connected ? 'connected' : 'disconnected';
+                statusElement.style.color = connected ? '#00ff00' : '#ff0000';
+            }
+        }
+
+        disconnect() {
+            if (this.room) {
+                this.room.leave();
+            }
+            this.isConnected = false;
+        }
         }
 
         // Global game client manager

@@ -7,6 +7,7 @@ const path = require('path');
 const basicAuth = require('express-basic-auth');
 const { monitor } = require('@colyseus/monitor');
 const fs = require('fs');
+const { StarSchema, TeamSchema, GameStateSchema } = require('./game-schema');
 
 const app = express();
 app.use(cors());
@@ -85,6 +86,7 @@ class RoomState extends Schema {
         this.gameState = 'waiting';
         this.teams = new MapSchema();
         this.hostId = '';
+        this.game = new GameStateSchema(); // Add game state
     }
 }
 
@@ -92,6 +94,7 @@ type({ map: Player })(RoomState.prototype, 'players');
 type('string')(RoomState.prototype, 'gameState');
 type({ map: 'any' })(RoomState.prototype, 'teams');
 type('string')(RoomState.prototype, 'hostId');
+type(GameStateSchema)(RoomState.prototype, 'game');
 
 // ConstellationRoom class
 class ConstellationRoom extends Room {
@@ -222,6 +225,132 @@ class ConstellationRoom extends Room {
             }, { except: client });
         });
 
+        // Game state synchronization - claim star
+        this.onMessage('claim_star', (client, data) => {
+            const player = this.state.players.get(client.sessionId);
+            if (!player || player.team === null) return;
+
+            const teamIndex = player.team;
+            const validation = this.validateClaim(data.starIndex, teamIndex);
+
+            if (validation.valid) {
+                // Apply move to server state
+                this.state.game.stars[data.starIndex].tm = teamIndex;
+                this.state.game.teams[teamIndex].movesLeft--;
+
+                // Broadcast delta update to all clients
+                this.broadcast('state_changed', {
+                    stars: [{ index: data.starIndex, tm: teamIndex }],
+                    teams: [{ index: teamIndex, movesLeft: this.state.game.teams[teamIndex].movesLeft }]
+                });
+            } else {
+                // Send rejection with reason - client will rollback and refund
+                client.send('move_rejected', {
+                    starIndex: data.starIndex,
+                    reason: validation.reason,
+                    refund: { moves: 1 }
+                });
+            }
+        });
+
+        // Game state synchronization - steal star
+        this.onMessage('steal_star', (client, data) => {
+            const player = this.state.players.get(client.sessionId);
+            if (!player || player.team === null) return;
+
+            const teamIndex = player.team;
+            const validation = this.validateSteal(data.starIndex, teamIndex);
+
+            if (validation.valid) {
+                // Apply steal to server state
+                this.state.game.stars[data.starIndex].tm = teamIndex;
+                this.state.game.teams[teamIndex].movesLeft--;
+                this.state.game.teams[teamIndex].stealsLeft--;
+
+                // Broadcast delta update to all clients
+                this.broadcast('state_changed', {
+                    stars: [{ index: data.starIndex, tm: teamIndex }],
+                    teams: [{
+                        index: teamIndex,
+                        movesLeft: this.state.game.teams[teamIndex].movesLeft,
+                        stealsLeft: this.state.game.teams[teamIndex].stealsLeft
+                    }]
+                });
+            } else {
+                // Send rejection with reason - client will rollback and refund
+                client.send('move_rejected', {
+                    starIndex: data.starIndex,
+                    reason: validation.reason,
+                    refund: { moves: 1, steals: 1 }
+                });
+            }
+        });
+
+        // Game state synchronization - place HQ
+        this.onMessage('place_hq', (client, data) => {
+            const player = this.state.players.get(client.sessionId);
+            if (!player || player.team === null) return;
+
+            const teamIndex = player.team;
+            const validation = this.validateHQ(data.starIndex, teamIndex);
+
+            if (validation.valid) {
+                // Apply HQ placement to server state
+                this.state.game.stars[data.starIndex].tm = teamIndex;
+                this.state.game.stars[data.starIndex].hq = true;
+                this.state.game.teams[teamIndex].movesLeft--;
+                this.state.game.teams[teamIndex].hqCount++;
+
+                // Broadcast delta update to all clients
+                this.broadcast('state_changed', {
+                    stars: [{ index: data.starIndex, tm: teamIndex, hq: true }],
+                    teams: [{
+                        index: teamIndex,
+                        movesLeft: this.state.game.teams[teamIndex].movesLeft,
+                        hqCount: this.state.game.teams[teamIndex].hqCount
+                    }]
+                });
+            } else {
+                // Send rejection with reason - client will rollback and refund
+                client.send('move_rejected', {
+                    starIndex: data.starIndex,
+                    reason: validation.reason,
+                    refund: { moves: 1 }
+                });
+            }
+        });
+
+        // Initialize game state when game starts
+        this.onMessage('init_game_state', (client, data) => {
+            if (!this.state.game.initialized && data.stars && data.teams) {
+                // Initialize stars
+                data.stars.forEach(starData => {
+                    const star = new StarSchema();
+                    star.x = starData.x;
+                    star.y = starData.y;
+                    star.ty = starData.ty;
+                    star.tm = starData.tm !== null ? starData.tm : -1;
+                    star.hq = starData.hq || false;
+                    star.pr = starData.pr || false;
+                    star.destroyed = starData.destroyed || false;
+                    star.req = starData.req || 0;
+                    this.state.game.stars.push(star);
+                });
+
+                // Initialize teams
+                data.teams.forEach(teamData => {
+                    const team = new TeamSchema();
+                    team.movesLeft = teamData.movesLeft;
+                    team.stealsLeft = teamData.stealsLeft;
+                    team.hqCount = teamData.hqCount || 0;
+                    this.state.game.teams.push(team);
+                });
+
+                this.state.game.initialized = true;
+                console.log(`Game state initialized for room ${this.roomId}: ${this.state.game.stars.length} stars, ${this.state.game.teams.length} teams`);
+            }
+        });
+
         // Allow admin-side deletion by forcing all clients to leave (room will auto-dispose)
         this.onMessage('force_dispose', () => {
             try {
@@ -269,6 +398,115 @@ class ConstellationRoom extends Room {
         // update monitor metadata clients count
         this.setMetadata({ ...this.metadata, clients: this.clients.length });
         this.updateAdminRoom();
+    }
+
+    // Validation methods for server-authoritative game state
+    validateClaim(starIndex, teamIndex) {
+        if (!this.state.game.initialized) {
+            return { valid: false, reason: 'Game state not initialized' };
+        }
+
+        if (starIndex < 0 || starIndex >= this.state.game.stars.length) {
+            return { valid: false, reason: 'Invalid star index' };
+        }
+
+        const star = this.state.game.stars[starIndex];
+        const team = this.state.game.teams[teamIndex];
+
+        if (star.destroyed) {
+            return { valid: false, reason: 'Star is destroyed' };
+        }
+
+        if (star.tm !== -1) {
+            return { valid: false, reason: 'Star already owned' };
+        }
+
+        if (team.movesLeft <= 0) {
+            return { valid: false, reason: 'No moves remaining' };
+        }
+
+        return { valid: true };
+    }
+
+    validateSteal(starIndex, teamIndex) {
+        if (!this.state.game.initialized) {
+            return { valid: false, reason: 'Game state not initialized' };
+        }
+
+        if (starIndex < 0 || starIndex >= this.state.game.stars.length) {
+            return { valid: false, reason: 'Invalid star index' };
+        }
+
+        const star = this.state.game.stars[starIndex];
+        const team = this.state.game.teams[teamIndex];
+
+        if (star.destroyed) {
+            return { valid: false, reason: 'Star is destroyed' };
+        }
+
+        if (star.tm === -1) {
+            return { valid: false, reason: 'Cannot steal unclaimed star' };
+        }
+
+        if (star.tm === teamIndex) {
+            return { valid: false, reason: 'Cannot steal own star' };
+        }
+
+        if (star.hq) {
+            return { valid: false, reason: 'Cannot steal HQ' };
+        }
+
+        if (star.pr) {
+            return { valid: false, reason: 'Star is protected' };
+        }
+
+        // Type 2 = cluster, Type 3 = blackhole
+        if (star.ty === 2 || star.ty === 3) {
+            return { valid: false, reason: 'Cannot steal cluster or blackhole' };
+        }
+
+        if (team.stealsLeft <= 0) {
+            return { valid: false, reason: 'No steals remaining' };
+        }
+
+        if (team.movesLeft <= 0) {
+            return { valid: false, reason: 'No moves remaining' };
+        }
+
+        return { valid: true };
+    }
+
+    validateHQ(starIndex, teamIndex) {
+        if (!this.state.game.initialized) {
+            return { valid: false, reason: 'Game state not initialized' };
+        }
+
+        if (starIndex < 0 || starIndex >= this.state.game.stars.length) {
+            return { valid: false, reason: 'Invalid star index' };
+        }
+
+        const star = this.state.game.stars[starIndex];
+        const team = this.state.game.teams[teamIndex];
+
+        if (star.destroyed) {
+            return { valid: false, reason: 'Star is destroyed' };
+        }
+
+        if (star.tm !== -1 && star.tm !== teamIndex) {
+            return { valid: false, reason: 'Cannot place HQ on enemy star' };
+        }
+
+        // Assuming HQ limit is 2 (from gameConfig.headquarters)
+        const hqLimit = this.gameConfig.headquarters || 2;
+        if (team.hqCount >= hqLimit) {
+            return { valid: false, reason: 'HQ limit reached' };
+        }
+
+        if (team.movesLeft <= 0) {
+            return { valid: false, reason: 'No moves remaining' };
+        }
+
+        return { valid: true };
     }
 
     updateAdminRoom() {
