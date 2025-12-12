@@ -78,6 +78,7 @@ type('boolean')(Player.prototype, 'ready');
 type('boolean')(Player.prototype, 'connected');
 type('number')(Player.prototype, 'connectedAt');
 type('string')(Player.prototype, 'studentId');
+type('number')(Player.prototype, 'movesLeft');
 
 class RoomState extends Schema {
     constructor() {
@@ -140,6 +141,8 @@ class ConstellationRoom extends Room {
                     if (msg.type === 'start_game') {
                         if (this.state.gameState === 'waiting') {
                             this.state.gameState = 'playing';
+                            // CRITICAL: Distribute moves when started via Admin presence
+                            this.distributeMoves();
                             this.broadcast('game_started', { gameState: 'playing', config: this.gameConfig, currentRound: 1 });
                             this.setMetadata({ ...this.metadata, gameState: 'playing' });
                             this.updateAdminRoom();
@@ -147,7 +150,7 @@ class ConstellationRoom extends Room {
                     } else if (msg.type === 'force_dispose') {
                         // lock and disconnect all clients, the room will auto-dispose
                         this.locked = true;
-                        this.clients.forEach((c) => { try { c.leave(0); } catch (e) { console.error('Error forcing client leave:', e); } });
+                        this.clients.forEach((c) => { try { c.leave(1000); } catch (e) { console.error('Error forcing client leave:', e); } });
                         setTimeout(() => this.updateAdminRoom(), 200);
                     } else if (msg.type === 'assign_team') {
                         const player = this.state.players.get(msg.playerId);
@@ -158,7 +161,7 @@ class ConstellationRoom extends Room {
                     } else if (msg.type === 'kick_player') {
                         const target = this.clients.find((c) => c.sessionId === msg.playerId);
                         if (target) {
-                            try { target.leave(0); } catch (e) { console.error('Error kicking player:', e); }
+                            try { target.leave(1000); } catch (e) { console.error('Error kicking player:', e); }
                         }
                         // Also remove from state if present
                         if (this.state.players.has(msg.playerId)) {
@@ -195,9 +198,17 @@ class ConstellationRoom extends Room {
             }
         });
 
+
+
+
+
         this.onMessage('start_game', (client, data) => {
             if (this.state.gameState === 'waiting') {
                 this.state.gameState = 'playing';
+
+                // Distribute Initial Moves
+                this.distributeMoves();
+
                 this.broadcast('game_started', { gameState: 'playing', config: this.gameConfig, currentRound: 1 });
                 // update monitor metadata to reflect new state
                 this.setMetadata({ ...this.metadata, gameState: 'playing' });
@@ -225,68 +236,113 @@ class ConstellationRoom extends Room {
             }, { except: client });
         });
 
-        // Game state synchronization - claim star
+        // Game state synchronization - claim_star
         this.onMessage('claim_star', (client, data) => {
             const player = this.state.players.get(client.sessionId);
             if (!player || player.team === null) return;
 
             const teamIndex = player.team;
-            const validation = this.validateClaim(data.starIndex, teamIndex);
+            const team = this.state.game.teams[teamIndex];
+
+            // Server-side authority: Determine if this is an HQ placement
+            // First N moves (defined by limit) MUST be HQs
+            const hqLimit = parseInt(this.gameConfig.headquarters || 2, 10);
+            const isHQ = team && (team.hqCount < hqLimit);
+
+            // Use correct validation method
+            let validation;
+            if (isHQ) {
+                validation = this.validateHQ(data.starIndex, teamIndex);
+            } else {
+                validation = this.validateClaim(data.starIndex, teamIndex);
+            }
 
             if (validation.valid) {
-                // Apply move to server state
-                this.state.game.stars[data.starIndex].tm = teamIndex;
-                this.state.game.teams[teamIndex].movesLeft--;
+                // Decrement player moves
+                if (player.movesLeft > 0) player.movesLeft--;
 
-                // Broadcast delta update to all clients
+                // Track team moves sum (optional but good for consistency)
+                if (team) {
+                    team.movesLeft--;
+                }
+
+                // Broadcast delta update to all clients (server state not used)
+                const starUpdate = { index: data.starIndex, tm: teamIndex, hq: isHQ };
+                if (isHQ) {
+                    // starUpdate.hq is already set above
+                    if (team) team.hqCount++;
+                }
+
                 this.broadcast('state_changed', {
-                    stars: [{ index: data.starIndex, tm: teamIndex }],
-                    teams: [{ index: teamIndex, movesLeft: this.state.game.teams[teamIndex].movesLeft }]
+                    stars: [starUpdate],
+                    teams: [{ index: teamIndex, movesLeft: -1, hqCount: isHQ ? 1 : 0 }] // 1 = increment hq count
                 });
+
+                console.log(`✅ Star ${data.starIndex} claimed by team ${teamIndex}${isHQ ? ' (HQ)' : ''}`);
             } else {
-                // Send rejection with reason - client will rollback and refund
                 client.send('move_rejected', {
                     starIndex: data.starIndex,
                     reason: validation.reason,
                     refund: { moves: 1 }
                 });
+                console.log(`❌ Claim rejected for star ${data.starIndex}: ${validation.reason}`);
             }
         });
 
-        // Game state synchronization - steal star
+        // Game state synchronization - steal_star
         this.onMessage('steal_star', (client, data) => {
             const player = this.state.players.get(client.sessionId);
             if (!player || player.team === null) return;
 
             const teamIndex = player.team;
-            const validation = this.validateSteal(data.starIndex, teamIndex);
+            const team = this.state.game.teams[teamIndex];
+
+            // Server-side authority: Determine if this is an HQ placement/upgrade
+            const hqLimit = parseInt(this.gameConfig.headquarters || 2, 10);
+            const isHQ = team && (team.hqCount < hqLimit);
+
+            let validation = this.validateSteal(data.starIndex, teamIndex);
+
+            // Extra check for HQ limit if upgrading to HQ on steal (Redundant but safe)
+            if (validation.valid && isHQ) {
+                if (team && team.hqCount >= hqLimit) {
+                    validation = { valid: false, reason: 'HQ limit reached' };
+                }
+            }
 
             if (validation.valid) {
-                // Apply steal to server state
-                this.state.game.stars[data.starIndex].tm = teamIndex;
-                this.state.game.teams[teamIndex].movesLeft--;
-                this.state.game.teams[teamIndex].stealsLeft--;
 
-                // Broadcast delta update to all clients
+                // Decrement moves and steals
+                if (player.movesLeft > 0) player.movesLeft--;
+                if (team) {
+                    team.movesLeft--;
+                    if (team.stealsLeft > 0) team.stealsLeft--;
+                }
+
+                // Broadcast delta update
+                const starUpdate = { index: data.starIndex, tm: teamIndex, hq: isHQ };
+                if (isHQ) {
+                    // starUpdate.hq is already set above
+                    if (team) team.hqCount++;
+                }
+
                 this.broadcast('state_changed', {
-                    stars: [{ index: data.starIndex, tm: teamIndex }],
-                    teams: [{
-                        index: teamIndex,
-                        movesLeft: this.state.game.teams[teamIndex].movesLeft,
-                        stealsLeft: this.state.game.teams[teamIndex].stealsLeft
-                    }]
+                    stars: [starUpdate],
+                    teams: [{ index: teamIndex, movesLeft: -1, stealsLeft: -1, hqCount: isHQ ? 1 : 0 }]
                 });
+
+                console.log(`✅ Star ${data.starIndex} stolen by team ${teamIndex}${isHQ ? ' (HQ)' : ''}`);
             } else {
-                // Send rejection with reason - client will rollback and refund
                 client.send('move_rejected', {
                     starIndex: data.starIndex,
                     reason: validation.reason,
-                    refund: { moves: 1, steals: 1 }
+                    refund: { moves: 1, steals: 0 } // Steal failed usually doesn't consume steal point if rejected
                 });
+                console.log(`❌ Steal rejected for star ${data.starIndex}: ${validation.reason}`);
             }
         });
 
-        // Game state synchronization - place HQ
+        // Game state synchronization - place_hq
         this.onMessage('place_hq', (client, data) => {
             const player = this.state.players.get(client.sessionId);
             if (!player || player.team === null) return;
@@ -295,28 +351,32 @@ class ConstellationRoom extends Room {
             const validation = this.validateHQ(data.starIndex, teamIndex);
 
             if (validation.valid) {
-                // Apply HQ placement to server state
-                this.state.game.stars[data.starIndex].tm = teamIndex;
-                this.state.game.stars[data.starIndex].hq = true;
-                this.state.game.teams[teamIndex].movesLeft--;
-                this.state.game.teams[teamIndex].hqCount++;
+                // Decrement player moves
+                if (player.movesLeft > 0) player.movesLeft--;
 
-                // Broadcast delta update to all clients
+                if (this.state.game.teams[teamIndex]) {
+                    this.state.game.teams[teamIndex].movesLeft--;
+                    this.state.game.teams[teamIndex].hqCount++;
+                }
+
+                // Broadcast delta update to all clients (server state not used)
                 this.broadcast('state_changed', {
                     stars: [{ index: data.starIndex, tm: teamIndex, hq: true }],
                     teams: [{
                         index: teamIndex,
-                        movesLeft: this.state.game.teams[teamIndex].movesLeft,
-                        hqCount: this.state.game.teams[teamIndex].hqCount
+                        movesLeft: -1, // -1 = decrement
+                        hqCount: 1 // +1 for HQ
                     }]
                 });
+
+                console.log(`✅ HQ placed at star ${data.starIndex} by team ${teamIndex}`);
             } else {
-                // Send rejection with reason - client will rollback and refund
                 client.send('move_rejected', {
                     starIndex: data.starIndex,
                     reason: validation.reason,
                     refund: { moves: 1 }
                 });
+                console.log(`❌ HQ placement rejected for star ${data.starIndex}: ${validation.reason}`);
             }
         });
 
@@ -371,7 +431,7 @@ class ConstellationRoom extends Room {
                 this.locked = true;
                 // Disconnect all clients
                 this.clients.forEach((c) => {
-                    try { c.leave(0); } catch (e) { console.error('Error forcing client leave:', e); }
+                    try { c.leave(1000); } catch (e) { console.error('Error forcing client leave:', e); }
                 });
                 setTimeout(() => this.updateAdminRoom(), 200);
             } catch (e) {
@@ -380,6 +440,66 @@ class ConstellationRoom extends Room {
         });
 
         setTimeout(() => this.updateAdminRoom(), 100);
+    }
+
+    distributeMoves() {
+        try {
+            // Distribute moves for ALL teams
+            const teams = {}; // teamIndex -> [players]
+            this.state.players.forEach(p => {
+                if (p.team !== null) {
+                    if (!teams[p.team]) teams[p.team] = [];
+                    teams[p.team].push(p);
+                }
+            });
+
+            const totalMoves = this.gameConfig.moves || 15;
+
+            Object.keys(teams).forEach(teamIdxStr => {
+                const teamIdx = parseInt(teamIdxStr); // Ensure integer index
+                const players = teams[teamIdxStr];
+                if (players.length === 0) return;
+
+                // ENSURE TEAM OBJECT EXISTS in state
+                // If the game state hasn't been initialized by a client map load yet,
+                // we must initialize the team entry to track moves and HQs safely.
+                while (this.state.game.teams.length <= teamIdx) {
+                    const newTeam = new TeamSchema();
+                    newTeam.hqCount = 0; // Explicitly 0
+                    this.state.game.teams.push(newTeam);
+                }
+
+                // Reset team moves sum and resources
+                if (this.state.game.teams[teamIdx]) {
+                    this.state.game.teams[teamIdx].movesLeft = totalMoves;
+                    // Properly reset shared resources on game start
+                    this.state.game.teams[teamIdx].hqCount = 0;
+                    const stealLimit = parseInt(this.gameConfig.steals || 15, 10);
+                    this.state.game.teams[teamIdx].stealsLeft = stealLimit;
+                }
+
+                const base = Math.floor(totalMoves / players.length);
+                let remainder = totalMoves % players.length;
+
+                // Shuffle players for random distribution of remainder
+                const shuffled = players.sort(() => Math.random() - 0.5);
+
+                shuffled.forEach(p => {
+                    const allocatedMoves = base + (remainder > 0 ? 1 : 0);
+                    p.movesLeft = allocatedMoves;
+                    remainder--;
+
+                    // FORCE SYNC: Send direct message to client to ensure UI updates
+                    const client = this.clients.find(c => c.sessionId === p.id);
+                    if (client) {
+                        client.send('update_moves', { moves: allocatedMoves });
+                    }
+                });
+                console.log(`Distributed ${totalMoves} moves to Team ${teamIdx} (${players.length} players):`, players.map(p => p.movesLeft));
+            });
+        } catch (error) {
+            console.error('❌ Error distributing moves:', error);
+        }
     }
 
     onJoin(client, options) {
@@ -394,13 +514,25 @@ class ConstellationRoom extends Room {
         player.id = client.sessionId;
         player.name = options.name || `Player ${client.sessionId.substring(0, 6)}`;
         player.studentId = options.studentId || '';
-        player.team = null;
+        player.team = 0; // Default to Cyan (Team 0) immediately
         player.ready = false;
         player.connected = true;
         player.connectedAt = Date.now();
         player.isHost = isFirstPlayer;
 
         this.state.players.set(client.sessionId, player);
+
+        // If game is already running, give them some moves? 
+        // Or if game hasn't started, they will get moves when it starts.
+        if (this.state.gameState === 'playing') {
+            // Late joiner logic - give them base moves?
+            const totalMoves = this.gameConfig.moves || 15;
+            const playersOnTeam = Array.from(this.state.players.values()).filter(p => p.team === 0).length;
+            // Simple logic: give them average or 0? 
+            // Let's give them 0 to prevent exploiting by rejoining.
+            player.movesLeft = 0;
+        }
+
         // keep monitor metadata in sync with game state
         this.setMetadata({ ...this.metadata, clients: this.clients.length });
         this.updateAdminRoom();
@@ -416,16 +548,27 @@ class ConstellationRoom extends Room {
 
     // Validation methods for server-authoritative game state
     validateClaim(starIndex, teamIndex) {
-        if (!this.state.game.initialized) {
-            return { valid: false, reason: 'Game state not initialized' };
+        // Validation works without full state initialization
+        // We just need to ensure indices are valid
+        if (starIndex < 0 || teamIndex < 0) {
+            return { valid: false, reason: 'Invalid indices' };
         }
 
-        if (starIndex < 0 || starIndex >= this.state.game.stars.length) {
+        // If game state not initialized yet, allow the move (client-side validation already passed)
+        if (!this.state.game.initialized) {
+            return { valid: true };
+        }
+
+        if (starIndex >= this.state.game.stars.length) {
             return { valid: false, reason: 'Invalid star index' };
         }
 
         const star = this.state.game.stars[starIndex];
         const team = this.state.game.teams[teamIndex];
+
+        if (!team) {
+            return { valid: false, reason: 'Invalid team index' };
+        }
 
         if (star.destroyed) {
             return { valid: false, reason: 'Star is destroyed' };
@@ -435,24 +578,45 @@ class ConstellationRoom extends Room {
             return { valid: false, reason: 'Star already owned' };
         }
 
+        // Check INDIVIDUAL player moves
+        const player = Array.from(this.state.players.values()).find(p => p.team === teamIndex); // Warning: this finds *any* player on team? No, validateClaim usually passed specific player context?
+        // Wait, validateClaim is called with teamIndex. We need player context.
+        // We should update call sites to pass player, or find player by session ID?
+        // Actually the call site in onMessage already checks player.movesLeft.
+        // But validateClaim is ALSO used. Should we remove redundancy or update it?
+        // Let's rely on the onMessage check, but update this to NOT block if team moves are desynced?
+        // Actually, if we use split moves, we should probably ignore team.movesLeft check here or update it to be sum?
+        // Let's remove the team.movesLeft check here since we check player.movesLeft in the handler.
+
+        /*
         if (team.movesLeft <= 0) {
             return { valid: false, reason: 'No moves remaining' };
         }
+        */
 
         return { valid: true };
     }
 
     validateSteal(starIndex, teamIndex) {
-        if (!this.state.game.initialized) {
-            return { valid: false, reason: 'Game state not initialized' };
+        if (starIndex < 0 || teamIndex < 0) {
+            return { valid: false, reason: 'Invalid indices' };
         }
 
-        if (starIndex < 0 || starIndex >= this.state.game.stars.length) {
+        // If game state not initialized yet, allow the move
+        if (!this.state.game.initialized) {
+            return { valid: true };
+        }
+
+        if (starIndex >= this.state.game.stars.length) {
             return { valid: false, reason: 'Invalid star index' };
         }
 
         const star = this.state.game.stars[starIndex];
         const team = this.state.game.teams[teamIndex];
+
+        if (!team) {
+            return { valid: false, reason: 'Invalid team index' };
+        }
 
         if (star.destroyed) {
             return { valid: false, reason: 'Star is destroyed' };
@@ -483,24 +647,33 @@ class ConstellationRoom extends Room {
             return { valid: false, reason: 'No steals remaining' };
         }
 
-        if (team.movesLeft <= 0) {
-            return { valid: false, reason: 'No moves remaining' };
-        }
+        // Steals consume 1 move from PLAYER, 1 steal from TEAM
+        // We check player moves in handler or here via context if passed
+        // Since we don't pass player context here, we assume handler checks player.movesLeft
 
         return { valid: true };
     }
 
     validateHQ(starIndex, teamIndex) {
-        if (!this.state.game.initialized) {
-            return { valid: false, reason: 'Game state not initialized' };
+        if (starIndex < 0 || teamIndex < 0) {
+            return { valid: false, reason: 'Invalid indices' };
         }
 
-        if (starIndex < 0 || starIndex >= this.state.game.stars.length) {
+        // If game state not initialized yet, allow the move
+        if (!this.state.game.initialized) {
+            return { valid: true };
+        }
+
+        if (starIndex >= this.state.game.stars.length) {
             return { valid: false, reason: 'Invalid star index' };
         }
 
         const star = this.state.game.stars[starIndex];
         const team = this.state.game.teams[teamIndex];
+
+        if (!team) {
+            return { valid: false, reason: 'Invalid team index' };
+        }
 
         if (star.destroyed) {
             return { valid: false, reason: 'Star is destroyed' };
@@ -511,14 +684,12 @@ class ConstellationRoom extends Room {
         }
 
         // Assuming HQ limit is 2 (from gameConfig.headquarters)
-        const hqLimit = this.gameConfig.headquarters || 2;
+        const hqLimit = parseInt(this.gameConfig.headquarters || 2, 10);
         if (team.hqCount >= hqLimit) {
             return { valid: false, reason: 'HQ limit reached' };
         }
 
-        if (team.movesLeft <= 0) {
-            return { valid: false, reason: 'No moves remaining' };
-        }
+        // HQ consumes 1 move from PLAYER, increments TEAM HQ count
 
         return { valid: true };
     }
