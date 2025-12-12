@@ -4489,15 +4489,15 @@
                 // Update round display
                 const roundElement = document.getElementById('round');
                 if (roundElement) {
-                    roundElement.textContent = `Round #${data.currentRound} (${seconds}s)`;
+                    roundElement.textContent = `Round #${data.currentRound}`;
                 }
             }
 
             handleRoundEnd(data) {
+                // No-op: Intermission removed for instant transition
                 const planningElement = document.getElementById('planning');
                 if (planningElement) {
-                    planningElement.textContent = `Round ${data.currentRound - 1} Complete! Next round starting...`;
-                    planningElement.style.display = 'block';
+                    planningElement.style.display = 'none';
                 }
             }
 
