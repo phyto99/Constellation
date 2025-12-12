@@ -4258,224 +4258,225 @@
                             teams: teamsData.length
                         });
                     }
-                }
-                if (cfg.customMap) currentGame.customMap = cfg.customMap;
-                if (Array.isArray(cfg.aiBots)) currentGame.aiBots = cfg.aiBots;
-            }
 
-            // Trigger game start logic
-            if(currentGame) {
-                currentGame.startGame();
-            }
-
-            // Update UI to show game has started
-            const planningElement = document.getElementById('planning');
-            if(planningElement) {
-                planningElement.style.display = 'none';
-            }
-
-            const roundElement = document.getElementById('round');
-            if(roundElement) {
-                const roundNum = (data && typeof data.currentRound === 'number') ? data.currentRound : 1;
-                roundElement.textContent = `Round #${roundNum}`;
-            }
-        }
-
-        handleGameAction(data) {
-            // Handle actions from other players
-            if (currentGame && data.playerId !== this.room.sessionId) {
-                console.log('🎯 Applying action from player:', data.playerId, data.action);
-
-                // Apply the action to the local game state
-                // This would integrate with the existing game action system
-            }
-        }
-
-        handleSettingsUpdate(data) {
-            if (currentGame && data.config) {
-                console.log('🔄 Received real-time settings update:', data.config);
-
-                // Update multipliers
-                if (data.config.multipliers) {
-                    Object.assign(MULTIPLIERS, data.config.multipliers);
-                    currentGame.recalculateAllScores(); // Recalculate with new multipliers
+                    // Apply custom map and AI bots
+                    if (cfg.customMap) currentGame.customMap = cfg.customMap;
+                    if (Array.isArray(cfg.aiBots)) currentGame.aiBots = cfg.aiBots;
                 }
 
-                // Update other settings
-                if (data.config.moves) currentGame.S = data.config.moves; // Assuming moves -> S (moves per round)
-                if (data.config.rounds) currentGame.TR = data.config.rounds;
-                if (data.config.roundLength) currentGame.RT = data.config.roundLength;
-                if (data.config.countdownLength) currentGame.PT = data.config.countdownLength;
-                if (data.config.aiBots) {
-                    currentGame.aiBots = Array.isArray(data.config.aiBots) ?
-                        data.config.aiBots.map(b => AIBot.fromData(b)) : [];
+                // Trigger game start logic
+                if (currentGame) {
+                    currentGame.startGame();
                 }
 
-                // Force UI update
-                currentGame.needsFullUIUpdate = true;
-                currentGame.updateUI();
+                // Update UI to show game has started
+                const planningElement = document.getElementById('planning');
+                if (planningElement) {
+                    planningElement.style.display = 'none';
+                }
 
-                // Handle map update
-                if (data.config.customMap) {
-                    // Only update if map is different (simplified check: compare title or just assume update if provided)
-                    // Deep compare or just overwrite? Let's check title or structure length to avoid heavy stringify if possible, but stringify is safest for now
-                    const currentMapStr = JSON.stringify(currentGame.cm);
-                    const newMapStr = JSON.stringify(data.config.customMap);
+                const roundElement = document.getElementById('round');
+                if (roundElement) {
+                    const roundNum = (data && typeof data.currentRound === 'number') ? data.currentRound : 1;
+                    roundElement.textContent = `Round #${roundNum}`;
+                }
+            }
 
-                    if (currentMapStr !== newMapStr) {
-                        currentGame.cm = data.config.customMap;
-                        // Trigger map reload/regen
-                        if (currentGame.initMap) {
-                            currentGame.initMap();
-                            console.log('Map updated from settings');
-                        } else {
-                            // unexpected fallback if initMap isn't exposed or valid
-                            console.warn('initMap not available, reloading game instance');
-                            const container = document.getElementById('gameContainer');
-                            if (container) container.innerHTML = '';
-                            const settings = { ...data.config, customMap: data.config.customMap };
-                            currentGame = new Game(settings);
-                            currentGame.startGame();
+            handleGameAction(data) {
+                // Handle actions from other players
+                if (currentGame && data.playerId !== this.room.sessionId) {
+                    console.log('🎯 Applying action from player:', data.playerId, data.action);
+
+                    // Apply the action to the local game state
+                    // This would integrate with the existing game action system
+                }
+            }
+
+            handleSettingsUpdate(data) {
+                if (currentGame && data.config) {
+                    console.log('🔄 Received real-time settings update:', data.config);
+
+                    // Update multipliers
+                    if (data.config.multipliers) {
+                        Object.assign(MULTIPLIERS, data.config.multipliers);
+                        currentGame.recalculateAllScores(); // Recalculate with new multipliers
+                    }
+
+                    // Update other settings
+                    if (data.config.moves) currentGame.S = data.config.moves; // Assuming moves -> S (moves per round)
+                    if (data.config.rounds) currentGame.TR = data.config.rounds;
+                    if (data.config.roundLength) currentGame.RT = data.config.roundLength;
+                    if (data.config.countdownLength) currentGame.PT = data.config.countdownLength;
+                    if (data.config.aiBots) {
+                        currentGame.aiBots = Array.isArray(data.config.aiBots) ?
+                            data.config.aiBots.map(b => AIBot.fromData(b)) : [];
+                    }
+
+                    // Force UI update
+                    currentGame.needsFullUIUpdate = true;
+                    currentGame.updateUI();
+
+                    // Handle map update
+                    if (data.config.customMap) {
+                        // Only update if map is different (simplified check: compare title or just assume update if provided)
+                        // Deep compare or just overwrite? Let's check title or structure length to avoid heavy stringify if possible, but stringify is safest for now
+                        const currentMapStr = JSON.stringify(currentGame.cm);
+                        const newMapStr = JSON.stringify(data.config.customMap);
+
+                        if (currentMapStr !== newMapStr) {
+                            currentGame.cm = data.config.customMap;
+                            // Trigger map reload/regen
+                            if (currentGame.initMap) {
+                                currentGame.initMap();
+                                console.log('Map updated from settings');
+                            } else {
+                                // unexpected fallback if initMap isn't exposed or valid
+                                console.warn('initMap not available, reloading game instance');
+                                const container = document.getElementById('gameContainer');
+                                if (container) container.innerHTML = '';
+                                const settings = { ...data.config, customMap: data.config.customMap };
+                                currentGame = new Game(settings);
+                                currentGame.startGame();
+                            }
                         }
                     }
-                }
 
-                // Update debug display
-                const debugEl = document.getElementById('debug-settings');
-                if (debugEl) {
-                    debugEl.textContent = 'Last Sync: ' + new Date().toLocaleTimeString() + '\n' +
-                        JSON.stringify(data.config, null, 2);
-                }
+                    // Update debug display
+                    const debugEl = document.getElementById('debug-settings');
+                    if (debugEl) {
+                        debugEl.textContent = 'Last Sync: ' + new Date().toLocaleTimeString() + '\n' +
+                            JSON.stringify(data.config, null, 2);
+                    }
 
-                if (typeof showNotification === 'function') {
-                    showNotification('Game settings updated');
+                    if (typeof showNotification === 'function') {
+                        showNotification('Game settings updated');
+                    }
                 }
             }
-        }
 
 
-        updateGameUI(state) {
-            // Update round display
-            const roundElement = document.getElementById('round');
-            if (roundElement && state.currentRound) {
-                roundElement.textContent = `Round #${state.currentRound}`;
+            updateGameUI(state) {
+                // Update round display
+                const roundElement = document.getElementById('round');
+                if (roundElement && state.currentRound) {
+                    roundElement.textContent = `Round #${state.currentRound}`;
+                }
+
+                // Update timer display
+                if (state.timeRemaining !== undefined) {
+                    const seconds = Math.ceil(state.timeRemaining / 1000);
+                    const timerElement = document.getElementById('timer');
+                    if (timerElement) {
+                        const percentage = (state.timeRemaining / (30 * 1000)) * 100; // Assuming 30s rounds
+                        timerElement.style.width = `${percentage}%`;
+                        timerElement.style.display = state.gameState === 'playing' ? 'block' : 'none';
+                    }
+                }
+
+                // Update game header
+                const titleLine = document.getElementById('titleLine');
+                if (titleLine) {
+                    const stateText = state.gameState === 'playing' ? 'In Progress' :
+                        state.gameState === 'finished' ? 'Finished' : 'Waiting';
+                    titleLine.textContent = `Game Room: ${this.roomId} (${stateText})`;
+                }
             }
 
-            // Update timer display
-            if (state.timeRemaining !== undefined) {
-                const seconds = Math.ceil(state.timeRemaining / 1000);
+            handleTimeUpdate(data) {
+                // Update timer display smoothly
+                const seconds = Math.ceil(data.timeRemaining / 1000);
                 const timerElement = document.getElementById('timer');
                 if (timerElement) {
-                    const percentage = (state.timeRemaining / (30 * 1000)) * 100; // Assuming 30s rounds
+                    const percentage = (data.timeRemaining / (30 * 1000)) * 100;
                     timerElement.style.width = `${percentage}%`;
-                    timerElement.style.display = state.gameState === 'playing' ? 'block' : 'none';
+                }
+
+                // Update round display
+                const roundElement = document.getElementById('round');
+                if (roundElement) {
+                    roundElement.textContent = `Round #${data.currentRound} (${seconds}s)`;
                 }
             }
 
-            // Update game header
-            const titleLine = document.getElementById('titleLine');
-            if (titleLine) {
-                const stateText = state.gameState === 'playing' ? 'In Progress' :
-                    state.gameState === 'finished' ? 'Finished' : 'Waiting';
-                titleLine.textContent = `Game Room: ${this.roomId} (${stateText})`;
-            }
-        }
-
-        handleTimeUpdate(data) {
-            // Update timer display smoothly
-            const seconds = Math.ceil(data.timeRemaining / 1000);
-            const timerElement = document.getElementById('timer');
-            if (timerElement) {
-                const percentage = (data.timeRemaining / (30 * 1000)) * 100;
-                timerElement.style.width = `${percentage}%`;
+            handleRoundEnd(data) {
+                const planningElement = document.getElementById('planning');
+                if (planningElement) {
+                    planningElement.textContent = `Round ${data.currentRound - 1} Complete! Next round starting...`;
+                    planningElement.style.display = 'block';
+                }
             }
 
-            // Update round display
-            const roundElement = document.getElementById('round');
-            if (roundElement) {
-                roundElement.textContent = `Round #${data.currentRound} (${seconds}s)`;
-            }
-        }
+            handleRoundStart(data) {
+                const planningElement = document.getElementById('planning');
+                if (planningElement) {
+                    planningElement.style.display = 'none';
+                }
 
-        handleRoundEnd(data) {
-            const planningElement = document.getElementById('planning');
-            if (planningElement) {
-                planningElement.textContent = `Round ${data.currentRound - 1} Complete! Next round starting...`;
-                planningElement.style.display = 'block';
-            }
-        }
-
-        handleRoundStart(data) {
-            const planningElement = document.getElementById('planning');
-            if (planningElement) {
-                planningElement.style.display = 'none';
+                const roundElement = document.getElementById('round');
+                if (roundElement) {
+                    roundElement.textContent = `Round #${data.currentRound}`;
+                }
             }
 
-            const roundElement = document.getElementById('round');
-            if (roundElement) {
-                roundElement.textContent = `Round #${data.currentRound}`;
+            handleGameEnd(data) {
+                const planningElement = document.getElementById('planning');
+                if (planningElement) {
+                    planningElement.textContent = `Game Complete! Final Round: ${data.finalRound}`;
+                    planningElement.style.display = 'block';
+                    planningElement.style.color = '#00ff00';
+                }
+
+                const timerElement = document.getElementById('timer');
+                if (timerElement) {
+                    timerElement.style.display = 'none';
+                }
             }
-        }
 
-        handleGameEnd(data) {
-            const planningElement = document.getElementById('planning');
-            if (planningElement) {
-                planningElement.textContent = `Game Complete! Final Round: ${data.finalRound}`;
-                planningElement.style.display = 'block';
-                planningElement.style.color = '#00ff00';
+            sendGameAction(action) {
+                if (this.room && this.isConnected) {
+                    this.room.send('game_action', action);
+                }
             }
 
-            const timerElement = document.getElementById('timer');
-            if (timerElement) {
-                timerElement.style.display = 'none';
+            joinTeam(teamIndex) {
+                if (this.room && this.isConnected) {
+                    this.room.send('join_team', { teamIndex });
+                }
             }
-        }
 
-        sendGameAction(action) {
-            if (this.room && this.isConnected) {
-                this.room.send('game_action', action);
+            handleDisconnection() {
+                this.updateConnectionStatus(false);
+
+                if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                    this.reconnectAttempts++;
+                    console.log(`Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+
+                    setTimeout(() => {
+                        if (this.roomId) {
+                            this.connectToRoom(this.roomId);
+                        }
+                    }, 2000 * this.reconnectAttempts);
+                } else {
+                    console.error('Max reconnection attempts reached');
+                    alert('Connection lost. Please refresh the page to reconnect.');
+                }
             }
-        }
 
-        joinTeam(teamIndex) {
-            if (this.room && this.isConnected) {
-                this.room.send('join_team', { teamIndex });
+            updateConnectionStatus(connected) {
+                // Update UI to show connection status
+                const statusElement = document.getElementById('connection-status');
+                if (statusElement) {
+                    statusElement.textContent = connected ? 'connected' : 'disconnected';
+                    statusElement.style.color = connected ? '#00ff00' : '#ff0000';
+                }
             }
-        }
 
-        handleDisconnection() {
-            this.updateConnectionStatus(false);
-
-            if (this.reconnectAttempts < this.maxReconnectAttempts) {
-                this.reconnectAttempts++;
-                console.log(`Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-
-                setTimeout(() => {
-                    if (this.roomId) {
-                        this.connectToRoom(this.roomId);
-                    }
-                }, 2000 * this.reconnectAttempts);
-            } else {
-                console.error('Max reconnection attempts reached');
-                alert('Connection lost. Please refresh the page to reconnect.');
+            disconnect() {
+                if (this.room) {
+                    this.room.leave();
+                }
+                this.isConnected = false;
             }
-        }
-
-        updateConnectionStatus(connected) {
-            // Update UI to show connection status
-            const statusElement = document.getElementById('connection-status');
-            if (statusElement) {
-                statusElement.textContent = connected ? 'connected' : 'disconnected';
-                statusElement.style.color = connected ? '#00ff00' : '#ff0000';
-            }
-        }
-
-        disconnect() {
-            if (this.room) {
-                this.room.leave();
-            }
-            this.isConnected = false;
-        }
         }
 
         // Global game client manager
