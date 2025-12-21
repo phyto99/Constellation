@@ -258,7 +258,25 @@ class ConstellationRoom extends Room {
                     // Check game over (Round Limit Reached)
                     if (this.state.game.round >= rounds) {
                         console.log(`🏁 Game ended for room ${this.roomId}`);
-                        this.broadcast('game_ended', { finalRound: this.state.game.round });
+
+                        // Calculate Winner
+                        const scores = { 0: 0, 1: 0, '-1': 0 };
+                        this.state.game.stars.forEach(s => {
+                            if (s.tm !== -1) {
+                                if (!scores[s.tm]) scores[s.tm] = 0;
+                                scores[s.tm]++;
+                            }
+                        });
+
+                        let winningTeam = -1;
+                        if (scores[0] > scores[1]) winningTeam = 0;
+                        else if (scores[1] > scores[0]) winningTeam = 1;
+
+                        this.broadcast('game_ended', {
+                            finalRound: this.state.game.round,
+                            winningTeam: winningTeam,
+                            scores: scores
+                        });
                         clearInterval(this.gameLoopInterval);
                         return;
                     }
@@ -271,8 +289,17 @@ class ConstellationRoom extends Room {
                     // REPLENISH MOVES
                     this.distributeMoves(false);
 
-                    // Broadcast new round immediately
-                    this.broadcast('round_started', { currentRound: this.state.game.round });
+                    // Get updated moves for broadcast to ensure INSTANT UI update
+                    const playerMoves = {};
+                    this.state.players.forEach((p, sessionId) => {
+                        playerMoves[sessionId] = p.movesLeft;
+                    });
+
+                    // Broadcast new round AND moves immediately
+                    this.broadcast('round_started', {
+                        currentRound: this.state.game.round,
+                        playerMoves: playerMoves
+                    });
 
                 } else {
                     // Timer Update
