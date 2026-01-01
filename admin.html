@@ -909,11 +909,23 @@
         <div id="game-content" style="display: none;">
             <div style="padding: 20px;">
                 <!-- Game Action Buttons at the very top -->
-                <div class="game-actions" style="margin-bottom: 15px;">
+                <div class="game-actions" style="margin-bottom: 15px; position: relative;">
                     <button class="btn-start" id="start-btn" onclick="startGame()">Start Game</button>
+                    <button class="btn-pause" id="pause-btn" onclick="showPausePopup()" style="background: #f59e0b; color: white; display: none;">⏸ Pause</button>
+                    <button class="btn-resume" id="resume-btn" onclick="resumeGame()" style="background: #10b981; color: white; display: none;">▶ Resume</button>
                     <button class="btn-delete" onclick="deleteGame()">Delete Game</button>
                     <a href="#" id="game-direct-link" class="game-link" target="_blank"
                         style="display: inline-block; margin-left: 10px; padding: 8px 0;">Join Game</a>
+                    
+                    <!-- Pause Reason Popup -->
+                    <div id="pause-popup" style="display: none; position: absolute; top: 100%; left: 80px; margin-top: 8px; z-index: 1000;">
+                        <div style="position: relative; background: white; border: 1px solid #ccc; border-radius: 8px; padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); width: 280px;">
+                            <!-- Arrow pointing up -->
+                            <div style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 8px solid #ccc;"></div>
+                            <div style="position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 7px solid white;"></div>
+                            <input type="text" id="pause-reason-input" placeholder="Please state a valid reason" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; box-sizing: border-box;" onkeydown="if(event.key === 'Enter') submitPause()">
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="scenario-header" onclick="toggleScenario()">
@@ -1655,6 +1667,10 @@
                 currentRoom.send('start_game', { roomId: selectedRoomId });
                 console.log('✓ Game start command sent via AdminRoom');
                 
+                // Show pause button, hide start button
+                document.getElementById('start-btn').style.display = 'none';
+                document.getElementById('pause-btn').style.display = 'inline-block';
+                
                 // Auto-start color mode when game starts
                 if (!colorGameMode) {
                     document.getElementById('colorStartGameBtn').click();
@@ -1664,6 +1680,54 @@
                 alert(`Failed to start game: ${error.message}`);
             }
         }
+
+        let isPaused = false;
+
+        function showPausePopup() {
+            const popup = document.getElementById('pause-popup');
+            const input = document.getElementById('pause-reason-input');
+            popup.style.display = 'block';
+            input.value = '';
+            input.focus();
+        }
+
+        function hidePausePopup() {
+            document.getElementById('pause-popup').style.display = 'none';
+        }
+
+        function submitPause() {
+            const reason = document.getElementById('pause-reason-input').value;
+            hidePausePopup();
+            
+            if (!selectedRoomId || !currentRoom) return;
+            
+            currentRoom.send('pause_game', { roomId: selectedRoomId, reason: reason });
+            console.log('✓ Game pause command sent via AdminRoom');
+            
+            isPaused = true;
+            document.getElementById('pause-btn').style.display = 'none';
+            document.getElementById('resume-btn').style.display = 'inline-block';
+        }
+
+        function resumeGame() {
+            if (!selectedRoomId || !currentRoom) return;
+            
+            currentRoom.send('resume_game', { roomId: selectedRoomId });
+            console.log('✓ Game resume command sent via AdminRoom');
+            
+            isPaused = false;
+            document.getElementById('resume-btn').style.display = 'none';
+            document.getElementById('pause-btn').style.display = 'inline-block';
+        }
+
+        // Close pause popup when clicking outside
+        document.addEventListener('click', function(e) {
+            const popup = document.getElementById('pause-popup');
+            const pauseBtn = document.getElementById('pause-btn');
+            if (popup && popup.style.display === 'block' && !popup.contains(e.target) && e.target !== pauseBtn) {
+                hidePausePopup();
+            }
+        });
 
         async function deleteGame() {
             if (!selectedRoomId) {
