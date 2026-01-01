@@ -903,6 +903,7 @@ class ConstellationRoom extends Room {
                 roomId: this.roomId,
                 players: Array.from(this.state.players.values()),
                 state: this.state.gameState,
+                isPaused: this.isPaused || false,
                 playerCount: this.clients.length,
                 metadata: this.metadata || {},
                 config: this.gameConfig
@@ -957,15 +958,22 @@ class AdminRoom extends Room {
 
         this.onMessage('start_game', async (client, data) => {
             try {
+                if (!this.presence) {
+                    throw new Error('Presence not available');
+                }
                 await this.presence.publish(`room_${data.roomId}`, { type: 'start_game' });
                 client.send('game_started', { success: true, roomId: data.roomId });
             } catch (error) {
+                console.error('Error starting game:', error);
                 client.send('game_started', { success: false, roomId: data.roomId, error: error.message });
             }
         });
 
         this.onMessage('delete_room', async (client, data) => {
             try {
+                if (!this.presence) {
+                    throw new Error('Presence not available');
+                }
                 await this.presence.publish(`room_${data.roomId}`, { type: 'force_dispose' });
                 client.send('room_deleted', { success: true, roomId: data.roomId });
                 setTimeout(() => this.updateRoomsList(), 300);
@@ -977,6 +985,9 @@ class AdminRoom extends Room {
         // NEW: team assignment and kicking via admin room
         this.onMessage('assign_team', async (client, data) => {
             try {
+                if (!this.presence) {
+                    throw new Error('Presence not available');
+                }
                 await this.presence.publish(`room_${data.roomId}`, { type: 'assign_team', playerId: data.playerId, teamIndex: data.teamIndex });
             } catch (error) {
                 console.error('Error assigning team via AdminRoom:', error);
@@ -985,6 +996,9 @@ class AdminRoom extends Room {
 
         this.onMessage('kick_player', async (client, data) => {
             try {
+                if (!this.presence) {
+                    throw new Error('Presence not available');
+                }
                 await this.presence.publish(`room_${data.roomId}`, { type: 'kick_player', playerId: data.playerId });
             } catch (error) {
                 console.error('Error kicking player via AdminRoom:', error);
@@ -993,6 +1007,9 @@ class AdminRoom extends Room {
 
         this.onMessage('update_settings', async (client, data) => {
             try {
+                if (!this.presence) {
+                    throw new Error('Presence not available');
+                }
                 await this.presence.publish(`room_${data.roomId}`, { type: 'update_settings', settings: data.settings });
             } catch (error) {
                 console.error('Error updating settings via AdminRoom:', error);
@@ -1001,27 +1018,37 @@ class AdminRoom extends Room {
 
         this.onMessage('pause_game', async (client, data) => {
             try {
+                if (!this.presence) {
+                    throw new Error('Presence not available');
+                }
                 await this.presence.publish(`room_${data.roomId}`, { type: 'pause_game', reason: data.reason });
                 client.send('game_paused', { success: true, roomId: data.roomId });
             } catch (error) {
+                console.error('Error pausing game:', error);
                 client.send('game_paused', { success: false, roomId: data.roomId, error: error.message });
             }
         });
 
         this.onMessage('resume_game', async (client, data) => {
             try {
+                if (!this.presence) {
+                    throw new Error('Presence not available');
+                }
                 await this.presence.publish(`room_${data.roomId}`, { type: 'resume_game' });
                 client.send('game_resumed', { success: true, roomId: data.roomId });
             } catch (error) {
+                console.error('Error resuming game:', error);
                 client.send('game_resumed', { success: false, roomId: data.roomId, error: error.message });
             }
         });
 
         // Listen for room updates
-        this.presence.subscribe('admin_update', (data) => {
-            this.roomStates.set(data.roomId, data);
-            this.broadcast('player_update', data);
-        });
+        if (this.presence) {
+            this.presence.subscribe('admin_update', (data) => {
+                this.roomStates.set(data.roomId, data);
+                this.broadcast('player_update', data);
+            });
+        }
 
         // Periodic updates
         this.updateInterval = setInterval(() => this.updateRoomsList(), 5000);
