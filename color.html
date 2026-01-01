@@ -2058,8 +2058,138 @@
             renderColorSpace();
         });
 
-        generateColors();
-        setTimeout(() => randomizeStudents(), 100);
+        // ============================================
+        // EMBED MODE - postMessage Communication
+        // ============================================
+        
+        const isEmbedMode = new URLSearchParams(window.location.search).get('embed') === 'true';
+        
+        function initEmbedMode() {
+            if (!isEmbedMode) return;
+            
+            // Hide sidebar in embed mode - only show main content (color recommender)
+            document.querySelector('.sidebar').style.display = 'none';
+            document.querySelector('.layout').style.gridTemplateColumns = '1fr';
+            document.querySelector('.header').style.display = 'none';
+            
+            // Adjust body padding for embed
+            document.body.style.padding = '5px';
+            document.body.style.background = '#0a0a0a';
+            
+            // Listen for messages from parent
+            window.addEventListener('message', handleParentMessage);
+            
+            // Notify parent we're ready
+            notifyParent({ type: 'ready' });
+        }
+        
+        function handleParentMessage(event) {
+            const data = event.data;
+            if (!data || !data.type) return;
+            
+            switch (data.type) {
+                case 'generateColors':
+                    document.getElementById('teamSize').value = data.count;
+                    document.getElementById('teamSizeVal').textContent = data.count;
+                    generateColors();
+                    notifyParent({ type: 'colorsUpdated', colors: colors });
+                    break;
+                    
+                case 'startGame':
+                    gameMode = true;
+                    document.getElementById('startGameBtn').style.display = 'none';
+                    document.getElementById('stopGameBtn').style.display = 'inline-block';
+                    document.getElementById('addTeamColorBtn').disabled = false;
+                    document.getElementById('teamSize').disabled = true;
+                    renderRecommendations();
+                    break;
+                    
+                case 'stopGame':
+                    gameMode = false;
+                    document.getElementById('startGameBtn').style.display = 'inline-block';
+                    document.getElementById('stopGameBtn').style.display = 'none';
+                    document.getElementById('addTeamColorBtn').disabled = true;
+                    document.getElementById('teamSize').disabled = false;
+                    document.getElementById('recommendationsGrid').innerHTML = '';
+                    break;
+                    
+                case 'addTeamColor':
+                    if (gameMode) {
+                        const optimalCandidate = findOptimalColorGeometric(colors);
+                        if (optimalCandidate) {
+                            const optimalColor = {
+                                name: rgbToTNIL(optimalCandidate.rgb),
+                                rgb: optimalCandidate.rgb
+                            };
+                            colors.push(optimalColor);
+                            updateAll();
+                            notifyParent({ type: 'colorAdded', color: optimalColor });
+                            notifyParent({ type: 'colorsUpdated', colors: colors });
+                        }
+                    }
+                    break;
+                    
+                case 'setMode':
+                    currentMode = data.mode;
+                    document.querySelectorAll('.toggle').forEach(b => b.classList.remove('active'));
+                    const targetBtn = document.querySelector(`.toggle[data-mode="${data.mode}"]`);
+                    if (targetBtn) targetBtn.classList.add('active');
+                    updateAll();
+                    break;
+                    
+                case 'updateStudents':
+                    // Update student counts from parent (connected players)
+                    if (data.counts) {
+                        // Clear existing students and recreate based on counts
+                        students = [];
+                        const types = ['normal', 'deuteranopia', 'protanopia', 'tritanopia'];
+                        types.forEach(type => {
+                            const count = data.counts[type] || 0;
+                            for (let i = 0; i < count; i++) {
+                                students.push({
+                                    id: `student-${Date.now()}-${studentIdCounter++}`,
+                                    name: `Player ${studentIdCounter}`,
+                                    type: type,
+                                    assignedTeam: i % colors.length // Auto-assign
+                                });
+                            }
+                        });
+                        updateStats();
+                        if (!gameMode) {
+                            generateColors();
+                        }
+                    }
+                    break;
+            }
+        }
+        
+        function notifyParent(message) {
+            if (isEmbedMode && window.parent !== window) {
+                window.parent.postMessage(message, '*');
+            }
+        }
+        
+        // Override updateAll to notify parent of color changes
+        const originalUpdateAll = updateAll;
+        updateAll = function() {
+            originalUpdateAll();
+            if (isEmbedMode) {
+                notifyParent({ type: 'colorsUpdated', colors: colors });
+            }
+        };
+        
+        // Initialize
+        if (isEmbedMode) {
+            initEmbedMode();
+            generateColors();
+            // Scroll to bottom after content loads
+            setTimeout(() => {
+                window.scrollTo(0, document.body.scrollHeight);
+            }, 200);
+        } else {
+            generateColors();
+            setTimeout(() => randomizeStudents(), 100);
+        }
     </script>
 </body>
 </html>
