@@ -192,6 +192,26 @@ class ConstellationRoom extends Room {
                             this.broadcast('settings_update', { config: this.gameConfig });
                             console.log(`Settings updated for room ${this.roomId}:`, this.gameConfig);
                         }
+                    } else if (msg.type === 'pause_game') {
+                        if (this.state.gameState === 'playing' && !this.isPaused) {
+                            this.isPaused = true;
+                            this.pauseReason = msg.reason || '';
+                            console.log(`⏸️ Game paused in room ${this.roomId}. Reason: ${this.pauseReason}`);
+                            
+                            this.broadcast('game_paused', { 
+                                reason: this.pauseReason,
+                                announcement: this.pauseReason
+                            });
+                            this.updateAdminRoom();
+                        }
+                    } else if (msg.type === 'resume_game') {
+                        if (this.state.gameState === 'playing' && this.isPaused) {
+                            this.isPaused = false;
+                            console.log(`▶️ Game resumed in room ${this.roomId}`);
+                            
+                            this.broadcast('game_resumed', {});
+                            this.updateAdminRoom();
+                        }
                     }
                 } catch (e) {
                     console.error('Error handling presence message for room', this.roomId, e);
@@ -240,7 +260,37 @@ class ConstellationRoom extends Room {
             }
         });
 
+        // Pause game handler
+        this.onMessage('pause_game', (client, data) => {
+            if (this.state.gameState === 'playing' && !this.isPaused) {
+                this.isPaused = true;
+                this.pauseReason = data.reason || '';
+                console.log(`⏸️ Game paused in room ${this.roomId}. Reason: ${this.pauseReason}`);
+                
+                this.broadcast('game_paused', { 
+                    reason: this.pauseReason,
+                    announcement: this.pauseReason
+                });
+                this.updateAdminRoom();
+            }
+        });
+
+        // Resume game handler
+        this.onMessage('resume_game', (client, data) => {
+            if (this.state.gameState === 'playing' && this.isPaused) {
+                this.isPaused = false;
+                console.log(`▶️ Game resumed in room ${this.roomId}`);
+                
+                this.broadcast('game_resumed', {});
+                this.updateAdminRoom();
+            }
+        });
+
         // Game Loop Logic
+        this.isPaused = false;
+        this.pauseReason = '';
+        this.savedTimeRemaining = 0;
+        
         this.startGameLoop = () => {
             if (this.gameLoopInterval) clearInterval(this.gameLoopInterval);
 
@@ -248,7 +298,8 @@ class ConstellationRoom extends Room {
             const roundLength = (this.gameConfig.roundLength || 30) * 1000;
             const rounds = this.gameConfig.rounds || 10;
 
-            let timeRemaining = roundLength;
+            let timeRemaining = this.savedTimeRemaining > 0 ? this.savedTimeRemaining : roundLength;
+            this.savedTimeRemaining = 0;
             let inIntermission = false;
 
             console.log(`⏱️ Game loop started for room ${this.roomId}. Round length: ${roundLength}ms`);
@@ -259,8 +310,14 @@ class ConstellationRoom extends Room {
                     clearInterval(this.gameLoopInterval);
                     return;
                 }
+                
+                // Check if paused
+                if (this.isPaused) {
+                    return; // Skip tick while paused
+                }
 
                 timeRemaining -= 1000;
+                this.currentTimeRemaining = timeRemaining; // Store for pause/resume
                 if (timeRemaining % 5000 === 0) console.log(`⏱️ Room ${this.roomId} Tick: ${timeRemaining}ms, Round: ${this.state.game.round}`);
 
                 if (timeRemaining < 0) {
@@ -922,6 +979,24 @@ class AdminRoom extends Room {
                 await this.presence.publish(`room_${data.roomId}`, { type: 'update_settings', settings: data.settings });
             } catch (error) {
                 console.error('Error updating settings via AdminRoom:', error);
+            }
+        });
+
+        this.onMessage('pause_game', async (client, data) => {
+            try {
+                await this.presence.publish(`room_${data.roomId}`, { type: 'pause_game', reason: data.reason });
+                client.send('game_paused', { success: true, roomId: data.roomId });
+            } catch (error) {
+                client.send('game_paused', { success: false, roomId: data.roomId, error: error.message });
+            }
+        });
+
+        this.onMessage('resume_game', async (client, data) => {
+            try {
+                await this.presence.publish(`room_${data.roomId}`, { type: 'resume_game' });
+                client.send('game_resumed', { success: true, roomId: data.roomId });
+            } catch (error) {
+                client.send('game_resumed', { success: false, roomId: data.roomId, error: error.message });
             }
         });
 
