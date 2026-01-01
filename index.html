@@ -7839,6 +7839,11 @@
                     this.handleGameResumed(data);
                 });
 
+                this.room.onMessage('game_resuming', (data) => {
+                    console.log('▶️ Game resuming with countdown:', data);
+                    this.handleGameResuming(data);
+                });
+
                 this.room.onMessage('player_joined', (data) => {
                     console.log('👤 Player joined:', data);
                 });
@@ -8323,6 +8328,28 @@
                 const overlay = document.getElementById('pause-overlay');
                 if (overlay) {
                     overlay.style.display = 'none';
+                }
+            }
+
+            handleGameResuming(data) {
+                // Show countdown on the pause overlay
+                const overlay = document.getElementById('pause-overlay');
+                if (overlay) {
+                    let countdown = data.countdown || 5;
+                    
+                    const updateCountdown = () => {
+                        overlay.innerHTML = `
+                            <div style="color: #10b981; font-size: 48px; font-weight: bold; margin-bottom: 20px;">RESUMING IN</div>
+                            <div style="color: white; font-size: 72px; font-weight: bold;">${countdown}</div>
+                        `;
+                        
+                        if (countdown > 0) {
+                            countdown--;
+                            setTimeout(updateCountdown, 1000);
+                        }
+                    };
+                    
+                    updateCountdown();
                 }
             }
 
