@@ -471,6 +471,387 @@
             padding: 10px;
             text-align: center;
         }
+
+        /* Color Management Styles */
+        .color-section-title {
+            color: #333;
+            font-size: 18px;
+            margin: 15px 0 10px 0;
+            padding: 0;
+            background: none;
+            border: none;
+            display: block;
+            font-weight: bold;
+        }
+
+        .color-stats-bar {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            padding: 8px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        .color-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .color-stat-item {
+            text-align: center;
+        }
+
+        .color-stat-label {
+            font-size: 10px;
+            color: #666;
+            margin-bottom: 2px;
+        }
+
+        .color-stat-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .color-stat-percent {
+            font-size: 10px;
+            color: #666;
+        }
+
+        .color-stat-controls {
+            display: flex;
+            justify-content: center;
+            gap: 3px;
+            margin-top: 4px;
+        }
+
+        .color-stat-btn {
+            background: #fff;
+            border: 1px solid #ccc;
+            color: #333;
+            padding: 2px 6px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: bold;
+            border-radius: 3px;
+        }
+
+        .color-stat-btn:hover {
+            background: #e8e8e8;
+        }
+
+        .color-btn {
+            background: #fff;
+            border: 1px solid #ccc;
+            color: #333;
+            padding: 4px 10px;
+            cursor: pointer;
+            font-size: 11px;
+            width: 100%;
+            margin-bottom: 4px;
+            border-radius: 3px;
+        }
+
+        .color-btn:hover {
+            background: #e8e8e8;
+        }
+
+        .color-btn.primary {
+            background: #007bff;
+            color: #fff;
+            border-color: #007bff;
+        }
+
+        .color-btn.primary:hover {
+            background: #0056b3;
+        }
+
+        .color-btn.pressed {
+            background: #0056b3;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+            transform: translateY(1px);
+        }
+
+        .color-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .player-pool {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            padding: 8px;
+            min-height: 80px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        .player-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .player-chip {
+            background: #fff;
+            border: 1px solid #ccc;
+            padding: 3px 6px;
+            font-size: 11px;
+            cursor: move;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            border-radius: 3px;
+            transition: all 0.1s;
+        }
+
+        .player-chip:hover {
+            background: #e8e8e8;
+        }
+
+        .player-chip.dragging {
+            opacity: 0.5;
+        }
+
+        .player-chip-name {
+            font-weight: normal;
+            color: #333;
+        }
+
+        .player-chip-type {
+            font-size: 9px;
+            padding: 1px 3px;
+            background: #f5f5f5;
+            border-radius: 2px;
+        }
+
+        .player-chip-type.normal { color: #28a745; }
+        .player-chip-type.deuteranopia { color: #b8860b; }
+        .player-chip-type.protanopia { color: #d2691e; }
+        .player-chip-type.tritanopia { color: #4682b4; }
+
+        .team-color-assignments {
+            display: grid;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .team-color-slot {
+            background: #fff;
+            border: 1px solid #ccc;
+            padding: 8px;
+            min-height: 40px;
+            border-radius: 4px;
+        }
+
+        .team-color-slot.drag-over {
+            border-color: #007bff;
+            background: #f0f7ff;
+        }
+
+        .team-color-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .team-color-swatch {
+            width: 20px;
+            height: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 3px;
+        }
+
+        .team-color-info {
+            flex: 1;
+        }
+
+        .team-color-name {
+            font-weight: normal;
+            color: #333;
+            font-size: 12px;
+        }
+
+        .team-color-hex {
+            display: none;
+        }
+
+        .team-color-players {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+        }
+
+        .color-iframe-container {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .color-iframe-header {
+            background: #f5f5f5;
+            padding: 6px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .color-iframe-header span {
+            font-size: 12px;
+            color: #333;
+            font-weight: normal;
+        }
+
+        .color-iframe-toggle {
+            background: #007bff;
+            color: #fff;
+            border: none;
+            padding: 3px 8px;
+            font-size: 10px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+
+        #colorOptimizerFrame {
+            width: 100%;
+            height: 300px;
+            border: none;
+            display: block;
+        }
+
+        /* Expanded color optimizer pane */
+        .color-optimizer-pane {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 500px;
+            height: 500px;
+            background: #0a0a0a;
+            border: 1px solid #ccc;
+            z-index: 100;
+            overflow: hidden;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .color-optimizer-pane.visible {
+            display: block;
+        }
+
+        .color-optimizer-pane iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .color-optimizer-pane-header {
+            background: #f5f5f5;
+            padding: 6px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .main-content {
+            margin-left: 280px;
+            width: calc(100% - 280px);
+        }
+
+        .sync-indicator-light {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #28a745;
+            margin-left: 5px;
+            animation: pulse-light 2s infinite;
+        }
+
+        @keyframes pulse-light {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .vision-toggles {
+            display: flex;
+            gap: 0px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .vision-toggle {
+            color: #666;
+            cursor: pointer;
+            font-size: 11px;
+            text-decoration: none;
+            padding: 2px 0;
+            margin-right: 0px;
+        }
+
+        .vision-toggle:hover {
+            text-decoration: underline;
+            color: #007bff;
+        }
+
+        .vision-toggle.active {
+            color: #333;
+            font-weight: normal;
+            text-decoration: underline;
+        }
+
+        #colorInfoBtn {
+            color: #333;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        #colorInfoBtn:hover {
+            color: #007bff;
+        }
+
+        .attendees-container {
+            background: none;
+            border: none;
+            border-radius: 0;
+            padding: 0;
+        }
+
+        .attendees-container .player-pool {
+            background: none;
+            border: none;
+            padding: 0;
+            margin-bottom: 15px;
+        }
+
+        .attendees-container .team-color-assignments {
+            margin-bottom: 0;
+        }
+
+        .team-box.drag-over {
+            border-color: #007bff;
+            background: #f0f7ff;
+        }
+
+        .no-players-box {
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 8px;
+            margin-bottom: 10px;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
     </style>
 </head>
 
@@ -518,14 +899,23 @@
             </div>
         </div>
     </div>
-    <div class="main-content">
+    <div class="main-content" id="mainContent">
         <div id="no-game-selected" class="no-games">
             <h1>Constellation Admin Panel</h1>
             <h2>Select a Game</h2>
             <p>No games created yet. Create a new game to get started.</p>
         </div>
+        
         <div id="game-content" style="display: none;">
             <div style="padding: 20px;">
+                <!-- Game Action Buttons at the very top -->
+                <div class="game-actions" style="margin-bottom: 15px;">
+                    <button class="btn-start" id="start-btn" onclick="startGame()">Start Game</button>
+                    <button class="btn-delete" onclick="deleteGame()">Delete Game</button>
+                    <a href="#" id="game-direct-link" class="game-link" target="_blank"
+                        style="display: inline-block; margin-left: 10px; padding: 8px 0;">Join Game</a>
+                </div>
+                
                 <div class="scenario-header" onclick="toggleScenario()">
                     <div>
                         <h3 id="scenario-name">Game Session</h3>
@@ -607,34 +997,59 @@
                             <span id="settings-status">Settings are saved automatically</span>
                         </div>
                     </div>
-                    <div class="team-section">
+                    <div class="settings-section">
                         <h3>Team Management</h3>
-                        <div class="team-controls">
-                            <div>
-                                <label>Number of Teams:</label>
-                                <select id="team-count" onchange="updateTeamCount()">
-                                    <option value="3" selected>3</option>
-                                    <option value="4">4</option>
-                                    <option value="5">5</option>
-                                </select>
+                        <div class="form-group">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <label style="margin: 0; white-space: nowrap;">Number of Teams:</label>
+                                <input type="number" id="colorTeamCount" value="6" min="3" max="20" style="width: 80px; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px;">
+                                <input type="range" id="colorTeamSize" value="6" min="3" max="20" style="flex: 1;">
                             </div>
-                            <button class="btn-auto" onclick="autoSetupTeams()">Auto Balance</button>
                         </div>
-                        <div id="teams-container"></div>
-                        <div id="unassigned-section">
-                            <h4>Connected Players:</h4>
-                            <div id="unassigned-players"></div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px;">
+                            <button class="color-btn" id="colorAddTeamBtn" disabled style="margin: 0; padding: 8px;">+ Add New Team</button>
+                            <button class="color-btn" onclick="colorAutoAssignPlayers()" style="margin: 0; padding: 8px;">Auto-Assign All</button>
+                            <button class="color-btn" onclick="colorClearAssignments()" style="margin: 0; padding: 8px;">Unassign All</button>
                         </div>
-                        <div class="game-actions">
-                            <button class="btn-start" id="start-btn" onclick="startGame()">Start Game</button>
-                            <button class="btn-delete" onclick="deleteGame()">Delete Game</button>
-                            <a href="#" id="game-direct-link" class="game-link" target="_blank"
-                                style="display: inline-block; margin-left: 10px; padding: 8px 0;">Join Game</a>
+                        
+                        <div class="form-group" style="margin-top: 20px;">
+                            <label>Attendees (<span id="totalAttendeesCount">0</span>):</label>
+                            
+                            <div class="team-color-slot" id="unassignedBox" style="margin-top: 10px;">
+                                <div class="team-color-players" id="colorPlayerPool">
+                                    <div style="color: #666; text-align: center; padding: 12px; font-size: 12px;">No players connected</div>
+                                </div>
+                            </div>
+                            
+                            <div class="team-color-assignments" id="colorTeamAssignments" style="margin-top: 6px;"></div>
+                            
+                            <div class="vision-toggles" style="margin-top: 6px;">
+                                <span class="vision-toggle active" data-mode="normal" id="normalToggle">N0</span>
+                                <span class="vision-toggle" data-mode="deuteranopia" id="deutToggle">D0</span>
+                                <span class="vision-toggle" data-mode="protanopia" id="protToggle">P0</span>
+                                <span class="vision-toggle" data-mode="tritanopia" id="tritToggle">T0</span>
+                                <span id="colorInfoBtn" onclick="toggleColorIframe()">ⓘ</span>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; margin-top: 15px;">
+                            <button class="color-btn primary" id="colorStartGameBtn" style="flex: 1; margin: 0; padding: 8px;">▶ Start Color Mode</button>
+                            <button class="color-btn" id="colorStopGameBtn" style="flex: 1; margin: 0; padding: 8px; display: none;">⏹ Stop Color Mode</button>
+                            <button class="color-btn" id="colorResetBtn" style="flex: 1; margin: 0; padding: 8px;">↻ Reset to Optimal</button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Expanded Color Optimizer Pane -->
+    <div class="color-optimizer-pane" id="colorOptimizerPane">
+        <div class="color-optimizer-pane-header">
+            <span style="font-size: 12px; color: #333;">Detailed View</span>
+            <button class="color-iframe-toggle" onclick="toggleColorIframe()">Collapse</button>
+        </div>
+        <iframe id="colorOptimizerFrameExpanded" src="color.html?embed=true"></iframe>
     </div>
 
     <script src="https://unpkg.com/colyseus.js@0.15.24/dist/colyseus.js"></script>
@@ -839,46 +1254,14 @@
 
         function updateRoomPlayers(data) {
             // Render and manage connected players for the selected room
-            if (!data || data.roomId !== selectedRoomId) return;
-
-            const container = document.getElementById('unassigned-players');
-            if (!container) return;
+            if (!data || !selectedRoomId || data.roomId !== selectedRoomId) return;
 
             const players = Array.isArray(data.players) ? data.players : [];
-            if (players.length === 0) {
-                container.innerHTML = '<div style="color:#888;font-size:12px;">No players connected</div>';
-                return;
+            
+            // Sync to color manager - this now handles all player display
+            if (typeof syncColyseusPlayersToColorManager === 'function') {
+                syncColyseusPlayersToColorManager(players);
             }
-
-            const TEAM_OPTIONS = TEAM_CONFIGS.map((team, index) => `<option value="${index}" style="color:#${team.color.toString(16).padStart(6, '0')}">${team.displayName}</option>`).join('');
-
-            container.innerHTML = players.map(p => {
-                const name = p.name || (p.id ? `Player ${p.id.substring(0, 6)}` : 'Player');
-                const idDisplay = p.studentId ? ` <span style="color:#666;font-size:11px;">(ID: ${p.studentId})</span>` : '';
-                const teamIndex = Number.isFinite(p.team) ? p.team : '';
-                const isHost = !!p.isHost;
-                return `
-                    <div class="player-row" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid #e5e7eb;border-radius:4px;margin-bottom:6px;background:#fff;">
-                        <span style="flex:1;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}${idDisplay}${isHost ? ' <span style="color:#10b981;font-size:11px;">(host)</span>' : ''}</span>
-                        <select onchange="assignPlayerTeam('${p.id}', this.value)" style="flex:0 0 150px;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;">
-                            <option value="">No Team</option>
-                            ${TEAM_OPTIONS}
-                        </select>
-                        <button onclick="kickPlayer('${p.id}')" style="flex:0 0 auto;background:#ef4444;color:#fff;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:12px;">Kick</button>
-                    </div>
-                `;
-            }).join('');
-
-            // Pre-select current team values
-            const rows = container.querySelectorAll('.player-row');
-            players.forEach((p, idx) => {
-                const select = rows[idx]?.querySelector('select');
-                if (select && Number.isFinite(p.team)) {
-                    select.value = String(p.team);
-                } else if (select) {
-                    select.value = '';
-                }
-            });
         }
 
         async function initializeColyseus() {
@@ -1271,6 +1654,11 @@
                 // Send start command via AdminRoom
                 currentRoom.send('start_game', { roomId: selectedRoomId });
                 console.log('✓ Game start command sent via AdminRoom');
+                
+                // Auto-start color mode when game starts
+                if (!colorGameMode) {
+                    document.getElementById('colorStartGameBtn').click();
+                }
             } catch (error) {
                 console.error('Failed to start game:', error);
                 alert(`Failed to start game: ${error.message}`);
@@ -1291,6 +1679,7 @@
                     // Clear selection
                     document.getElementById('no-game-selected').style.display = 'block';
                     document.getElementById('game-content').style.display = 'none';
+                    
                     selectedRoomId = null;
                 }
             } catch (error) {
@@ -1405,7 +1794,434 @@
         window.addEventListener('load', () => {
             initializeColyseus();
             loadMapList();
+            initColorManager();
         });
+
+        // ============================================
+        // COLOR MANAGER - Right Sidebar Integration
+        // ============================================
+        
+        let colorPlayers = [];
+        let colorTeamColors = [];
+        let colorGameMode = false;
+        let colorCurrentMode = 'normal';
+        let colorDraggedPlayer = null;
+        let colorIframeExpanded = false;
+        let colorPlayerIdCounter = 0;
+
+        // Color blindness simulation matrices
+        const COLOR_CB_MATRICES = {
+            deuteranopia: [[0.625, 0.375, 0], [0.7, 0.3, 0], [0, 0.3, 0.7]],
+            protanopia: [[0.567, 0.433, 0], [0.558, 0.442, 0], [0, 0.242, 0.758]],
+            tritanopia: [[0.95, 0.05, 0], [0, 0.433, 0.567], [0, 0.475, 0.525]]
+        };
+
+        function initColorManager() {
+            // Initialize default team colors
+            colorTeamColors = [
+                { name: 'cyan', rgb: [0, 255, 255] },
+                { name: 'magenta', rgb: [255, 0, 255] },
+                { name: 'lime', rgb: [0, 255, 0] },
+                { name: 'gold', rgb: [255, 215, 0] },
+                { name: 'blue', rgb: [0, 0, 255] },
+                { name: 'red', rgb: [255, 0, 0] }
+            ];
+
+            // Setup vision toggle buttons (excluding info button)
+            document.querySelectorAll('.vision-toggle:not(#colorInfoBtn)').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.vision-toggle:not(#colorInfoBtn)').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    colorCurrentMode = btn.dataset.mode;
+                    renderColorTeamAssignments();
+                    sendToColorIframe({ type: 'setMode', mode: colorCurrentMode });
+                });
+            });
+
+            // Team count input and slider sync
+            const teamCountInput = document.getElementById('colorTeamCount');
+            const teamSizeSlider = document.getElementById('colorTeamSize');
+            
+            teamCountInput.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                if (value >= 3 && value <= 12) {
+                    teamSizeSlider.value = value;
+                    if (!colorGameMode) {
+                        requestColorsFromIframe(value);
+                    }
+                }
+            });
+            
+            teamSizeSlider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                teamCountInput.value = value;
+                if (!colorGameMode) {
+                    requestColorsFromIframe(value);
+                }
+            });
+
+            // Game control buttons
+            document.getElementById('colorStartGameBtn').addEventListener('click', () => {
+                colorGameMode = true;
+                const startBtn = document.getElementById('colorStartGameBtn');
+                const stopBtn = document.getElementById('colorStopGameBtn');
+                
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'block';
+                stopBtn.classList.add('pressed');
+                
+                document.getElementById('colorAddTeamBtn').disabled = false;
+                teamSizeSlider.disabled = true;
+                teamCountInput.disabled = true;
+                sendToColorIframe({ type: 'startGame' });
+            });
+
+            document.getElementById('colorStopGameBtn').addEventListener('click', () => {
+                colorGameMode = false;
+                const startBtn = document.getElementById('colorStartGameBtn');
+                const stopBtn = document.getElementById('colorStopGameBtn');
+                
+                startBtn.style.display = 'block';
+                stopBtn.style.display = 'none';
+                stopBtn.classList.remove('pressed');
+                
+                document.getElementById('colorAddTeamBtn').disabled = true;
+                teamSizeSlider.disabled = false;
+                teamCountInput.disabled = false;
+                sendToColorIframe({ type: 'stopGame' });
+            });
+
+            document.getElementById('colorResetBtn').addEventListener('click', () => {
+                const teamSize = parseInt(teamSizeSlider.value);
+                requestColorsFromIframe(teamSize);
+            });
+
+            document.getElementById('colorAddTeamBtn').addEventListener('click', () => {
+                if (colorGameMode) {
+                    sendToColorIframe({ type: 'addTeamColor' });
+                }
+            });
+
+            // Listen for messages from color iframe
+            window.addEventListener('message', handleColorIframeMessage);
+
+            renderColorTeamAssignments();
+            updateColorStats();
+        }
+
+        function handleColorIframeMessage(event) {
+            const data = event.data;
+            if (!data || !data.type) return;
+
+            switch (data.type) {
+                case 'colorsUpdated':
+                    colorTeamColors = data.colors;
+                    renderColorTeamAssignments();
+                    break;
+                case 'colorAdded':
+                    colorTeamColors.push(data.color);
+                    renderColorTeamAssignments();
+                    break;
+                case 'ready':
+                    // Iframe is ready, send initial data
+                    syncPlayersToIframe();
+                    break;
+            }
+        }
+
+        function sendToColorIframe(message) {
+            const iframe = document.getElementById('colorOptimizerFrameExpanded');
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage(message, '*');
+            }
+        }
+
+        function requestColorsFromIframe(teamCount) {
+            sendToColorIframe({ type: 'generateColors', count: teamCount });
+        }
+
+        function syncPlayersToIframe() {
+            const assignedPlayers = colorPlayers.filter(p => p.colorTeam !== null && p.colorTeam !== undefined);
+            const counts = {
+                normal: assignedPlayers.filter(p => p.visionType === 'normal').length,
+                deuteranopia: assignedPlayers.filter(p => p.visionType === 'deuteranopia').length,
+                protanopia: assignedPlayers.filter(p => p.visionType === 'protanopia').length,
+                tritanopia: assignedPlayers.filter(p => p.visionType === 'tritanopia').length
+            };
+            sendToColorIframe({ type: 'updateStudents', counts: counts });
+        }
+
+        function toggleColorIframe() {
+            const pane = document.getElementById('colorOptimizerPane');
+            colorIframeExpanded = !colorIframeExpanded;
+            
+            if (colorIframeExpanded) {
+                // Show expanded pane
+                pane.classList.add('visible');
+                
+                // Scroll the expanded iframe to bottom
+                const expandedFrame = document.getElementById('colorOptimizerFrameExpanded');
+                if (expandedFrame && expandedFrame.contentWindow) {
+                    setTimeout(() => {
+                        expandedFrame.contentWindow.scrollTo(0, expandedFrame.contentWindow.document.body.scrollHeight);
+                    }, 100);
+                }
+            } else {
+                // Hide expanded pane
+                pane.classList.remove('visible');
+            }
+        }
+
+        function colorAutoAssignPlayers() {
+            const unassigned = colorPlayers.filter(p => p.colorTeam === null);
+            if (unassigned.length === 0 || colorTeamColors.length === 0) return;
+            
+            unassigned.forEach((player, index) => {
+                player.colorTeam = index % colorTeamColors.length;
+            });
+            
+            renderColorPlayerPool();
+            renderColorTeamAssignments();
+            updateColorStats();
+            syncPlayersToIframe();
+        }
+
+        function colorClearAssignments() {
+            colorPlayers.forEach(p => p.colorTeam = null);
+            renderColorPlayerPool();
+            renderColorTeamAssignments();
+            updateColorStats();
+            syncPlayersToIframe();
+        }
+
+        function renderColorPlayerPool() {
+            const pool = document.getElementById('colorPlayerPool');
+            pool.innerHTML = '';
+            
+            const unassigned = colorPlayers.filter(p => p.colorTeam === null);
+            
+            if (colorPlayers.length === 0) {
+                pool.innerHTML = '<div style="color: #666; text-align: center; padding: 12px; font-size: 12px;">No players connected</div>';
+                return;
+            }
+            
+            if (unassigned.length === 0) {
+                pool.innerHTML = '<div style="color: #28a745; text-align: center; padding: 12px; font-size: 12px;">✓ All assigned!</div>';
+                return;
+            }
+            
+            unassigned.forEach(player => {
+                const el = document.createElement('div');
+                el.className = 'player-chip';
+                el.draggable = true;
+                el.dataset.playerId = player.id;
+                
+                const typeLabel = player.visionType === 'normal' ? 'N' : player.visionType.substring(0, 1).toUpperCase();
+                el.innerHTML = `
+                    <span class="player-chip-name">${player.name}</span>
+                    <span class="player-chip-type ${player.visionType}">${typeLabel}</span>
+                `;
+                
+                el.addEventListener('dragstart', () => {
+                    colorDraggedPlayer = player;
+                    el.classList.add('dragging');
+                });
+                
+                el.addEventListener('dragend', () => {
+                    el.classList.remove('dragging');
+                    colorDraggedPlayer = null;
+                });
+                
+                pool.appendChild(el);
+            });
+        }
+
+        function renderColorTeamAssignments() {
+            const container = document.getElementById('colorTeamAssignments');
+            container.innerHTML = '';
+            
+            colorTeamColors.forEach((color, index) => {
+                const slot = document.createElement('div');
+                slot.className = 'team-color-slot';
+                
+                const assigned = colorPlayers.filter(p => p.colorTeam === index);
+                const displayRgb = simulateColorBlindnessAdmin(color.rgb, colorCurrentMode);
+                const hexColor = rgbToHexAdmin(displayRgb);
+                
+                slot.innerHTML = `
+                    <div class="team-color-header">
+                        <div class="team-color-swatch" style="background: ${hexColor}"></div>
+                        <div class="team-color-info">
+                            <div class="team-color-name">${color.name}</div>
+                        </div>
+                    </div>
+                    <div class="team-color-players" id="color-team-${index}"></div>
+                `;
+                
+                slot.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    slot.classList.add('drag-over');
+                });
+                
+                slot.addEventListener('dragleave', () => {
+                    slot.classList.remove('drag-over');
+                });
+                
+                slot.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    slot.classList.remove('drag-over');
+                    
+                    if (colorDraggedPlayer) {
+                        colorDraggedPlayer.colorTeam = index;
+                        // Sync to game server
+                        syncColorTeamToGame(colorDraggedPlayer);
+                        renderColorPlayerPool();
+                        renderColorTeamAssignments();
+                        updateColorStats();
+                        syncPlayersToIframe();
+                    }
+                });
+                
+                container.appendChild(slot);
+                
+                const teamContainer = document.getElementById(`color-team-${index}`);
+                assigned.forEach(player => {
+                    const el = document.createElement('div');
+                    el.className = 'player-chip';
+                    el.style.cursor = 'pointer';
+                    const typeLabel = player.visionType === 'normal' ? 'N' : player.visionType.substring(0, 1).toUpperCase();
+                    el.innerHTML = `
+                        <span class="player-chip-name">${player.name}</span>
+                        <span class="player-chip-type ${player.visionType}">${typeLabel}</span>
+                    `;
+                    el.onclick = () => {
+                        player.colorTeam = null;
+                        // Sync to game server (unassign)
+                        syncColorTeamToGame(player);
+                        renderColorPlayerPool();
+                        renderColorTeamAssignments();
+                        updateColorStats();
+                        syncPlayersToIframe();
+                    };
+                    teamContainer.appendChild(el);
+                });
+            });
+        }
+
+        // Sync color team assignment to game server
+        function syncColorTeamToGame(player) {
+            if (!currentRoom || !selectedRoomId || !player.colyseusId) return;
+            
+            const payload = {
+                roomId: selectedRoomId,
+                playerId: player.colyseusId,
+                teamIndex: player.colorTeam
+            };
+            
+            try {
+                currentRoom.send('assign_team', payload);
+                console.log('✓ Synced color team assignment:', payload);
+            } catch (e) {
+                console.error('Failed to sync color team:', e);
+            }
+        }
+
+        function updateColorStats() {
+            const assignedPlayers = colorPlayers.filter(p => p.colorTeam !== null);
+            const counts = {
+                normal: assignedPlayers.filter(p => p.visionType === 'normal').length,
+                deuteranopia: assignedPlayers.filter(p => p.visionType === 'deuteranopia').length,
+                protanopia: assignedPlayers.filter(p => p.visionType === 'protanopia').length,
+                tritanopia: assignedPlayers.filter(p => p.visionType === 'tritanopia').length
+            };
+            
+            const totalAssigned = assignedPlayers.length;
+            const totalPlayers = colorPlayers.length;
+            
+            // Update vision toggle text
+            document.getElementById('normalToggle').textContent = `N${counts.normal}`;
+            document.getElementById('deutToggle').textContent = `D${counts.deuteranopia}`;
+            document.getElementById('protToggle').textContent = `P${counts.protanopia}`;
+            document.getElementById('tritToggle').textContent = `T${counts.tritanopia}`;
+            
+            // Update total attendees count
+            document.getElementById('totalAttendeesCount').textContent = totalPlayers;
+        }
+
+        function simulateColorBlindnessAdmin(rgb, type) {
+            if (type === 'normal') return rgb;
+            const matrix = COLOR_CB_MATRICES[type];
+            return [
+                Math.round(matrix[0][0] * rgb[0] + matrix[0][1] * rgb[1] + matrix[0][2] * rgb[2]),
+                Math.round(matrix[1][0] * rgb[0] + matrix[1][1] * rgb[1] + matrix[1][2] * rgb[2]),
+                Math.round(matrix[2][0] * rgb[0] + matrix[2][1] * rgb[1] + matrix[2][2] * rgb[2])
+            ];
+        }
+
+        function rgbToHexAdmin(rgb) {
+            return '#' + rgb.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+        }
+
+        // Sync connected players from Colyseus to color manager
+        function syncColyseusPlayersToColorManager(players) {
+            // Map Colyseus players to color players
+            const existingIds = new Set(colorPlayers.map(p => p.colyseusId));
+            const newPlayers = [];
+            
+            players.forEach(p => {
+                if (!existingIds.has(p.id)) {
+                    const newPlayer = {
+                        id: `color-player-${Date.now()}-${colorPlayerIdCounter++}`,
+                        colyseusId: p.id,
+                        name: p.name || `Player ${p.id.substring(0, 6)}`,
+                        visionType: p.visionType || 'normal',
+                        colorTeam: null
+                    };
+                    colorPlayers.push(newPlayer);
+                    newPlayers.push(newPlayer);
+                }
+            });
+            
+            // Auto-assign new players if game is started and teams are balanced
+            if (colorGameMode && newPlayers.length > 0 && colorTeamColors.length > 0) {
+                newPlayers.forEach(player => {
+                    // Check if teams are balanced (all teams have same number of players)
+                    const teamCounts = colorTeamColors.map((_, idx) => 
+                        colorPlayers.filter(p => p.colorTeam === idx && p.id !== player.id).length
+                    );
+                    const minCount = Math.min(...teamCounts);
+                    const maxCount = Math.max(...teamCounts);
+                    
+                    if (maxCount - minCount <= 1) {
+                        // Teams are balanced, add new team if needed
+                        sendToColorIframe({ type: 'addTeamColor' });
+                        // Assign to the new team (will be last index)
+                        setTimeout(() => {
+                            player.colorTeam = colorTeamColors.length - 1;
+                            syncColorTeamToGame(player);
+                            renderColorPlayerPool();
+                            renderColorTeamAssignments();
+                            updateColorStats();
+                            syncPlayersToIframe();
+                        }, 100);
+                    } else {
+                        // Assign to smallest team
+                        const targetTeam = teamCounts.findIndex(count => count === minCount);
+                        player.colorTeam = targetTeam;
+                        syncColorTeamToGame(player);
+                    }
+                });
+            }
+            
+            // Remove players that disconnected
+            const currentIds = new Set(players.map(p => p.id));
+            colorPlayers = colorPlayers.filter(p => !p.colyseusId || currentIds.has(p.colyseusId));
+            
+            renderColorPlayerPool();
+            renderColorTeamAssignments();
+            updateColorStats();
+            syncPlayersToIframe();
+        }
     </script>
 </body>
 
