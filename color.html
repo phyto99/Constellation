@@ -1,0 +1,2065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Admin Panel - Team Color Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 11px;
+            background: #0a0a0a;
+            color: #fff;
+            padding: 10px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 8px;
+            background: #111;
+            border: 1px solid #333;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            font-size: 10px;
+        }
+
+        .stat {
+            color: #888;
+        }
+
+        .stat span {
+            color: #0ff;
+            font-weight: bold;
+        }
+
+        .toggles {
+            display: flex;
+            gap: 5px;
+        }
+
+        .toggle {
+            padding: 4px 10px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            color: #888;
+            cursor: pointer;
+            font-size: 10px;
+        }
+
+        .toggle.active {
+            background: #0ff;
+            color: #000;
+            border-color: #0ff;
+        }
+
+        .section-title {
+            color: #0ff;
+            font-size: 12px;
+            margin: 15px 0 8px 0;
+            padding: 4px 8px;
+            background: #111;
+            border-left: 3px solid #0ff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-help {
+            font-size: 9px;
+            color: #888;
+            font-weight: normal;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 15px;
+        }
+
+        .sidebar {
+            background: #111;
+            border: 1px solid #333;
+            padding: 10px;
+            height: fit-content;
+        }
+
+        .main-content {
+            background: #111;
+            border: 1px solid #333;
+            padding: 10px;
+        }
+
+        .control-group {
+            margin-bottom: 12px;
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .control-group label {
+            color: #888;
+            font-size: 9px;
+        }
+
+        .control-group input[type="number"],
+        .control-group input[type="range"] {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            color: #0ff;
+            padding: 4px 8px;
+            font-size: 10px;
+            font-family: inherit;
+        }
+
+        .control-group input[type="number"] {
+            width: 60px;
+        }
+
+        .btn {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            color: #0ff;
+            padding: 4px 12px;
+            cursor: pointer;
+            font-size: 10px;
+            font-family: inherit;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        .btn:hover {
+            background: #0ff;
+            color: #000;
+        }
+
+        .btn.primary {
+            background: #0ff;
+            color: #000;
+        }
+
+        .btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .student-pool {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            padding: 8px;
+            min-height: 120px;
+            margin-bottom: 12px;
+        }
+
+        .student-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .student {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            padding: 3px 6px;
+            font-size: 9px;
+            cursor: move;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.1s;
+        }
+
+        .student:hover {
+            border-color: #0ff;
+        }
+
+        .student.dragging {
+            opacity: 0.5;
+        }
+
+        .student-name {
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .student-type {
+            font-size: 8px;
+            padding: 1px 3px;
+            background: #0a0a0a;
+        }
+
+        .student-type.normal { color: #0f0; }
+        .student-type.deuteranopia { color: #ff0; }
+        .student-type.protanopia { color: #f80; }
+        .student-type.tritanopia { color: #08f; }
+
+        .remove-student {
+            background: #f44;
+            border: none;
+            color: #000;
+            padding: 1px 4px;
+            font-size: 8px;
+            cursor: pointer;
+        }
+
+        .team-assignments {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .team-slot {
+            background: #0a0a0a;
+            border: 1px dashed #333;
+            padding: 8px;
+            min-height: 60px;
+        }
+
+        .team-slot.drag-over {
+            border-color: #0ff;
+            background: #1a2a2a;
+        }
+
+        .team-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .team-color-swatch {
+            width: 25px;
+            height: 25px;
+            border: 1px solid #333;
+        }
+
+        .team-info {
+            flex: 1;
+        }
+
+        .team-name {
+            font-weight: bold;
+            color: #0ff;
+            font-size: 10px;
+        }
+
+        .team-hex {
+            font-size: 8px;
+            color: #666;
+        }
+
+        .team-students {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .heatmap-container {
+            margin-bottom: 15px;
+        }
+
+        .heatmap-grid {
+            display: grid;
+            gap: 1px;
+            background: #222;
+            border: 1px solid #333;
+        }
+
+        .heatmap-cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .heatmap-cell:hover {
+            transform: scale(1.1);
+            z-index: 10;
+            border: 2px solid #0ff;
+        }
+
+        .heatmap-label {
+            background: #111;
+            padding: 2px 4px;
+            font-size: 8px;
+            text-align: center;
+        }
+
+        .spectrum-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .spectrum-panel {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            padding: 8px;
+        }
+
+        .panel-title {
+            font-size: 9px;
+            color: #888;
+            margin-bottom: 6px;
+            text-align: center;
+        }
+
+        .spectrum-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2px;
+        }
+
+        .spectrum-cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            font-weight: bold;
+            border: 1px solid #000;
+            cursor: pointer;
+        }
+
+        .spectrum-cell:hover {
+            transform: scale(1.2);
+            z-index: 10;
+            border: 2px solid #0ff;
+        }
+
+        .colorspace-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .colorspace-panel {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            padding: 8px;
+        }
+
+        .colorspace-canvas {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 3/2;
+            background: #000;
+            border: 1px solid #333;
+            cursor: crosshair;
+        }
+
+        .info-text {
+            font-size: 8px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .stats-bar {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            padding: 8px;
+            margin-bottom: 12px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .stat-item {
+            text-align: center;
+            position: relative;
+        }
+
+        .stat-label {
+            font-size: 8px;
+            color: #888;
+            margin-bottom: 2px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0ff;
+        }
+
+        .stat-percent {
+            font-size: 9px;
+            color: #666;
+            margin-top: 1px;
+        }
+
+        .stat-controls {
+            display: flex;
+            justify-content: center;
+            gap: 3px;
+            margin-top: 4px;
+        }
+
+        .stat-btn {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            color: #0ff;
+            padding: 2px 6px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .stat-btn:hover {
+            background: #0ff;
+            color: #000;
+        }
+
+        .recommender-panel {
+            background: #0a0a0a;
+            border: 1px solid #0ff;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+
+        .algo-explain {
+            background: #0a0a0a;
+            border: 1px solid #0ff;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 10px;
+        }
+
+        .recommendations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .recommendation-card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .recommendation-card:hover {
+            border-color: #0ff;
+            transform: translateY(-2px);
+        }
+
+        .rec-color-preview {
+            width: 100%;
+            height: 40px;
+            margin-bottom: 5px;
+            border: 1px solid #333;
+            position: relative;
+        }
+
+        .rec-score {
+            font-size: 9px;
+            color: #888;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 3px;
+        }
+
+        .rec-score-value {
+            color: #0ff;
+            font-weight: bold;
+        }
+
+        #calculationBreakdown {
+            position: fixed;
+            background: #0a0a0a;
+            border: 1px solid #f80;
+            padding: 10px;
+            display: none;
+            z-index: 1000;
+            max-width: 500px;
+            max-height: 400px;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
+            font-size: 9px;
+        }
+
+        .constraint-section {
+            border-top: 1px solid #333;
+            padding-top: 8px;
+            margin-top: 8px;
+        }
+
+        .sync-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #0f0;
+            margin-left: 5px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="stats">
+            <div class="stat">Total Students: <span id="totalCount">0</span></div>
+            <div class="stat">Assigned: <span id="assignedCount">0</span></div>
+            <div class="stat">Unassigned: <span id="unassignedCount">0</span></div>
+        </div>
+        <div class="toggles">
+            <button class="toggle active" data-mode="normal">Normal</button>
+            <button class="toggle" data-mode="deuteranopia">Deuteranopia</button>
+            <button class="toggle" data-mode="protanopia">Protanopia</button>
+            <button class="toggle" data-mode="tritanopia">Tritanopia</button>
+        </div>
+    </div>
+
+    <div class="layout">
+        <div class="sidebar">
+            <div class="section-title" style="margin-top: 0;">■ Game Controls</div>
+
+            <div class="control-group" style="flex-direction: column; align-items: stretch;">
+                <button class="btn primary" id="startGameBtn" style="font-size: 11px; padding: 6px 16px;">▶ Start Game</button>
+                <button class="btn" id="stopGameBtn" style="font-size: 11px; padding: 6px 16px; display: none;">⏹ Stop Game</button>
+                <button class="btn" id="resetGameBtn" style="font-size: 11px; padding: 6px 16px;">↻ Reset Optimal</button>
+            </div>
+
+            <div class="control-group">
+                <label>Team Colors:</label>
+                <input type="range" id="teamSize" value="8" min="3" max="20" style="width: 100px">
+                <span id="teamSizeVal" style="font-size:11px; color:#0ff; font-weight:bold">8</span>
+            </div>
+
+            <div class="control-group" style="flex-direction: column; align-items: stretch;">
+                <button class="btn" id="addTeamColorBtn" style="font-size: 10px; padding: 4px 12px;" disabled>+ Add Team Color</button>
+            </div>
+
+            <div class="stats-bar">
+                <div style="font-size: 10px; color: #0ff; margin-bottom: 6px;">
+                    ■ Assigned Students <span class="sync-indicator" title="Synced with Color Optimizer"></span>
+                </div>
+                <div style="font-size: 8px; color: #666; margin-bottom: 8px; font-style: italic;">
+                    Only assigned students affect color optimization
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">Normal</div>
+                        <div class="stat-value" id="sidebarNormal">0</div>
+                        <div class="stat-percent" id="sidebarNormalPct">0%</div>
+                        <div class="stat-controls">
+                            <button class="stat-btn" onclick="adjustStudents('normal', -1)">−</button>
+                            <button class="stat-btn" onclick="adjustStudents('normal', 1)">+</button>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Deut</div>
+                        <div class="stat-value" id="sidebarDeut">0</div>
+                        <div class="stat-percent" id="sidebarDeutPct">0%</div>
+                        <div class="stat-controls">
+                            <button class="stat-btn" onclick="adjustStudents('deuteranopia', -1)">−</button>
+                            <button class="stat-btn" onclick="adjustStudents('deuteranopia', 1)">+</button>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Prot</div>
+                        <div class="stat-value" id="sidebarProt">0</div>
+                        <div class="stat-percent" id="sidebarProtPct">0%</div>
+                        <div class="stat-controls">
+                            <button class="stat-btn" onclick="adjustStudents('protanopia', -1)">−</button>
+                            <button class="stat-btn" onclick="adjustStudents('protanopia', 1)">+</button>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Trit</div>
+                        <div class="stat-value" id="sidebarTrit">0</div>
+                        <div class="stat-percent" id="sidebarTritPct">0%</div>
+                        <div class="stat-controls">
+                            <button class="stat-btn" onclick="adjustStudents('tritanopia', -1)">−</button>
+                            <button class="stat-btn" onclick="adjustStudents('tritanopia', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 6px; padding-top: 6px; border-top: 1px solid #333;">
+                    <div class="stat-label">Total Assigned</div>
+                    <div class="stat-value" style="font-size: 20px;" id="sidebarTotal">0</div>
+                </div>
+            </div>
+
+            <button class="btn" onclick="randomizeStudents()">New Random Students</button>
+            <button class="btn" onclick="autoAssignStudents()">Auto-Assign All</button>
+            <button class="btn" onclick="clearAssignments()">Unassign All</button>
+
+            <div class="section-title">■ Student Pool</div>
+            <div class="student-pool">
+                <div class="student-list" id="studentPool"></div>
+            </div>
+
+            <div class="section-title">■ Team Assignments</div>
+            <div class="team-assignments" id="teamAssignments"></div>
+        </div>
+
+        <div class="main-content">
+            <div class="section-title" style="margin-top: 0;">⚡ Intelligent Color Recommender</div>
+            
+            <div class="algo-explain">
+                <div style="color: #0ff; font-weight: bold; margin-bottom: 6px;">🎮 Two Modes:</div>
+                <div style="color: #aaa; line-height: 1.6; font-size: 9px;">
+                    <strong style="color:#fff">⏹ Planning Mode (Stop Game - Default):</strong><br>
+                    <span style="margin-left: 20px;">• Uses <strong style="color:#0f0">Global Optimization</strong> - finds all colors simultaneously</span><br>
+                    <span style="margin-left: 20px;">• Maximizes minimum pairwise distance across entire palette</span><br>
+                    <span style="margin-left: 20px;">• Adjust "Team Colors" slider to explore different palette sizes</span><br>
+                    <span style="margin-left: 20px;">• Shows what optimal complete palette would look like</span><br>
+                    <span style="margin-left: 20px;">• First 6 colors always included + globally optimized additions</span><br>
+                    <br>
+                    <strong style="color:#fff">▶ Game Mode (Start Game):</strong><br>
+                    <span style="margin-left: 20px;">• Uses <strong style="color:#ff0">Iterative Greedy</strong> - adds one color at a time</span><br>
+                    <span style="margin-left: 20px;">• Each new color maximizes distance from current palette</span><br>
+                    <span style="margin-left: 20px;">• Click <strong style="color:#0ff">"+ Add Team Color"</strong> to add the #1 optimal next color</span><br>
+                    <span style="margin-left: 20px;">• Build your palette step-by-step with guaranteed optimal choices</span><br>
+                    <span style="margin-left: 20px;">• Team Colors slider locked during game</span><br>
+                    <br>
+                    <span style="color:#0ff;">✓ 100% Deterministic: Same inputs always produce same results (no randomness)</span><br>
+                    <span style="color:#0f0;">🔗 Connected: Uses ONLY assigned student distribution</span>
+                </div>
+                <div style="margin-top: 8px; padding: 8px; background: #111; border-left: 2px solid #0ff;">
+                    <div style="color:#0ff; font-size: 9px; font-weight: bold; margin-bottom: 4px;">📊 Transparent Calculation Formula:</div>
+                    <div style="font-family: monospace; font-size: 8px; color: #888;">
+                        Score = Σ(mode_weights × min_distances) - Σ(UI_penalties) + TNIL_bonus<br>
+                        <span style="color:#666; margin-left: 8px;">• mode_weights: [N: w_n%, D: w_d%, P: w_p%, T: w_t%]</span><br>
+                        <span style="color:#666; margin-left: 8px;">• min_distances: min(ΔE to existing colors per mode)</span><br>
+                        <span style="color:#666; margin-left: 8px;">• UI_penalties: Σ((threshold - ΔE) × 100) for UI colors</span><br>
+                        <span style="color:#666; margin-left: 8px;">• TNIL_bonus: +bonus × (1 - frequency) for unique names</span><br>
+                        <span style="color:#666; margin-left: 8px;">• If min_distance < minΔE: penalty = (minΔE - dist) × 2 × weight</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="recommender-panel">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <!-- Avoid UI Colors Column -->
+                    <div>
+                        <div class="control-group">
+                            <label style="color:#fff">Avoid UI Colors:</label>
+                        </div>
+                        <div class="control-group">
+                            <input type="checkbox" id="avoidBlack" checked> <label>Black</label>
+                        </div>
+                        <div class="control-group">
+                            <label>Min Dist:</label>
+                            <input type="number" id="blackMinDist" value="1" min="0" max="100">
+                        </div>
+                        <div class="control-group">
+                            <input type="checkbox" id="avoidWhite" checked> <label>White</label>
+                        </div>
+                        <div class="control-group">
+                            <label>Min Dist:</label>
+                            <input type="number" id="whiteMinDist" value="33" min="0" max="100">
+                        </div>
+                        <div class="control-group">
+                            <input type="checkbox" id="avoidGrey" checked> <label>Grey</label>
+                        </div>
+                        <div class="control-group">
+                            <label>Min Dist:</label>
+                            <input type="number" id="greyMinDist" value="10" min="0" max="100">
+                        </div>
+                    </div>
+
+                    <!-- Avoid Problematic Colors Column -->
+                    <div>
+                        <div class="control-group">
+                            <label style="color:#f88">Avoid Problematic Colors:</label>
+                        </div>
+                        <div class="control-group">
+                            <input type="checkbox" id="avoidProblematic" checked> <label>Dark Red → YYL</label>
+                        </div>
+                        <div class="control-group">
+                            <label>Min Dist:</label>
+                            <input type="number" id="problematicMinDist" value="18" min="0" max="100">
+                        </div>
+                    </div>
+
+                    <!-- Gradient & Settings Column -->
+                    <div>
+                        <div class="control-group">
+                            <label>Min ΔE:</label>
+                            <input type="number" id="minDelta" value="33" min="10" max="100">
+                        </div>
+                        <div class="control-group">
+                            <label>TNIL Bonus:</label>
+                            <input type="number" id="tnilUniquenessBonus" value="0" min="0" max="500">
+                        </div>
+                        <div class="control-group">
+                            <input type="checkbox" id="showGamut" checked>
+                            <label>Show Gradient</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="recommendations-grid" id="recommendationsGrid"></div>
+            </div>
+
+            <div id="calculationBreakdown">
+                <div style="font-size: 10px; color: #f80; font-weight: bold; margin-bottom: 6px;">🔬 Score Breakdown</div>
+                <div id="breakdownContent" style="font-family: monospace; line-height: 1.5;"></div>
+            </div>
+
+            <div class="section-title">■ Color Spectrum Views</div>
+            <div class="spectrum-container" id="spectrumContainer"></div>
+
+            <div class="section-title">
+                <span>■ Color Difference Heatmap (ΔE)</span>
+                <span class="section-help">Hover to link | Top Right: Visual | Bottom Left: Numeric</span>
+            </div>
+            <div class="heatmap-container" id="heatmapContainer"></div>
+
+            <div class="section-title">■ Color Space Mapping - a* vs b* (CIELAB)</div>
+            <div class="colorspace-container" id="colorspaceContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        const colorRoots = ["gy", "ňr", "ml", "čw", "ḑr", "lw", "žl", "vm"];
+        const stems = ["a", "e", "u"];
+        const grayscale = ["axm-", "ucv-", "acv-", "ecv-", "abv-"];
+
+        const colorStems = colorRoots.map(
+            (root) => stems.map(
+                (stem) => stem + root + "-"
+            )).reduce((curr, acc) => [...curr, ...acc], []);
+
+        const tnilFullNames = {
+            "agy-": "agy", "egy-": "egy", "ugy-": "ugy",
+            "ařr-": "ařr", "eřr-": "eřr", "uřr-": "uřr",
+            "aml-": "aml", "eml-": "eml", "uml-": "uml",
+            "ačw-": "ačw", "ečw-": "ečw", "učw-": "učw",
+            "aḑr-": "aḑr", "eḑr-": "eḑr", "uḑr-": "uḑr",
+            "alw-": "alw", "elw-": "elw", "ulw-": "ulw",
+            "ažl-": "ažl", "ežl-": "ežl", "užl-": "užl",
+            "avm-": "avm", "evm-": "evm", "uvm-": "uvm",
+            "axm-": "axm", "ucv-": "ucv", "acv-": "acv", "ecv-": "ecv", "abv-": "abv"
+        };
+
+        let colors = [
+            { name: 'cyan', rgb: [0, 255, 255] },
+            { name: 'magenta', rgb: [255, 0, 255] },
+            { name: 'lime', rgb: [0, 255, 0] },
+            { name: 'gold', rgb: [255, 215, 0] },
+            { name: 'blue', rgb: [0, 0, 255] },
+            { name: 'red', rgb: [255, 0, 0] }
+        ];
+        let currentMode = 'normal';
+        let students = [];
+        let draggedStudent = null;
+        let gameMode = false;
+        let studentIdCounter = 0;
+        let hoveredCandidate = null;
+
+        const firstNames = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Avery', 'Quinn', 
+                           'Cameron', 'Skylar', 'Rowan', 'Sage', 'Phoenix', 'River', 'Dakota', 'Reese',
+                           'Parker', 'Finley', 'Charlie', 'Blake', 'Drew', 'Kai', 'Sam', 'Jaden'];
+        
+        const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis',
+                          'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Wilson', 'Anderson', 'Thomas',
+                          'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee', 'White', 'Harris'];
+
+        const CB_MATRICES = {
+            deuteranopia: [[0.625, 0.375, 0], [0.7, 0.3, 0], [0, 0.3, 0.7]],
+            protanopia: [[0.567, 0.433, 0], [0.558, 0.442, 0], [0, 0.242, 0.758]],
+            tritanopia: [[0.95, 0.05, 0], [0, 0.433, 0.567], [0, 0.475, 0.525]]
+        };
+
+        function simulateColorBlindness(rgb, type) {
+            if (type === 'normal') return rgb;
+            const matrix = CB_MATRICES[type];
+            return [
+                Math.round(matrix[0][0] * rgb[0] + matrix[0][1] * rgb[1] + matrix[0][2] * rgb[2]),
+                Math.round(matrix[1][0] * rgb[0] + matrix[1][1] * rgb[1] + matrix[1][2] * rgb[2]),
+                Math.round(matrix[2][0] * rgb[0] + matrix[2][1] * rgb[1] + matrix[2][2] * rgb[2])
+            ];
+        }
+
+        function rgbToLab(rgb) {
+            let [r, g, b] = rgb.map(v => {
+                v /= 255;
+                return v > 0.04045 ? Math.pow((v + 0.055) / 1.055, 2.4) : v / 12.92;
+            });
+            let x = (r * 0.4124 + g * 0.3576 + b * 0.1805) / 0.95047;
+            let y = (r * 0.2126 + g * 0.7152 + b * 0.0722);
+            let z = (r * 0.0193 + g * 0.1192 + b * 0.9505) / 1.08883;
+            const f = t => t > 0.008856 ? Math.pow(t, 1 / 3) : (7.787 * t) + 16 / 116;
+            [x, y, z] = [f(x), f(y), f(z)];
+            return [(116 * y) - 16, 500 * (x - y), 200 * (y - z)];
+        }
+
+        function labToRgb(lab) {
+            let y = (lab[0] + 16) / 116;
+            let x = lab[1] / 500 + y;
+            let z = y - lab[2] / 200;
+            const fInv = (t) => t > 0.206893034 ? t * t * t : (t - 16 / 116) / 7.787;
+            x = 0.95047 * fInv(x);
+            y = 1.00000 * fInv(y);
+            z = 1.08883 * fInv(z);
+            let r = x * 3.2406 + y * -1.5372 + z * -0.4986;
+            let g = x * -0.9689 + y * 1.8758 + z * 0.0415;
+            let b = x * 0.0557 + y * -0.2040 + z * 1.0570;
+            const gamma = (v) => v > 0.0031308 ? 1.055 * Math.pow(v, 1 / 2.4) - 0.055 : 12.92 * v;
+            return [
+                Math.round(gamma(r) * 255),
+                Math.round(gamma(g) * 255),
+                Math.round(gamma(b) * 255)
+            ];
+        }
+
+        function isRgbInGamut(rgb) {
+            return rgb[0] >= 0 && rgb[0] <= 255 &&
+                rgb[1] >= 0 && rgb[1] <= 255 &&
+                rgb[2] >= 0 && rgb[2] <= 255;
+        }
+
+        function deltaE(lab1, lab2) {
+            return Math.sqrt(Math.pow(lab1[0] - lab2[0], 2) + Math.pow(lab1[1] - lab2[1], 2) + Math.pow(lab1[2] - lab2[2], 2));
+        }
+
+        function rgbToHex(rgb) {
+            return '#' + rgb.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+        }
+
+        function rgbToHSL(rgb) {
+            const [r, g, b] = rgb.map(v => v / 255);
+            const min = Math.min(r, g, b);
+            const max = Math.max(r, g, b);
+            let l = (min + max) / 2;
+            let s, h;
+
+            if (max - min < 0.05) {
+                s = 0;
+                h = 0;
+            } else {
+                s = l < 0.5 ? (max - min) / (max + min) : (max - min) / (2.0 - max - min);
+                if (r === max) {
+                    h = 0.0 + (g - b) / (max - min);
+                } else if (g === max) {
+                    h = 2.0 + (b - r) / (max - min);
+                } else {
+                    h = 4.0 + (r - g) / (max - min);
+                }
+            }
+            return {
+                h: (h <= 0) * 360 + 60 * h,
+                s: s,
+                l: l
+            };
+        }
+
+        function hueToRoot(num) {
+            return colorStems[(Math.ceil(num / 15) + 1) % 24];
+        }
+
+        function rgbToTNIL(rgb) {
+            const hsl = rgbToHSL(rgb);
+            let tnilCode;
+            if (hsl.s < 0.2) {
+                tnilCode = grayscale[Math.floor(4.999 * hsl.l)];
+            } else {
+                tnilCode = hueToRoot(hsl.h);
+            }
+            return tnilFullNames[tnilCode] || tnilCode.replace('-', '');
+        }
+
+        function getTextColor(rgb) {
+            return (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) > 128 ? '#000' : '#fff';
+        }
+
+        function getWeights() {
+            const assignedStudents = students.filter(s => s.assignedTeam !== null);
+            const counts = {
+                normal: assignedStudents.filter(s => s.type === 'normal').length,
+                deuteranopia: assignedStudents.filter(s => s.type === 'deuteranopia').length,
+                protanopia: assignedStudents.filter(s => s.type === 'protanopia').length,
+                tritanopia: assignedStudents.filter(s => s.type === 'tritanopia').length
+            };
+            
+            const total = counts.normal + counts.deuteranopia + counts.protanopia + counts.tritanopia;
+            if (total === 0) {
+                return {
+                    normal: 0.92,
+                    deuteranopia: 0.05,
+                    protanopia: 0.01,
+                    tritanopia: 0.0001
+                };
+            }
+            
+            return {
+                normal: counts.normal / total,
+                deuteranopia: counts.deuteranopia / total,
+                protanopia: counts.protanopia / total,
+                tritanopia: counts.tritanopia / total
+            };
+        }
+
+        function getUIConstraints() {
+            const constraints = [];
+            
+            // UI Colors with separate min distances
+            if (document.getElementById('avoidBlack').checked) {
+                constraints.push({ rgb: [0, 0, 0], name: 'Black', minDist: parseFloat(document.getElementById('blackMinDist').value) || 40 });
+            }
+            if (document.getElementById('avoidWhite').checked) {
+                constraints.push({ rgb: [255, 255, 255], name: 'White', minDist: parseFloat(document.getElementById('whiteMinDist').value) || 40 });
+            }
+            if (document.getElementById('avoidGrey').checked) {
+                constraints.push({ rgb: [128, 128, 128], name: 'Grey', minDist: parseFloat(document.getElementById('greyMinDist').value) || 40 });
+            }
+            
+            // Problematic colors: dark red to yellow to lime spectrum (brighter medium browns included)
+            const problematicMinDist = parseFloat(document.getElementById('problematicMinDist').value) || 25;
+            if (document.getElementById('avoidProblematic').checked) {
+                // Dark red spectrum
+                constraints.push({ rgb: [94, 46, 30], name: '#5e2e1e', minDist: problematicMinDist });
+                constraints.push({ rgb: [139, 0, 0], name: 'Dark Red', minDist: problematicMinDist });
+                constraints.push({ rgb: [128, 0, 0], name: 'Maroon', minDist: problematicMinDist });
+                constraints.push({ rgb: [165, 42, 42], name: 'Brown Red', minDist: problematicMinDist });
+                // Medium browns (brighter)
+                constraints.push({ rgb: [132, 73, 8], name: '#824908', minDist: problematicMinDist });
+                constraints.push({ rgb: [160, 82, 45], name: 'Sienna', minDist: problematicMinDist });
+                constraints.push({ rgb: [184, 134, 11], name: 'Dark Goldenrod', minDist: problematicMinDist });
+                constraints.push({ rgb: [210, 105, 30], name: 'Chocolate', minDist: problematicMinDist });
+                constraints.push({ rgb: [188, 143, 0], name: 'Dark Yellow', minDist: problematicMinDist });
+                // Yellow to lime
+                constraints.push({ rgb: [204, 204, 0], name: 'Yellow', minDist: problematicMinDist });
+                constraints.push({ rgb: [173, 255, 47], name: 'Green-Yellow', minDist: problematicMinDist });
+                constraints.push({ rgb: [50, 205, 50], name: 'Lime Green', minDist: problematicMinDist });
+            }
+            
+            return { colors: constraints, minDist: 40, softPenalty: { rgb: [112, 122, 36], name: '#707a24', weight: 0.3 } };
+        }
+
+        function adjustStudents(type, delta) {
+            if (delta > 0) {
+                const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+                const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+                const newStudent = {
+                    id: `student-${Date.now()}-${studentIdCounter++}`,
+                    name: `${firstName} ${lastName}`,
+                    type: type,
+                    assignedTeam: null
+                };
+                students.push(newStudent);
+                
+                if (colors.length > 0) {
+                    const teamCounts = colors.map((_, idx) => 
+                        students.filter(s => s.assignedTeam === idx).length
+                    );
+                    const minCount = Math.min(...teamCounts);
+                    const targetTeam = teamCounts.findIndex(count => count === minCount);
+                    newStudent.assignedTeam = targetTeam;
+                }
+            } else if (delta < 0) {
+                const assignedOfType = students.filter(s => s.type === type && s.assignedTeam !== null);
+                if (assignedOfType.length > 0) {
+                    const toRemove = assignedOfType[0];
+                    students = students.filter(s => s.id !== toRemove.id);
+                } else {
+                    const unassignedOfType = students.filter(s => s.type === type && s.assignedTeam === null);
+                    if (unassignedOfType.length > 0) {
+                        const toRemove = unassignedOfType[0];
+                        students = students.filter(s => s.id !== toRemove.id);
+                    }
+                }
+            }
+            
+            renderStudentPool();
+            renderTeamAssignments();
+            updateStats();
+            
+            if (!gameMode) {
+                generateColors();
+            }
+        }
+
+        function findOptimalColorGeometric(existingColors) {
+            const weights = getWeights();
+            const uiConstraints = getUIConstraints();
+            const minDelta = parseFloat(document.getElementById('minDelta').value) || 30;
+            
+            const samples = [];
+            const step = 12;
+            
+            for (let L = 25; L <= 85; L += step) {
+                for (let a = -100; a <= 100; a += step) {
+                    for (let b = -100; b <= 100; b += step) {
+                        const rgb = labToRgb([L, a, b]);
+                        if (isRgbInGamut(rgb)) {
+                            samples.push({ rgb, lab: [L, a, b] });
+                        }
+                    }
+                }
+            }
+            
+            // Try with progressively relaxed constraints to ensure we always find a candidate
+            const relaxationLevels = [
+                { minDeltaMultiplier: 0.8, uiPenaltyMultiplier: 200 },  // Normal constraints
+                { minDeltaMultiplier: 0.6, uiPenaltyMultiplier: 100 },  // Relaxed constraints
+                { minDeltaMultiplier: 0.4, uiPenaltyMultiplier: 50 },   // More relaxed
+                { minDeltaMultiplier: 0.2, uiPenaltyMultiplier: 25 },   // Very relaxed
+                { minDeltaMultiplier: 0.0, uiPenaltyMultiplier: 10 }    // Minimal constraints
+            ];
+            
+            for (let level of relaxationLevels) {
+                let bestSample = null;
+                let bestScore = -Infinity;
+                
+                for (let sample of samples) {
+                    let tooClose = false;
+                    for (let existing of existingColors) {
+                        const dist = deltaE(sample.lab, rgbToLab(existing.rgb));
+                        if (dist < minDelta * level.minDeltaMultiplier) {
+                            tooClose = true;
+                            break;
+                        }
+                    }
+                    if (tooClose) continue;
+                    
+                    let score = 0;
+                    
+                    // Apply UI constraints with current penalty multiplier
+                    for (let ui of uiConstraints.colors) {
+                        const dist = deltaE(sample.lab, rgbToLab(ui.rgb));
+                        const threshold = ui.minDist || uiConstraints.minDist;
+                        if (dist < threshold) {
+                            score -= (threshold - dist) * level.uiPenaltyMultiplier;
+                        }
+                    }
+                    
+                    const modes = ['normal', 'deuteranopia', 'protanopia', 'tritanopia'];
+                    let totalWeightedDist = 0;
+                    
+                    for (let mode of modes) {
+                        const w = weights[mode];
+                        if (w <= 0) continue;
+                        
+                        const simRgb = simulateColorBlindness(sample.rgb, mode);
+                        const simLab = rgbToLab(simRgb);
+                        let minDist = Infinity;
+                        
+                        for (let existing of existingColors) {
+                            const existingSimRgb = simulateColorBlindness(existing.rgb, mode);
+                            const existingSimLab = rgbToLab(existingSimRgb);
+                            const dist = deltaE(simLab, existingSimLab);
+                            minDist = Math.min(minDist, dist);
+                        }
+                        
+                        let modeScore = minDist * w;
+                        if (minDist < minDelta) {
+                            modeScore -= (minDelta - minDist) * 5 * w;
+                        }
+                        totalWeightedDist += modeScore;
+                    }
+                    
+                    score += totalWeightedDist;
+                    
+                    // Soft penalty for #707a24 - probability-weighted to discourage but not forbid
+                    if (uiConstraints.softPenalty) {
+                        const softLab = rgbToLab(uiConstraints.softPenalty.rgb);
+                        const softDist = deltaE(sample.lab, softLab);
+                        // Soft penalty: decreases with distance, weight controls strength
+                        const softPenalty = Math.max(0, (30 - softDist) * uiConstraints.softPenalty.weight * 50);
+                        score -= softPenalty;
+                    }
+                    
+                    const tnilBonus = parseFloat(document.getElementById('tnilUniquenessBonus').value) || 100;
+                    const tnilName = rgbToTNIL(sample.rgb);
+                    const existingTnilNames = existingColors.map(c => c.name || rgbToTNIL(c.rgb));
+                    const currentCount = existingTnilNames.filter(n => n === tnilName).length;
+                    const totalColors = existingColors.length;
+                    
+                    if (totalColors > 0) {
+                        const frequency = currentCount / totalColors;
+                        score += tnilBonus * (1 - frequency);
+                    } else {
+                        score += tnilBonus;
+                    }
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestSample = sample;
+                    }
+                }
+                
+                // If we found a candidate at this relaxation level, return it
+                if (bestSample) {
+                    return bestSample;
+                }
+            }
+            
+            // Fallback: if no candidate found even with minimal constraints, return a random valid color
+            const validSamples = samples.filter(sample => {
+                for (let existing of existingColors) {
+                    const dist = deltaE(sample.lab, rgbToLab(existing.rgb));
+                    if (dist < 5) return false; // Minimum 5 deltaE distance
+                }
+                return true;
+            });
+            
+            if (validSamples.length > 0) {
+                return validSamples[Math.floor(Math.random() * validSamples.length)];
+            }
+            
+            // Ultimate fallback: return any sample (should never happen)
+            return samples[Math.floor(Math.random() * samples.length)];
+        }
+
+        function optimizeTeamGlobal(fixedColors, count) {
+            const weights = getWeights();
+            const uiConstraints = getUIConstraints();
+            const minDelta = parseFloat(document.getElementById('minDelta').value) || 30;
+            
+            const candidates = [];
+            const step = 12;
+            for (let L = 25; L <= 85; L += step) {
+                for (let a = -100; a <= 100; a += step) {
+                    for (let b = -100; b <= 100; b += step) {
+                        const rgb = labToRgb([L, a, b]);
+                        if (isRgbInGamut(rgb)) {
+                            candidates.push({ rgb, lab: [L, a, b] });
+                        }
+                    }
+                }
+            }
+            
+            const selectedSet = [];
+            const currentPalette = [...fixedColors.map(c => ({ rgb: c.rgb }))];
+            
+            for (let i = 0; i < count; i++) {
+                let bestCandidate = null;
+                let bestScore = -Infinity;
+                
+                for (let candidate of candidates) {
+                    if (selectedSet.some(s => deltaE(s.lab, candidate.lab) < 1)) continue;
+                    
+                    let tooClose = false;
+                    for (let fixed of fixedColors) {
+                        if (deltaE(candidate.lab, rgbToLab(fixed.rgb)) < minDelta * 0.8) {
+                            tooClose = true;
+                            break;
+                        }
+                    }
+                    if (tooClose) continue;
+                    
+                    let violatesConstraints = false;
+                    for (let ui of uiConstraints.colors) {
+                        const dist = deltaE(candidate.lab, rgbToLab(ui.rgb));
+                        const threshold = ui.minDist || uiConstraints.minDist;
+                        if (dist < threshold) {
+                            violatesConstraints = true;
+                            break;
+                        }
+                    }
+                    if (violatesConstraints) continue;
+                    
+                    const testSet = [...currentPalette, candidate, ...selectedSet];
+                    const score = scoreColorSet(testSet, weights, minDelta);
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestCandidate = candidate;
+                    }
+                }
+                
+                if (bestCandidate) {
+                    selectedSet.push(bestCandidate);
+                }
+            }
+            
+            return selectedSet.map(c => ({
+                rgb: c.rgb,
+                name: rgbToTNIL(c.rgb),
+                isNew: true
+            }));
+        }
+
+        function scoreColorSet(colorSet, weights, minDelta) {
+            let minPairwiseScore = Infinity;
+            
+            for (let i = 0; i < colorSet.length; i++) {
+                for (let j = i + 1; j < colorSet.length; j++) {
+                    let pairScore = 0;
+                    const modes = ['normal', 'deuteranopia', 'protanopia', 'tritanopia'];
+                    
+                    for (let mode of modes) {
+                        const w = weights[mode];
+                        if (w <= 0) continue;
+                        
+                        const rgb1 = simulateColorBlindness(colorSet[i].rgb, mode);
+                        const rgb2 = simulateColorBlindness(colorSet[j].rgb, mode);
+                        const lab1 = rgbToLab(rgb1);
+                        const lab2 = rgbToLab(rgb2);
+                        const dist = deltaE(lab1, lab2);
+                        
+                        let modeScore = dist * w;
+                        if (dist < minDelta) {
+                            modeScore -= (minDelta - dist) * 5 * w;
+                        }
+                        pairScore += modeScore;
+                    }
+                    
+                    minPairwiseScore = Math.min(minPairwiseScore, pairScore);
+                }
+            }
+            
+            // Apply soft penalty for #707a24 to each color in the set
+            const uiConstraints = getUIConstraints();
+            if (uiConstraints.softPenalty) {
+                const softLab = rgbToLab(uiConstraints.softPenalty.rgb);
+                for (let color of colorSet) {
+                    const softDist = deltaE(rgbToLab(color.rgb), softLab);
+                    const softPenalty = Math.max(0, (30 - softDist) * uiConstraints.softPenalty.weight * 50);
+                    minPairwiseScore -= softPenalty;
+                }
+            }
+            
+            return minPairwiseScore;
+        }
+
+        function generateColors() {
+            const teamSize = parseInt(document.getElementById('teamSize').value);
+            
+            const baseColors = [
+                { name: 'cyan', rgb: [0, 255, 255] },
+                { name: 'magenta', rgb: [255, 0, 255] },
+                { name: 'lime', rgb: [0, 255, 0] },
+                { name: 'gold', rgb: [255, 215, 0] },
+                { name: 'blue', rgb: [0, 0, 255] },
+                { name: 'red', rgb: [255, 0, 0] }
+            ];
+
+            if (teamSize <= 6) {
+                colors = baseColors.slice(0, teamSize);
+            } else {
+                const additionalColors = optimizeTeamGlobal(baseColors, teamSize - 6);
+                colors = [...baseColors, ...additionalColors];
+            }
+
+            updateAll();
+        }
+
+        function randomizeStudents() {
+            students = [];
+            const count = 20 + Math.floor(Math.random() * 10);
+            
+            for (let i = 0; i < count; i++) {
+                const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+                const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+                
+                const rand = Math.random();
+                let type;
+                if (rand < 0.85) type = 'normal';
+                else if (rand < 0.93) type = 'deuteranopia';
+                else if (rand < 0.98) type = 'protanopia';
+                else type = 'tritanopia';
+                
+                students.push({
+                    id: `student-${Date.now()}-${studentIdCounter++}`,
+                    name: `${firstName} ${lastName}`,
+                    type: type,
+                    assignedTeam: null
+                });
+            }
+            
+            renderStudentPool();
+            renderTeamAssignments();
+            updateStats();
+            generateColors();
+        }
+
+        function autoAssignStudents() {
+            const unassigned = students.filter(s => s.assignedTeam === null);
+            if (unassigned.length === 0 || colors.length === 0) return;
+            
+            unassigned.forEach((student, index) => {
+                student.assignedTeam = index % colors.length;
+            });
+            
+            renderStudentPool();
+            renderTeamAssignments();
+            updateStats();
+            
+            if (!gameMode) {
+                generateColors();
+            }
+        }
+
+        function clearAssignments() {
+            students.forEach(s => s.assignedTeam = null);
+            renderStudentPool();
+            renderTeamAssignments();
+            updateStats();
+            
+            if (!gameMode) {
+                generateColors();
+            }
+        }
+
+        function removeStudent(studentId) {
+            students = students.filter(s => s.id !== studentId);
+            renderStudentPool();
+            renderTeamAssignments();
+            updateStats();
+            
+            if (!gameMode) {
+                generateColors();
+            }
+        }
+
+        function renderStudentPool() {
+            const pool = document.getElementById('studentPool');
+            pool.innerHTML = '';
+            
+            const unassigned = students.filter(s => s.assignedTeam === null);
+            
+            if (students.length === 0) {
+                pool.innerHTML = '<div style="color:#666;text-align:center;padding:12px;font-size:9px;">Click "New Random Students"</div>';
+                return;
+            }
+            
+            if (unassigned.length === 0) {
+                pool.innerHTML = '<div style="color:#0ff;text-align:center;padding:12px;font-size:9px;">✓ All assigned!</div>';
+                return;
+            }
+            
+            unassigned.forEach(student => {
+                const el = document.createElement('div');
+                el.className = 'student';
+                el.draggable = true;
+                el.dataset.studentId = student.id;
+                
+                el.innerHTML = `
+                    <span class="student-name">${student.name}</span>
+                    <span class="student-type ${student.type}">${student.type === 'normal' ? 'N' : student.type.substring(0, 1).toUpperCase()}</span>
+                    <button class="remove-student" onclick="removeStudent('${student.id}')">✕</button>
+                `;
+                
+                el.addEventListener('dragstart', (e) => {
+                    draggedStudent = student;
+                    el.classList.add('dragging');
+                });
+                
+                el.addEventListener('dragend', (e) => {
+                    el.classList.remove('dragging');
+                    draggedStudent = null;
+                });
+                
+                pool.appendChild(el);
+            });
+        }
+
+        function renderTeamAssignments() {
+            const container = document.getElementById('teamAssignments');
+            container.innerHTML = '';
+            
+            colors.forEach((color, index) => {
+                const slot = document.createElement('div');
+                slot.className = 'team-slot';
+                
+                const assigned = students.filter(s => s.assignedTeam === index);
+                
+                slot.innerHTML = `
+                    <div class="team-header">
+                        <div class="team-color-swatch" style="background: ${rgbToHex(color.rgb)}"></div>
+                        <div class="team-info">
+                            <div class="team-name">${index + 1}. ${color.name}</div>
+                            <div class="team-hex">${rgbToHex(color.rgb)}</div>
+                        </div>
+                    </div>
+                    <div class="team-students" id="team-${index}"></div>
+                `;
+                
+                slot.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    slot.classList.add('drag-over');
+                });
+                
+                slot.addEventListener('dragleave', () => {
+                    slot.classList.remove('drag-over');
+                });
+                
+                slot.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    slot.classList.remove('drag-over');
+                    
+                    if (draggedStudent) {
+                        draggedStudent.assignedTeam = index;
+                        renderStudentPool();
+                        renderTeamAssignments();
+                        updateStats();
+                        
+                        if (!gameMode) {
+                            generateColors();
+                        }
+                    }
+                });
+                
+                container.appendChild(slot);
+                
+                const teamContainer = document.getElementById(`team-${index}`);
+                assigned.forEach(student => {
+                    const el = document.createElement('div');
+                    el.className = 'student';
+                    el.style.cursor = 'pointer';
+                    el.innerHTML = `
+                        <span class="student-name">${student.name}</span>
+                        <span class="student-type ${student.type}">${student.type === 'normal' ? 'N' : student.type.substring(0, 1).toUpperCase()}</span>
+                    `;
+                    el.onclick = () => {
+                        student.assignedTeam = null;
+                        renderStudentPool();
+                        renderTeamAssignments();
+                        updateStats();
+                        
+                        if (!gameMode) {
+                            generateColors();
+                        }
+                    };
+                    teamContainer.appendChild(el);
+                });
+            });
+        }
+
+        function updateStats() {
+            const assignedStudents = students.filter(s => s.assignedTeam !== null);
+            const counts = {
+                normal: assignedStudents.filter(s => s.type === 'normal').length,
+                deuteranopia: assignedStudents.filter(s => s.type === 'deuteranopia').length,
+                protanopia: assignedStudents.filter(s => s.type === 'protanopia').length,
+                tritanopia: assignedStudents.filter(s => s.type === 'tritanopia').length
+            };
+            
+            const totalAssigned = assignedStudents.length;
+            const totalUnassigned = students.length - totalAssigned;
+            
+            document.getElementById('totalCount').textContent = students.length;
+            document.getElementById('assignedCount').textContent = totalAssigned;
+            document.getElementById('unassignedCount').textContent = totalUnassigned;
+            
+            document.getElementById('sidebarNormal').textContent = counts.normal;
+            document.getElementById('sidebarDeut').textContent = counts.deuteranopia;
+            document.getElementById('sidebarProt').textContent = counts.protanopia;
+            document.getElementById('sidebarTrit').textContent = counts.tritanopia;
+            document.getElementById('sidebarTotal').textContent = totalAssigned;
+            
+            if (totalAssigned > 0) {
+                document.getElementById('sidebarNormalPct').textContent = `${((counts.normal / totalAssigned) * 100).toFixed(1)}%`;
+                document.getElementById('sidebarDeutPct').textContent = `${((counts.deuteranopia / totalAssigned) * 100).toFixed(1)}%`;
+                document.getElementById('sidebarProtPct').textContent = `${((counts.protanopia / totalAssigned) * 100).toFixed(1)}%`;
+                document.getElementById('sidebarTritPct').textContent = `${((counts.tritanopia / totalAssigned) * 100).toFixed(1)}%`;
+            } else {
+                document.getElementById('sidebarNormalPct').textContent = '0%';
+                document.getElementById('sidebarDeutPct').textContent = '0%';
+                document.getElementById('sidebarProtPct').textContent = '0%';
+                document.getElementById('sidebarTritPct').textContent = '0%';
+            }
+        }
+
+        function renderHeatmap() {
+            const container = document.getElementById('heatmapContainer');
+            container.innerHTML = '';
+            const n = colors.length;
+            const grid = document.createElement('div');
+            grid.className = 'heatmap-grid';
+            grid.style.gridTemplateColumns = `40px repeat(${n}, 1fr)`;
+
+            grid.appendChild(document.createElement('div'));
+            colors.forEach(color => {
+                const label = document.createElement('div');
+                label.className = 'heatmap-label';
+                label.textContent = color.name.substring(0, 3);
+                label.style.color = rgbToHex(color.rgb);
+                grid.appendChild(label);
+            });
+
+            colors.forEach((rowColor, i) => {
+                const rowLabel = document.createElement('div');
+                rowLabel.className = 'heatmap-label';
+                rowLabel.textContent = rowColor.name.substring(0, 3);
+                rowLabel.style.color = rgbToHex(rowColor.rgb);
+                grid.appendChild(rowLabel);
+                
+                colors.forEach((colColor, j) => {
+                    const cell = document.createElement('div');
+                    cell.className = 'heatmap-cell';
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    
+                    if (i === j) {
+                        const cbRgb = simulateColorBlindness(rowColor.rgb, currentMode);
+                        cell.style.background = rgbToHex(cbRgb);
+                    } else {
+                        const rgb1 = simulateColorBlindness(rowColor.rgb, currentMode);
+                        const rgb2 = simulateColorBlindness(colColor.rgb, currentMode);
+                        const lab1 = rgbToLab(rgb1);
+                        const lab2 = rgbToLab(rgb2);
+                        const diff = deltaE(lab1, lab2);
+                        
+                        if (j > i) {
+                            cell.style.background = `linear-gradient(135deg, ${rgbToHex(rgb1)} 50%, ${rgbToHex(rgb2)} 50%)`;
+                            cell.style.color = diff < 15 ? '#f44' : (diff > 40 ? '#4f4' : '#ff4');
+                            cell.style.textShadow = '0 0 2px #000';
+                            cell.textContent = diff.toFixed(0);
+                        } else {
+                            const hue = Math.max(0, Math.min(120, diff * 1.5));
+                            cell.style.background = `hsl(${hue}, 80%, 40%)`;
+                            cell.style.color = '#fff';
+                            cell.textContent = diff.toFixed(0);
+                        }
+                    }
+                    cell.onmouseover = () => highlightMirror(i, j, true, cell, colors);
+                    cell.onmouseout = () => highlightMirror(i, j, false, cell, colors);
+                    grid.appendChild(cell);
+                });
+            });
+            container.appendChild(grid);
+        }
+
+        function highlightMirror(row, col, active, sourceCell, activeColors) {
+            const cells = document.querySelectorAll('.heatmap-cell');
+            const n = Math.sqrt(cells.length);
+            const mirrorIdx = col * n + row;
+            const currentIdx = row * n + col;
+            
+            if (active) {
+                // Get the colorblind-simulated colors for proper border
+                const rowColor = activeColors[row];
+                const colColor = activeColors[col];
+                const rgb1 = simulateColorBlindness(rowColor.rgb, currentMode);
+                const rgb2 = simulateColorBlindness(colColor.rgb, currentMode);
+                
+                // Current cell
+                cells[currentIdx].style.borderColor = rgbToHex(rgb1);
+                cells[currentIdx].style.borderWidth = '3px';
+                cells[currentIdx].style.borderStyle = 'solid';
+                cells[currentIdx].style.zIndex = '10';
+                cells[currentIdx].style.transform = 'scale(1.05)';
+                
+                // Mirror cell
+                cells[mirrorIdx].style.borderColor = rgbToHex(rgb2);
+                cells[mirrorIdx].style.borderWidth = '3px';
+                cells[mirrorIdx].style.borderStyle = 'solid';
+                cells[mirrorIdx].style.zIndex = '10';
+                cells[mirrorIdx].style.transform = 'scale(1.05)';
+            } else {
+                cells[currentIdx].style.border = 'none';
+                cells[currentIdx].style.zIndex = 'auto';
+                cells[currentIdx].style.transform = 'scale(1)';
+                cells[mirrorIdx].style.border = 'none';
+                cells[mirrorIdx].style.zIndex = 'auto';
+                cells[mirrorIdx].style.transform = 'scale(1)';
+            }
+        }
+
+        function renderSpectrum() {
+            const container = document.getElementById('spectrumContainer');
+            container.innerHTML = '';
+            const modes = ['normal', 'deuteranopia', 'protanopia', 'tritanopia'];
+            const titles = ['Normal', 'Deuteranopia', 'Protanopia', 'Tritanopia'];
+            
+            modes.forEach((mode, idx) => {
+                const panel = document.createElement('div');
+                panel.className = 'spectrum-panel';
+                panel.innerHTML = `<div class="panel-title">${titles[idx]}</div>`;
+                const grid = document.createElement('div');
+                grid.className = 'spectrum-grid';
+                
+                const cols = Math.ceil(Math.sqrt(colors.length));
+                grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+                
+                colors.forEach(color => {
+                    const rgb = simulateColorBlindness(color.rgb, mode);
+                    const cell = document.createElement('div');
+                    cell.className = 'spectrum-cell';
+                    cell.style.background = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+                    cell.style.color = getTextColor(rgb);
+                    cell.textContent = color.name.substring(0, 3);
+                    grid.appendChild(cell);
+                });
+                panel.appendChild(grid);
+                container.appendChild(panel);
+            });
+        }
+
+        function renderColorSpace() {
+            const container = document.getElementById('colorspaceContainer');
+            container.innerHTML = '';
+            const modes = ['normal', currentMode];
+            const titles = ['Normal Vision', `${currentMode.charAt(0).toUpperCase() + currentMode.slice(1)}`];
+
+            modes.forEach((mode, idx) => {
+                const panel = document.createElement('div');
+                panel.className = 'colorspace-panel';
+                const title = document.createElement('div');
+                title.className = 'panel-title';
+                title.textContent = titles[idx];
+                panel.appendChild(title);
+                
+                const canvas = document.createElement('canvas');
+                canvas.className = 'colorspace-canvas';
+                canvas.width = 500;
+                canvas.height = 333;
+                panel.appendChild(canvas);
+                
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 500, 333);
+
+                drawVoronoiMap(ctx, mode, colors);
+
+                ctx.strokeStyle = '#444';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(250, 0); ctx.lineTo(250, 333);
+                ctx.moveTo(0, 166); ctx.lineTo(500, 166);
+                ctx.stroke();
+
+                colors.forEach(c => plotDot(ctx, c.rgb, c.name, mode, true));
+
+                ctx.font = '7px monospace';
+                
+                colorStems.forEach((stem, idx) => {
+                    const hue = (idx * 15) % 360;
+                    const saturation = 0.85;
+                    const lightness = 0.6;
+                    
+                    const h = hue / 60;
+                    const c = (1 - Math.abs(2 * lightness - 1)) * saturation;
+                    const x_val = c * (1 - Math.abs(h % 2 - 1));
+                    const m = lightness - c / 2;
+                    
+                    let r, g, b;
+                    if (h < 1) { r = c; g = x_val; b = 0; }
+                    else if (h < 2) { r = x_val; g = c; b = 0; }
+                    else if (h < 3) { r = 0; g = c; b = x_val; }
+                    else if (h < 4) { r = 0; g = x_val; b = c; }
+                    else if (h < 5) { r = x_val; g = 0; b = c; }
+                    else { r = c; g = 0; b = x_val; }
+                    
+                    const rgb = [(r + m) * 255, (g + m) * 255, (b + m) * 255];
+                    const simRgb = simulateColorBlindness(rgb, mode);
+                    const lab = rgbToLab(simRgb);
+                    const px = 250 + lab[1] * 2;
+                    const py = 166 - lab[2] * 2;
+                    
+                    ctx.fillStyle = `rgb(${simRgb[0]}, ${simRgb[1]}, ${simRgb[2]})`;
+                    ctx.beginPath();
+                    ctx.arc(px, py, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#555';
+                    ctx.fillText(stem.replace('-', ''), px + 4, py + 2);
+                });
+                
+                grayscale.forEach((gray, idx) => {
+                    const lightness = idx / 4.999;
+                    const grayVal = lightness * 255;
+                    const rgb = [grayVal, grayVal, grayVal];
+                    const simRgb = simulateColorBlindness(rgb, mode);
+                    const lab = rgbToLab(simRgb);
+                    const px = 250 + lab[1] * 2;
+                    const py = 166 - lab[2] * 2;
+                    
+                    ctx.fillStyle = `rgb(${simRgb[0]}, ${simRgb[1]}, ${simRgb[2]})`;
+                    ctx.fillRect(px - 2, py - 2, 4, 4);
+                    ctx.strokeStyle = '#555';
+                    ctx.strokeRect(px - 2, py - 2, 4, 4);
+                    
+                    ctx.fillStyle = '#555';
+                    ctx.fillText(gray.replace('-', ''), px + 4, py + 2);
+                });
+
+                panel.appendChild(document.createElement('div')).innerHTML =
+                    '<div class="info-text">Background: True Gamut (L=60) | Lines: Voronoi | Gray text: All 29 TNIL roots (24 chromatic + 5 grayscale)</div>';
+                container.appendChild(panel);
+            });
+        }
+
+        function drawVoronoiMap(ctx, mode, activeColors) {
+            const w = 500;
+            const h = 333;
+            const imgData = ctx.createImageData(w, h);
+            const data = imgData.data;
+            const showGamut = document.getElementById('showGamut').checked;
+
+            const points = activeColors.map(c => {
+                const sim = simulateColorBlindness(c.rgb, mode);
+                const lab = rgbToLab(sim);
+                return {
+                    l: lab[0], a: lab[1], b: lab[2],
+                    rgb: sim,
+                    isNew: c.isNew || c.name.startsWith('+') || c.name === 'Candidate'
+                };
+            });
+
+            function getClosestIdx(a, b) {
+                let minDist = Infinity;
+                let idx = -1;
+                const sliceL = 60;
+                for (let i = 0; i < points.length; i++) {
+                    const d = (sliceL - points[i].l) ** 2 + (a - points[i].a) ** 2 + (b - points[i].b) ** 2;
+                    if (d < minDist) { minDist = d; idx = i; }
+                }
+                return idx;
+            }
+
+            // First pass: fill everything at L=60 slice
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    const a = (x - 250) / 2;
+                    const b = (166 - y) / 2;
+                    const idx = (y * w + x) * 4;
+
+                    // Calculate the color at this Lab position (L=60 slice)
+                    const trueRgb = labToRgb([60, a, b]);
+                    
+                    // Check if in gamut - this creates the curved gamut boundary
+                    if (!isRgbInGamut(trueRgb)) {
+                        data[idx + 3] = 0; // transparent outside gamut
+                        continue;
+                    }
+
+                    // Determine which Voronoi region this pixel belongs to
+                    if (points.length > 0) {
+                        const closestIdx = getClosestIdx(a, b);
+                        const owner = points[closestIdx];
+
+                        if (owner.isNew) {
+                            // NEW colors: show gradient
+                            if (showGamut) {
+                                data[idx] = trueRgb[0];
+                                data[idx + 1] = trueRgb[1];
+                                data[idx + 2] = trueRgb[2];
+                                data[idx + 3] = 255;
+                            } else {
+                                data[idx] = 0;
+                                data[idx + 1] = 0;
+                                data[idx + 2] = 0;
+                                data[idx + 3] = 255;
+                            }
+                        } else {
+                            // EXISTING colors: black fill
+                            data[idx] = 0;
+                            data[idx + 1] = 0;
+                            data[idx + 2] = 0;
+                            data[idx + 3] = 255;
+                        }
+                    } else {
+                        // No points: just show gradient
+                        if (showGamut) {
+                            data[idx] = trueRgb[0];
+                            data[idx + 1] = trueRgb[1];
+                            data[idx + 2] = trueRgb[2];
+                            data[idx + 3] = 255;
+                        } else {
+                            data[idx] = 0;
+                            data[idx + 1] = 0;
+                            data[idx + 2] = 0;
+                            data[idx + 3] = 255;
+                        }
+                    }
+                }
+            }
+
+            // Second pass: draw Voronoi boundaries
+            if (points.length > 0) {
+                for (let y = 0; y < h - 1; y++) {
+                    for (let x = 0; x < w - 1; x++) {
+                        const a = (x - 250) / 2;
+                        const b = (166 - y) / 2;
+                        const idx = (y * w + x) * 4;
+
+                        // Skip if transparent
+                        if (data[idx + 3] === 0) continue;
+
+                        const closestIdx = getClosestIdx(a, b);
+                        const right = getClosestIdx(a + 0.5, b);
+                        const down = getClosestIdx(a, b - 0.5);
+
+                        // Draw boundary if neighbors differ
+                        if (closestIdx !== right || closestIdx !== down) {
+                            data[idx] = 0;
+                            data[idx + 1] = 0;
+                            data[idx + 2] = 0;
+                            data[idx + 3] = 255;
+                        }
+                    }
+                }
+            }
+
+            ctx.putImageData(imgData, 0, 0);
+            drawGamutWireframe(ctx, mode);
+        }
+
+        function drawGamutWireframe(ctx, mode) {
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            const corners = [[0, 0, 0], [255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0], [255, 0, 255], [0, 255, 255], [255, 255, 255]];
+            const edges = [[0, 1], [0, 2], [0, 3], [1, 4], [1, 5], [2, 4], [2, 6], [3, 5], [3, 6], [4, 7], [5, 7], [6, 7]];
+            ctx.beginPath();
+            edges.forEach(edge => {
+                const start = corners[edge[0]];
+                const end = corners[edge[1]];
+                for (let i = 0; i <= 10; i++) {
+                    const t = i / 10;
+                    const r = start[0] + (end[0] - start[0]) * t;
+                    const g = start[1] + (end[1] - start[1]) * t;
+                    const b = start[2] + (end[2] - start[2]) * t;
+                    const sim = simulateColorBlindness([r, g, b], mode);
+                    const lab = rgbToLab(sim);
+                    const x = 250 + lab[1] * 2;
+                    const y = 166 - lab[2] * 2;
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                }
+            });
+            ctx.stroke();
+        }
+
+        function plotDot(ctx, rgb, label, mode, isBase, isStack = false, isPlan = false) {
+            const sim = simulateColorBlindness(rgb, mode);
+            const lab = rgbToLab(sim);
+            const x = 250 + lab[1] * 2;
+            const y = 166 - lab[2] * 2;
+            ctx.fillStyle = `rgb(${sim[0]}, ${sim[1]}, ${sim[2]})`;
+            ctx.beginPath();
+            ctx.arc(x, y, isStack || isPlan ? 5 : 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            if (isBase) {
+                ctx.fillStyle = '#fff';
+                ctx.font = '9px monospace';
+                ctx.fillText(label.replace('+', ''), x + 8, y + 3);
+                
+                const lValue = `L${Math.round(lab[0])}`;
+                ctx.fillStyle = '#000';
+                ctx.fillRect(x + 8, y + 6, 22, 10);
+                ctx.strokeStyle = '#666';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x + 8, y + 6, 22, 10);
+                ctx.fillStyle = '#888';
+                ctx.font = '8px monospace';
+                ctx.fillText(lValue, x + 9, y + 14);
+            }
+        }
+
+        function renderRecommendations() {
+            const grid = document.getElementById('recommendationsGrid');
+            grid.innerHTML = '<div style="color:#888;grid-column:1/-1;text-align:center;padding:20px">Computing optimal next color...</div>';
+
+            setTimeout(() => {
+                const optimalCandidate = findOptimalColorGeometric(colors);
+                
+                if (!optimalCandidate) {
+                    grid.innerHTML = '<div style="color:#f88;grid-column:1/-1;text-align:center;padding:20px">Could not find valid candidates</div>';
+                    return;
+                }
+                
+                const card = document.createElement('div');
+                card.className = 'recommendation-card';
+                card.style.border = '2px solid #0ff';
+                card.style.background = '#1a2a2a';
+                
+                card.onclick = () => {
+                    const newColor = { 
+                        name: rgbToTNIL(optimalCandidate.rgb), 
+                        rgb: optimalCandidate.rgb 
+                    };
+                    colors.push(newColor);
+                    updateAll();
+                };
+
+                const rank = document.createElement('div');
+                rank.style.position = 'absolute';
+                rank.style.top = '4px';
+                rank.style.left = '4px';
+                rank.style.background = '#0ff';
+                rank.style.color = '#000';
+                rank.style.padding = '2px 6px';
+                rank.style.fontSize = '8px';
+                rank.style.fontWeight = 'bold';
+                rank.textContent = '#1';
+
+                const preview = document.createElement('div');
+                preview.className = 'rec-color-preview';
+                preview.style.background = `rgb(${optimalCandidate.rgb[0]}, ${optimalCandidate.rgb[1]}, ${optimalCandidate.rgb[2]})`;
+                preview.style.position = 'relative';
+                preview.appendChild(rank);
+                card.appendChild(preview);
+
+                const hex = document.createElement('div');
+                hex.style.fontSize = '9px';
+                hex.style.color = '#0ff';
+                hex.style.fontWeight = 'bold';
+                hex.textContent = rgbToHex(optimalCandidate.rgb);
+                card.appendChild(hex);
+
+                const tnilName = document.createElement('div');
+                tnilName.style.fontSize = '10px';
+                tnilName.style.color = '#0ff';
+                tnilName.style.fontWeight = 'bold';
+                tnilName.style.marginTop = '3px';
+                tnilName.textContent = rgbToTNIL(optimalCandidate.rgb);
+                card.appendChild(tnilName);
+
+                const btnAdd = document.createElement('button');
+                btnAdd.className = 'btn primary';
+                btnAdd.innerHTML = '★ Add Best';
+                btnAdd.style.width = '100%';
+                btnAdd.style.marginTop = '5px';
+                btnAdd.style.fontSize = '9px';
+                btnAdd.onclick = (e) => { 
+                    e.stopPropagation(); 
+                    const newColor = { 
+                        name: rgbToTNIL(optimalCandidate.rgb), 
+                        rgb: optimalCandidate.rgb 
+                    };
+                    colors.push(newColor);
+                    updateAll(); 
+                };
+                card.appendChild(btnAdd);
+                
+                grid.innerHTML = '';
+                grid.appendChild(card);
+            }, 50);
+        }
+
+        function updateAll() {
+            renderHeatmap();
+            renderSpectrum();
+            renderColorSpace();
+            renderTeamAssignments();
+            if (gameMode) {
+                renderRecommendations();
+            }
+        }
+
+        document.querySelectorAll('.toggle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.toggle').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentMode = btn.dataset.mode;
+                updateAll();
+            });
+        });
+
+        document.getElementById('teamSize').addEventListener('input', (e) => {
+            document.getElementById('teamSizeVal').textContent = e.target.value;
+            if (!gameMode) {
+                generateColors();
+            }
+        });
+
+        document.getElementById('startGameBtn').addEventListener('click', () => {
+            gameMode = true;
+            document.getElementById('startGameBtn').style.display = 'none';
+            document.getElementById('stopGameBtn').style.display = 'inline-block';
+            document.getElementById('addTeamColorBtn').disabled = false;
+            document.getElementById('teamSize').disabled = true;
+            renderRecommendations();
+        });
+
+        document.getElementById('stopGameBtn').addEventListener('click', () => {
+            gameMode = false;
+            document.getElementById('startGameBtn').style.display = 'inline-block';
+            document.getElementById('stopGameBtn').style.display = 'none';
+            document.getElementById('addTeamColorBtn').disabled = true;
+            document.getElementById('teamSize').disabled = false;
+            document.getElementById('recommendationsGrid').innerHTML = '';
+        });
+
+        document.getElementById('resetGameBtn').addEventListener('click', () => {
+            const teamSize = parseInt(document.getElementById('teamSize').value);
+            const fixedColors = [
+                { name: 'cyan', rgb: [0, 255, 255] },
+                { name: 'magenta', rgb: [255, 0, 255] },
+                { name: 'lime', rgb: [0, 255, 0] },
+                { name: 'gold', rgb: [255, 215, 0] },
+                { name: 'blue', rgb: [0, 0, 255] },
+                { name: 'red', rgb: [255, 0, 0] }
+            ];
+            
+            if (teamSize <= 6) {
+                colors = fixedColors.slice(0, teamSize);
+            } else {
+                const optimalAdditions = optimizeTeamGlobal(fixedColors, teamSize - 6);
+                colors = [...fixedColors, ...optimalAdditions];
+            }
+            
+            updateAll();
+        });
+
+        document.getElementById('addTeamColorBtn').addEventListener('click', () => {
+            if (gameMode) {
+                const optimalCandidate = findOptimalColorGeometric(colors);
+                if (optimalCandidate) {
+                    const optimalColor = {
+                        name: rgbToTNIL(optimalCandidate.rgb),
+                        rgb: optimalCandidate.rgb
+                    };
+                    colors.push(optimalColor);
+                    updateAll();
+                }
+            }
+        });
+
+        ['avoidBlack', 'avoidWhite', 'avoidGrey', 'avoidProblematic'].forEach(id => {
+            document.getElementById(id).addEventListener('change', () => {
+                if (!gameMode) {
+                    generateColors();
+                }
+            });
+        });
+
+        ['blackMinDist', 'whiteMinDist', 'greyMinDist', 'problematicMinDist', 'minDelta', 'tnilUniquenessBonus'].forEach(id => {
+            document.getElementById(id).addEventListener('change', () => {
+                if (!gameMode) {
+                    generateColors();
+                }
+            });
+            document.getElementById(id).addEventListener('input', () => {
+                if (!gameMode) {
+                    generateColors();
+                }
+            });
+        });
+
+        document.getElementById('showGamut').addEventListener('change', () => {
+            renderColorSpace();
+        });
+
+        generateColors();
+        setTimeout(() => randomizeStudents(), 100);
+    </script>
+</body>
+</html>
