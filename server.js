@@ -207,6 +207,15 @@ class ConstellationRoom extends Room {
             }
         });
 
+        this.onMessage('update_name', (client, data) => {
+            const player = this.state.players.get(client.sessionId);
+            if (player && data.name) {
+                player.name = data.name.trim().substring(0, 20); // Limit to 20 characters
+                this.updateAdminRoom();
+                console.log(`Player ${client.sessionId} updated name to: ${player.name}`);
+            }
+        });
+
 
 
 

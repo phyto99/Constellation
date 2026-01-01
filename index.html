@@ -414,6 +414,48 @@
         .timer-container+.ui {
             margin-top: 5px
         }
+
+        .player-name-input {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1004;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #333;
+        }
+
+        .player-name-input label {
+            display: block;
+            color: white;
+            font-size: 12px;
+            margin-bottom: 5px;
+            font-family: Arial, sans-serif;
+        }
+
+        .player-name-input input {
+            width: 200px;
+            padding: 6px 8px;
+            border: 1px solid #555;
+            background: #222;
+            color: white;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: Arial, sans-serif;
+        }
+
+        .player-name-input input:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+            transform: scale(1.02);
+            transition: all 0.2s ease;
+        }
+
+        .player-name-input input {
+            transition: all 0.2s ease;
+        }
     </style>
 </head>
 
@@ -7696,7 +7738,7 @@
 
                     // Try to join the specific room
                     this.room = await this.client.joinById(roomId, {
-                        name: `Player ${Date.now().toString().slice(-6)}`
+                        name: localStorage.getItem('playerName') || `Player ${Date.now().toString().slice(-6)}`
                     });
 
                     this.setupRoomListeners();
@@ -8280,6 +8322,14 @@
                 }
             }
 
+            updatePlayerName(newName) {
+                if (this.room && this.isConnected) {
+                    // Send name update to server
+                    this.room.send('update_name', { name: newName });
+                    console.log('Player name updated to:', newName);
+                }
+            }
+
             disconnect() {
                 if (this.room) {
                     this.room.leave();
@@ -8316,11 +8366,95 @@
                     if (titleLine) {
                         titleLine.textContent = `Game Room: ${roomId.substring(0, 8)}`;
                     }
+                    
+                    // Setup player name input functionality
+                    setupPlayerNameInput();
                 } else {
                     if (titleLine) {
                         titleLine.textContent = `Failed to connect to room`;
                     }
                 }
+            }
+        }
+
+        function setupPlayerNameInput() {
+            const playerNameInput = document.getElementById('playerName');
+            const nameStatus = document.getElementById('nameStatus');
+            
+            if (playerNameInput && gameClientManager) {
+                // Set initial placeholder with player ID
+                if (gameClientManager.room && gameClientManager.room.sessionId) {
+                    playerNameInput.placeholder = `Player ${gameClientManager.room.sessionId.substring(0, 6)}`;
+                }
+
+                // Load saved name from localStorage
+                const savedName = localStorage.getItem('playerName');
+                if (savedName) {
+                    playerNameInput.value = savedName;
+                    // Send the saved name to server immediately
+                    gameClientManager.updatePlayerName(savedName);
+                    if (nameStatus) {
+                        nameStatus.style.display = 'inline';
+                        nameStatus.style.color = '#00ff00';
+                        nameStatus.textContent = '✓';
+                    }
+                }
+
+                // Add event listener for real-time name updates
+                let nameUpdateTimeout;
+                playerNameInput.addEventListener('input', (e) => {
+                    const newName = e.target.value.trim();
+                    
+                    // Hide status indicator while typing
+                    if (nameStatus) {
+                        nameStatus.style.display = 'none';
+                    }
+                    
+                    // Clear previous timeout
+                    if (nameUpdateTimeout) {
+                        clearTimeout(nameUpdateTimeout);
+                    }
+                    
+                    // Debounce the name update to avoid too many server calls
+                    nameUpdateTimeout = setTimeout(() => {
+                        if (newName.length > 0) {
+                            gameClientManager.updatePlayerName(newName);
+                            // Save to localStorage
+                            localStorage.setItem('playerName', newName);
+                            // Show success indicator
+                            if (nameStatus) {
+                                nameStatus.style.display = 'inline';
+                                nameStatus.style.color = '#00ff00';
+                                nameStatus.textContent = '✓';
+                            }
+                        } else {
+                            // Clear localStorage if name is empty
+                            localStorage.removeItem('playerName');
+                        }
+                    }, 500); // Wait 500ms after user stops typing
+                });
+
+                // Also update on blur (when user clicks away)
+                playerNameInput.addEventListener('blur', (e) => {
+                    const newName = e.target.value.trim();
+                    if (newName.length > 0) {
+                        if (nameUpdateTimeout) {
+                            clearTimeout(nameUpdateTimeout);
+                        }
+                        gameClientManager.updatePlayerName(newName);
+                        // Save to localStorage
+                        localStorage.setItem('playerName', newName);
+                        // Show success indicator
+                        if (nameStatus) {
+                            nameStatus.style.display = 'inline';
+                            nameStatus.style.color = '#00ff00';
+                            nameStatus.textContent = '✓';
+                        }
+                    } else {
+                        // Clear localStorage if name is empty
+                        localStorage.removeItem('playerName');
+                    }
+                });
             }
         }
 
@@ -8359,11 +8493,28 @@
 
             // Initialize multiplayer if in a game room
             initializeMultiplayer();
+            
+            // Hide player name input if not in a game room
+            const path = window.location.pathname;
+            const roomIdMatch = path.match(/\/game\/([^/]+)/);
+            const playerNameInput = document.getElementById('playerNameInput');
+            if (playerNameInput) {
+                playerNameInput.style.display = roomIdMatch ? 'block' : 'none';
+            }
         });
     </script>
 
 
     <div id="notification-toast" class="notification-toast">Game settings updated</div>
+    
+    <!-- Player Name Input -->
+    <div class="player-name-input" id="playerNameInput">
+        <label for="playerName">Player Name:</label>
+        <div style="position: relative;">
+            <input type="text" id="playerName" placeholder="Enter your name..." maxlength="20">
+            <span id="nameStatus" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; color: #666; display: none;">✓</span>
+        </div>
+    </div>
 </body>
 
 </html>
