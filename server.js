@@ -102,6 +102,11 @@ class ConstellationRoom extends Room {
     onCreate(options) {
         console.log('ConstellationRoom created with options:', options);
 
+        // Initialize pause state early
+        this.isPaused = false;
+        this.pauseReason = '';
+        this.currentTimeRemaining = 0;
+
         const state = new RoomState();
         state.gameState = 'waiting';
         state.hostId = '';
@@ -206,11 +211,19 @@ class ConstellationRoom extends Room {
                         }
                     } else if (msg.type === 'resume_game') {
                         if (this.state.gameState === 'playing' && this.isPaused) {
-                            this.isPaused = false;
-                            console.log(`▶️ Game resumed in room ${this.roomId}`);
+                            const countdownLength = (this.gameConfig.countdownLength || 5) * 1000;
+                            console.log(`▶️ Game resuming in room ${this.roomId} with ${countdownLength}ms countdown`);
                             
-                            this.broadcast('game_resumed', {});
-                            this.updateAdminRoom();
+                            // Broadcast countdown start
+                            this.broadcast('game_resuming', { countdown: this.gameConfig.countdownLength || 5 });
+                            
+                            // Start countdown then resume
+                            setTimeout(() => {
+                                this.isPaused = false;
+                                this.broadcast('game_resumed', {});
+                                this.updateAdminRoom();
+                                console.log(`▶️ Game resumed in room ${this.roomId}`);
+                            }, countdownLength);
                         }
                     }
                 } catch (e) {
@@ -278,19 +291,23 @@ class ConstellationRoom extends Room {
         // Resume game handler
         this.onMessage('resume_game', (client, data) => {
             if (this.state.gameState === 'playing' && this.isPaused) {
-                this.isPaused = false;
-                console.log(`▶️ Game resumed in room ${this.roomId}`);
+                const countdownLength = (this.gameConfig.countdownLength || 5) * 1000;
+                console.log(`▶️ Game resuming in room ${this.roomId} with ${countdownLength}ms countdown`);
                 
-                this.broadcast('game_resumed', {});
-                this.updateAdminRoom();
+                // Broadcast countdown start
+                this.broadcast('game_resuming', { countdown: this.gameConfig.countdownLength || 5 });
+                
+                // Start countdown then resume
+                setTimeout(() => {
+                    this.isPaused = false;
+                    this.broadcast('game_resumed', {});
+                    this.updateAdminRoom();
+                    console.log(`▶️ Game resumed in room ${this.roomId}`);
+                }, countdownLength);
             }
         });
 
         // Game Loop Logic
-        this.isPaused = false;
-        this.pauseReason = '';
-        this.savedTimeRemaining = 0;
-        
         this.startGameLoop = () => {
             if (this.gameLoopInterval) clearInterval(this.gameLoopInterval);
 
