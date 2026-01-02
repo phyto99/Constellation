@@ -207,7 +207,11 @@ class ConstellationRoom extends Room {
                                 reason: this.pauseReason,
                                 announcement: this.pauseReason
                             });
-                            this.updateAdminRoom();
+                            try {
+                                this.updateAdminRoom();
+                            } catch (err) {
+                                console.error('Error updating admin room after pause:', err);
+                            }
                         }
                     } else if (msg.type === 'resume_game') {
                         if (this.state.gameState === 'playing' && this.isPaused) {
@@ -221,7 +225,11 @@ class ConstellationRoom extends Room {
                             setTimeout(() => {
                                 this.isPaused = false;
                                 this.broadcast('game_resumed', {});
-                                this.updateAdminRoom();
+                                try {
+                                    this.updateAdminRoom();
+                                } catch (err) {
+                                    console.error('Error updating admin room after resume:', err);
+                                }
                                 console.log(`▶️ Game resumed in room ${this.roomId}`);
                             }, countdownLength);
                         }
@@ -1017,12 +1025,21 @@ class AdminRoom extends Room {
         });
 
         this.onMessage('pause_game', async (client, data) => {
+            console.log('AdminRoom received pause_game for room:', data.roomId);
             try {
                 if (!this.presence) {
-                    throw new Error('Presence not available');
+                    console.error('Presence not available for pause_game');
+                    client.send('game_paused', { success: false, roomId: data.roomId, error: 'Presence not available' });
+                    return;
                 }
-                await this.presence.publish(`room_${data.roomId}`, { type: 'pause_game', reason: data.reason });
+                if (!data.roomId) {
+                    console.error('No roomId provided for pause_game');
+                    client.send('game_paused', { success: false, roomId: data.roomId, error: 'No roomId provided' });
+                    return;
+                }
+                this.presence.publish(`room_${data.roomId}`, { type: 'pause_game', reason: data.reason || '' });
                 client.send('game_paused', { success: true, roomId: data.roomId });
+                console.log('AdminRoom successfully published pause_game');
             } catch (error) {
                 console.error('Error pausing game:', error);
                 client.send('game_paused', { success: false, roomId: data.roomId, error: error.message });
@@ -1030,12 +1047,21 @@ class AdminRoom extends Room {
         });
 
         this.onMessage('resume_game', async (client, data) => {
+            console.log('AdminRoom received resume_game for room:', data.roomId);
             try {
                 if (!this.presence) {
-                    throw new Error('Presence not available');
+                    console.error('Presence not available for resume_game');
+                    client.send('game_resumed', { success: false, roomId: data.roomId, error: 'Presence not available' });
+                    return;
                 }
-                await this.presence.publish(`room_${data.roomId}`, { type: 'resume_game' });
+                if (!data.roomId) {
+                    console.error('No roomId provided for resume_game');
+                    client.send('game_resumed', { success: false, roomId: data.roomId, error: 'No roomId provided' });
+                    return;
+                }
+                this.presence.publish(`room_${data.roomId}`, { type: 'resume_game' });
                 client.send('game_resumed', { success: true, roomId: data.roomId });
+                console.log('AdminRoom successfully published resume_game');
             } catch (error) {
                 console.error('Error resuming game:', error);
                 client.send('game_resumed', { success: false, roomId: data.roomId, error: error.message });

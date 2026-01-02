@@ -909,16 +909,20 @@
         <div id="game-content" style="display: none;">
             <div style="padding: 20px;">
                 <!-- Game Action Buttons at the very top -->
-                <div class="game-actions" style="margin-bottom: 15px; position: relative;">
-                    <button class="btn-start" id="start-btn" onclick="startGame()">Start Game</button>
-                    <button class="btn-pause" id="pause-btn" onclick="showPausePopup()" style="background: #f59e0b; color: white; display: none;">⏸ Pause</button>
-                    <button class="btn-resume" id="resume-btn" onclick="resumeGame()" style="background: #10b981; color: white; display: none;">▶ Resume</button>
-                    <button class="btn-delete" onclick="deleteGame()">Delete Game</button>
-                    <a href="#" id="game-direct-link" class="game-link" target="_blank"
-                        style="display: inline-block; margin-left: 10px; padding: 8px 0;">Join Game</a>
+                <div class="game-actions" style="margin-bottom: 15px; position: relative; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-back" onclick="deselectRoom()" style="background: #6b7280; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">← Back</button>
+                        <button class="btn-delete" onclick="deleteGame()" style="background: #6b7280; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Close Game</button>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button class="btn-start" id="start-btn" onclick="startGame()" style="background: #6b7280; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Start Game</button>
+                        <button class="btn-pause" id="pause-btn" onclick="showPausePopup()" style="background: #6b7280; color: white; display: none; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">⏸ Pause</button>
+                        <button class="btn-resume" id="resume-btn" onclick="resumeGame()" style="background: #6b7280; color: white; display: none; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">▶ Resume</button>
+                        <a href="#" id="game-direct-link" target="_blank" style="background: #6b7280; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; text-decoration: none; display: inline-block;">Join Game</a>
+                    </div>
                     
                     <!-- Pause Reason Popup -->
-                    <div id="pause-popup" style="display: none; position: absolute; top: 100%; left: 80px; margin-top: 8px; z-index: 1000;">
+                    <div id="pause-popup" style="display: none; position: absolute; top: 100%; right: 200px; margin-top: 8px; z-index: 1000;">
                         <div style="position: relative; background: white; border: 1px solid #ccc; border-radius: 8px; padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); width: 280px;">
                             <!-- Arrow pointing up -->
                             <div style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 8px solid #ccc;"></div>
@@ -1029,7 +1033,7 @@
                             
                             <div class="team-color-slot" id="unassignedBox" style="margin-top: 10px;">
                                 <div class="team-color-players" id="colorPlayerPool">
-                                    <div style="color: #666; text-align: center; padding: 12px; font-size: 12px;">No players connected</div>
+                                    <div style="color: #666; text-align: center; padding: 12px; font-size: 12px; width: 100%;">No players connected</div>
                                 </div>
                             </div>
                             
@@ -1251,15 +1255,25 @@
 
             if (statusElement) {
                 statusElement.textContent = status;
-                statusElement.style.color = status === 'Connected' ? '#00ff00' : '#ff0000';
+                if (status === 'Connected') {
+                    statusElement.style.color = '#00ff00';
+                } else if (status.startsWith('Reconnecting')) {
+                    statusElement.style.color = '#f59e0b';
+                } else {
+                    statusElement.style.color = '#ff0000';
+                }
             }
 
             if (reconnectBtn) {
-                reconnectBtn.style.display = status === 'Connected' ? 'none' : 'inline-block';
+                reconnectBtn.style.display = (status === 'Connected' || status.startsWith('Reconnecting')) ? 'none' : 'inline-block';
             }
         }
 
         function manualReconnect() {
+            if (reconnectTimer) {
+                clearInterval(reconnectTimer);
+                reconnectTimer = null;
+            }
             updateConnectionStatus('Connecting...');
             initializeColyseus();
         }
@@ -1353,8 +1367,28 @@
             currentRoom.onLeave((code) => {
                 console.log('Left admin room:', code);
                 currentRoom = null;
-                updateConnectionStatus('Disconnected');
+                startReconnectTimer();
             });
+        }
+
+        let reconnectTimer = null;
+        let reconnectCountdown = 5;
+
+        function startReconnectTimer() {
+            reconnectCountdown = 5;
+            updateConnectionStatus(`Reconnecting ${reconnectCountdown}s`);
+            
+            reconnectTimer = setInterval(() => {
+                reconnectCountdown--;
+                if (reconnectCountdown <= 0) {
+                    clearInterval(reconnectTimer);
+                    reconnectTimer = null;
+                    updateConnectionStatus('Connecting...');
+                    initializeColyseus();
+                } else {
+                    updateConnectionStatus(`Reconnecting ${reconnectCountdown}s`);
+                }
+            }, 1000);
         }
 
         let latestRoomsData = [];
@@ -1532,6 +1566,41 @@
             linkElement.textContent = 'Join Game';
 
             document.getElementById('scenario-name').textContent = `Game ${roomId.substring(0, 8)}`;
+            
+            // Update button states based on room state
+            const startBtn = document.getElementById('start-btn');
+            const pauseBtn = document.getElementById('pause-btn');
+            const resumeBtn = document.getElementById('resume-btn');
+            
+            if (roomData && roomData.state === 'playing') {
+                startBtn.style.display = 'none';
+                if (roomData.isPaused) {
+                    pauseBtn.style.display = 'none';
+                    resumeBtn.style.display = 'inline-block';
+                    isPaused = true;
+                } else {
+                    pauseBtn.style.display = 'inline-block';
+                    resumeBtn.style.display = 'none';
+                    isPaused = false;
+                }
+            } else {
+                startBtn.style.display = 'inline-block';
+                pauseBtn.style.display = 'none';
+                resumeBtn.style.display = 'none';
+                isPaused = false;
+            }
+        }
+
+        function deselectRoom() {
+            selectedRoomId = null;
+            document.getElementById('no-game-selected').style.display = 'block';
+            document.getElementById('game-content').style.display = 'none';
+            
+            // Reset button states
+            document.getElementById('start-btn').style.display = 'inline-block';
+            document.getElementById('pause-btn').style.display = 'none';
+            document.getElementById('resume-btn').style.display = 'none';
+            isPaused = false;
         }
 
         async function createGame() {
@@ -2065,12 +2134,12 @@
             const unassigned = colorPlayers.filter(p => p.colorTeam === null);
             
             if (colorPlayers.length === 0) {
-                pool.innerHTML = '<div style="color: #666; text-align: center; padding: 12px; font-size: 12px;">No players connected</div>';
+                pool.innerHTML = '<div style="color: #666; text-align: center; padding: 12px; font-size: 12px; width: 100%;">No players connected</div>';
                 return;
             }
             
             if (unassigned.length === 0) {
-                pool.innerHTML = '<div style="color: #28a745; text-align: center; padding: 12px; font-size: 12px;">✓ All assigned!</div>';
+                pool.innerHTML = '<div style="color: #28a745; text-align: center; padding: 12px; font-size: 12px; width: 100%;">✓ All assigned!</div>';
                 return;
             }
             
