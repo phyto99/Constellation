@@ -1492,6 +1492,54 @@
             return div;
         }
 
+        function resetRoomSettingsToDefaults() {
+            console.log('Resetting room settings to defaults');
+            
+            // Reset form fields to default values
+            document.getElementById('edit-rounds').value = 10;
+            document.getElementById('edit-roundTime').value = 30;
+            document.getElementById('edit-countdownTime').value = 5;
+            document.getElementById('edit-stealLimit').value = 15;
+            document.getElementById('edit-hqMax').value = 2;
+            document.getElementById('edit-movesPerRound').value = 15;
+            
+            // Reset multipliers to defaults
+            document.getElementById('edit-countMultiplier').value = 500;
+            document.getElementById('edit-distanceMultiplier').value = 1;
+            document.getElementById('edit-hqMultiplier').value = 10;
+            document.getElementById('edit-destructionMultiplier').value = 1;
+            
+            // Clear map JSON
+            document.getElementById('edit-mapJson').value = '';
+            
+            // Reset AI bots to empty
+            const container = document.getElementById('admin-ai-bots');
+            if (container) {
+                container.innerHTML = '<div class="ai-bots-empty">No AI bots added yet</div>';
+            }
+            
+            // Reset button states to waiting/new game state
+            document.getElementById('start-btn').style.display = 'inline-block';
+            document.getElementById('pause-btn').style.display = 'none';
+            document.getElementById('resume-btn').style.display = 'none';
+            isPaused = false;
+            
+            // Reset color management to setup mode (not game mode)
+            colorGameMode = false;
+            const startBtn = document.getElementById('colorStartGameBtn');
+            const stopBtn = document.getElementById('colorStopGameBtn');
+            if (startBtn && stopBtn) {
+                startBtn.style.display = 'inline-block';
+                stopBtn.style.display = 'none';
+            }
+            
+            // Clear players
+            colorPlayers = [];
+            renderColorPlayerPool();
+            renderColorTeamAssignments();
+            updateColorStats();
+        }
+
         function selectRoom(roomId) {
             console.log('Selected room:', roomId);
             selectedRoomId = roomId;
@@ -1499,20 +1547,26 @@
             // Populate settings if available
             const roomData = latestRoomsData.find(r => r.roomId === roomId);
             
-            // CRITICAL: Sync players from room data to color manager
-            if (roomData && roomData.players && Array.isArray(roomData.players)) {
-                console.log('Syncing players from room data:', roomData.players);
-                if (typeof syncColyseusPlayersToColorManager === 'function') {
-                    syncColyseusPlayersToColorManager(roomData.players);
-                }
+            if (!roomData) {
+                console.log('No room data found, resetting to defaults');
+                resetRoomSettingsToDefaults();
             } else {
-                // Clear players if no room data or no players
-                console.log('No players in room data, clearing player list');
-                colorPlayers = [];
-                renderColorPlayerPool();
-                renderColorTeamAssignments();
-                updateColorStats();
+                // CRITICAL: Sync players from room data to color manager
+                if (roomData.players && Array.isArray(roomData.players)) {
+                    console.log('Syncing players from room data:', roomData.players);
+                    if (typeof syncColyseusPlayersToColorManager === 'function') {
+                        syncColyseusPlayersToColorManager(roomData.players);
+                    }
+                } else {
+                    // Clear players if no players in room data
+                    console.log('No players in room data, clearing player list');
+                    colorPlayers = [];
+                    renderColorPlayerPool();
+                    renderColorTeamAssignments();
+                    updateColorStats();
+                }
             }
+            
             if (roomData && roomData.config) {
                 const cfg = roomData.config;
                 // Regular settings
@@ -1621,11 +1675,29 @@
                     resumeBtn.style.display = 'none';
                     isPaused = false;
                 }
+                
+                // Set color management to game mode for playing rooms
+                colorGameMode = true;
+                const colorStartBtn = document.getElementById('colorStartGameBtn');
+                const colorStopBtn = document.getElementById('colorStopGameBtn');
+                if (colorStartBtn && colorStopBtn) {
+                    colorStartBtn.style.display = 'none';
+                    colorStopBtn.style.display = 'inline-block';
+                }
             } else {
                 startBtn.style.display = 'inline-block';
                 pauseBtn.style.display = 'none';
                 resumeBtn.style.display = 'none';
                 isPaused = false;
+                
+                // Set color management to setup mode for waiting rooms
+                colorGameMode = false;
+                const colorStartBtn = document.getElementById('colorStartGameBtn');
+                const colorStopBtn = document.getElementById('colorStopGameBtn');
+                if (colorStartBtn && colorStopBtn) {
+                    colorStartBtn.style.display = 'inline-block';
+                    colorStopBtn.style.display = 'none';
+                }
             }
         }
 
@@ -1639,6 +1711,15 @@
             document.getElementById('pause-btn').style.display = 'none';
             document.getElementById('resume-btn').style.display = 'none';
             isPaused = false;
+            
+            // Reset color management to setup mode
+            colorGameMode = false;
+            const colorStartBtn = document.getElementById('colorStartGameBtn');
+            const colorStopBtn = document.getElementById('colorStopGameBtn');
+            if (colorStartBtn && colorStopBtn) {
+                colorStartBtn.style.display = 'inline-block';
+                colorStopBtn.style.display = 'none';
+            }
             
             // Clear player list when deselecting room
             colorPlayers = [];
@@ -1681,10 +1762,21 @@
                 // Clear the game name input
                 document.getElementById('game-name').value = '';
 
-                // Select the newly created room and update rooms list
+                // Select the newly created room (this will reset to defaults since room data doesn't exist yet)
                 selectRoom(room.roomId);
+                
+                // Request updated rooms list to get the new room data
                 if (currentRoom) {
-                    setTimeout(() => currentRoom.send('request_rooms_list'), 200);
+                    setTimeout(() => {
+                        currentRoom.send('request_rooms_list');
+                        // After rooms list is updated, re-select the room to get proper data
+                        setTimeout(() => {
+                            if (selectedRoomId === room.roomId) {
+                                console.log('Re-selecting room after rooms list update');
+                                selectRoom(room.roomId);
+                            }
+                        }, 300);
+                    }, 200);
                 }
             } catch (error) {
                 console.error('Failed to create game:', error);
