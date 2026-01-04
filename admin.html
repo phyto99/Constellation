@@ -2011,11 +2011,35 @@
                 countdownLength: parseInt(document.getElementById('edit-countdownTime').value) || 5,
                 steals: parseInt(document.getElementById('edit-stealLimit').value) || 15,
                 headquarters: parseInt(document.getElementById('edit-hqMax').value) || 2,
-                customMap: document.getElementById('edit-mapJson').value ? JSON.parse(document.getElementById('edit-mapJson').value) : null,
+                // NOTE: customMapFilename is added below only when a map is selected
                 multipliers: multipliers,
                 aiBots: getAdminAIBots(),
                 teamColors: teamColors
             };
+
+            // Send map filename instead of full JSON to avoid Colyseus presence message size limits
+            const selectedMapFilename = document.getElementById('map-selector').value;
+            const mapJsonValue = document.getElementById('edit-mapJson').value.trim();
+            
+            if (selectedMapFilename) {
+                // Map selected from dropdown
+                settings.customMapFilename = selectedMapFilename;
+                console.log('📍 Sending map filename:', selectedMapFilename);
+            } else if (mapJsonValue) {
+                // Manual JSON in textarea
+                try {
+                    // Validate JSON
+                    JSON.parse(mapJsonValue);
+                    settings.customMapFilename = '__manual_json__';
+                    settings.customMapJson = mapJsonValue; // Send raw JSON string for manual entry
+                    console.log('📍 Sending manual map JSON');
+                } catch (e) {
+                    console.error('❌ Failed to parse map JSON:', e.message);
+                    // Don't send customMapFilename if JSON is invalid
+                }
+            }
+            // If neither dropdown nor textarea has a map, don't include customMapFilename
+            // This preserves the existing map on the server
 
             // Only send if settings actually changed
             const settingsJson = JSON.stringify(settings);
@@ -2063,19 +2087,35 @@
 
         async function loadMapFromDropdown() {
             const filename = document.getElementById('map-selector').value;
-            if (!filename) return;
+            
+            if (!filename) {
+                // Map was cleared - clear the textarea and send explicit clear command
+                document.getElementById('edit-mapJson').value = '';
+                
+                // Send settings with explicit null to clear the map
+                if (currentRoom && selectedRoomId) {
+                    const settings = {
+                        customMapFilename: null // Explicitly clear the map
+                    };
+                    currentRoom.send('update_settings', { roomId: selectedRoomId, settings: settings });
+                    console.log('📍 Map cleared - sent null customMapFilename');
+                    showNotification('Map cleared');
+                }
+                return;
+            }
 
             try {
+                // Fetch map to display in textarea (for preview/editing)
                 const response = await fetch(`/api/maps/${encodeURIComponent(filename)}`);
                 const mapData = await response.json();
 
-                // Format nicely in the textarea
+                // Format nicely in the textarea for preview
                 const mapJsonString = JSON.stringify(mapData, null, 2);
                 document.getElementById('edit-mapJson').value = mapJsonString;
 
-                // Trigger update
+                // Trigger update - this will send the filename, server will fetch the map
                 sendSettingsUpdate();
-                console.log(`Loaded map: ${filename}`);
+                console.log(`Selected map: ${filename}`);
             } catch (err) {
                 console.error('Failed to load map data:', err);
                 alert('Failed to load map data');

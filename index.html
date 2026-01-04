@@ -460,15 +460,14 @@
 </head>
 
 <body>
-    <div id="gameContainer"><canvas width="2470" height="1322"
-            style="touch-action: none; width: 1235px; height: 661px; cursor: inherit;"></canvas></div>
+    <div id="gameContainer"></div>
     <div class="timer-container">
-        <div id="timer" class="timer" style="display: block; width: 100%; background: rgb(136, 136, 136);"></div>
+        <div id="timer" class="timer"></div>
     </div>
-    <div class="header" id="gameHeader" style="display: block;">
-        <div id="titleLine">Game Room: 80xRwMcuA (In Progress)</div>
-        <div class="info-line">Game ID: <span id="gameIdDisplay" style="font-weight:bold;">80xRwMcu</span>.⠀ Player:
-            <span id="playerIdDisplay" style="font-weight:bold;">apwnhqVQ</span>.⠀ Team: <span id="teamColor"
+    <div class="header" id="gameHeader">
+        <div id="titleLine">Game Room</div>
+        <div class="info-line">Game ID: <span id="gameIdDisplay" style="font-weight:bold;"></span>.⠀ Player:
+            <span id="playerIdDisplay" style="font-weight:bold;"></span>.⠀ Team: <span id="teamColor"
                 style="color: rgb(0, 255, 255);">cyan</span>.⠀
             Status: <span id="connection-status" style="color: rgb(255, 255, 255);">connecting...</span>
         </div>
@@ -8388,7 +8387,19 @@
                     // The server will validate moves on-demand as they come in
 
                     // Apply custom map and AI bots
-                    if (cfg.customMap) currentGame.customMap = cfg.customMap;
+                    if (cfg.customMap) {
+                        currentGame.cm = cfg.customMap;
+                        // Reload map if game already initialized
+                        if (currentGame.st && currentGame.st.length > 0) {
+                            currentGame.loadMap();
+                            currentGame.calculateMapBounds();
+                            currentGame.setupCam();
+                            currentGame.precomputeStaticData();
+                            currentGame.calcScores();
+                            currentGame.updateUI();
+                            console.log('✅ Map applied from game_started config');
+                        }
+                    }
                     if (Array.isArray(cfg.aiBots)) {
                         // Properly instantiate AIBot objects
                         currentGame.aiBots = cfg.aiBots.map(botData => {
@@ -8487,35 +8498,40 @@
                     currentGame.updateUI();
 
                     // Handle map update
+                    console.log('🗺️ Checking map update. Current cm:', currentGame.cm ? 'exists' : 'null/undefined', 'New customMap:', data.config.customMap ? 'exists' : 'null/undefined');
+                    
                     if (data.config.customMap) {
-                        // Only update if map is different (simplified check: compare title or just assume update if provided)
-                        // Deep compare or just overwrite? Let's check title or structure length to avoid heavy stringify if possible, but stringify is safest for now
-                        const currentMapStr = JSON.stringify(currentGame.cm);
+                        // Check if map is different - handle undefined/null cases
+                        const currentMapStr = currentGame.cm ? JSON.stringify(currentGame.cm) : '';
                         const newMapStr = JSON.stringify(data.config.customMap);
 
+                        console.log('🗺️ Map comparison - current length:', currentMapStr.length, 'new length:', newMapStr.length);
+
                         if (currentMapStr !== newMapStr) {
+                            console.log('🗺️ Map is different, updating...');
                             currentGame.cm = data.config.customMap;
-                            // Trigger map reload/regen
-                            if (currentGame.initMap) {
-                                currentGame.initMap();
-                                console.log('Map updated from settings');
-                            } else {
-                                // unexpected fallback if initMap isn't exposed or valid
-                                console.warn('initMap not available, reloading game instance');
-                                // Preserve critical state before destroy
-                                const savedMoves = currentGame.myMoves;
-                                const container = document.getElementById('gameContainer');
-                                if (container) container.innerHTML = '';
-                                const settings = { ...data.config, customMap: data.config.customMap };
-                                currentGame = new Game(settings);
-                                // CRITICAL: Restore gameClientManager reference so multiplayer continues to work
-                                currentGame.gameClientManager = gameClientManager;
-                                // Restore moves
-                                if (savedMoves !== undefined) currentGame.myMoves = savedMoves;
-                                console.log('🔧 Restored gameClientManager to reloaded game');
-                                currentGame.startGame();
-                            }
+                            // Trigger map reload using the correct function
+                            currentGame.loadMap();
+                            currentGame.calculateMapBounds();
+                            currentGame.setupCam();
+                            currentGame.precomputeStaticData();
+                            currentGame.calcScores();
+                            currentGame.updateUI();
+                            console.log('✅ Map updated from settings');
+                        } else {
+                            console.log('🗺️ Map is the same, skipping update');
                         }
+                    } else if (data.config.customMap === null && currentGame.cm) {
+                        // Map was cleared, generate random map
+                        console.log('🗺️ Map cleared, generating random map');
+                        currentGame.cm = null;
+                        currentGame.loadMap();
+                        currentGame.calculateMapBounds();
+                        currentGame.setupCam();
+                        currentGame.precomputeStaticData();
+                        currentGame.calcScores();
+                        currentGame.updateUI();
+                        console.log('✅ Map cleared, generated random map');
                     }
 
                     // Update debug display
