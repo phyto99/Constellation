@@ -608,7 +608,7 @@
             </div>
         </div>
     </div>
-    <div class="settings-panel" id="settingsPanel">
+    <div class="settings-panel hidden" id="settingsPanel">
         <h3>Game Settings</h3>
         <div class="setting-group">
             <label for="mapJson">Map JSON Data:</label>
@@ -4340,7 +4340,11 @@
         // AI Bot Class
         class AIBot {
             static fromData(data) {
-                return new AIBot(data.type, data.teamIndex, data.aggression);
+                const bot = new AIBot(data.type, data.teamIndex, data.aggression);
+                // Set server-assigned ID and moves if provided
+                if (data.id) bot.playerId = data.id;
+                if (data.movesLeft !== undefined) bot.movesLeft = data.movesLeft;
+                return bot;
             }
 
             constructor(type, teamIndex, aggression = 5) {
@@ -4359,6 +4363,13 @@
                 this.roundStartTime = Date.now();
                 this.strategicMemory = new Map(); // Remember important decisions
                 this.lastScorePosition = 0;
+                
+                // Server-side integration properties
+                this.playerId = null; // Server-assigned player ID (e.g., 'bot_0_123456')
+                this.movesLeft = 0;   // Individual move allocation from server
+                
+                // Move rejection tracking - prevents retrying failed moves
+                this.lastRejectedMove = null; // { starIndex, reason, timestamp }
             }
 
             calculateMoveDelay() {
@@ -4729,14 +4740,15 @@
                 // Find stealable targets
                 const candidates = game.st
                     .map((star, index) => ({ star, index }))
-                    .filter(({ star }) =>
+                    .filter(({ star, index }) =>
                         star.tm !== null &&
                         star.tm !== this.teamIndex &&
                         !star.hq &&
                         !star.pr &&
                         !star.destroyed &&
                         star.ty !== T.C && // Cannot steal cluster stars
-                        star.ty !== T.B    // Cannot steal black holes
+                        star.ty !== T.B && // Cannot steal black holes
+                        !this.isRecentlyRejected(index) // Skip recently rejected targets
                     );
 
                 if (candidates.length === 0) return null;
@@ -4760,7 +4772,12 @@
                 return best !== null ? { type: 'steal', target: best } : null;
             }
 
-
+            // Check if a star was recently rejected (within 2 seconds)
+            isRecentlyRejected(starIndex) {
+                if (!this.lastRejectedMove) return false;
+                if (this.lastRejectedMove.starIndex !== starIndex) return false;
+                return (Date.now() - this.lastRejectedMove.timestamp) < 2000;
+            }
 
             calculateStealThreshold(gameState) {
                 // Modular threshold based on remaining steals AND rounds
@@ -4826,7 +4843,7 @@
             tryExpand(game, gameState) {
                 const candidates = game.st
                     .map((star, index) => ({ star, index }))
-                    .filter(({ star }) => star.tm === null && !star.destroyed);
+                    .filter(({ star, index }) => star.tm === null && !star.destroyed && !this.isRecentlyRejected(index));
 
                 if (candidates.length === 0) return null;
 
@@ -4943,12 +4960,18 @@
                 const star = game.st[move.target];
                 if (!star || star.destroyed) return false;
 
-                // Check if we have moves left
-                if (game.tms[this.teamIndex].movesLeft <= 0) return false;
+                // Check if we have moves left - use individual bot moves in multiplayer, team moves in single player
+                const hasMovesLeft = game.ml ? (this.movesLeft > 0) : (game.tms[this.teamIndex].movesLeft > 0);
+                if (!hasMovesLeft) {
+                    console.log('🤖 Bot has no moves left:', { botMovesLeft: this.movesLeft, teamMovesLeft: game.tms[this.teamIndex].movesLeft, multiplayer: game.ml });
+                    return false;
+                }
 
                 // Debug logging
                 console.log('🤖 AI Bot executeMove:', {
                     ml: game.ml,
+                    botMovesLeft: this.movesLeft,
+                    playerId: this.playerId,
                     hasGameClientManager: !!gameClientManager,
                     hasRoom: gameClientManager?.room ? true : false,
                     isConnected: gameClientManager?.isConnected,
@@ -4958,18 +4981,20 @@
 
                 // In multiplayer mode, send moves to server for validation
                 if (game.ml && gameClientManager && gameClientManager.room && gameClientManager.isConnected) {
-                    console.log('📤 Sending move to server via gameClientManager');
+                    console.log('📤 Sending bot move to server via gameClientManager, botId:', this.playerId);
                     try {
                         if (move.type === 'steal' && star.tm !== null && star.tm !== this.teamIndex) {
                             // Validate locally first to avoid unnecessary server calls
                             if (star.hq || star.pr || game.tms[this.teamIndex].st <= 0) return false;
                             if (star.ty === T.C || star.ty === T.B) return false;
 
-                            gameClientManager.room.send('steal_star', { starIndex: move.target });
+                            // Include bot player ID so server knows which bot is making the move
+                            gameClientManager.room.send('steal_star', { starIndex: move.target, botId: this.playerId });
 
                             // Optimistic update - will be rolled back if server rejects
                             game.tms[this.teamIndex].st--;
                             game.tms[this.teamIndex].movesLeft--;
+                            this.movesLeft--; // Decrement bot's individual moves
                             star.tm = this.teamIndex;
                             this.stealsUsed++;
                             this.totalStealsThisRound++;
@@ -4977,22 +5002,24 @@
                         } else if (move.type === 'hq' && star.tm === null) {
                             if (game.tms[this.teamIndex].h >= game.HM) return false;
 
-                            gameClientManager.room.send('place_hq', { starIndex: move.target });
+                            gameClientManager.room.send('place_hq', { starIndex: move.target, botId: this.playerId });
 
                             // Optimistic update
                             star.tm = this.teamIndex;
                             star.hq = true;
                             game.tms[this.teamIndex].h++;
                             game.tms[this.teamIndex].movesLeft--;
+                            this.movesLeft--; // Decrement bot's individual moves
                             this.hqPlaced = true;
                         } else if (move.type === 'capture' && (star.tm === null || star.tm === this.teamIndex)) {
                             if (star.tm === this.teamIndex) return false;
 
-                            gameClientManager.room.send('claim_star', { starIndex: move.target });
+                            gameClientManager.room.send('claim_star', { starIndex: move.target, botId: this.playerId });
 
                             // Optimistic update
                             star.tm = this.teamIndex;
                             game.tms[this.teamIndex].movesLeft--;
+                            this.movesLeft--; // Decrement bot's individual moves
                         } else {
                             return false;
                         }
@@ -5163,6 +5190,9 @@
                 this.playerCursors = new Map(); // playerId -> { x, y, teamIndex, lastUpdate }
                 this.lastCursorSend = 0;
                 this.cursorSendInterval = 50; // Send cursor updates every 50ms
+
+                // Initialize leaderboard colors with current team configuration
+                setTimeout(() => this.updateLeaderboardColors(), 0);
 
                 this.init();
             }
@@ -5545,6 +5575,9 @@
                                         gameClientManager.room.send('join_team', { teamIndex });
                                     }
 
+                                    // Update leaderboard colors to reflect new team selection
+                                    this.updateLeaderboardColors();
+
                                     // Force immediate leaderboard visual update
                                     this.needsFullUIUpdate = true;
                                     this.updateUI();
@@ -5800,16 +5833,22 @@
                         if (remainingTime <= 0) this.startGame();
                     }
                 } else if (!this.go) {
-                    // Use real-time for ultra-smooth timer bar
-                    const elapsedTime = (currentTime - this.roundStartTime) / 1000;
-                    const remainingTime = Math.max(0, this.RT - elapsedTime);
-                    const newWidth = (remainingTime / this.RT) * 100;
+                    // In multiplayer mode, let the server control the timer
+                    // Only run client-side timer in single-player mode
+                    const isMultiplayer = gameClientManager && gameClientManager.isConnected;
+                    if (!isMultiplayer) {
+                        // Use real-time for ultra-smooth timer bar (single-player only)
+                        const elapsedTime = (currentTime - this.roundStartTime) / 1000;
+                        const remainingTime = Math.max(0, this.RT - elapsedTime);
+                        const newWidth = (remainingTime / this.RT) * 100;
 
-                    // Update timer bar every frame for maximum smoothness
-                    const te = document.getElementById('timer');
-                    te.style.width = `${newWidth.toFixed(2)}%`;
+                        // Update timer bar every frame for maximum smoothness
+                        const te = document.getElementById('timer');
+                        te.style.width = `${newWidth.toFixed(2)}%`;
 
-                    if (remainingTime <= 0) this.nextRound();
+                        if (remainingTime <= 0) this.nextRound();
+                    }
+                    // In multiplayer, timer is updated by server time_update messages
                 }
 
                 // Use real-time for smooth animations (lag-independent)
@@ -6989,6 +7028,26 @@
             }
 
             updateAIBots(currentTime) {
+                // Debug logging for AI bot updates (every 10 seconds to reduce spam)
+                if (this.aiBots.length > 0 && currentTime - this.lastAIUpdate > 10000) {
+                    console.log('🤖 AI Bot Status:', {
+                        botCount: this.aiBots.length,
+                        planning: this.p,
+                        gameOver: this.go,
+                        multiplayer: this.ml,
+                        gameClientManagerExists: !!gameClientManager,
+                        isConnected: gameClientManager?.isConnected,
+                        hasRoom: !!gameClientManager?.room,
+                        bots: this.aiBots.map(b => ({ 
+                            type: b.type, 
+                            team: b.teamIndex, 
+                            moves: b.movesLeft, 
+                            playerId: b.playerId,
+                            lastMoveTime: b.lastMoveTime
+                        }))
+                    });
+                }
+
                 if (!this.p && !this.go && this.aiBots.length > 0) {
                     // Only update AI during active gameplay, not planning or game over
                     if (currentTime - this.lastAIUpdate > this.aiUpdateInterval) {
@@ -7022,7 +7081,11 @@
             }
 
             updateUI() {
-                document.getElementById('round').textContent = this.go ? "Game Over" : `Round #${this.r}`;
+                // In multiplayer, let server control round display to prevent flickering
+                const isMultiplayer = gameClientManager && gameClientManager.isConnected;
+                if (!isMultiplayer) {
+                    document.getElementById('round').textContent = this.go ? "Game Over" : `Round #${this.r}`;
+                }
                 const timerEl = document.getElementById('timer');
                 if (this.go) {
                     let winningTeamColor;
@@ -7108,6 +7171,164 @@
                 } else {
                     header.style.display = 'none';
                 }
+            }
+
+            // Update team colors from server configuration
+            // This enables dynamic team color synchronization from admin panel
+            updateTeamColors(teamColors) {
+                if (!teamColors || !Array.isArray(teamColors)) return;
+                
+                console.log('🎨 Updating team colors from server:', teamColors);
+                
+                // Dynamically resize tms array to match server team count
+                while (this.tms.length < teamColors.length) {
+                    // Add new team with default values
+                    this.tms.push({
+                        c: 0x888888,
+                        name: `team${this.tms.length}`,
+                        displayName: `Team ${this.tms.length}`,
+                        s: 0,
+                        st: this.S,
+                        h: 0,
+                        movesLeft: this.S
+                    });
+                }
+                
+                // Remove extra teams if server has fewer
+                while (this.tms.length > teamColors.length) {
+                    this.tms.pop();
+                }
+                
+                teamColors.forEach((tc, index) => {
+                    if (this.tms[index]) {
+                        // Update color value (handle both hex number and string formats)
+                        if (typeof tc.color === 'number') {
+                            this.tms[index].c = tc.color;
+                        } else if (typeof tc.color === 'string') {
+                            // Parse hex string like '#00FFFF' or '0x00FFFF'
+                            this.tms[index].c = parseInt(tc.color.replace('#', '').replace('0x', ''), 16);
+                        }
+                        
+                        // Update name and display name
+                        if (tc.name) this.tms[index].name = tc.name;
+                        if (tc.displayName) this.tms[index].displayName = tc.displayName;
+                    }
+                });
+                
+                // Also update the global TEAM_CONFIGS for consistency with UI elements outside Game class
+                // Resize TEAM_CONFIGS to match
+                while (TEAM_CONFIGS.length < teamColors.length) {
+                    TEAM_CONFIGS.push({ color: 0x888888, name: `team${TEAM_CONFIGS.length}`, displayName: `Team ${TEAM_CONFIGS.length}` });
+                }
+                while (TEAM_CONFIGS.length > teamColors.length) {
+                    TEAM_CONFIGS.pop();
+                }
+                
+                teamColors.forEach((tc, index) => {
+                    if (TEAM_CONFIGS[index]) {
+                        if (typeof tc.color === 'number') {
+                            TEAM_CONFIGS[index].color = tc.color;
+                        } else if (typeof tc.color === 'string') {
+                            TEAM_CONFIGS[index].color = parseInt(tc.color.replace('#', '').replace('0x', ''), 16);
+                        }
+                        if (tc.name) TEAM_CONFIGS[index].name = tc.name;
+                        if (tc.displayName) TEAM_CONFIGS[index].displayName = tc.displayName;
+                    }
+                });
+                
+                // Update leaderboard HTML elements with new colors
+                this.updateLeaderboardColors();
+                this.updateLeaderboardColors();
+                
+                // Force full UI refresh to apply new colors everywhere
+                this.needsFullUIUpdate = true;
+                this.needsStarRedraw = true;
+                this.needsStaticLineRedraw = true;
+                this.needsAnimatedLineRedraw = true;
+                this.updateUI();
+                this.updateHeader();
+                
+                console.log('🎨 Team colors updated successfully');
+            }
+
+            // Update leaderboard HTML elements with dynamic team colors
+            // This function dynamically creates/updates team rows based on the current team configuration
+            updateLeaderboardColors() {
+                const scoresEl = document.getElementById('scores');
+                if (!scoresEl) return;
+
+                // Get existing team rows (excluding multiplier row)
+                const existingRows = scoresEl.querySelectorAll('.score-row:not(.multiplier-row)');
+                const multiplierRow = scoresEl.querySelector('.multiplier-row');
+
+                // Create or update team rows
+                this.tms.forEach((team, index) => {
+                    let scoreRow = scoresEl.querySelector(`[data-team-index="${index}"]`);
+                    const hexColor = `#${(team.c || 0x888888).toString(16).padStart(6, '0')}`;
+                    const teamName = team.displayName || team.name || `Team ${index}`;
+
+                    if (!scoreRow) {
+                        // Create new row for this team
+                        scoreRow = document.createElement('div');
+                        scoreRow.className = 'score-row';
+                        scoreRow.setAttribute('data-team-index', index);
+                        scoreRow.title = `Click to select ${teamName} team`;
+                        scoreRow.innerHTML = `
+                            <div class="main-score-section">
+                                <div class="score-highlight" style="background:${hexColor};width:45px;"></div>
+                                <div class="score-content">
+                                    <div class="steal-circle">${team.st || 0}</div>
+                                    <span class="score-number">0</span>
+                                </div>
+                            </div>
+                            <div class="detail-section">
+                                <span class="detail-col" style="color:${hexColor};width:32px;">0</span>
+                                <span class="detail-col" style="color:${hexColor};width:56px;">0</span>
+                                <span class="detail-col" style="color:${hexColor};width:24px;">0</span>
+                                <span class="detail-col" style="color:${hexColor};width:24px;">0</span>
+                            </div>
+                        `;
+                        
+                        // Insert before multiplier row if it exists, otherwise append
+                        if (multiplierRow) {
+                            scoresEl.insertBefore(scoreRow, multiplierRow);
+                        } else {
+                            scoresEl.appendChild(scoreRow);
+                        }
+                    } else {
+                        // Update existing row colors
+                        const scoreHighlight = scoreRow.querySelector('.score-highlight');
+                        if (scoreHighlight) {
+                            scoreHighlight.style.background = hexColor;
+                        }
+                        
+                        const detailCols = scoreRow.querySelectorAll('.detail-col');
+                        detailCols.forEach(col => {
+                            col.style.color = hexColor;
+                        });
+                        
+                        scoreRow.title = `Click to select ${teamName} team`;
+                    }
+
+                    // Update team selection outline
+                    if (this.tm === index) {
+                        scoreRow.style.outline = `2px solid ${hexColor}`;
+                        scoreRow.style.outlineOffset = '-2px';
+                        scoreRow.style.padding = '0 4px';
+                    } else {
+                        scoreRow.style.outline = '';
+                        scoreRow.style.outlineOffset = '';
+                        scoreRow.style.padding = '';
+                    }
+                });
+
+                // Remove extra rows if team count decreased
+                existingRows.forEach(row => {
+                    const teamIndex = parseInt(row.getAttribute('data-team-index'));
+                    if (teamIndex >= this.tms.length) {
+                        row.remove();
+                    }
+                });
             }
 
             updateScoreDisplay() {
@@ -7942,6 +8163,15 @@
                             currentGame.changedTeams.add(change.index);
                         });
                     }
+                    
+                    // Sync bot moves from server (authoritative update)
+                    if (delta.botMove && currentGame.aiBots) {
+                        const bot = currentGame.aiBots.find(b => b.playerId === delta.botMove.botId);
+                        if (bot) {
+                            bot.movesLeft = delta.botMove.movesLeft;
+                            console.log(`🤖 Bot ${bot.playerId} moves synced from server: ${bot.movesLeft}`);
+                        }
+                    }
 
                     // Update UI and recalculate scores
                     currentGame.deferredScoreUpdate = true;
@@ -7950,25 +8180,91 @@
                     currentGame.updateUI();
                 });
 
-                // Handle move rejections with resource refunding
+                // Handle move rejections with resource refunding and rollback
                 this.room.onMessage('move_rejected', (data) => {
                     if (!currentGame) return;
 
-                    console.warn('❌ Move rejected by server:', data.reason);
+                    console.warn('❌ Move rejected by server:', data.reason, data);
 
-                    // Refund resources
-                    if (data.refund) {
-                        if (data.refund.moves && currentGame.tm < currentGame.tms.length) {
-                            currentGame.tms[currentGame.tm].movesLeft += data.refund.moves;
+                    // Check if this is a bot rejection
+                    if (data.botId && currentGame.aiBots) {
+                        const bot = currentGame.aiBots.find(b => b.playerId === data.botId);
+                        if (bot) {
+                            // Refund bot's move (optimistic update rollback)
+                            if (data.refund && data.refund.moves) {
+                                bot.movesLeft += data.refund.moves;
+                            }
+                            // Mark this move type as failed so bot doesn't retry immediately
+                            bot.lastRejectedMove = {
+                                starIndex: data.starIndex,
+                                reason: data.reason,
+                                timestamp: Date.now()
+                            };
+                            console.log(`🤖 Bot ${bot.playerId} move rejected, moves refunded: ${bot.movesLeft}`);
                         }
-                        if (data.refund.steals && currentGame.tm < currentGame.tms.length) {
-                            currentGame.tms[currentGame.tm].st += data.refund.steals;
+                    } else {
+                        // Human player rejection - refund resources
+                        if (data.refund) {
+                            if (data.refund.moves && currentGame.tm < currentGame.tms.length) {
+                                currentGame.tms[currentGame.tm].movesLeft += data.refund.moves;
+                                // Also refund myMoves for multiplayer
+                                if (currentGame.myMoves !== undefined) {
+                                    currentGame.myMoves += data.refund.moves;
+                                }
+                            }
+                            if (data.refund.steals && currentGame.tm < currentGame.tms.length) {
+                                currentGame.tms[currentGame.tm].st += data.refund.steals;
+                            }
                         }
+
+                        // Rollback optimistic star update if starIndex provided
+                        if (data.starIndex !== undefined && data.starIndex < currentGame.st.length) {
+                            const star = currentGame.st[data.starIndex];
+                            // Reset star to unclaimed state (server will send correct state)
+                            // We don't know the previous owner, so just trigger a redraw
+                            currentGame.needsStarRedraw = true;
+                            currentGame.needsStaticLineRedraw = true;
+                        }
+
+                        // Show error notification for human players
+                        showNotification(`Move rejected: ${data.reason}`);
                     }
 
-                    // Show error notification
-                    showNotification(`Move rejected: ${data.reason}`);
                     currentGame.updateUI();
+                });
+
+                // Handle server-generated star requirements for special stars (black holes, wormholes)
+                // Server generates random req values between minReq and maxReq to ensure consistency across all clients
+                this.room.onMessage('star_requirements', (data) => {
+                    if (!currentGame || !data.requirements) return;
+                    
+                    console.log('🎲 Received star requirements from server:', data.requirements);
+                    
+                    data.requirements.forEach(({ index, req, ty }) => {
+                        if (index >= 0 && index < currentGame.st.length) {
+                            const star = currentGame.st[index];
+                            star.req = req;
+                            console.log(`🎲 Star ${index} (${ty === 2 ? 'black hole' : 'wormhole'}) req set to ${req}`);
+                            
+                            // Redraw the star to show the actual requirement instead of range
+                            currentGame.drawStar(star, index);
+                        }
+                    });
+                    
+                    // Update UI to reflect new requirements
+                    currentGame.updateUI();
+                });
+
+                // Handle move transfers when a player leaves
+                this.room.onMessage('moves_transferred', (data) => {
+                    console.log('🔄 Moves transferred:', data);
+                    
+                    // Show notification about the transfer
+                    const message = `${data.movesTransferred} moves transferred from leaving player to team`;
+                    showNotification(message);
+                    
+                    // If we're on the receiving team, our moves will be updated via state sync
+                    // The server will send updated player.movesLeft in the next state update
                 });
 
                 // Handle errors and disconnections
@@ -8082,6 +8378,11 @@
                     if (typeof cfg.rounds === 'number') currentGame.rounds = cfg.rounds;
                     if (typeof cfg.countdownLength === 'number') currentGame.countdownLength = cfg.countdownLength;
 
+                    // Apply team colors from server config
+                    if (cfg.teamColors && Array.isArray(cfg.teamColors)) {
+                        currentGame.updateTeamColors(cfg.teamColors);
+                    }
+
                     // NOTE: Removed init_game_state message - payload too large for WebSocket
                     // Server-side validation works without full state initialization
                     // The server will validate moves on-demand as they come in
@@ -8095,6 +8396,36 @@
                             if (botData instanceof AIBot) return botData;
                             return AIBot.fromData(botData);
                         });
+                    }
+                    
+                    // Initialize bots with server-assigned IDs and moves
+                    if (data.botPlayers && Array.isArray(data.botPlayers)) {
+                        console.log('🤖 Initializing bots with server data:', data.botPlayers);
+                        
+                        // Match bots by index order (server sends bots in same order as config)
+                        data.botPlayers.forEach((serverBot, index) => {
+                            if (index < currentGame.aiBots.length) {
+                                const bot = currentGame.aiBots[index];
+                                bot.playerId = serverBot.id;
+                                bot.movesLeft = serverBot.movesLeft || 0;
+                                // Also update team in case it was changed
+                                bot.teamIndex = serverBot.team;
+                                console.log(`🤖 Bot ${index} (${bot.type}) assigned ID: ${bot.playerId}, team: ${bot.teamIndex}, moves: ${bot.movesLeft}`);
+                            } else {
+                                // Server has more bots than client config - create new bot
+                                const newBot = AIBot.fromData({
+                                    type: serverBot.type || 'HAL',
+                                    teamIndex: serverBot.team,
+                                    aggression: serverBot.aggression || 5
+                                });
+                                newBot.playerId = serverBot.id;
+                                newBot.movesLeft = serverBot.movesLeft || 0;
+                                currentGame.aiBots.push(newBot);
+                                console.log(`🤖 Created new bot from server: ${newBot.type} (ID: ${newBot.playerId}), team: ${newBot.teamIndex}, moves: ${newBot.movesLeft}`);
+                            }
+                        });
+                        
+                        console.log(`🤖 Total bots initialized: ${currentGame.aiBots.length}`);
                     }
                 }
 
@@ -8129,6 +8460,11 @@
             handleSettingsUpdate(data) {
                 if (currentGame && data.config) {
                     console.log('🔄 Received real-time settings update:', data.config);
+
+                    // Update team colors if provided (dynamic color sync from admin panel)
+                    if (data.config.teamColors && Array.isArray(data.config.teamColors)) {
+                        currentGame.updateTeamColors(data.config.teamColors);
+                    }
 
                     // Update multipliers
                     if (data.config.multipliers) {
@@ -8273,6 +8609,17 @@
                     if (data.playerMoves[myId] !== undefined) {
                         currentGame.myMoves = data.playerMoves[myId];
                         currentGame.updateHeader(); // Force header update
+                    }
+                    
+                    // Update bot moves from server allocation
+                    if (currentGame.aiBots && currentGame.aiBots.length > 0) {
+                        currentGame.aiBots.forEach(bot => {
+                            if (bot.playerId && data.playerMoves[bot.playerId] !== undefined) {
+                                bot.movesLeft = data.playerMoves[bot.playerId];
+                                bot.totalStealsThisRound = 0; // Reset steal counter for new round
+                                console.log(`🤖 Bot ${bot.playerId} moves updated: ${bot.movesLeft}`);
+                            }
+                        });
                     }
                 }
             }
@@ -8559,6 +8906,26 @@
             currentGame = new Game();
             window.addEventListener('resize', () => {
                 if (currentGame && currentGame.app) { currentGame.app.renderer.resize(innerWidth, innerHeight); currentGame.setupCam(); }
+            });
+
+            // Handle player leaving - offer to transfer moves to teammates
+            window.addEventListener('beforeunload', (event) => {
+                // Only show dialog if in a multiplayer game with moves remaining
+                if (multiplayerManager && multiplayerManager.room && currentGame && currentGame.myMoves > 0) {
+                    // Send leave message with transfer choice
+                    // Note: beforeunload doesn't allow custom dialogs, so we default to transferring
+                    // The user can cancel the leave if they don't want to transfer
+                    try {
+                        multiplayerManager.room.send('player_leaving', { transferMoves: true });
+                    } catch (e) {
+                        console.error('Error sending leave message:', e);
+                    }
+                    
+                    // Show browser's default "Leave site?" dialog with your requested text
+                    event.preventDefault();
+                    event.returnValue = 'Leaving the session? Transfer moves to teammates or don\'t';
+                    return event.returnValue;
+                }
             });
 
             // Initialize multiplayer if in a game room

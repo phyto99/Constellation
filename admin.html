@@ -1135,25 +1135,30 @@
             const existingBots = container.querySelectorAll('.ai-bot-item').length;
             const botTypes = Object.keys(AI_BOT_TYPES);
             const nextBotType = botTypes[existingBots % botTypes.length];
-            const nextTeamIndex = existingBots % TEAM_CONFIGS.length;
+            const nextTeamIndex = existingBots % colorTeamColors.length;
 
             const botId = `adminAiBot_${aiBotCounter++}`;
             const botDiv = document.createElement('div');
             botDiv.className = 'ai-bot-item';
             botDiv.id = botId;
 
+            // Use dynamic team colors from color manager instead of hardcoded TEAM_CONFIGS
+            const teamOptionsHtml = colorTeamColors.map((team, index) => {
+                const hexColor = rgbToHexAdmin(team.rgb);
+                const displayName = team.name.charAt(0).toUpperCase() + team.name.slice(1);
+                return `<option value="${index}" ${index === nextTeamIndex ? 'selected' : ''} style="color: ${hexColor}; background-color: rgba(${team.rgb[0]}, ${team.rgb[1]}, ${team.rgb[2]}, 0.2);">${displayName} (${hexColor})</option>`;
+            }).join('');
+
             botDiv.innerHTML = `
-                <select class="ai-bot-select" onchange="updateAdminAIBotDisplay('${botId}')">
+                <select class="ai-bot-select" onchange="updateAdminAIBotDisplay('${botId}'); debouncedBotSettingsUpdate();">
                     ${Object.keys(AI_BOT_TYPES).map(key =>
                 `<option value="${key}" ${key === nextBotType ? 'selected' : ''}>${AI_BOT_TYPES[key].name} - ${AI_BOT_TYPES[key].description}</option>`
             ).join('')}
                 </select>
-                <select class="ai-team-select">
-                    ${TEAM_CONFIGS.map((team, index) =>
-                `<option value="${index}" ${index === nextTeamIndex ? 'selected' : ''} style="color: #${team.color.toString(16).padStart(6, '0')}">${team.displayName}</option>`
-            ).join('')}
+                <select class="ai-team-select" onchange="updateAdminAIBotDisplay('${botId}'); debouncedBotSettingsUpdate();">
+                    ${teamOptionsHtml}
                 </select>
-                <select class="ai-aggression-select">
+                <select class="ai-aggression-select" onchange="updateAdminAIBotDisplay('${botId}'); debouncedBotSettingsUpdate();">
                     <option value="1">Level 1 - Very Passive</option>
                     <option value="2">Level 2 - Passive</option>
                     <option value="3">Level 3 - Conservative</option>
@@ -1170,6 +1175,10 @@
 
             container.appendChild(botDiv);
             updateAdminAIBotDisplay(botId);
+            
+            // Sync bot changes to server (debounced)
+            clearTimeout(botSettingsUpdateTimeout);
+            botSettingsUpdateTimeout = setTimeout(() => sendSettingsUpdate(), 500);
         }
 
         function removeAdminAIBot(botId) {
@@ -1182,9 +1191,20 @@
                 if (container.querySelectorAll('.ai-bot-item').length === 0) {
                     container.innerHTML = '<div class="ai-bots-empty">No AI bots added yet</div>';
                 }
+                
+                // Sync bot changes to server (debounced)
+                clearTimeout(botSettingsUpdateTimeout);
+                botSettingsUpdateTimeout = setTimeout(() => sendSettingsUpdate(), 500);
             }
         }
 
+        let botSettingsUpdateTimeout = null;
+        
+        function debouncedBotSettingsUpdate() {
+            clearTimeout(botSettingsUpdateTimeout);
+            botSettingsUpdateTimeout = setTimeout(() => sendSettingsUpdate(), 500);
+        }
+        
         function updateAdminAIBotDisplay(botId) {
             const botDiv = document.getElementById(botId);
             if (!botDiv) return;
@@ -1198,13 +1218,20 @@
             const teamIndex = parseInt(teamSelect.value);
             const aggression = parseInt(aggressionSelect.value);
 
-            // Update cube appearance
-            const teamColor = `#${TEAM_CONFIGS[teamIndex].color.toString(16).padStart(6, '0')}`;
+            // Update cube appearance using dynamic team colors
+            const teamColor = colorTeamColors[teamIndex] ? rgbToHexAdmin(colorTeamColors[teamIndex].rgb) : '#00FFFF';
             const opacity = 0.3 + ((aggression - 1) / 8 * 0.7);
 
             cube.style.background = teamColor;
             cube.style.opacity = opacity;
-            cube.title = `${AI_BOT_TYPES[botType].name} on ${TEAM_CONFIGS[teamIndex].displayName} team (Level ${aggression} aggression)`;
+            
+            const teamName = colorTeamColors[teamIndex] ? colorTeamColors[teamIndex].name : 'Unknown';
+            cube.title = `${AI_BOT_TYPES[botType].name} on ${teamName} team (Level ${aggression} aggression)`;
+        }
+
+        // Helper function to convert RGB array to hex string
+        function rgbToHexAdmin(rgb) {
+            return `#${rgb.map(c => Math.round(c).toString(16).padStart(2, '0')).join('')}`;
         }
 
         function getAdminAIBots() {
@@ -1469,12 +1496,23 @@
             console.log('Selected room:', roomId);
             selectedRoomId = roomId;
 
-            // Request detailed room information
-            // Optional: if AdminRoom supports request_room_state
-            // currentRoom.send('request_room_state', { roomId });
-
             // Populate settings if available
             const roomData = latestRoomsData.find(r => r.roomId === roomId);
+            
+            // CRITICAL: Sync players from room data to color manager
+            if (roomData && roomData.players && Array.isArray(roomData.players)) {
+                console.log('Syncing players from room data:', roomData.players);
+                if (typeof syncColyseusPlayersToColorManager === 'function') {
+                    syncColyseusPlayersToColorManager(roomData.players);
+                }
+            } else {
+                // Clear players if no room data or no players
+                console.log('No players in room data, clearing player list');
+                colorPlayers = [];
+                renderColorPlayerPool();
+                renderColorTeamAssignments();
+                updateColorStats();
+            }
             if (roomData && roomData.config) {
                 const cfg = roomData.config;
                 // Regular settings
@@ -1601,6 +1639,12 @@
             document.getElementById('pause-btn').style.display = 'none';
             document.getElementById('resume-btn').style.display = 'none';
             isPaused = false;
+            
+            // Clear player list when deselecting room
+            colorPlayers = [];
+            renderColorPlayerPool();
+            renderColorTeamAssignments();
+            updateColorStats();
         }
 
         async function createGame() {
@@ -1821,7 +1865,26 @@
             }
         }
 
+        // Debounce timer for settings updates
+        let settingsUpdateTimeout = null;
+        
         function sendSettingsUpdate() {
+            if (!currentRoom || !selectedRoomId) return;
+            
+            // Debounce settings updates to prevent excessive server calls
+            if (settingsUpdateTimeout) {
+                clearTimeout(settingsUpdateTimeout);
+            }
+            
+            settingsUpdateTimeout = setTimeout(() => {
+                sendSettingsUpdateImmediate();
+            }, 300); // 300ms debounce
+        }
+
+        // Track last sent settings to avoid duplicate notifications
+        let lastSentSettingsJson = '';
+
+        function sendSettingsUpdateImmediate() {
             if (!currentRoom || !selectedRoomId) return;
 
             const multipliers = {
@@ -1830,6 +1893,19 @@
                 hq: parseInt(document.getElementById('edit-hqMultiplier').value) || 0,
                 destruction: parseInt(document.getElementById('edit-destructionMultiplier').value) || 0
             };
+
+            // Convert colorTeamColors (RGB arrays) to server format (hex numbers)
+            const teamColors = colorTeamColors.map(tc => {
+                // Convert RGB array to hex number
+                const hexColor = (tc.rgb[0] << 16) | (tc.rgb[1] << 8) | tc.rgb[2];
+                // Capitalize first letter for displayName
+                const displayName = tc.name.charAt(0).toUpperCase() + tc.name.slice(1);
+                return {
+                    color: hexColor,
+                    name: tc.name.toLowerCase(),
+                    displayName: displayName
+                };
+            });
 
             const settings = {
                 // movesPerRound is usually hardcoded in game or passed, checking server it's not in gameConfig top level but passed... 
@@ -1845,8 +1921,16 @@
                 headquarters: parseInt(document.getElementById('edit-hqMax').value) || 2,
                 customMap: document.getElementById('edit-mapJson').value ? JSON.parse(document.getElementById('edit-mapJson').value) : null,
                 multipliers: multipliers,
-                aiBots: getAdminAIBots()
+                aiBots: getAdminAIBots(),
+                teamColors: teamColors
             };
+
+            // Only send if settings actually changed
+            const settingsJson = JSON.stringify(settings);
+            if (settingsJson === lastSentSettingsJson) {
+                return; // No change, skip update
+            }
+            lastSentSettingsJson = settingsJson;
 
             try {
                 // Send update command via AdminRoom
@@ -2042,24 +2126,66 @@
             updateColorStats();
         }
 
+        // Track last sent colors to avoid duplicate updates
+        let lastSentColorsJson = '';
+
         function handleColorIframeMessage(event) {
             const data = event.data;
             if (!data || !data.type) return;
 
             switch (data.type) {
                 case 'colorsUpdated':
-                    colorTeamColors = data.colors;
-                    renderColorTeamAssignments();
+                    // Only update if colors actually changed
+                    const newColorsJson = JSON.stringify(data.colors);
+                    if (newColorsJson !== lastSentColorsJson) {
+                        lastSentColorsJson = newColorsJson;
+                        colorTeamColors = data.colors;
+                        renderColorTeamAssignments();
+                        // Refresh AI bot team dropdowns with new colors
+                        refreshAIBotTeamDropdowns();
+                        // Sync updated colors to game clients
+                        sendSettingsUpdate();
+                    }
                     break;
                 case 'colorAdded':
                     colorTeamColors.push(data.color);
+                    lastSentColorsJson = JSON.stringify(colorTeamColors);
                     renderColorTeamAssignments();
+                    // Refresh AI bot team dropdowns with new colors
+                    refreshAIBotTeamDropdowns();
+                    // Sync new color to game clients
+                    sendSettingsUpdate();
                     break;
                 case 'ready':
                     // Iframe is ready, send initial data
                     syncPlayersToIframe();
                     break;
             }
+        }
+
+        // Refresh AI bot team dropdowns when team colors change
+        function refreshAIBotTeamDropdowns() {
+            const container = document.getElementById('admin-ai-bots');
+            const botDivs = container.querySelectorAll('.ai-bot-item');
+            
+            botDivs.forEach(botDiv => {
+                const teamSelect = botDiv.querySelector('.ai-team-select');
+                if (teamSelect) {
+                    const currentValue = teamSelect.value;
+                    
+                    // Rebuild options with new colors including hex code in text
+                    const teamOptionsHtml = colorTeamColors.map((team, index) => {
+                        const hexColor = rgbToHexAdmin(team.rgb);
+                        const displayName = team.name.charAt(0).toUpperCase() + team.name.slice(1);
+                        return `<option value="${index}" ${index == currentValue ? 'selected' : ''} style="color: ${hexColor}; background-color: rgba(${team.rgb[0]}, ${team.rgb[1]}, ${team.rgb[2]}, 0.2);">${displayName} (${hexColor})</option>`;
+                    }).join('');
+                    
+                    teamSelect.innerHTML = teamOptionsHtml;
+                    
+                    // Update the bot display
+                    updateAdminAIBotDisplay(botDiv.id);
+                }
+            });
         }
 
         function sendToColorIframe(message) {

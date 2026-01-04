@@ -563,13 +563,13 @@
                     ■ Assigned Students <span class="sync-indicator" title="Synced with Color Optimizer"></span>
                 </div>
                 <div style="font-size: 8px; color: #666; margin-bottom: 8px; font-style: italic;">
-                    Only assigned students affect color optimization
+                    Normal people add weighted CB rates (92% N, 5% D, 2.5% P, 0.5% T)
                 </div>
                 <div class="stats-grid">
                     <div class="stat-item">
                         <div class="stat-label">Normal</div>
                         <div class="stat-value" id="sidebarNormal">0</div>
-                        <div class="stat-percent" id="sidebarNormalPct">0%</div>
+                        <div class="stat-percent" id="sidebarNormalPct" title="Weighted optimization %">0%</div>
                         <div class="stat-controls">
                             <button class="stat-btn" onclick="adjustStudents('normal', -1)">−</button>
                             <button class="stat-btn" onclick="adjustStudents('normal', 1)">+</button>
@@ -894,30 +894,60 @@
             return (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) > 128 ? '#000' : '#fff';
         }
 
+        // Population statistics for color blindness (approximate)
+        // These are used when a "normal" person joins - they contribute weighted fractions
+        // to account for undiagnosed color blindness in the general population
+        const POPULATION_CB_RATES = {
+            normal: 0.92,      // ~92% truly normal vision
+            deuteranopia: 0.05, // ~5% (most common, red-green)
+            protanopia: 0.025,  // ~2.5% (red-green)
+            tritanopia: 0.005   // ~0.5% (blue-yellow, rare)
+        };
+
         function getWeights() {
             const assignedStudents = students.filter(s => s.assignedTeam !== null);
-            const counts = {
-                normal: assignedStudents.filter(s => s.type === 'normal').length,
-                deuteranopia: assignedStudents.filter(s => s.type === 'deuteranopia').length,
-                protanopia: assignedStudents.filter(s => s.type === 'protanopia').length,
-                tritanopia: assignedStudents.filter(s => s.type === 'tritanopia').length
+            
+            // Calculate weighted counts - normal people contribute fractional weights
+            // based on population color blindness statistics
+            let weightedCounts = {
+                normal: 0,
+                deuteranopia: 0,
+                protanopia: 0,
+                tritanopia: 0
             };
             
-            const total = counts.normal + counts.deuteranopia + counts.protanopia + counts.tritanopia;
+            assignedStudents.forEach(student => {
+                if (student.type === 'normal') {
+                    // Normal person contributes weighted fractions based on population statistics
+                    // This accounts for undiagnosed color blindness
+                    weightedCounts.normal += POPULATION_CB_RATES.normal;
+                    weightedCounts.deuteranopia += POPULATION_CB_RATES.deuteranopia;
+                    weightedCounts.protanopia += POPULATION_CB_RATES.protanopia;
+                    weightedCounts.tritanopia += POPULATION_CB_RATES.tritanopia;
+                } else {
+                    // Known colorblind person contributes full weight to their type
+                    weightedCounts[student.type] += 1;
+                }
+            });
+            
+            const total = weightedCounts.normal + weightedCounts.deuteranopia + 
+                          weightedCounts.protanopia + weightedCounts.tritanopia;
+            
             if (total === 0) {
+                // Default weights when no students assigned
                 return {
                     normal: 0.92,
                     deuteranopia: 0.05,
-                    protanopia: 0.01,
-                    tritanopia: 0.0001
+                    protanopia: 0.025,
+                    tritanopia: 0.005
                 };
             }
             
             return {
-                normal: counts.normal / total,
-                deuteranopia: counts.deuteranopia / total,
-                protanopia: counts.protanopia / total,
-                tritanopia: counts.tritanopia / total
+                normal: weightedCounts.normal / total,
+                deuteranopia: weightedCounts.deuteranopia / total,
+                protanopia: weightedCounts.protanopia / total,
+                tritanopia: weightedCounts.tritanopia / total
             };
         }
 
@@ -1471,17 +1501,13 @@
             document.getElementById('sidebarTrit').textContent = counts.tritanopia;
             document.getElementById('sidebarTotal').textContent = totalAssigned;
             
-            if (totalAssigned > 0) {
-                document.getElementById('sidebarNormalPct').textContent = `${((counts.normal / totalAssigned) * 100).toFixed(1)}%`;
-                document.getElementById('sidebarDeutPct').textContent = `${((counts.deuteranopia / totalAssigned) * 100).toFixed(1)}%`;
-                document.getElementById('sidebarProtPct').textContent = `${((counts.protanopia / totalAssigned) * 100).toFixed(1)}%`;
-                document.getElementById('sidebarTritPct').textContent = `${((counts.tritanopia / totalAssigned) * 100).toFixed(1)}%`;
-            } else {
-                document.getElementById('sidebarNormalPct').textContent = '0%';
-                document.getElementById('sidebarDeutPct').textContent = '0%';
-                document.getElementById('sidebarProtPct').textContent = '0%';
-                document.getElementById('sidebarTritPct').textContent = '0%';
-            }
+            // Show the actual weighted percentages used for optimization
+            // (accounts for population color blindness rates in "normal" people)
+            const weights = getWeights();
+            document.getElementById('sidebarNormalPct').textContent = `${(weights.normal * 100).toFixed(1)}%`;
+            document.getElementById('sidebarDeutPct').textContent = `${(weights.deuteranopia * 100).toFixed(1)}%`;
+            document.getElementById('sidebarProtPct').textContent = `${(weights.protanopia * 100).toFixed(1)}%`;
+            document.getElementById('sidebarTritPct').textContent = `${(weights.tritanopia * 100).toFixed(1)}%`;
         }
 
         function renderHeatmap() {
