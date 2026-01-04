@@ -569,7 +569,7 @@
 
         .color-btn.pressed {
             background: #0056b3;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
             transform: translateY(1px);
         }
 
@@ -636,11 +636,26 @@
             border-radius: 2px;
         }
 
-        .player-chip-type.normal { color: #28a745; }
-        .player-chip-type.deuteranopia { color: #b8860b; }
-        .player-chip-type.protanopia { color: #d2691e; }
-        .player-chip-type.tritanopia { color: #4682b4; }
-        .player-chip-type.bot { color: #4a90d9; background: #e0f0ff; }
+        .player-chip-type.normal {
+            color: #28a745;
+        }
+
+        .player-chip-type.deuteranopia {
+            color: #b8860b;
+        }
+
+        .player-chip-type.protanopia {
+            color: #d2691e;
+        }
+
+        .player-chip-type.tritanopia {
+            color: #4682b4;
+        }
+
+        .player-chip-type.bot {
+            color: #4a90d9;
+            background: #e0f0ff;
+        }
 
         .team-color-assignments {
             display: grid;
@@ -748,7 +763,7 @@
             z-index: 100;
             overflow: hidden;
             border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
 
         .color-optimizer-pane.visible {
@@ -786,8 +801,15 @@
         }
 
         @keyframes pulse-light {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
         }
 
         .vision-toggles {
@@ -915,33 +937,54 @@
             <h2>Select a Game</h2>
             <p>No games created yet. Create a new game to get started.</p>
         </div>
-        
+
         <div id="game-content" style="display: none;">
             <div style="padding: 20px;">
                 <!-- Game Action Buttons at the very top -->
-                <div class="game-actions" style="margin-bottom: 15px; position: relative; display: flex; justify-content: space-between; align-items: center;">
+                <div class="game-actions"
+                    style="margin-bottom: 15px; position: relative; display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; gap: 10px;">
-                        <button class="btn-back" onclick="deselectRoom()" style="background: #6b7280; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">← Back</button>
-                        <button class="btn-delete" onclick="deleteGame()" style="background: #6b7280; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Close Game</button>
+                        <button class="btn-back" onclick="deselectRoom()"
+                            style="background: #6b7280; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">←
+                            Back</button>
+                        <button class="btn-delete" onclick="deleteGame()"
+                            style="background: #6b7280; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Close
+                            Game</button>
                     </div>
                     <div style="display: flex; gap: 10px; align-items: center;">
-                        <button class="btn-start" id="start-btn" onclick="startGame()" style="background: #6b7280; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Start Game</button>
-                        <button class="btn-pause" id="pause-btn" onclick="showPausePopup()" style="background: #6b7280; color: white; display: none; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">⏸ Pause</button>
-                        <button class="btn-resume" id="resume-btn" onclick="resumeGame()" style="background: #6b7280; color: white; display: none; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">▶ Resume</button>
-                        <a href="#" id="game-direct-link" target="_blank" style="background: #6b7280; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; text-decoration: none; display: inline-block;">Join Game</a>
+                        <button class="btn-start" id="start-btn" onclick="startGame()"
+                            style="background: #6b7280; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Start
+                            Game</button>
+                        <button class="btn-pause" id="pause-btn" onclick="showPausePopup()"
+                            style="background: #6b7280; color: white; display: none; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">⏸
+                            Pause</button>
+                        <button class="btn-resume" id="resume-btn" onclick="resumeGame()"
+                            style="background: #6b7280; color: white; display: none; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">▶
+                            Resume</button>
+                        <a href="#" id="game-direct-link" target="_blank"
+                            style="background: #6b7280; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; text-decoration: none; display: inline-block;">Join
+                            Game</a>
                     </div>
-                    
+
                     <!-- Pause Reason Popup -->
-                    <div id="pause-popup" style="display: none; position: absolute; top: 100%; right: 200px; margin-top: 8px; z-index: 1000;">
-                        <div style="position: relative; background: white; border: 1px solid #ccc; border-radius: 8px; padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); width: 280px;">
+                    <div id="pause-popup"
+                        style="display: none; position: absolute; top: 100%; right: 200px; margin-top: 8px; z-index: 1000;">
+                        <div
+                            style="position: relative; background: white; border: 1px solid #ccc; border-radius: 8px; padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); width: 280px;">
                             <!-- Arrow pointing up -->
-                            <div style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 8px solid #ccc;"></div>
-                            <div style="position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 7px solid white;"></div>
-                            <input type="text" id="pause-reason-input" placeholder="Please state a valid reason" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; box-sizing: border-box;" onkeydown="if(event.key === 'Enter') submitPause()">
+                            <div
+                                style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 8px solid #ccc;">
+                            </div>
+                            <div
+                                style="position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 7px solid white;">
+                            </div>
+                            <input type="text" id="pause-reason-input" placeholder="Please state a valid reason"
+                                style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; box-sizing: border-box;"
+                                onkeydown="if(event.key === 'Enter') submitPause()">
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="scenario-header" onclick="toggleScenario()">
                     <div>
                         <h3 id="scenario-name">Game Session</h3>
@@ -1008,8 +1051,10 @@
                             </div>
                             <div class="form-group">
                                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                    <input type="checkbox" id="edit-allowPlayerTeamSelection" onchange="sendSettingsUpdate()" style="width: auto; margin: 0;">
-                                    <span>Allow Player Team Selection <span class="sublabel">(Players can pick their team from the game client)</span></span>
+                                    <input type="checkbox" id="edit-allowPlayerTeamSelection"
+                                        onchange="sendSettingsUpdate()" style="width: auto; margin: 0;">
+                                    <span>Allow Player Team Selection <span class="sublabel">(Players can pick their
+                                            team from the game client)</span></span>
                                 </label>
                             </div>
                         </div>
@@ -1034,27 +1079,34 @@
                         <div class="form-group">
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <label style="margin: 0; white-space: nowrap;">Number of Teams:</label>
-                                <input type="number" id="colorTeamCount" value="6" min="3" max="20" style="width: 80px; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px;">
+                                <input type="number" id="colorTeamCount" value="6" min="3" max="20"
+                                    style="width: 80px; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px;">
                                 <input type="range" id="colorTeamSize" value="6" min="3" max="20" style="flex: 1;">
                             </div>
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px;">
-                            <button class="color-btn" id="colorAddTeamBtn" disabled style="margin: 0; padding: 8px;">+ Add New Team</button>
-                            <button class="color-btn" onclick="colorAutoAssignPlayers()" style="margin: 0; padding: 8px;">Auto-Balance</button>
-                            <button class="color-btn" onclick="colorClearAssignments()" style="margin: 0; padding: 8px;">Unassign All</button>
+                            <button class="color-btn" id="colorAddTeamBtn" disabled style="margin: 0; padding: 8px;">+
+                                Add New Team</button>
+                            <button class="color-btn" onclick="colorAutoAssignPlayers()"
+                                style="margin: 0; padding: 8px;">Auto-Balance</button>
+                            <button class="color-btn" onclick="colorClearAssignments()"
+                                style="margin: 0; padding: 8px;">Unassign All</button>
                         </div>
-                        
+
                         <div class="form-group" style="margin-top: 20px;">
                             <label>Attendees (<span id="totalAttendeesCount">0</span>):</label>
-                            
+
                             <div class="team-color-slot" id="unassignedBox" style="margin-top: 10px;">
                                 <div class="team-color-players" id="colorPlayerPool">
-                                    <div style="color: #666; text-align: center; padding: 12px; font-size: 12px; width: 100%;">No players connected</div>
+                                    <div
+                                        style="color: #666; text-align: center; padding: 12px; font-size: 12px; width: 100%;">
+                                        No players connected</div>
                                 </div>
                             </div>
-                            
-                            <div class="team-color-assignments" id="colorTeamAssignments" style="margin-top: 6px;"></div>
-                            
+
+                            <div class="team-color-assignments" id="colorTeamAssignments" style="margin-top: 6px;">
+                            </div>
+
                             <div class="vision-toggles" style="margin-top: 6px;">
                                 <span class="vision-toggle active" data-mode="normal" id="normalToggle">N0</span>
                                 <span class="vision-toggle" data-mode="deuteranopia" id="deutToggle">D0</span>
@@ -1063,11 +1115,14 @@
                                 <span id="colorInfoBtn" onclick="toggleColorIframe()">ⓘ</span>
                             </div>
                         </div>
-                        
+
                         <div style="display: flex; gap: 10px; margin-top: 15px;">
-                            <button class="color-btn primary" id="colorStartGameBtn" style="flex: 1; margin: 0; padding: 8px;">▶ Start Color Mode</button>
-                            <button class="color-btn" id="colorStopGameBtn" style="flex: 1; margin: 0; padding: 8px; display: none;">⏹ Stop Color Mode</button>
-                            <button class="color-btn" id="colorResetBtn" style="flex: 1; margin: 0; padding: 8px;">↻ Reset to Optimal</button>
+                            <button class="color-btn primary" id="colorStartGameBtn"
+                                style="flex: 1; margin: 0; padding: 8px;">▶ Start Color Mode</button>
+                            <button class="color-btn" id="colorStopGameBtn"
+                                style="flex: 1; margin: 0; padding: 8px; display: none;">⏹ Stop Color Mode</button>
+                            <button class="color-btn" id="colorResetBtn" style="flex: 1; margin: 0; padding: 8px;">↻
+                                Reset to Optimal</button>
                         </div>
                     </div>
                 </div>
@@ -1191,7 +1246,7 @@
 
             container.appendChild(botDiv);
             updateAdminAIBotDisplay(botId);
-            
+
             // Sync bot changes to server (debounced)
             clearTimeout(botSettingsUpdateTimeout);
             botSettingsUpdateTimeout = setTimeout(() => sendSettingsUpdate(), 500);
@@ -1207,7 +1262,7 @@
                 if (container.querySelectorAll('.ai-bot-item').length === 0) {
                     container.innerHTML = '<div class="ai-bots-empty">No AI bots added yet</div>';
                 }
-                
+
                 // Sync bot changes to server (debounced)
                 clearTimeout(botSettingsUpdateTimeout);
                 botSettingsUpdateTimeout = setTimeout(() => sendSettingsUpdate(), 500);
@@ -1215,12 +1270,12 @@
         }
 
         let botSettingsUpdateTimeout = null;
-        
+
         function debouncedBotSettingsUpdate() {
             clearTimeout(botSettingsUpdateTimeout);
             botSettingsUpdateTimeout = setTimeout(() => sendSettingsUpdate(), 500);
         }
-        
+
         function updateAdminAIBotDisplay(botId) {
             const botDiv = document.getElementById(botId);
             if (!botDiv) return;
@@ -1240,7 +1295,7 @@
 
             cube.style.background = teamColor;
             cube.style.opacity = opacity;
-            
+
             const teamName = colorTeamColors[teamIndex] ? colorTeamColors[teamIndex].name : 'Unknown';
             cube.title = `${AI_BOT_TYPES[botType].name} on ${teamName} team (Level ${aggression} aggression)`;
         }
@@ -1326,7 +1381,7 @@
             if (!data || !selectedRoomId || data.roomId !== selectedRoomId) return;
 
             const players = Array.isArray(data.players) ? data.players : [];
-            
+
             // Sync to color manager - this now handles all player display
             if (typeof syncColyseusPlayersToColorManager === 'function') {
                 syncColyseusPlayersToColorManager(players);
@@ -1420,7 +1475,7 @@
         function startReconnectTimer() {
             reconnectCountdown = 5;
             updateConnectionStatus(`Reconnecting ${reconnectCountdown}s`);
-            
+
             reconnectTimer = setInterval(() => {
                 reconnectCountdown--;
                 if (reconnectCountdown <= 0) {
@@ -1510,7 +1565,7 @@
 
         function resetRoomSettingsToDefaults() {
             console.log('Resetting room settings to defaults');
-            
+
             // Reset form fields to default values
             document.getElementById('edit-rounds').value = 10;
             document.getElementById('edit-roundTime').value = 30;
@@ -1518,28 +1573,28 @@
             document.getElementById('edit-stealLimit').value = 15;
             document.getElementById('edit-hqMax').value = 2;
             document.getElementById('edit-movesPerRound').value = 15;
-            
+
             // Reset multipliers to defaults
             document.getElementById('edit-countMultiplier').value = 500;
             document.getElementById('edit-distanceMultiplier').value = 1;
             document.getElementById('edit-hqMultiplier').value = 10;
             document.getElementById('edit-destructionMultiplier').value = 1;
-            
+
             // Clear map JSON
             document.getElementById('edit-mapJson').value = '';
-            
+
             // Reset AI bots to empty
             const container = document.getElementById('admin-ai-bots');
             if (container) {
                 container.innerHTML = '<div class="ai-bots-empty">No AI bots added yet</div>';
             }
-            
+
             // Reset button states to waiting/new game state
             document.getElementById('start-btn').style.display = 'inline-block';
             document.getElementById('pause-btn').style.display = 'none';
             document.getElementById('resume-btn').style.display = 'none';
             isPaused = false;
-            
+
             // Reset color management to setup mode (not game mode)
             colorGameMode = false;
             const startBtn = document.getElementById('colorStartGameBtn');
@@ -1548,7 +1603,7 @@
                 startBtn.style.display = 'inline-block';
                 stopBtn.style.display = 'none';
             }
-            
+
             // Clear players
             colorPlayers = [];
             renderColorPlayerPool();
@@ -1562,7 +1617,7 @@
 
             // Populate settings if available
             const roomData = latestRoomsData.find(r => r.roomId === roomId);
-            
+
             if (!roomData) {
                 console.log('No room data found, resetting to defaults');
                 resetRoomSettingsToDefaults();
@@ -1582,7 +1637,7 @@
                     updateColorStats();
                 }
             }
-            
+
             if (roomData && roomData.config) {
                 const cfg = roomData.config;
                 // Regular settings
@@ -1594,7 +1649,7 @@
                 // Game usually has 'movesPerRound' stored as 'steals' count or custom prop? 
                 // Server code doesn't explicitly save 'moves', assumes defaults. client 'S' is moves.
                 // We'll leave moves default for now if not in config.
-                
+
                 // Player team selection setting
                 document.getElementById('edit-allowPlayerTeamSelection').checked = cfg.allowPlayerTeamSelection || false;
 
@@ -1677,12 +1732,12 @@
             linkElement.textContent = 'Join Game';
 
             document.getElementById('scenario-name').textContent = `Game ${roomId.substring(0, 8)}`;
-            
+
             // Update button states based on room state
             const startBtn = document.getElementById('start-btn');
             const pauseBtn = document.getElementById('pause-btn');
             const resumeBtn = document.getElementById('resume-btn');
-            
+
             if (roomData && roomData.state === 'playing') {
                 startBtn.style.display = 'none';
                 if (roomData.isPaused) {
@@ -1694,7 +1749,7 @@
                     resumeBtn.style.display = 'none';
                     isPaused = false;
                 }
-                
+
                 // Set color management to game mode for playing rooms
                 colorGameMode = true;
                 const colorStartBtn = document.getElementById('colorStartGameBtn');
@@ -1708,7 +1763,7 @@
                 pauseBtn.style.display = 'none';
                 resumeBtn.style.display = 'none';
                 isPaused = false;
-                
+
                 // Set color management to setup mode for waiting rooms
                 colorGameMode = false;
                 const colorStartBtn = document.getElementById('colorStartGameBtn');
@@ -1724,13 +1779,13 @@
             selectedRoomId = null;
             document.getElementById('no-game-selected').style.display = 'block';
             document.getElementById('game-content').style.display = 'none';
-            
+
             // Reset button states
             document.getElementById('start-btn').style.display = 'inline-block';
             document.getElementById('pause-btn').style.display = 'none';
             document.getElementById('resume-btn').style.display = 'none';
             isPaused = false;
-            
+
             // Reset color management to setup mode
             colorGameMode = false;
             const colorStartBtn = document.getElementById('colorStartGameBtn');
@@ -1739,7 +1794,7 @@
                 colorStartBtn.style.display = 'inline-block';
                 colorStopBtn.style.display = 'none';
             }
-            
+
             // Clear player list when deselecting room
             colorPlayers = [];
             renderColorPlayerPool();
@@ -1783,7 +1838,7 @@
 
                 // Select the newly created room (this will reset to defaults since room data doesn't exist yet)
                 selectRoom(room.roomId);
-                
+
                 // Request updated rooms list to get the new room data
                 if (currentRoom) {
                     setTimeout(() => {
@@ -1890,11 +1945,11 @@
                 // Send start command via AdminRoom
                 currentRoom.send('start_game', { roomId: selectedRoomId });
                 console.log('✓ Game start command sent via AdminRoom');
-                
+
                 // Show pause button, hide start button
                 document.getElementById('start-btn').style.display = 'none';
                 document.getElementById('pause-btn').style.display = 'inline-block';
-                
+
                 // Auto-start color mode when game starts
                 if (!colorGameMode) {
                     document.getElementById('colorStartGameBtn').click();
@@ -1922,12 +1977,12 @@
         function submitPause() {
             const reason = document.getElementById('pause-reason-input').value;
             hidePausePopup();
-            
+
             if (!selectedRoomId || !currentRoom) return;
-            
+
             currentRoom.send('pause_game', { roomId: selectedRoomId, reason: reason });
             console.log('✓ Game pause command sent via AdminRoom');
-            
+
             isPaused = true;
             document.getElementById('pause-btn').style.display = 'none';
             document.getElementById('resume-btn').style.display = 'inline-block';
@@ -1935,17 +1990,17 @@
 
         function resumeGame() {
             if (!selectedRoomId || !currentRoom) return;
-            
+
             currentRoom.send('resume_game', { roomId: selectedRoomId });
             console.log('✓ Game resume command sent via AdminRoom');
-            
+
             isPaused = false;
             document.getElementById('resume-btn').style.display = 'none';
             document.getElementById('pause-btn').style.display = 'inline-block';
         }
 
         // Close pause popup when clicking outside
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', function (e) {
             const popup = document.getElementById('pause-popup');
             const pauseBtn = document.getElementById('pause-btn');
             if (popup && popup.style.display === 'block' && !popup.contains(e.target) && e.target !== pauseBtn) {
@@ -1967,7 +2022,7 @@
                     // Clear selection
                     document.getElementById('no-game-selected').style.display = 'block';
                     document.getElementById('game-content').style.display = 'none';
-                    
+
                     selectedRoomId = null;
                 }
             } catch (error) {
@@ -1978,15 +2033,15 @@
 
         // Debounce timer for settings updates
         let settingsUpdateTimeout = null;
-        
+
         function sendSettingsUpdate() {
             if (!currentRoom || !selectedRoomId) return;
-            
+
             // Debounce settings updates to prevent excessive server calls
             if (settingsUpdateTimeout) {
                 clearTimeout(settingsUpdateTimeout);
             }
-            
+
             settingsUpdateTimeout = setTimeout(() => {
                 sendSettingsUpdateImmediate();
             }, 300); // 300ms debounce
@@ -2040,7 +2095,7 @@
             // Send map filename instead of full JSON to avoid Colyseus presence message size limits
             const selectedMapFilename = document.getElementById('map-selector').value;
             const mapJsonValue = document.getElementById('edit-mapJson').value.trim();
-            
+
             if (selectedMapFilename) {
                 // Map selected from dropdown
                 settings.customMapFilename = selectedMapFilename;
@@ -2107,11 +2162,11 @@
 
         async function loadMapFromDropdown() {
             const filename = document.getElementById('map-selector').value;
-            
+
             if (!filename) {
                 // Map was cleared - clear the textarea and send explicit clear command
                 document.getElementById('edit-mapJson').value = '';
-                
+
                 // Send settings with explicit null to clear the map
                 if (currentRoom && selectedRoomId) {
                     const settings = {
@@ -2169,7 +2224,7 @@
         // ============================================
         // COLOR MANAGER - Right Sidebar Integration
         // ============================================
-        
+
         let colorPlayers = [];
         let colorTeamColors = [];
         let colorGameMode = false;
@@ -2210,7 +2265,7 @@
             // Team count input and slider sync
             const teamCountInput = document.getElementById('colorTeamCount');
             const teamSizeSlider = document.getElementById('colorTeamSize');
-            
+
             teamCountInput.addEventListener('input', (e) => {
                 const value = parseInt(e.target.value);
                 if (value >= 3 && value <= 12) {
@@ -2220,7 +2275,7 @@
                     }
                 }
             });
-            
+
             teamSizeSlider.addEventListener('input', (e) => {
                 const value = parseInt(e.target.value);
                 teamCountInput.value = value;
@@ -2234,11 +2289,11 @@
                 colorGameMode = true;
                 const startBtn = document.getElementById('colorStartGameBtn');
                 const stopBtn = document.getElementById('colorStopGameBtn');
-                
+
                 startBtn.style.display = 'none';
                 stopBtn.style.display = 'block';
                 stopBtn.classList.add('pressed');
-                
+
                 document.getElementById('colorAddTeamBtn').disabled = false;
                 teamSizeSlider.disabled = true;
                 teamCountInput.disabled = true;
@@ -2249,11 +2304,11 @@
                 colorGameMode = false;
                 const startBtn = document.getElementById('colorStartGameBtn');
                 const stopBtn = document.getElementById('colorStopGameBtn');
-                
+
                 startBtn.style.display = 'block';
                 stopBtn.style.display = 'none';
                 stopBtn.classList.remove('pressed');
-                
+
                 document.getElementById('colorAddTeamBtn').disabled = true;
                 teamSizeSlider.disabled = false;
                 teamCountInput.disabled = false;
@@ -2319,21 +2374,21 @@
         function refreshAIBotTeamDropdowns() {
             const container = document.getElementById('admin-ai-bots');
             const botDivs = container.querySelectorAll('.ai-bot-item');
-            
+
             botDivs.forEach(botDiv => {
                 const teamSelect = botDiv.querySelector('.ai-team-select');
                 if (teamSelect) {
                     const currentValue = teamSelect.value;
-                    
+
                     // Rebuild options with new colors including hex code in text
                     const teamOptionsHtml = colorTeamColors.map((team, index) => {
                         const hexColor = rgbToHexAdmin(team.rgb);
                         const displayName = team.name.charAt(0).toUpperCase() + team.name.slice(1);
                         return `<option value="${index}" ${index == currentValue ? 'selected' : ''} style="color: ${hexColor}; background-color: rgba(${team.rgb[0]}, ${team.rgb[1]}, ${team.rgb[2]}, 0.2);">${displayName} (${hexColor})</option>`;
                     }).join('');
-                    
+
                     teamSelect.innerHTML = teamOptionsHtml;
-                    
+
                     // Update the bot display
                     updateAdminAIBotDisplay(botDiv.id);
                 }
@@ -2365,11 +2420,11 @@
         function toggleColorIframe() {
             const pane = document.getElementById('colorOptimizerPane');
             colorIframeExpanded = !colorIframeExpanded;
-            
+
             if (colorIframeExpanded) {
                 // Show expanded pane
                 pane.classList.add('visible');
-                
+
                 // Scroll the expanded iframe to bottom
                 const expandedFrame = document.getElementById('colorOptimizerFrameExpanded');
                 if (expandedFrame && expandedFrame.contentWindow) {
@@ -2386,11 +2441,11 @@
         function colorAutoAssignPlayers() {
             const unassigned = colorPlayers.filter(p => p.colorTeam === null);
             if (unassigned.length === 0 || colorTeamColors.length === 0) return;
-            
+
             unassigned.forEach((player, index) => {
                 player.colorTeam = index % colorTeamColors.length;
             });
-            
+
             renderColorPlayerPool();
             renderColorTeamAssignments();
             updateColorStats();
@@ -2408,41 +2463,41 @@
         function renderColorPlayerPool() {
             const pool = document.getElementById('colorPlayerPool');
             pool.innerHTML = '';
-            
+
             const unassigned = colorPlayers.filter(p => p.colorTeam === null);
-            
+
             if (colorPlayers.length === 0) {
                 pool.innerHTML = '<div style="color: #666; text-align: center; padding: 12px; font-size: 12px; width: 100%;">No players connected</div>';
                 return;
             }
-            
+
             if (unassigned.length === 0) {
                 pool.innerHTML = '<div style="color: #28a745; text-align: center; padding: 12px; font-size: 12px; width: 100%;">✓ All assigned!</div>';
                 return;
             }
-            
+
             unassigned.forEach(player => {
                 const el = document.createElement('div');
                 el.className = 'player-chip' + (player.isBot ? ' bot-player' : '');
                 el.draggable = true;
                 el.dataset.playerId = player.id;
-                
+
                 const typeLabel = player.isBot ? '🤖' : (player.visionType === 'normal' ? 'N' : player.visionType.substring(0, 1).toUpperCase());
                 el.innerHTML = `
                     <span class="player-chip-name">${player.name}</span>
                     <span class="player-chip-type ${player.isBot ? 'bot' : player.visionType}">${typeLabel}</span>
                 `;
-                
+
                 el.addEventListener('dragstart', () => {
                     colorDraggedPlayer = player;
                     el.classList.add('dragging');
                 });
-                
+
                 el.addEventListener('dragend', () => {
                     el.classList.remove('dragging');
                     colorDraggedPlayer = null;
                 });
-                
+
                 pool.appendChild(el);
             });
         }
@@ -2450,15 +2505,15 @@
         function renderColorTeamAssignments() {
             const container = document.getElementById('colorTeamAssignments');
             container.innerHTML = '';
-            
+
             colorTeamColors.forEach((color, index) => {
                 const slot = document.createElement('div');
                 slot.className = 'team-color-slot';
-                
+
                 const assigned = colorPlayers.filter(p => p.colorTeam === index);
                 const displayRgb = simulateColorBlindnessAdmin(color.rgb, colorCurrentMode);
                 const hexColor = rgbToHexAdmin(displayRgb);
-                
+
                 slot.innerHTML = `
                     <div class="team-color-header">
                         <div class="team-color-swatch" style="background: ${hexColor}"></div>
@@ -2468,20 +2523,20 @@
                     </div>
                     <div class="team-color-players" id="color-team-${index}"></div>
                 `;
-                
+
                 slot.addEventListener('dragover', (e) => {
                     e.preventDefault();
                     slot.classList.add('drag-over');
                 });
-                
+
                 slot.addEventListener('dragleave', () => {
                     slot.classList.remove('drag-over');
                 });
-                
+
                 slot.addEventListener('drop', (e) => {
                     e.preventDefault();
                     slot.classList.remove('drag-over');
-                    
+
                     if (colorDraggedPlayer) {
                         colorDraggedPlayer.colorTeam = index;
                         // Sync to game server
@@ -2492,9 +2547,9 @@
                         syncPlayersToIframe();
                     }
                 });
-                
+
                 container.appendChild(slot);
-                
+
                 const teamContainer = document.getElementById(`color-team-${index}`);
                 assigned.forEach(player => {
                     const el = document.createElement('div');
@@ -2522,13 +2577,13 @@
         // Sync color team assignment to game server
         function syncColorTeamToGame(player) {
             if (!currentRoom || !selectedRoomId || !player.colyseusId) return;
-            
+
             const payload = {
                 roomId: selectedRoomId,
                 playerId: player.colyseusId,
                 teamIndex: player.colorTeam
             };
-            
+
             try {
                 currentRoom.send('assign_team', payload);
                 console.log('✓ Synced color team assignment:', payload);
@@ -2545,16 +2600,16 @@
                 protanopia: assignedPlayers.filter(p => p.visionType === 'protanopia').length,
                 tritanopia: assignedPlayers.filter(p => p.visionType === 'tritanopia').length
             };
-            
+
             const totalAssigned = assignedPlayers.length;
             const totalPlayers = colorPlayers.length;
-            
+
             // Update vision toggle text
             document.getElementById('normalToggle').textContent = `N${counts.normal}`;
             document.getElementById('deutToggle').textContent = `D${counts.deuteranopia}`;
             document.getElementById('protToggle').textContent = `P${counts.protanopia}`;
             document.getElementById('tritToggle').textContent = `T${counts.tritanopia}`;
-            
+
             // Update total attendees count
             document.getElementById('totalAttendeesCount').textContent = totalPlayers;
         }
@@ -2578,11 +2633,11 @@
             // Map Colyseus players to color players
             const existingIds = new Set(colorPlayers.map(p => p.colyseusId));
             const newPlayers = [];
-            
+
             players.forEach(p => {
                 // Check if player already exists
                 const existingPlayer = colorPlayers.find(cp => cp.colyseusId === p.id);
-                
+
                 if (existingPlayer) {
                     // Update existing player's team if it changed on server
                     if (p.team !== null && p.team !== undefined) {
@@ -2607,21 +2662,21 @@
                     newPlayers.push(newPlayer);
                 }
             });
-            
+
             // Auto-assign new HUMAN players if game is started and teams are balanced
             // (Bots already have teams assigned from config)
             if (colorGameMode && newPlayers.length > 0 && colorTeamColors.length > 0) {
                 newPlayers.forEach(player => {
                     // Skip bots - they already have team assignments
                     if (player.isBot) return;
-                    
+
                     // Check if teams are balanced (all teams have same number of players)
-                    const teamCounts = colorTeamColors.map((_, idx) => 
+                    const teamCounts = colorTeamColors.map((_, idx) =>
                         colorPlayers.filter(p => p.colorTeam === idx && p.id !== player.id).length
                     );
                     const minCount = Math.min(...teamCounts);
                     const maxCount = Math.max(...teamCounts);
-                    
+
                     if (maxCount - minCount <= 1) {
                         // Teams are balanced, add new team if needed
                         sendToColorIframe({ type: 'addTeamColor' });
@@ -2642,11 +2697,11 @@
                     }
                 });
             }
-            
+
             // Remove players that disconnected (but keep bots unless they're removed from config)
             const currentIds = new Set(players.map(p => p.id));
             colorPlayers = colorPlayers.filter(p => !p.colyseusId || currentIds.has(p.colyseusId));
-            
+
             renderColorPlayerPool();
             renderColorTeamAssignments();
             updateColorStats();
