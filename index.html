@@ -8536,6 +8536,11 @@
 
                 // Trigger game start logic
                 if (currentGame) {
+                    currentGame.notStarted = false; // Clear waiting state for late joiners
+                    // Set current round from server data
+                    if (data && typeof data.currentRound === 'number') {
+                        currentGame.r = data.currentRound;
+                    }
                     currentGame.startGame();
                 }
 
