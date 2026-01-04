@@ -607,8 +607,17 @@
             transition: all 0.1s;
         }
 
+        .player-chip.bot-player {
+            background: #f0f8ff;
+            border-color: #4a90d9;
+        }
+
         .player-chip:hover {
             background: #e8e8e8;
+        }
+
+        .player-chip.bot-player:hover {
+            background: #e0f0ff;
         }
 
         .player-chip.dragging {
@@ -631,6 +640,7 @@
         .player-chip-type.deuteranopia { color: #b8860b; }
         .player-chip-type.protanopia { color: #d2691e; }
         .player-chip-type.tritanopia { color: #4682b4; }
+        .player-chip-type.bot { color: #4a90d9; background: #e0f0ff; }
 
         .team-color-assignments {
             display: grid;
@@ -995,6 +1005,12 @@
                                     <input type="number" id="edit-destructionMultiplier" value="1"
                                         placeholder="Destruction" style="width: 25%;" onchange="sendSettingsUpdate()">
                                 </div>
+                            </div>
+                            <div class="form-group">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="edit-allowPlayerTeamSelection" onchange="sendSettingsUpdate()" style="width: auto; margin: 0;">
+                                    <span>Allow Player Team Selection <span class="sublabel">(Players can pick their team from the game client)</span></span>
+                                </label>
                             </div>
                         </div>
 
@@ -1578,6 +1594,9 @@
                 // Game usually has 'movesPerRound' stored as 'steals' count or custom prop? 
                 // Server code doesn't explicitly save 'moves', assumes defaults. client 'S' is moves.
                 // We'll leave moves default for now if not in config.
+                
+                // Player team selection setting
+                document.getElementById('edit-allowPlayerTeamSelection').checked = cfg.allowPlayerTeamSelection || false;
 
                 // Multipliers
                 if (cfg.multipliers) {
@@ -2014,7 +2033,8 @@
                 // NOTE: customMapFilename is added below only when a map is selected
                 multipliers: multipliers,
                 aiBots: getAdminAIBots(),
-                teamColors: teamColors
+                teamColors: teamColors,
+                allowPlayerTeamSelection: document.getElementById('edit-allowPlayerTeamSelection').checked
             };
 
             // Send map filename instead of full JSON to avoid Colyseus presence message size limits
@@ -2403,14 +2423,14 @@
             
             unassigned.forEach(player => {
                 const el = document.createElement('div');
-                el.className = 'player-chip';
+                el.className = 'player-chip' + (player.isBot ? ' bot-player' : '');
                 el.draggable = true;
                 el.dataset.playerId = player.id;
                 
-                const typeLabel = player.visionType === 'normal' ? 'N' : player.visionType.substring(0, 1).toUpperCase();
+                const typeLabel = player.isBot ? '🤖' : (player.visionType === 'normal' ? 'N' : player.visionType.substring(0, 1).toUpperCase());
                 el.innerHTML = `
                     <span class="player-chip-name">${player.name}</span>
-                    <span class="player-chip-type ${player.visionType}">${typeLabel}</span>
+                    <span class="player-chip-type ${player.isBot ? 'bot' : player.visionType}">${typeLabel}</span>
                 `;
                 
                 el.addEventListener('dragstart', () => {
@@ -2478,12 +2498,12 @@
                 const teamContainer = document.getElementById(`color-team-${index}`);
                 assigned.forEach(player => {
                     const el = document.createElement('div');
-                    el.className = 'player-chip';
+                    el.className = 'player-chip' + (player.isBot ? ' bot-player' : '');
                     el.style.cursor = 'pointer';
-                    const typeLabel = player.visionType === 'normal' ? 'N' : player.visionType.substring(0, 1).toUpperCase();
+                    const typeLabel = player.isBot ? '🤖' : (player.visionType === 'normal' ? 'N' : player.visionType.substring(0, 1).toUpperCase());
                     el.innerHTML = `
                         <span class="player-chip-name">${player.name}</span>
-                        <span class="player-chip-type ${player.visionType}">${typeLabel}</span>
+                        <span class="player-chip-type ${player.isBot ? 'bot' : player.visionType}">${typeLabel}</span>
                     `;
                     el.onclick = () => {
                         player.colorTeam = null;
@@ -2560,22 +2580,41 @@
             const newPlayers = [];
             
             players.forEach(p => {
-                if (!existingIds.has(p.id)) {
+                // Check if player already exists
+                const existingPlayer = colorPlayers.find(cp => cp.colyseusId === p.id);
+                
+                if (existingPlayer) {
+                    // Update existing player's team if it changed on server
+                    if (p.team !== null && p.team !== undefined) {
+                        existingPlayer.colorTeam = p.team;
+                    }
+                    // Update name if changed
+                    existingPlayer.name = p.name || existingPlayer.name;
+                    existingPlayer.isBot = p.isBot || p.id.startsWith('bot_');
+                } else {
+                    // Create new player entry
+                    const isBot = p.isBot || p.id.startsWith('bot_');
                     const newPlayer = {
                         id: `color-player-${Date.now()}-${colorPlayerIdCounter++}`,
                         colyseusId: p.id,
                         name: p.name || `Player ${p.id.substring(0, 6)}`,
                         visionType: p.visionType || 'normal',
-                        colorTeam: null
+                        // Bots come with team pre-assigned from server
+                        colorTeam: (p.team !== null && p.team !== undefined) ? p.team : null,
+                        isBot: isBot
                     };
                     colorPlayers.push(newPlayer);
                     newPlayers.push(newPlayer);
                 }
             });
             
-            // Auto-assign new players if game is started and teams are balanced
+            // Auto-assign new HUMAN players if game is started and teams are balanced
+            // (Bots already have teams assigned from config)
             if (colorGameMode && newPlayers.length > 0 && colorTeamColors.length > 0) {
                 newPlayers.forEach(player => {
+                    // Skip bots - they already have team assignments
+                    if (player.isBot) return;
+                    
                     // Check if teams are balanced (all teams have same number of players)
                     const teamCounts = colorTeamColors.map((_, idx) => 
                         colorPlayers.filter(p => p.colorTeam === idx && p.id !== player.id).length
@@ -2604,7 +2643,7 @@
                 });
             }
             
-            // Remove players that disconnected
+            // Remove players that disconnected (but keep bots unless they're removed from config)
             const currentIds = new Set(players.map(p => p.id));
             colorPlayers = colorPlayers.filter(p => !p.colyseusId || currentIds.has(p.colyseusId));
             

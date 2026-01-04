@@ -116,8 +116,24 @@
             box-shadow: 2px 0px 4px rgba(0, 0, 0, 0.3);
         }
 
+        /* Ensure selected team row has consistent height and outline visibility */
+        .score-row.selected-team {
+            z-index: 1; /* Ensure outline is not clipped by adjacent rows */
+        }
+
         .score-row.multiplier-row {
             cursor: default;
+        }
+
+        /* Shake animation for rejected team selection */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+            20%, 40%, 60%, 80% { transform: translateX(4px); }
+        }
+
+        .score-row.shake {
+            animation: shake 0.5s ease-in-out;
         }
 
         .main-score-section {
@@ -4966,41 +4982,28 @@
                     return false;
                 }
 
-                // Debug logging
-                console.log('🤖 AI Bot executeMove:', {
-                    ml: game.ml,
-                    botMovesLeft: this.movesLeft,
-                    playerId: this.playerId,
-                    hasGameClientManager: !!gameClientManager,
-                    hasRoom: gameClientManager?.room ? true : false,
-                    isConnected: gameClientManager?.isConnected,
-                    moveType: move.type,
-                    target: move.target
-                });
-
                 // In multiplayer mode, send moves to server for validation
+                // Server is authoritative - minimal client-side validation
                 if (game.ml && gameClientManager && gameClientManager.room && gameClientManager.isConnected) {
-                    console.log('📤 Sending bot move to server via gameClientManager, botId:', this.playerId);
                     try {
+                        // Determine move type and send to server
+                        // Server will validate and reject if invalid
                         if (move.type === 'steal' && star.tm !== null && star.tm !== this.teamIndex) {
-                            // Validate locally first to avoid unnecessary server calls
-                            if (star.hq || star.pr || game.tms[this.teamIndex].st <= 0) return false;
-                            if (star.ty === T.C || star.ty === T.B) return false;
-
-                            // Include bot player ID so server knows which bot is making the move
+                            // Basic sanity checks only - server does full validation
+                            if (star.hq || star.pr) return false; // Obviously invalid
+                            
                             gameClientManager.room.send('steal_star', { starIndex: move.target, botId: this.playerId });
 
                             // Optimistic update - will be rolled back if server rejects
                             game.tms[this.teamIndex].st--;
                             game.tms[this.teamIndex].movesLeft--;
-                            this.movesLeft--; // Decrement bot's individual moves
+                            this.movesLeft--;
                             star.tm = this.teamIndex;
                             this.stealsUsed++;
                             this.totalStealsThisRound++;
                             game.addFx(star.x * game.G, star.y * game.G, 'steal');
+                            
                         } else if (move.type === 'hq' && star.tm === null) {
-                            if (game.tms[this.teamIndex].h >= game.HM) return false;
-
                             gameClientManager.room.send('place_hq', { starIndex: move.target, botId: this.playerId });
 
                             // Optimistic update
@@ -5008,17 +5011,16 @@
                             star.hq = true;
                             game.tms[this.teamIndex].h++;
                             game.tms[this.teamIndex].movesLeft--;
-                            this.movesLeft--; // Decrement bot's individual moves
+                            this.movesLeft--;
                             this.hqPlaced = true;
-                        } else if (move.type === 'capture' && (star.tm === null || star.tm === this.teamIndex)) {
-                            if (star.tm === this.teamIndex) return false;
-
+                            
+                        } else if (move.type === 'capture' && star.tm === null) {
                             gameClientManager.room.send('claim_star', { starIndex: move.target, botId: this.playerId });
 
                             // Optimistic update
                             star.tm = this.teamIndex;
                             game.tms[this.teamIndex].movesLeft--;
-                            this.movesLeft--; // Decrement bot's individual moves
+                            this.movesLeft--;
                         } else {
                             return false;
                         }
@@ -5031,17 +5033,15 @@
 
                         return true;
                     } catch (error) {
-                        console.error('Error sending move to server:', error);
+                        console.error('Error sending bot move to server:', error);
                         return false;
                     }
                 }
 
-                // Fallback for local/offline mode - keep existing logic
-                // Execute the move
+                // Fallback for local/offline mode - full validation needed
                 if (move.type === 'steal' && star.tm !== null && star.tm !== this.teamIndex) {
-                    // Stealing logic - validate all conditions
                     if (star.hq || star.pr || game.tms[this.teamIndex].st <= 0) return false;
-                    if (star.ty === T.C || star.ty === T.B) return false; // Cannot steal clusters or black holes
+                    if (star.ty === T.C || star.ty === T.B) return false;
                     if (this.totalStealsThisRound >= this.calculateMaxSteals(this.analyzeGameState(game))) return false;
 
                     game.tms[this.teamIndex].st--;
@@ -5049,17 +5049,13 @@
                     star.tm = this.teamIndex;
                     this.stealsUsed++;
                     this.totalStealsThisRound++;
-
-                    // Add steal effect
                     game.addFx(star.x * game.G, star.y * game.G, 'steal');
-                } else if (move.type === 'capture' && (star.tm === null || star.tm === this.teamIndex)) {
-                    // Regular capture
-                    if (star.tm === this.teamIndex) return false; // Already owned
-
+                    
+                } else if (move.type === 'capture' && star.tm === null) {
                     star.tm = this.teamIndex;
                     game.tms[this.teamIndex].movesLeft--;
+                    
                 } else if (move.type === 'hq' && star.tm === null) {
-                    // HQ placement
                     if (game.tms[this.teamIndex].h >= game.HM) return false;
 
                     star.tm = this.teamIndex;
@@ -5186,7 +5182,7 @@
                 this.currentAIBotIndex = 0; // Round-robin bot updates
 
                 // Multiplayer cursor tracking
-                this.playerCursors = new Map(); // playerId -> { x, y, teamIndex, lastUpdate }
+                this.playerCursors = new Map(); // playerId -> { x, y, teamIndex }
                 this.lastCursorSend = 0;
                 this.cursorSendInterval = 50; // Send cursor updates every 50ms
 
@@ -6582,18 +6578,8 @@
 
 
             renderPlayerCursors() {
-                const now = Date.now();
-                const cursorTimeout = 2000;
-
                 // Clear ONLY the cursor graphics layer
                 this.cursorGfx.clear();
-
-                // Remove stale cursors from data
-                for (const [playerId, cursor] of this.playerCursors.entries()) {
-                    if (now - cursor.lastUpdate > cursorTimeout) {
-                        this.playerCursors.delete(playerId);
-                    }
-                }
 
                 // Draw each player's cursor on the dedicated cursor layer
                 for (const [playerId, cursor] of this.playerCursors.entries()) {
@@ -6603,27 +6589,18 @@
                     const x = cursor.x * this.G;
                     const y = cursor.y * this.G;
 
-                    // Draw cursor matching reference - classic arrow pointer
-                    const size = 24;
+                    // Draw perfectly symmetrical cursor - diamond/rhombus shape
+                    const size = 20;
 
                     this.cursorGfx.lineStyle(0); // No outline
                     this.cursorGfx.beginFill(teamColor, 1);
 
-                    // Dart / Arrowhead shape matching the references
-                    this.cursorGfx.moveTo(x, y); // 1. Top Tip (Origin)
-
-                    // 2. Bottom Left Tip (Long tail)
-                    this.cursorGfx.lineTo(x + size * 0.35, y + size * 1.0);
-
-                    // 3. Inner Notch
-                    // This cuts into the body of the arrow
-                    this.cursorGfx.lineTo(x + size * 0.55, y + size * 0.7);
-
-                    // 4. Right Wing Tip
-                    this.cursorGfx.lineTo(x + size * 1.0, y + size * 0.55);
-
-                    // 5. Back to Top to close the shape
-                    this.cursorGfx.lineTo(x, y);
+                    // Perfect diamond/rhombus shape - symmetrical on both axes
+                    this.cursorGfx.moveTo(x, y - size); // Top point
+                    this.cursorGfx.lineTo(x + size * 0.6, y); // Right point
+                    this.cursorGfx.lineTo(x, y + size); // Bottom point
+                    this.cursorGfx.lineTo(x - size * 0.6, y); // Left point
+                    this.cursorGfx.lineTo(x, y - size); // Back to top to close
 
                     this.cursorGfx.endFill();
                 }
@@ -7314,10 +7291,12 @@
                         scoreRow.style.outline = `2px solid ${hexColor}`;
                         scoreRow.style.outlineOffset = '-2px';
                         scoreRow.style.padding = '0 4px';
+                        scoreRow.classList.add('selected-team');
                     } else {
                         scoreRow.style.outline = '';
                         scoreRow.style.outlineOffset = '';
                         scoreRow.style.padding = '';
+                        scoreRow.classList.remove('selected-team');
                     }
                 });
 
@@ -7359,8 +7338,9 @@
                     const displayScore = isWormholeWinner ? "Won" : data.finalScore;
                     const scoreWidth = displayScore.toString().length * 9 + 36 + (isCurrentTeam ? 8 : 0);
                     const teamBorder = isCurrentTeam ? `outline: 2px solid ${color}; outline-offset: -2px; padding: 0 4px;` : '';
+                    const selectedClass = isCurrentTeam ? ' selected-team' : '';
 
-                    html += `<div class="score-row" data-team-index="${data.teamIdx}" style="${teamBorder}" title="Click to select ${data.team.displayName} team${aiBot ? ' (AI: ' + aiBot.config.name + ')' : ''}">
+                    html += `<div class="score-row${selectedClass}" data-team-index="${data.teamIdx}" style="${teamBorder}" title="Click to select ${data.team.displayName} team${aiBot ? ' (AI: ' + aiBot.config.name + ')' : ''}">
                             <div class="main-score-section">
                                 <div class="score-highlight" style="background:${color};width:${scoreWidth}px;"></div>
                                 <div class="score-content">
@@ -8082,8 +8062,7 @@
                         currentGame.playerCursors.set(data.playerId, {
                             x: data.x,
                             y: data.y,
-                            teamIndex: data.teamIndex,
-                            lastUpdate: Date.now()
+                            teamIndex: data.teamIndex
                         });
                     }
                 });
