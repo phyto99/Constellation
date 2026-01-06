@@ -4406,29 +4406,9 @@
             }
 
             calculateMoveDelay() {
-                // Default fallback if game not ready
-                let availableTime = 30000;
-                let movesPerRound = 15;
-
-                if (typeof currentGame !== 'undefined' && currentGame) {
-                    availableTime = currentGame.RT * 1000;
-                    movesPerRound = currentGame.S;
-                }
-
-                // Calculate ideal interval to use all moves
-                // E.g., 30000ms / 15 moves = 2000ms/move
-                const idealInterval = availableTime / Math.max(1, movesPerRound);
-
-                // Aggression factor: Higher aggression = faster than ideal (to rush)
-                // Lower aggression = slower (more deliberate)
-                // Aggression 1-9.
-                // Factor: 1 -> 1.5x ideal (slow), 5 -> 1.0x ideal, 9 -> 0.5x ideal (fast)
-                const aggressionFactor = 1.6 - (this.aggression * 0.12);
-
-                const baseDelay = idealInterval * aggressionFactor;
-                const randomVariation = Math.random() * (baseDelay * 0.2) - (baseDelay * 0.1);
-
-                // Clamp delay to reasonable limits (e.g. 200ms min)
+                // Aggression 1-9 maps to delays: 3000ms to 300ms
+                const baseDelay = 3300 - (this.aggression * 300);
+                const randomVariation = Math.random() * 400 - 200;
                 return Math.max(200, baseDelay + randomVariation);
             }
 
@@ -5133,7 +5113,7 @@
                     MULTIPLIERS = { ...MULTIPLIERS, ...s.multipliers };
                 }
 
-                Object.assign(this, { G: 20, S: s.moves || 15, HM: s.headquarters || 2, RT: s.roundLength || 30, TR: s.rounds || 10, PT: s.countdownLength || 5, MW: 64, MH: 36 });
+                Object.assign(this, { G: 20, S: s.steals || 50, HM: s.headquarters || 2, RT: s.roundLength || 30, TR: s.rounds || 10, PT: s.countdownLength || 5, MW: 64, MH: 36 });
                 Object.assign(this, { r: 1, t: this.RT, go: false, p: true, pt: this.PT, tm: 0, pu: 0, bhr: 0, ml: true, notStarted: true }); // ml = multiplayer mode
                 this.st = []; this.ln = []; this.pr = new Set(); this.fx = []; this.cm = s.customMap || null;
                 this.wormholeWinner = null; // Track which team won by connecting wormholes
@@ -6660,7 +6640,7 @@
                 const existing = document.getElementById('cursorInfo');
                 if (existing) existing.remove();
 
-                if (!this.showCursorInfo || this.tm < 0 || this.tm >= this.tms.length) return;
+                if (!this.showCursorInfo || this.tm >= this.tms.length) return;
 
                 // Use individual moves in multiplayer, else team moves
                 let movesLeft;
@@ -7245,7 +7225,7 @@
                     }
 
                     // Use the current team's name in lowercase
-                    if (this.tm >= 0 && this.tm < this.tms.length) {
+                    if (this.tm < this.tms.length) {
                         teamColorSpan.textContent = this.tms[this.tm].name;
                         teamColorSpan.style.color = `#${this.tms[this.tm].c.toString(16).padStart(6, '0')}`;
                     }
@@ -7479,7 +7459,7 @@
                     </div>`;
 
                 scoresEl.innerHTML = html;
-                this.setupScoreboardEventsNew();
+                this.setupScoreboardEvents();
 
                 // Save snapshot of current scores for change detection
                 this.lastScoreSnapshot = this.teamScoreData.map(data => ({
@@ -7494,64 +7474,6 @@
             createAIIndicator(aiBot, teamColor) {
                 // Remove AI indicator icons from scoreboard as requested
                 return '';
-            }
-
-            setupScoreboardEventsNew() {
-                const scoresEl = document.getElementById('scores');
-                if (!scoresEl) return;
-
-                // 1. Handle Team Selection (Rows)
-                const teamRows = scoresEl.querySelectorAll('.score-row:not(.multiplier-row)');
-                teamRows.forEach(row => {
-                    row.onclick = (e) => {
-                        e.stopPropagation(); // Prevent toggling the container when clicking a specific row
-
-                        // If game is in progress (not planning), clicking shouldn't change team
-                        if (!this.notStarted) {
-                            // Just toggle visibility instead
-                            scoresEl.classList.toggle('expanded');
-                            return;
-                        }
-
-                        // In Planning Phase: Allow team selection
-                        const teamIdx = parseInt(row.getAttribute('data-team-index'));
-                        if (!isNaN(teamIdx) && teamIdx !== this.tm) {
-                            // Update local team immediately for feedback
-                            this.tm = teamIdx;
-
-                            // Send selection to server if possible
-                            if (gameClientManager && gameClientManager.room) {
-                                console.log('Sending team change request:', teamIdx);
-                                gameClientManager.room.send('team_change', { teamId: teamIdx });
-                            }
-
-                            // Update UI
-                            this.updateHeader();
-                            this.updateScoreDisplay();
-
-                            // Pulse effect or confirmation could go here
-                        } else {
-                            // Clicking own team toggles expansion
-                            scoresEl.classList.toggle('expanded');
-                        }
-                    };
-                });
-
-                // 2. Handle Expansion (Multiplier Row & General Click)
-                const multiplierRow = scoresEl.querySelector('.multiplier-row');
-                if (multiplierRow) {
-                    multiplierRow.onclick = (e) => {
-                        e.stopPropagation();
-                        scoresEl.classList.toggle('expanded');
-                    };
-                }
-
-                // Allow clicking the container background to toggle too (if not handled by row)
-                scoresEl.onclick = (e) => {
-                    if (e.target === scoresEl) {
-                        scoresEl.classList.toggle('expanded');
-                    }
-                };
             }
 
             renderBackground() {
@@ -8095,7 +8017,6 @@
                 this.lastServerTime = null;
                 this.lastServerTimestamp = null;
                 this.serverRoundLength = 30000; // Default 30 seconds
-                this.pendingInitialTeam = null; // Store team assignment until game starts
             }
 
             async connectToRoom(roomId) {
@@ -8524,7 +8445,6 @@
                         const cfg = data.config;
                         settings.steals = cfg.steals;
                         settings.headquarters = cfg.headquarters;
-                        settings.moves = cfg.moves; // Fix: ensure moves are passed to game
                         settings.roundLength = cfg.roundLength;
                         settings.rounds = cfg.rounds;
                         settings.countdownLength = cfg.countdownLength;
@@ -8536,18 +8456,7 @@
                     if (container) {
                         container.innerHTML = '';
                     }
-                    if (this.pendingInitialTeam !== null && this.pendingInitialTeam !== undefined) {
-                        console.log('Applying pending initial team:', this.pendingInitialTeam);
-                        settings.initialTeam = this.pendingInitialTeam;
-                    }
-
                     currentGame = new Game(settings);
-
-                    if (this.pendingInitialTeam !== null && this.pendingInitialTeam !== undefined) {
-                        currentGame.tm = this.pendingInitialTeam;
-                        // Clear it so it doesn't override later
-                        // this.pendingInitialTeam = null; 
-                    }
 
                     const debugEl = document.getElementById('debug-settings');
                     if (debugEl && data.config) {
@@ -8567,7 +8476,6 @@
                     }
                     // Update instance properties if present
                     if (typeof cfg.steals === 'number') currentGame.steals = cfg.steals;
-                    if (typeof cfg.moves === 'number') currentGame.S = cfg.moves; // Fix: update moves (S)
                     if (typeof cfg.headquarters === 'number') currentGame.headquarters = cfg.headquarters;
                     if (typeof cfg.roundLength === 'number') {
                         currentGame.roundLength = cfg.roundLength;
@@ -8670,29 +8578,8 @@
             }
 
             handleSettingsUpdate(data) {
-                // Store initial team regardless of whether game is ready
-                if (data.initialTeam !== undefined && data.initialTeam !== null) {
-                    this.pendingInitialTeam = data.initialTeam;
-                    console.log('👤 Stored pending initial team:', this.pendingInitialTeam);
-                }
-
                 if (currentGame && data.config) {
                     console.log('🔄 Received real-time settings update:', data.config);
-
-                    // handle initial team assignment for new players (immediate update)
-                    if (data.initialTeam !== undefined) {
-                        console.log('👤 Initial team assigned from server:', data.initialTeam);
-                        currentGame.tm = data.initialTeam;
-
-                        // Update team color display immediately
-                        const teamColorSpan = document.getElementById('teamColor');
-                        if (teamColorSpan && typeof TEAM_CONFIGS !== 'undefined' && TEAM_CONFIGS[data.initialTeam]) {
-                            teamColorSpan.textContent = TEAM_CONFIGS[data.initialTeam].name;
-                            teamColorSpan.style.color = TEAM_CONFIGS[data.initialTeam].name;
-                        }
-
-                        currentGame.updateHeader();
-                    }
 
                     // Update team colors if provided (dynamic color sync from admin panel)
                     if (data.config.teamColors && Array.isArray(data.config.teamColors)) {
