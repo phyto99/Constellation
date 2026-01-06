@@ -8021,6 +8021,11 @@
                 this.lastServerTime = null;
                 this.lastServerTimestamp = null;
                 this.serverRoundLength = 30000; // Default 30 seconds
+                
+                // Game state tracking
+                this.currentRound = undefined;
+                this.timeRemaining = undefined;
+                this.gameConfig = null; // Store current game configuration
             }
 
             async connectToRoom(roomId) {
@@ -8456,8 +8461,14 @@
                         }
                     }
 
-                    // Update UI elements
-                    this.updateGameUI(state);
+                    // Update UI elements with enhanced state including round and time
+                    const enhancedState = {
+                        ...state,
+                        currentRound: this.currentRound,
+                        timeRemaining: this.timeRemaining,
+                        gameState: 'playing' // Game is in playing state when receiving state updates
+                    };
+                    this.updateGameUI(enhancedState);
                 }
             }
 
@@ -8579,6 +8590,9 @@
                 if (currentGame) {
                     currentGame.startGame();
                     
+                    // Store game config for use in other functions
+                    this.gameConfig = data.config;
+                    
                     // Request current player state to sync moves
                     if (this.room && this.room.sessionId) {
                         this.room.send('request_player_state');
@@ -8623,15 +8637,18 @@
                         currentGame.recalculateAllScores(); // Recalculate with new multipliers
                     }
 
-                    // Update other settings
-                    if (data.config.moves) currentGame.S = data.config.moves; // Assuming moves -> S (moves per round)
-                    if (data.config.rounds) currentGame.TR = data.config.rounds;
-                    if (data.config.roundLength) {
+                    // Update other settings with proper validation and fallbacks
+                    if (typeof data.config.steals === 'number') currentGame.steals = data.config.steals;
+                    if (typeof data.config.headquarters === 'number') currentGame.headquarters = data.config.headquarters;
+                    if (typeof data.config.moves === 'number') currentGame.S = data.config.moves;
+                    if (typeof data.config.rounds === 'number') currentGame.TR = data.config.rounds;
+                    if (typeof data.config.roundLength === 'number') {
                         currentGame.RT = data.config.roundLength;
+                        currentGame.roundLength = data.config.roundLength; // Update both properties
                         // Update serverRoundLength for timer bar synchronization
                         this.serverRoundLength = data.config.roundLength * 1000;
                     }
-                    if (data.config.countdownLength) currentGame.PT = data.config.countdownLength;
+                    if (typeof data.config.countdownLength === 'number') currentGame.PT = data.config.countdownLength;
                     if (data.config.aiBots) {
                         currentGame.aiBots = Array.isArray(data.config.aiBots) ?
                             data.config.aiBots.map(b => AIBot.fromData(b)) : [];
@@ -8640,6 +8657,9 @@
                     // Force UI update
                     currentGame.needsFullUIUpdate = true;
                     currentGame.updateUI();
+                    
+                    // Store game config for use in other functions (like game end screen)
+                    this.gameConfig = data.config;
 
                     // Handle map update
                     console.log('🗺️ Checking map update. Current cm:', currentGame.cm ? 'exists' : 'null/undefined', 'New customMap:', data.config.customMap ? 'exists' : 'null/undefined');
@@ -8699,12 +8719,14 @@
                     roundElement.textContent = `Round #${state.currentRound}`;
                 }
 
-                // Update timer display
-                if (state.timeRemaining !== undefined) {
+                // Update timer display (only in single-player mode)
+                if (state.timeRemaining !== undefined && !(gameClientManager && gameClientManager.isConnected)) {
                     const seconds = Math.ceil(state.timeRemaining / 1000);
                     const timerElement = document.getElementById('timer');
                     if (timerElement) {
-                        const percentage = (state.timeRemaining / (30 * 1000)) * 100; // Assuming 30s rounds
+                        // Use actual round length instead of hardcoded 30 seconds
+                        const roundLength = (currentGame && currentGame.RT) ? currentGame.RT * 1000 : 30000;
+                        const percentage = (state.timeRemaining / roundLength) * 100;
                         timerElement.style.width = `${percentage}%`;
                         timerElement.style.display = state.gameState === 'playing' ? 'block' : 'none';
                     }
@@ -8733,6 +8755,10 @@
                 // Store server time data for smooth interpolation
                 this.lastServerTime = data.timeRemaining;
                 this.lastServerTimestamp = Date.now();
+                
+                // Store current round and time remaining for UI updates
+                this.currentRound = data.currentRound;
+                this.timeRemaining = data.timeRemaining;
 
                 // Get round length from current game settings (synced from admin panel)
                 if (currentGame && currentGame.RT) {
@@ -8746,6 +8772,17 @@
                 if (roundElement) {
                     roundElement.textContent = `Round #${data.currentRound}`;
                 }
+
+                // Update timer display immediately
+                const timerElement = document.getElementById('timer');
+                if (timerElement) {
+                    const percentage = (data.timeRemaining / this.serverRoundLength) * 100;
+                    timerElement.style.width = `${Math.max(0, percentage).toFixed(2)}%`;
+                    timerElement.style.display = 'block';
+                }
+
+                // Update game UI with current round and time remaining
+                this.updateGameUI({ currentRound: this.currentRound, timeRemaining: this.timeRemaining });
             }
 
             // New function for smooth timer interpolation
@@ -8763,117 +8800,6 @@
                 // Update timer bar smoothly
                 const percentage = (interpolatedTime / this.serverRoundLength) * 100;
                 timerElement.style.width = `${Math.max(0, percentage).toFixed(2)}%`;
-            }
-
-            handleRoundEnd(data) {
-                // No-op: Intermission removed for instant transition
-                const planningElement = document.getElementById('planning');
-                if (planningElement) {
-                    planningElement.style.display = 'none';
-                }
-            }
-
-            handleRoundStart(data) {
-                const planningElement = document.getElementById('planning');
-                if (planningElement) {
-                    planningElement.style.display = 'none';
-                }
-
-                const roundElement = document.getElementById('round');
-                if (roundElement) {
-                    roundElement.textContent = `Round #${data.currentRound}`;
-                }
-
-                // INSTANT TIMER RESET (Visual sync)
-                const timerElement = document.getElementById('timer');
-                if (timerElement) {
-                    timerElement.style.width = '100%';
-                }
-
-                // INSTANT MOVE UPDATE
-                if (data.playerMoves && typeof currentGame !== 'undefined') {
-                    console.log(' Round start - received playerMoves:', data.playerMoves);
-                    console.log(' My session ID:', this.room.sessionId);
-                    
-                    // Update my moves instantly
-                    const myId = this.room.sessionId;
-                    if (data.playerMoves[myId] !== undefined) {
-                        console.log(` Updating my moves to: ${data.playerMoves[myId]}`);
-                        currentGame.myMoves = data.playerMoves[myId];
-                        currentGame.updateMovesUI(); // Update moves display
-                        currentGame.updateHeader(); // Force header update
-                    } else {
-                        console.warn(' My moves not found in playerMoves object. Available IDs:', Object.keys(data.playerMoves));
-                        // Fallback: request current player state if not found
-                        if (this.room) {
-                            this.room.send('request_player_state');
-                        }
-                    }
-
-                    // Update bot moves from server allocation
-                    if (currentGame.aiBots && currentGame.aiBots.length > 0) {
-                        currentGame.aiBots.forEach(bot => {
-                            if (bot.playerId && data.playerMoves[bot.playerId] !== undefined) {
-                                bot.movesLeft = data.playerMoves[bot.playerId];
-                                bot.totalStealsThisRound = 0; // Reset steal counter for new round
-                                console.log(`🤖 Bot ${bot.playerId} moves updated: ${bot.movesLeft}`);
-                            }
-                        });
-                    }
-                }
-            }
-
-            handleGameEnd(data) {
-                const planningElement = document.getElementById('planning');
-                if (planningElement) {
-                    let winnerName = 'TIED';
-                    let winnerColor = '#FFFFFF';
-
-                    // Get team colors from game config or use defaults
-                    const teamColors = (gameClientManager && gameClientManager.gameConfig && gameClientManager.gameConfig.teamColors) || [
-                        { name: 'cyan', displayName: 'Cyan', color: 0x00FFFF },
-                        { name: 'magenta', displayName: 'Magenta', color: 0xFF00FF },
-                        { name: 'lime', displayName: 'Lime', color: 0x00FF00 },
-                        { name: 'gold', displayName: 'Gold', color: 0xFFD700 },
-                        { name: 'blue', displayName: 'Blue', color: 0x0066FF },
-                        { name: 'red', displayName: 'Red', color: 0xFF3333 },
-                        { name: 'dark green', displayName: 'Dark Green', color: 0x006400 }
-                    ];
-
-                    if (data.winningTeam !== -1 && data.winningTeam < teamColors.length) {
-                        const winningTeamConfig = teamColors[data.winningTeam];
-                        winnerName = winningTeamConfig.displayName.toUpperCase();
-                        winnerColor = `#${winningTeamConfig.color.toString(16).padStart(6, '0')}`;
-                    }
-
-                    planningElement.textContent = data.winningTeam === -1 ? 'GAME OVER - TIE!' : `GAME OVER - TEAM ${winnerName} WINS!`;
-                    planningElement.style.display = 'block';
-                    planningElement.style.color = winnerColor;
-                    planningElement.style.fontSize = '24px';
-                }
-
-                const timerElement = document.getElementById('timer');
-                if (timerElement) {
-                    timerElement.style.display = 'block';
-                    timerElement.style.width = '100%';
-
-                    // Set color to winning team or grey for tie
-                    if (data.winningTeam !== -1) {
-                        const teamColors = (gameClientManager && gameClientManager.gameConfig && gameClientManager.gameConfig.teamColors) || [
-                            { color: 0x00FFFF }, { color: 0xFF00FF }, { color: 0x00FF00 }, { color: 0xFFD700 },
-                            { color: 0x0066FF }, { color: 0xFF3333 }, { color: 0x006400 }
-                        ];
-
-                        if (data.winningTeam < teamColors.length) {
-                            const winnerColor = `#${teamColors[data.winningTeam].color.toString(16).padStart(6, '0')}`;
-                            timerElement.style.backgroundColor = winnerColor;
-                        } else {
-                            timerElement.style.backgroundColor = '#888888'; // Grey for unknown team
-                        }
-                    } else {
-                        timerElement.style.backgroundColor = '#888888'; // Grey for tie
-                    }
-                }
             }
 
             handleGamePaused(data) {
