@@ -297,18 +297,22 @@
         .notification-toast {
             position: fixed;
             bottom: 20px;
-            right: 20px;
-            background-color: #4caf50;
-            color: white;
-            padding: 10px 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #000000;
+            color: #ffffff;
+            padding: 8px 16px;
             border-radius: 4px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            border: 2px solid #ffffff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
             z-index: 2000;
             opacity: 0;
             transition: opacity 0.3s;
             pointer-events: none;
             font-family: 'Segoe UI', sans-serif;
-            font-size: 16px;
+            font-size: 14px;
+            font-weight: 600;
+            text-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
         }
 
         .notification-toast.show {
@@ -5715,7 +5719,7 @@
                 if (s.destroyed) return; // Can't reclaim destroyed stars
 
                 // Check if current team has moves left
-                if (this.ml && this.gameClientManager && this.gameClientManager.isConnected) {
+                if (this.ml && gameClientManager && gameClientManager.isConnected) {
                     if (this.myMoves <= 0) return;
                 } else if (this.tms[this.tm].movesLeft <= 0) return;
 
@@ -5733,8 +5737,8 @@
                     if (s.hq || s.pr || this.tms[this.tm].st <= 0) return;
 
                     // Send steal to server in multiplayer mode
-                    if (this.ml && this.gameClientManager && this.gameClientManager.isConnected) {
-                        this.gameClientManager.room.send('steal_star', {
+                    if (this.ml && gameClientManager && gameClientManager.isConnected) {
+                        gameClientManager.room.send('steal_star', {
                             starIndex: i,
                             isHQ: willBeHQ
                         });
@@ -5750,8 +5754,8 @@
                 } else {
                     // Regular claim
                     // Send claim to server in multiplayer mode
-                    if (this.ml && this.gameClientManager && this.gameClientManager.isConnected) {
-                        this.gameClientManager.room.send('claim_star', {
+                    if (this.ml && gameClientManager && gameClientManager.isConnected) {
+                        gameClientManager.room.send('claim_star', {
                             starIndex: i,
                             isHQ: willBeHQ
                         });
@@ -5796,12 +5800,13 @@
             }
 
             updateMovesUI() {
-                const movesEl = document.getElementById('movesDisplay');
-                if (movesEl) {
+                // Update cursor info div which shows moves
+                const cursorEl = document.getElementById('cursorInfo');
+                if (cursorEl) {
                     if (this.ml && this.myMoves !== undefined) {
-                        movesEl.textContent = this.myMoves;
+                        cursorEl.textContent = this.myMoves.toString();
                     } else if (this.tms && this.tms[this.tm]) {
-                        movesEl.textContent = this.tms[this.tm].movesLeft;
+                        cursorEl.textContent = this.tms[this.tm].movesLeft.toString();
                     }
                 }
             }
@@ -5963,8 +5968,7 @@
 
             startGame() {
                 this.p = false; document.getElementById('planning').style.display = 'none'; document.getElementById('timer').style.display = 'block';
-                // Reset local moves for multiplayer only if not already synced (wait for server sync)
-                if (this.ml && this.myMoves === undefined) this.myMoves = 0;
+                // Don't reset myMoves - let server handle move synchronization
                 this.st.forEach(s => { if (s.ty >= T.B && s.req === undefined) s.req = Math.floor(Math.random() * 3) + 2; });
 
                 // Reset timing for smooth round timer
@@ -8100,6 +8104,14 @@
                     }
                 });
 
+                this.room.onMessage('player_state_update', (data) => {
+                    console.log('🔄 Player state update:', data);
+                    if (currentGame) {
+                        currentGame.myMoves = data.movesLeft;
+                        currentGame.updateMovesUI();
+                    }
+                });
+
                 this.room.onMessage('authoritative_scores', (data) => {
                     console.log('📊 Received authoritative scores from server:', data);
 
@@ -8330,7 +8342,15 @@
                         }
 
                         // Show error notification for human players
-                        showNotification(`Move rejected: ${data.reason}`);
+                        let errorMessage = data.reason;
+                        if (data.reason === 'No moves remaining') {
+                            errorMessage = 'Out of moves!';
+                        } else if (data.reason === 'No steals remaining') {
+                            errorMessage = 'Out of steals!';
+                        } else if (data.reason === 'Star is protected') {
+                            errorMessage = 'Cannot steal protected star!';
+                        }
+                        showNotification(errorMessage);
                     }
 
                     currentGame.updateUI();
@@ -8398,10 +8418,16 @@
                     if (this.room && this.room.sessionId && state.players) {
                         const myPlayer = state.players.get(this.room.sessionId);
                         if (myPlayer) {
-                            // Sync moves
+                            // Sync moves - but don't override if we already have valid local moves
                             if (myPlayer.movesLeft !== undefined) {
-                                currentGame.myMoves = myPlayer.movesLeft;
-                                currentGame.updateMovesUI(); // Helper to update local UI
+                                // Only update if local moves are undefined or server has more moves (replenishment)
+                                if (currentGame.myMoves === undefined || myPlayer.movesLeft > currentGame.myMoves) {
+                                    console.log(`🔄 State update - syncing my moves to: ${myPlayer.movesLeft}`);
+                                    currentGame.myMoves = myPlayer.movesLeft;
+                                    currentGame.updateMovesUI(); // Helper to update local UI
+                                } else {
+                                    console.log(`🔄 State update - keeping local moves: ${currentGame.myMoves} (server has: ${myPlayer.movesLeft})`);
+                                }
                             }
 
                             // Update Host Status
@@ -8483,7 +8509,7 @@
                         // Initialize serverRoundLength for timer bar synchronization
                         this.serverRoundLength = cfg.roundLength * 1000;
                     }
-                    if (typeof cfg.rounds === 'number') currentGame.rounds = cfg.rounds;
+                    if (typeof cfg.rounds === 'number') currentGame.TR = cfg.rounds;
                     if (typeof cfg.countdownLength === 'number') currentGame.countdownLength = cfg.countdownLength;
 
                     // Apply team colors from server config
@@ -8552,6 +8578,11 @@
                 // Trigger game start logic
                 if (currentGame) {
                     currentGame.startGame();
+                    
+                    // Request current player state to sync moves
+                    if (this.room && this.room.sessionId) {
+                        this.room.send('request_player_state');
+                    }
                 }
 
                 // Update UI to show game has started
@@ -8761,11 +8792,22 @@
 
                 // INSTANT MOVE UPDATE
                 if (data.playerMoves && typeof currentGame !== 'undefined') {
+                    console.log(' Round start - received playerMoves:', data.playerMoves);
+                    console.log(' My session ID:', this.room.sessionId);
+                    
                     // Update my moves instantly
                     const myId = this.room.sessionId;
                     if (data.playerMoves[myId] !== undefined) {
+                        console.log(` Updating my moves to: ${data.playerMoves[myId]}`);
                         currentGame.myMoves = data.playerMoves[myId];
+                        currentGame.updateMovesUI(); // Update moves display
                         currentGame.updateHeader(); // Force header update
+                    } else {
+                        console.warn(' My moves not found in playerMoves object. Available IDs:', Object.keys(data.playerMoves));
+                        // Fallback: request current player state if not found
+                        if (this.room) {
+                            this.room.send('request_player_state');
+                        }
                     }
 
                     // Update bot moves from server allocation

@@ -193,17 +193,20 @@
 
         .notification-toast {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background-color: #4caf50;
+            bottom: 10px;
+            right: 10px;
+            background-color: rgba(76, 175, 80, 0.8);
             color: white;
-            padding: 10px 20px;
-            border-radius: 4px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            padding: 4px 8px;
+            border-radius: 2px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             z-index: 1000;
             opacity: 0;
-            transition: opacity 0.3s;
+            transition: opacity 0.2s;
             pointer-events: none;
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            font-weight: 500;
         }
 
         .notification-toast.show {
@@ -2439,10 +2442,10 @@
         }
 
         function colorAutoAssignPlayers() {
-            const unassigned = colorPlayers.filter(p => p.colorTeam === null);
-            if (unassigned.length === 0 || colorTeamColors.length === 0) return;
+            if (colorPlayers.length === 0 || colorTeamColors.length === 0) return;
 
-            unassigned.forEach((player, index) => {
+            // Clear all assignments first, then redistribute all players
+            colorPlayers.forEach((player, index) => {
                 player.colorTeam = index % colorTeamColors.length;
             });
 
@@ -2554,12 +2557,25 @@
                 assigned.forEach(player => {
                     const el = document.createElement('div');
                     el.className = 'player-chip' + (player.isBot ? ' bot-player' : '');
-                    el.style.cursor = 'pointer';
+                    el.style.cursor = 'move';
+                    el.draggable = true;
                     const typeLabel = player.isBot ? '🤖' : (player.visionType === 'normal' ? 'N' : player.visionType.substring(0, 1).toUpperCase());
                     el.innerHTML = `
                         <span class="player-chip-name">${player.name}</span>
                         <span class="player-chip-type ${player.isBot ? 'bot' : player.visionType}">${typeLabel}</span>
                     `;
+                    
+                    // Add drag events for team players
+                    el.addEventListener('dragstart', () => {
+                        colorDraggedPlayer = player;
+                        el.classList.add('dragging');
+                    });
+
+                    el.addEventListener('dragend', () => {
+                        el.classList.remove('dragging');
+                        colorDraggedPlayer = null;
+                    });
+                    
                     el.onclick = () => {
                         player.colorTeam = null;
                         // Sync to game server (unassign)
@@ -2587,6 +2603,29 @@
             try {
                 currentRoom.send('assign_team', payload);
                 console.log('✓ Synced color team assignment:', payload);
+                
+                // If this is a bot, update its display in the AI bots section
+                if (player.isBot && player.colyseusId) {
+                    // Find the bot div by matching the colyseusId
+                    const botContainer = document.getElementById('admin-ai-bots');
+                    if (botContainer) {
+                        const botDivs = botContainer.querySelectorAll('.ai-bot-item');
+                        botDivs.forEach(botDiv => {
+                            const botSelect = botDiv.querySelector('.ai-bot-select');
+                            const teamSelect = botDiv.querySelector('.ai-team-select');
+                            
+                            // Check if this bot div corresponds to the moved bot
+                            // We need to match by some identifier - let's use the bot ID pattern
+                            if (botDiv.id && botDiv.id.includes('bot_')) {
+                                // Update team selection if it doesn't match
+                                if (teamSelect && player.colorTeam !== null && player.colorTeam !== undefined) {
+                                    teamSelect.value = player.colorTeam;
+                                    updateAdminAIBotDisplay(botDiv.id);
+                                }
+                            }
+                        });
+                    }
+                }
             } catch (e) {
                 console.error('Failed to sync color team:', e);
             }
