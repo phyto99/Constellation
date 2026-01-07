@@ -15,9 +15,9 @@ app.use(cors());
 app.use(express.json());
 
 // Airtable configuration
-const AIRTABLE_BASE_ID = 'appTD6mhx60nuMHtd';
-const AIRTABLE_TABLE_ID = 'tblbareHvl8s0hjAg';
-const AIRTABLE_PERSONAL_ACCESS_TOKEN = 'REMOVED_FOR_SECURITY';
+const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || 'appTD6mhx60nuMHtd';
+const AIRTABLE_TABLE_ID = process.env.AIRTABLE_TABLE_ID || 'tblbareHvl8s0hjAg';
+const AIRTABLE_PERSONAL_ACCESS_TOKEN = process.env.AIRTABLE_PERSONAL_ACCESS_TOKEN || '';
 const AIRTABLE_JSON_FIELD = 'JSON'; // Field name for the JSON data
 const AIRTABLE_NAME_FIELD = 'Name'; // Field name for the map name
 
