@@ -8802,6 +8802,56 @@
                 timerElement.style.width = `${Math.max(0, percentage).toFixed(2)}%`;
             }
 
+            handleRoundStart(data) {
+                const planningElement = document.getElementById('planning');
+                if (planningElement) {
+                    planningElement.style.display = 'none';
+                }
+
+                const roundElement = document.getElementById('round');
+                if (roundElement) {
+                    roundElement.textContent = `Round #${data.currentRound}`;
+                }
+
+                // INSTANT TIMER RESET (Visual sync)
+                const timerElement = document.getElementById('timer');
+                if (timerElement) {
+                    timerElement.style.width = '100%';
+                }
+
+                // INSTANT MOVE UPDATE
+                if (data.playerMoves && typeof currentGame !== 'undefined') {
+                    console.log(' Round start - received playerMoves:', data.playerMoves);
+                    console.log(' My session ID:', this.room.sessionId);
+                    
+                    // Update my moves instantly
+                    const myId = this.room.sessionId;
+                    if (data.playerMoves[myId] !== undefined) {
+                        console.log(` Updating my moves to: ${data.playerMoves[myId]}`);
+                        currentGame.myMoves = data.playerMoves[myId];
+                        currentGame.updateMovesUI(); // Update moves display
+                        currentGame.updateHeader(); // Force header update
+                    } else {
+                        console.warn(' My moves not found in playerMoves object. Available IDs:', Object.keys(data.playerMoves));
+                        // Fallback: request current player state if not found
+                        if (this.room) {
+                            this.room.send('request_player_state');
+                        }
+                    }
+
+                    // Update bot moves from server allocation
+                    if (currentGame.aiBots && currentGame.aiBots.length > 0) {
+                        currentGame.aiBots.forEach(bot => {
+                            if (bot.playerId && data.playerMoves[bot.playerId] !== undefined) {
+                                bot.movesLeft = data.playerMoves[bot.playerId];
+                                bot.totalStealsThisRound = 0; // Reset steal counter for new round
+                                console.log(`🤖 Bot ${bot.playerId} moves updated: ${bot.movesLeft}`);
+                            }
+                        });
+                    }
+                }
+            }
+
             handleGamePaused(data) {
                 if (currentGame) {
                     currentGame.isPaused = true;
