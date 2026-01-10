@@ -17,9 +17,12 @@ app.use(express.json());
 // Airtable configuration
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || 'appTD6mhx60nuMHtd';
 const AIRTABLE_TABLE_ID = process.env.AIRTABLE_TABLE_ID || 'tblbareHvl8s0hjAg';
-const AIRTABLE_PERSONAL_ACCESS_TOKEN = process.env.AIRTABLE_PERSONAL_ACCESS_TOKEN || '';
+const AIRTABLE_PERSONAL_ACCESS_TOKEN = process.env.AIRTABLE_PERSONAL_ACCESS_TOKEN || 'patWv1h9n2yFvE2h8j.4b8f9e6a3c2d1b0a9c8d7e6f5a4b3c2d1';
 const AIRTABLE_JSON_FIELD = 'JSON'; // Field name for the JSON data
 const AIRTABLE_NAME_FIELD = 'Name'; // Field name for the map name
+
+// Local map folder configuration
+const MAPS_FOLDER = path.join(__dirname, 'Constellation maps 2');
 
 // Airtable API helper - handles pagination to get all records
 async function fetchAirtableRecords() {
@@ -52,31 +55,18 @@ async function fetchAirtableRecords() {
     }
 }
 
-// Map endpoints - now pulling from Airtable
 app.get('/api/maps', async (req, res) => {
     try {
-        const records = await fetchAirtableRecords();
+        // Read all JSON files from the maps folder
+        const files = fs.readdirSync(MAPS_FOLDER)
+            .filter(file => file.endsWith('.json'))
+            .sort(); // Sort alphabetically
 
-        // Extract map names from records that have JSON data
-        const maps = records
-            .filter(record => record.fields[AIRTABLE_JSON_FIELD]) // Only records with JSON field
-            .map(record => {
-                // Use the Name field if available, otherwise fall back to record ID
-                let mapName = record.fields[AIRTABLE_NAME_FIELD] || record.id;
-
-                // Ensure it has .json extension
-                if (!mapName.endsWith('.json')) {
-                    mapName += '.json';
-                }
-
-                return mapName;
-            });
-
-        console.log(`📍 Found ${maps.length} maps in Airtable:`, maps);
-        res.json(maps);
+        console.log(`📍 Found ${files.length} maps in local folder:`, files);
+        res.json(files);
     } catch (error) {
-        console.error('Error fetching maps from Airtable:', error);
-        res.status(500).json({ error: 'Failed to fetch maps from Airtable' });
+        console.error('Error reading maps from local folder:', error);
+        res.status(500).json({ error: 'Failed to read maps from local folder' });
     }
 });
 
@@ -85,46 +75,34 @@ app.get('/api/maps/:filename', async (req, res) => {
     console.log(`📍 Request for map: ${filename}`);
 
     try {
-        const records = await fetchAirtableRecords();
-
-        // Find the record by matching filename
-        let targetRecord = null;
-
-        for (const record of records) {
-            if (!record.fields[AIRTABLE_JSON_FIELD]) continue;
-
-            // Try to match by Name field or record ID
-            let mapName = record.fields[AIRTABLE_NAME_FIELD] || record.id;
-
-            // Ensure it has .json extension for comparison
-            if (!mapName.endsWith('.json')) {
-                mapName += '.json';
-            }
-
-            if (mapName === filename) {
-                targetRecord = record;
-                break;
-            }
+        // Security: Ensure filename has .json extension and doesn't contain path traversal
+        if (!filename.endsWith('.json') || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+            console.log(`❌ Invalid filename: ${filename}`);
+            return res.status(400).json({ error: 'Invalid filename' });
         }
 
-        if (!targetRecord) {
-            console.log(`❌ Map not found: ${filename}`);
+        const filePath = path.join(MAPS_FOLDER, filename);
+        
+        // Check if file exists
+        if (!fs.existsSync(filePath)) {
+            console.log(`❌ Map file not found: ${filename}`);
             return res.status(404).json({ error: 'Map not found' });
         }
 
-        // Parse and return the JSON data
-        try {
-            const jsonData = JSON.parse(targetRecord.fields[AIRTABLE_JSON_FIELD]);
-            console.log(`✅ Serving map: ${filename}`);
-            res.json(jsonData);
-        } catch (e) {
-            console.error(`❌ Error parsing JSON for map ${filename}:`, e.message);
-            res.status(500).json({ error: 'Invalid JSON in map data' });
-        }
+        // Read and parse the JSON file
+        const fileContent = fs.readFileSync(filePath, 'utf8');
+        const jsonData = JSON.parse(fileContent);
+        
+        console.log(`✅ Serving map: ${filename}, stars: ${jsonData.stars?.length || 0}`);
+        res.json(jsonData);
 
     } catch (error) {
-        console.error('Error fetching map from Airtable:', error);
-        res.status(500).json({ error: 'Failed to fetch map from Airtable' });
+        console.error('Error reading map file:', error);
+        if (error instanceof SyntaxError) {
+            res.status(500).json({ error: 'Invalid JSON in map file' });
+        } else {
+            res.status(500).json({ error: 'Failed to read map file' });
+        }
     }
 });
 
@@ -307,33 +285,41 @@ class ConstellationRoom extends Room {
                                             this.gameConfig.customMapFilename = null;
                                         }
                                     } else {
-                                        // Fetch map from Airtable
+                                        // Load map from local file system
                                         try {
-                                            console.log(`📍 Fetching map from Airtable: ${msg.settings.customMapFilename}`);
-                                            const records = await fetchAirtableRecords();
-                                            let targetRecord = null;
-
-                                            for (const record of records) {
-                                                if (!record.fields[AIRTABLE_JSON_FIELD]) continue;
-                                                let mapName = record.fields[AIRTABLE_NAME_FIELD] || record.id;
-                                                if (!mapName.endsWith('.json')) mapName += '.json';
-                                                if (mapName === msg.settings.customMapFilename) {
-                                                    targetRecord = record;
-                                                    break;
-                                                }
-                                            }
-
-                                            if (targetRecord) {
-                                                this.gameConfig.customMap = JSON.parse(targetRecord.fields[AIRTABLE_JSON_FIELD]);
-                                                this.gameConfig.customMapFilename = msg.settings.customMapFilename;
-                                                console.log(`✅ Loaded map from Airtable: ${msg.settings.customMapFilename}, stars: ${this.gameConfig.customMap.stars?.length || 0}`);
-                                            } else {
-                                                console.error(`❌ Map not found in Airtable: ${msg.settings.customMapFilename}`);
+                                            console.log(`📍 Loading map from local folder: ${msg.settings.customMapFilename}`);
+                                            
+                                            // Security: Ensure filename has .json extension and doesn't contain path traversal
+                                            if (!msg.settings.customMapFilename.endsWith('.json') || 
+                                                msg.settings.customMapFilename.includes('..') || 
+                                                msg.settings.customMapFilename.includes('/') || 
+                                                msg.settings.customMapFilename.includes('\\')) {
+                                                console.error(`❌ Invalid map filename: ${msg.settings.customMapFilename}`);
                                                 this.gameConfig.customMap = null;
                                                 this.gameConfig.customMapFilename = null;
+                                                return;
                                             }
+                                            
+                                            const filePath = path.join(MAPS_FOLDER, msg.settings.customMapFilename);
+                                            
+                                            // Check if file exists
+                                            if (!fs.existsSync(filePath)) {
+                                                console.error(`❌ Map file not found: ${msg.settings.customMapFilename}`);
+                                                this.gameConfig.customMap = null;
+                                                this.gameConfig.customMapFilename = null;
+                                                return;
+                                            }
+                                            
+                                            // Read and parse the JSON file
+                                            const fileContent = fs.readFileSync(filePath, 'utf8');
+                                            const mapData = JSON.parse(fileContent);
+                                            
+                                            this.gameConfig.customMap = mapData;
+                                            this.gameConfig.customMapFilename = msg.settings.customMapFilename;
+                                            console.log(`✅ Loaded map from local folder: ${msg.settings.customMapFilename}, stars: ${this.gameConfig.customMap.stars?.length || 0}`);
+                                            
                                         } catch (e) {
-                                            console.error(`❌ Failed to fetch map from Airtable:`, e.message);
+                                            console.error(`❌ Failed to load map from local folder:`, e.message);
                                             this.gameConfig.customMap = null;
                                             this.gameConfig.customMapFilename = null;
                                         }
