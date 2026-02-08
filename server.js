@@ -220,6 +220,9 @@ class ConstellationRoom extends Room {
                             // CRITICAL: Distribute moves when started via Admin presence (isGameStart = true)
                             this.distributeMoves(true);
 
+                            // Initialize server game state from config so human and bot moves validate and sync for all clients
+                            this.initializeGameStateFromConfig();
+
                             this.broadcast('game_started', { gameState: 'playing', config: this.gameConfig, currentRound: 1, botPlayers: this.getBotPlayerIds() });
 
                             // Start the Game Loop
@@ -467,6 +470,10 @@ class ConstellationRoom extends Room {
 
                 // Initialize Round State
                 this.state.game.round = 1;
+
+                // Initialize server game state from config so human and bot moves validate and sync for all clients
+                this.initializeGameStateFromConfig();
+
                 this.broadcast('game_started', { gameState: 'playing', config: this.gameConfig, currentRound: 1, botPlayers: this.getBotPlayerIds() });
 
                 // Start the Game Loop
@@ -1054,6 +1061,40 @@ class ConstellationRoom extends Room {
             clearInterval(this.gameLoopInterval);
         }
         console.log(`Room ${this.roomId} disposed`);
+    }
+
+    // Initialize server game state from gameConfig (customMap) when game starts.
+    // This ensures human and bot moves are validated and broadcast so all clients see them.
+    initializeGameStateFromConfig() {
+        const map = this.gameConfig.customMap;
+        if (!map || !Array.isArray(map.stars)) {
+            console.log(`⚠️ No customMap.stars for room ${this.roomId}, skipping game state init`);
+            return;
+        }
+        // Clear existing stars (e.g. from a previous game)
+        if (this.state.game.stars.length > 0) {
+            this.state.game.stars.splice(0, this.state.game.stars.length);
+        }
+        map.stars.forEach((starData, index) => {
+            const star = new StarSchema();
+            star.x = starData.x;
+            star.y = starData.y;
+            star.ty = starData.ty || 0;
+            star.tm = (starData.tm !== null && starData.tm !== undefined) ? starData.tm : -1;
+            star.hq = starData.hq || false;
+            star.pr = starData.pr || false;
+            star.destroyed = starData.destroyed || false;
+            if (starData.ty === 2 || starData.ty === 3) {
+                const minReq = starData.min_value != null ? starData.min_value : (starData.ty === 2 ? 2 : 2);
+                const maxReq = starData.max_value != null ? starData.max_value : (starData.ty === 2 ? 4 : 3);
+                star.req = Math.floor(Math.random() * (maxReq - minReq + 1)) + minReq;
+            } else {
+                star.req = starData.req || 0;
+            }
+            this.state.game.stars.push(star);
+        });
+        this.state.game.initialized = true;
+        console.log(`✅ Game state initialized from config for room ${this.roomId}: ${this.state.game.stars.length} stars, ${this.state.game.teams.length} teams`);
     }
 
     distributeMoves(isGameStart = false) {

@@ -429,7 +429,7 @@
 
         .header {
             position: fixed;
-            top: 8px;
+            top: 42px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 1003;
@@ -455,7 +455,7 @@
 
         .player-name-input {
             position: fixed;
-            bottom: 20px;
+            top: 8px;
             left: 20px;
             z-index: 1004;
             background: rgba(0, 0, 0, 0.8);
@@ -6623,19 +6623,14 @@
                     const x = cursor.x * this.G;
                     const y = cursor.y * this.G;
 
-                    // Draw perfectly symmetrical cursor - diamond/rhombus shape
-                    const size = 20;
-
-                    this.cursorGfx.lineStyle(0); // No outline
+                    // Figma-style cursor: arrow head only (no stem), tip at (x, y)
+                    const size = 16;
+                    this.cursorGfx.lineStyle(0);
                     this.cursorGfx.beginFill(teamColor, 1);
-
-                    // Perfect diamond/rhombus shape - symmetrical on both axes
-                    this.cursorGfx.moveTo(x, y - size); // Top point
-                    this.cursorGfx.lineTo(x + size * 0.6, y); // Right point
-                    this.cursorGfx.lineTo(x, y + size); // Bottom point
-                    this.cursorGfx.lineTo(x - size * 0.6, y); // Left point
-                    this.cursorGfx.lineTo(x, y - size); // Back to top to close
-
+                    this.cursorGfx.moveTo(x, y);
+                    this.cursorGfx.lineTo(x - size, y - size * 0.85);
+                    this.cursorGfx.lineTo(x - size * 0.55, y);
+                    this.cursorGfx.lineTo(x, y);
                     this.cursorGfx.endFill();
                 }
             }
