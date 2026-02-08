@@ -692,18 +692,23 @@ class ConstellationRoom extends Room {
                     team.movesLeft--;
                 }
 
-                // Broadcast delta update to all clients (server state not used)
-                const starUpdate = { index: data.starIndex, tm: teamIndex, hq: isHQ };
-                if (isHQ) {
-                    // starUpdate.hq is already set above
-                    if (team) team.hqCount++;
+                // Update server-authoritative star state so authoritative_scores and new joiners stay correct
+                if (this.state.game.stars && data.starIndex < this.state.game.stars.length) {
+                    this.state.game.stars[data.starIndex].tm = teamIndex;
+                    this.state.game.stars[data.starIndex].hq = isHQ;
+                }
+                if (isHQ && team) {
+                    team.hqCount++;
                 }
 
-                // Prepare update objects
-                const teamUpdate = { index: teamIndex, movesLeft: -1 };
-                if (isHQ) {
-                    teamUpdate.hqCount = 1; // Increment client count
-                }
+                // Broadcast star update and absolute team state (all clients apply same values, no double-decrement for actor)
+                const starUpdate = { index: data.starIndex, tm: teamIndex, hq: isHQ };
+                const teamUpdate = {
+                    index: teamIndex,
+                    movesLeft: team ? team.movesLeft : undefined,
+                    stealsLeft: team ? team.stealsLeft : undefined,
+                    hqCount: team ? team.hqCount : undefined
+                };
 
                 // Include bot move info in broadcast for client-side bot sync
                 const stateChange = {
@@ -779,17 +784,23 @@ class ConstellationRoom extends Room {
                     if (team.stealsLeft > 0) team.stealsLeft--;
                 }
 
-                // Broadcast delta update
-                const starUpdate = { index: data.starIndex, tm: teamIndex, hq: isHQ };
-                if (isHQ) {
-                    if (team) team.hqCount++;
+                // Update server-authoritative star state
+                if (this.state.game.stars && data.starIndex < this.state.game.stars.length) {
+                    this.state.game.stars[data.starIndex].tm = teamIndex;
+                    this.state.game.stars[data.starIndex].hq = isHQ;
+                }
+                if (isHQ && team) {
+                    team.hqCount++;
                 }
 
-                // Prepare update objects
-                const teamUpdate = { index: teamIndex, movesLeft: -1, stealsLeft: -1 };
-                if (isHQ) {
-                    teamUpdate.hqCount = 1; // Increment client count
-                }
+                // Broadcast star update and absolute team state
+                const starUpdate = { index: data.starIndex, tm: teamIndex, hq: isHQ };
+                const teamUpdate = {
+                    index: teamIndex,
+                    movesLeft: team ? team.movesLeft : undefined,
+                    stealsLeft: team ? team.stealsLeft : undefined,
+                    hqCount: team ? team.hqCount : undefined
+                };
 
                 // Include bot move info in broadcast for client-side bot sync
                 const stateChange = {
@@ -849,18 +860,28 @@ class ConstellationRoom extends Room {
                 // Decrement player moves
                 player.movesLeft--;
 
-                if (this.state.game.teams[teamIndex]) {
-                    this.state.game.teams[teamIndex].movesLeft--;
-                    this.state.game.teams[teamIndex].hqCount++;
+                const gameTeam = this.state.game.teams[teamIndex];
+                if (gameTeam) {
+                    gameTeam.movesLeft--;
+                    gameTeam.hqCount++;
                 }
 
-                // Include bot move info in broadcast for client-side bot sync
+                // Update server-authoritative star state (HQ placement on existing star)
+                if (this.state.game.stars && data.starIndex < this.state.game.stars.length) {
+                    this.state.game.stars[data.starIndex].hq = true;
+                    if (this.state.game.stars[data.starIndex].tm === -1) {
+                        this.state.game.stars[data.starIndex].tm = teamIndex;
+                    }
+                }
+
+                // Broadcast absolute team state
                 const stateChange = {
                     stars: [{ index: data.starIndex, tm: teamIndex, hq: true }],
                     teams: [{
                         index: teamIndex,
-                        movesLeft: -1, // -1 = decrement
-                        hqCount: 1 // +1 for HQ
+                        movesLeft: gameTeam ? gameTeam.movesLeft : undefined,
+                        stealsLeft: gameTeam ? gameTeam.stealsLeft : undefined,
+                        hqCount: gameTeam ? gameTeam.hqCount : undefined
                     }]
                 };
                 if (data.botId) {

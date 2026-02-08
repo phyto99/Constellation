@@ -8124,19 +8124,22 @@
 
                     // Update client scores to match server authority
                     if (data.teamScores) {
-                        // Reset all team scores to 0 first
-                        currentGame.tms.forEach(team => team.s = 0);
-
-                        // Apply server scores
-                        Object.entries(data.teamScores).forEach(([teamIndex, score]) => {
-                            const idx = parseInt(teamIndex);
-                            if (idx >= 0 && idx < currentGame.tms.length) {
-                                currentGame.tms[idx].s = score;
-                            }
+                        currentGame.tms.forEach((team, idx) => {
+                            team.s = data.teamScores[idx] != null ? data.teamScores[idx] : 0;
                         });
 
-                        // Force UI update with server-authoritative scores
+                        // Sync teamScoreData so leaderboard display and sort order match server
+                        if (currentGame.teamScoreData && currentGame.teamScoreData.length === currentGame.tms.length) {
+                            currentGame.teamScoreData.forEach((data, idx) => {
+                                const score = currentGame.tms[idx].s;
+                                data.finalScore = score;
+                                data.count = score; // Server sends star count; keep detail in sync
+                            });
+                        }
+
+                        // Force immediate leaderboard/score UI update
                         currentGame.needsFullUIUpdate = true;
+                        currentGame.lastScoreUpdate = 0; // Bypass multiplayer throttle so display updates now
                         currentGame.updateUI();
 
                         console.log('✅ Client scores synchronized with server');
@@ -8242,34 +8245,16 @@
                         });
                     }
 
-                    // Apply team changes
+                    // Apply team changes (server sends absolute values so all clients stay in sync, including actor)
                     if (delta.teams) {
                         delta.teams.forEach(change => {
                             if (change.index < 0 || change.index >= currentGame.tms.length) return;
 
                             const team = currentGame.tms[change.index];
-                            // Handle deltas: negative values mean decrement, positive mean increment/set
-                            if (change.movesLeft !== undefined) {
-                                if (change.movesLeft < 0) {
-                                    team.movesLeft += change.movesLeft; // Decrement (e.g., += -1)
-                                } else {
-                                    team.movesLeft = change.movesLeft; // Absolute value
-                                }
-                            }
-                            if (change.stealsLeft !== undefined) {
-                                if (change.stealsLeft < 0) {
-                                    team.st += change.stealsLeft; // Decrement
-                                } else {
-                                    team.st = change.stealsLeft; // Absolute value
-                                }
-                            }
-                            if (change.hqCount !== undefined) {
-                                if (change.hqCount > 0 && change.hqCount < 10) {
-                                    team.h += change.hqCount; // Increment
-                                } else {
-                                    team.h = change.hqCount; // Absolute value
-                                }
-                            }
+                            // Server sends absolute movesLeft, stealsLeft, hqCount after each move
+                            if (change.movesLeft !== undefined) team.movesLeft = change.movesLeft;
+                            if (change.stealsLeft !== undefined) team.st = change.stealsLeft;
+                            if (change.hqCount !== undefined) team.h = change.hqCount;
 
                             currentGame.changedTeams.add(change.index);
                         });
@@ -8284,6 +8269,10 @@
                         }
                     }
 
+                    // Force line layer redraw so connected lines show correct team color for all clients
+                    currentGame.needsStaticLineRedraw = true;
+                    currentGame.needsAnimatedLineRedraw = true;
+
                     // Update UI and recalculate scores (only in single-player)
                     const isMultiplayer = gameClientManager && gameClientManager.isConnected;
                     if (!isMultiplayer) {
@@ -8292,10 +8281,10 @@
                         currentGame.deferredSpecialCheck = true;
                         currentGame.deferredNetworkAnalysis = true;
                     } else {
-                        // In multiplayer, server is authoritative for scores
-                        // Only update special checks and network analysis
+                        // In multiplayer, server sends authoritative_scores next; force score refresh when it arrives
                         currentGame.deferredSpecialCheck = true;
                         currentGame.deferredNetworkAnalysis = true;
+                        currentGame.needsFullUIUpdate = true; // Ensure leaderboard refreshes after authoritative_scores
                     }
                     currentGame.updateUI();
                 });

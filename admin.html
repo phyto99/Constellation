@@ -39,6 +39,32 @@
             padding: 5px 10px;
         }
 
+        .nameplate-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 8px 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .nameplate-container label {
+            font-size: 11px;
+            color: #666;
+            margin-right: 6px;
+        }
+
+        .nameplate-container input {
+            padding: 4px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 3px;
+            font-size: 12px;
+            width: 150px;
+        }
+
         .main-content {
             margin-left: 280px;
             width: calc(100% - 280px);
@@ -122,6 +148,11 @@
             cursor: pointer;
         }
 
+        .create-section button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
         .scenario-header {
             background: #e5e7eb;
             padding: 15px;
@@ -186,9 +217,7 @@
 
         .ai-bot-item {
             flex: 1 1 auto;
-            /* Compress/expand but don't force new lines aggressively */
             min-width: 200px;
-            /* Minimum width before wrapping */
         }
 
         .notification-toast {
@@ -211,6 +240,14 @@
 
         .notification-toast.show {
             opacity: 1;
+        }
+
+        .notification-toast.error {
+            background-color: rgba(239, 68, 68, 0.8);
+        }
+
+        .notification-toast.warning {
+            background-color: rgba(245, 158, 11, 0.8);
         }
 
         .form-group {
@@ -241,6 +278,16 @@
         .form-group textarea {
             height: 60px;
             resize: vertical;
+        }
+
+        .form-group input.error {
+            border-color: #ef4444;
+        }
+
+        .form-group .error-message {
+            color: #ef4444;
+            font-size: 11px;
+            margin-top: 2px;
         }
 
         .team-section h3 {
@@ -384,22 +431,17 @@
             text-decoration: underline;
         }
 
-        /* AI Bot Styles */
         .ai-bot-item {
             background: #fff;
             border: 1px solid #d1d5db;
             border-radius: 4px;
             padding: 10px 12px;
-            /* more breathing room */
             margin-bottom: 10px;
             display: flex;
             align-items: center;
             gap: 10px;
-            /* larger gaps for readability */
             flex-wrap: wrap;
-            /* allow wrapping across the row */
             white-space: normal;
-            /* allow natural breaks */
         }
 
         .ai-bot-select,
@@ -412,7 +454,6 @@
             border-radius: 4px;
             font-size: 12px;
             flex: 1 1 180px;
-            /* grow and wrap nicely */
             min-width: 160px;
         }
 
@@ -467,6 +508,11 @@
             background: #2563eb;
         }
 
+        .add-bot-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
         .ai-bots-empty {
             color: #9ca3af;
             font-size: 12px;
@@ -475,7 +521,13 @@
             text-align: center;
         }
 
-        /* Color Management Styles */
+        .limit-warning {
+            color: #f59e0b;
+            font-size: 11px;
+            margin-top: 5px;
+            font-weight: bold;
+        }
+
         .color-section-title {
             color: #333;
             font-size: 18px;
@@ -752,7 +804,6 @@
             display: block;
         }
 
-        /* Expanded color optimizer pane */
         .color-optimizer-pane {
             display: none;
             position: fixed;
@@ -887,10 +938,23 @@
             align-items: center;
             justify-content: center;
         }
+
+        .game-item.not-mine {
+            opacity: 0.7;
+        }
+
+        .game-item.not-mine .btn-delete {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
+    <!-- Nameplate in top right -->
+    <div class="nameplate-container">
+        <label>Your Name:</label>
+        <input type="text" id="user-nameplate" placeholder="Enter your name" maxlength="30" onchange="saveUserName()">
+    </div>
     <div class="sidebar">
         <div class="sidebar-content">
             <div class="game-section">
@@ -921,8 +985,11 @@
                     <option value="No game focus">No game focus</option>
                 </select>
                 <div class="create-row">
-                    <input type="text" id="game-name" placeholder="Session name">
-                    <button onclick="createGame()">Create</button>
+                    <input type="text" id="game-name" placeholder="Session name" maxlength="50">
+                    <button id="create-btn" onclick="createGame()">Create</button>
+                </div>
+                <div id="game-limit-warning" class="limit-warning" style="display: none;">
+                    Max 4 games reached
                 </div>
                 <div style="margin-top: 8px; font-size: 11px; text-align: center;">
                     Status: <span id="connection-status" style="font-weight: bold;">Connecting...</span>
@@ -941,9 +1008,17 @@
             <p>No games created yet. Create a new game to get started.</p>
         </div>
 
+        <!-- Security Activity Log - Fixed at bottom -->
+        <div style="position: fixed; bottom: 0; left: 280px; right: 0; z-index: 50; background: white; border-top: 1px solid #e5e7eb;">
+            <div style="background: #f9f9f9; border-bottom: 1px solid #e5e7eb; max-height: 200px; overflow-y: auto;">
+                <div id="security-logs-list">
+                    <div style="color: #666; font-style: italic; padding: 10px;">No logs yet</div>
+                </div>
+            </div>
+        </div>
+
         <div id="game-content" style="display: none;">
             <div style="padding: 20px;">
-                <!-- Game Action Buttons at the very top -->
                 <div class="game-actions"
                     style="margin-bottom: 15px; position: relative; display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; gap: 10px;">
@@ -969,12 +1044,10 @@
                             Game</a>
                     </div>
 
-                    <!-- Pause Reason Popup -->
                     <div id="pause-popup"
                         style="display: none; position: absolute; top: 100%; right: 200px; margin-top: 8px; z-index: 1000;">
                         <div
                             style="position: relative; background: white; border: 1px solid #ccc; border-radius: 8px; padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); width: 280px;">
-                            <!-- Arrow pointing up -->
                             <div
                                 style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 8px solid #ccc;">
                             </div>
@@ -1015,41 +1088,41 @@
                             </div>
                             <div class="form-group">
                                 <label>Moves <span class="sublabel">(Number of moves per round)</span></label>
-                                <input type="number" id="edit-movesPerRound" value="15" onchange="sendSettingsUpdate()">
+                                <input type="number" id="edit-movesPerRound" value="15" min="1" max="99" onchange="validateAndUpdate(this, 1, 99)">
                             </div>
                             <div class="form-group">
                                 <label>Rounds <span class="sublabel">(Number of rounds)</span></label>
-                                <input type="number" id="edit-rounds" value="10" onchange="sendSettingsUpdate()">
+                                <input type="number" id="edit-rounds" value="10" min="1" max="99" onchange="validateAndUpdate(this, 1, 99)">
                             </div>
                             <div class="form-group">
                                 <label>Round Length <span class="sublabel">(Seconds per round)</span></label>
-                                <input type="number" id="edit-roundTime" value="30" onchange="sendSettingsUpdate()">
+                                <input type="number" id="edit-roundTime" value="30" min="10" max="300" onchange="validateAndUpdate(this, 10, 300)">
                             </div>
                             <div class="form-group">
                                 <label>Countdown Length <span class="sublabel">(Seconds before game
                                         starts)</span></label>
-                                <input type="number" id="edit-countdownTime" value="5" onchange="sendSettingsUpdate()">
+                                <input type="number" id="edit-countdownTime" value="5" min="0" max="60" onchange="validateAndUpdate(this, 0, 60)">
                             </div>
                             <div class="form-group">
                                 <label>Steals <span class="sublabel">(Number of steals allowed)</span></label>
-                                <input type="number" id="edit-stealLimit" value="15" onchange="sendSettingsUpdate()">
+                                <input type="number" id="edit-stealLimit" value="15" min="0" max="99" onchange="validateAndUpdate(this, 0, 99)">
                             </div>
                             <div class="form-group">
                                 <label>Headquarters <span class="sublabel">(Number of Headquarters)</span></label>
-                                <input type="number" id="edit-hqMax" value="2" onchange="sendSettingsUpdate()">
+                                <input type="number" id="edit-hqMax" value="2" min="0" max="20" onchange="validateAndUpdate(this, 0, 20)">
                             </div>
                             <div class="form-group">
                                 <label>Score Multipliers <span class="sublabel">(Count, Distance, HQ,
                                         Destruction)</span></label>
                                 <div style="display: flex; gap: 5px;">
                                     <input type="number" id="edit-countMultiplier" value="500" placeholder="Count"
-                                        style="width: 25%;" onchange="sendSettingsUpdate()">
+                                        style="width: 25%;" min="0" max="10000" onchange="validateAndUpdate(this, 0, 10000)">
                                     <input type="number" id="edit-distanceMultiplier" value="1" placeholder="Distance"
-                                        style="width: 25%;" onchange="sendSettingsUpdate()">
+                                        style="width: 25%;" min="0" max="100" onchange="validateAndUpdate(this, 0, 100)">
                                     <input type="number" id="edit-hqMultiplier" value="10" placeholder="HQ"
-                                        style="width: 25%;" onchange="sendSettingsUpdate()">
+                                        style="width: 25%;" min="0" max="1000" onchange="validateAndUpdate(this, 0, 1000)">
                                     <input type="number" id="edit-destructionMultiplier" value="1"
-                                        placeholder="Destruction" style="width: 25%;" onchange="sendSettingsUpdate()">
+                                        placeholder="Destruction" style="width: 25%;" min="0" max="100" onchange="validateAndUpdate(this, 0, 100)">
                                 </div>
                             </div>
                             <div class="form-group">
@@ -1062,14 +1135,16 @@
                             </div>
                         </div>
 
-                        <!-- AI Bots Section moved below standard settings -->
                         <div class="form-group full-width"
                             style="margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-                            <label>AI Bots <span class="sublabel">(Add AI players to the game)</span></label>
+                            <label>AI Bots <span class="sublabel">(Add AI players to the game - Max 10)</span></label>
                             <div id="admin-ai-bots">
                                 <div class="ai-bots-empty">No AI bots added yet</div>
                             </div>
-                            <button type="button" class="add-bot-btn" onclick="addAdminAIBot()">Add AI Bot</button>
+                            <button type="button" class="add-bot-btn" id="add-bot-btn" onclick="addAdminAIBot()">Add AI Bot</button>
+                            <div id="bot-limit-warning" class="limit-warning" style="display: none;">
+                                Maximum 10 AI bots reached
+                            </div>
                         </div>
 
                         <div
@@ -1133,7 +1208,6 @@
         </div>
     </div>
 
-    <!-- Expanded Color Optimizer Pane -->
     <div class="color-optimizer-pane" id="colorOptimizerPane">
         <div class="color-optimizer-pane-header">
             <span style="font-size: 12px; color: #333;">Detailed View</span>
@@ -1144,7 +1218,163 @@
 
     <script src="https://unpkg.com/colyseus.js@0.15.24/dist/colyseus.js"></script>
     <script>
-        // AI Bot Types Configuration (same as index.html)
+        // ============================================
+        // SECURITY CONFIGURATION
+        // ============================================
+        const SECURITY_CONFIG = {
+            MAX_GAMES_PER_USER: 4,
+            MAX_AI_BOTS: 10,
+            MAX_GAME_NAME_LENGTH: 50,
+            MAX_PAST_INSTANCES: 25, // Limit past games to prevent overwhelming server
+            MESSAGE_RATE_LIMIT: 10, // messages per second
+            MESSAGE_RATE_WINDOW: 1000 // milliseconds
+        };
+
+        // User identity management
+        let currentUserName = '';
+
+        function loadUserName() {
+            const saved = localStorage.getItem('constellation_user_name');
+            if (saved) {
+                currentUserName = saved;
+                document.getElementById('user-nameplate').value = saved;
+            }
+        }
+
+        function saveUserName() {
+            const input = document.getElementById('user-nameplate');
+            const name = input.value.trim();
+            
+            if (name.length > 30) {
+                showNotification('Name too long. Max 30 characters.', 'error');
+                input.value = name.substring(0, 30);
+                return;
+            }
+            
+            currentUserName = name;
+            if (name) {
+                localStorage.setItem('constellation_user_name', name);
+            } else {
+                localStorage.removeItem('constellation_user_name');
+            }
+        }
+
+        // Message rate limiting tracker
+        const messageRateLimiter = {
+            counts: new Map(),
+            isLimited(clientId) {
+                const now = Date.now();
+                const record = this.counts.get(clientId) || { count: 0, resetTime: now + SECURITY_CONFIG.MESSAGE_RATE_WINDOW };
+                
+                if (now > record.resetTime) {
+                    record.count = 0;
+                    record.resetTime = now + SECURITY_CONFIG.MESSAGE_RATE_WINDOW;
+                }
+                
+                record.count++;
+                this.counts.set(clientId, record);
+                
+                if (record.count > SECURITY_CONFIG.MESSAGE_RATE_LIMIT) {
+                    logSuspiciousActivity('RATE_LIMIT_EXCEEDED', { clientId, count: record.count });
+                    return true;
+                }
+                return false;
+            }
+        };
+
+        // Suspicious activity logger
+        function logSuspiciousActivity(type, data) {
+            const timestamp = new Date().toISOString();
+            console.warn(`[SECURITY] ${timestamp} - ${type}:`, data);
+            
+            // Track patterns
+            if (!window.securityLog) {
+                window.securityLog = [];
+            }
+            window.securityLog.push({ timestamp, type, data });
+            
+            // Keep only last 50 entries
+            if (window.securityLog.length > 50) {
+                window.securityLog.shift();
+            }
+            
+            // Update log display
+            renderSecurityLogs();
+            
+            // Show warning notification for severe issues
+            if (type === 'RATE_LIMIT_EXCEEDED' || type === 'INPUT_VALIDATION_FAILED') {
+                showNotification('Security warning: Suspicious activity detected', 'warning');
+            }
+        }
+
+        // Render security logs on home page
+        function renderSecurityLogs() {
+            const logContainer = document.getElementById('security-logs-list');
+            if (!logContainer) return;
+            
+            if (!window.securityLog || window.securityLog.length === 0) {
+                logContainer.innerHTML = '<div style="color: #666; font-style: italic; padding: 10px;">No logs yet</div>';
+                return;
+            }
+            
+            // Reverse to show newest first
+            const logs = [...window.securityLog].reverse();
+            
+            logContainer.innerHTML = logs.map(log => {
+                const time = new Date(log.timestamp).toLocaleTimeString();
+                const date = new Date(log.timestamp).toLocaleDateString();
+                const typeColor = log.type.includes('EXCEEDED') || log.type.includes('FAILED') ? '#ef4444' : 
+                                 log.type.includes('ERROR') ? '#f59e0b' : '#666';
+                
+                let dataStr = '';
+                if (log.data && Object.keys(log.data).length > 0) {
+                    dataStr = Object.entries(log.data)
+                        .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
+                        .join(', ');
+                }
+                
+                return `
+                    <div style="padding: 8px; border-bottom: 1px solid #e5e7eb; font-size: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                            <span style="color: ${typeColor}; font-weight: bold;">${log.type}</span>
+                            <span style="color: #999; font-size: 11px;">${date} ${time}</span>
+                        </div>
+                        ${dataStr ? `<div style="color: #666; font-size: 11px; margin-top: 2px;">${dataStr}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Input validation helper
+        function validateInput(value, min, max, fieldName) {
+            const num = parseInt(value);
+            if (isNaN(num)) {
+                logSuspiciousActivity('INPUT_VALIDATION_FAILED', { field: fieldName, value, reason: 'Not a number' });
+                return false;
+            }
+            if (num < min || num > max) {
+                logSuspiciousActivity('INPUT_VALIDATION_FAILED', { field: fieldName, value: num, min, max, reason: 'Out of range' });
+                return false;
+            }
+            return true;
+        }
+
+        // Validate and update numeric input
+        function validateAndUpdate(input, min, max) {
+            const fieldName = input.id || 'unknown';
+            if (!validateInput(input.value, min, max, fieldName)) {
+                input.classList.add('error');
+                showNotification(`Invalid value for ${fieldName}. Must be between ${min} and ${max}.`, 'error');
+                // Reset to previous valid value or default
+                input.value = Math.max(min, Math.min(max, parseInt(input.value) || min));
+                setTimeout(() => input.classList.remove('error'), 2000);
+            } else {
+                input.classList.remove('error');
+                sendSettingsUpdate();
+            }
+        }
+
+        // AI Bot Types Configuration
         const AI_BOT_TYPES = {
             HAL: {
                 name: 'HAL',
@@ -1184,29 +1414,37 @@
             }
         };
 
-        // Team Configuration (same as index.html)
-        const TEAM_CONFIGS = [
-            { color: 0x00FFFF, name: 'cyan', displayName: 'Cyan' },
-            { color: 0xFF00FF, name: 'magenta', displayName: 'Magenta' },
-            { color: 0x00FF00, name: 'lime', displayName: 'Lime' },
-            { color: 0xFFD700, name: 'gold', displayName: 'Gold' },
-            { color: 0x0000FF, name: 'blue', displayName: 'Blue' },
-            { color: 0xFF0000, name: 'red', displayName: 'Red' },
-            { color: 0x006400, name: 'dark green', displayName: 'Dark Green' }
-        ];
-
-        // AI Bot Management
         let aiBotCounter = 0;
+
+        function updateAddBotButtonState() {
+            const container = document.getElementById('admin-ai-bots');
+            const botCount = container.querySelectorAll('.ai-bot-item').length;
+            const addBtn = document.getElementById('add-bot-btn');
+            const warning = document.getElementById('bot-limit-warning');
+            
+            if (botCount >= SECURITY_CONFIG.MAX_AI_BOTS) {
+                addBtn.disabled = true;
+                warning.style.display = 'block';
+            } else {
+                addBtn.disabled = false;
+                warning.style.display = 'none';
+            }
+        }
 
         function addAdminAIBot() {
             const container = document.getElementById('admin-ai-bots');
+            const existingBots = container.querySelectorAll('.ai-bot-item').length;
+            
+            // Enforce AI bot limit
+            if (existingBots >= SECURITY_CONFIG.MAX_AI_BOTS) {
+                showNotification(`Maximum ${SECURITY_CONFIG.MAX_AI_BOTS} AI bots allowed`, 'warning');
+                logSuspiciousActivity('MAX_BOTS_EXCEEDED', { count: existingBots });
+                return;
+            }
 
-            // Remove empty message
             const emptyMsg = container.querySelector('.ai-bots-empty');
             if (emptyMsg) emptyMsg.remove();
 
-            // Auto-cycle through bot types and teams
-            const existingBots = container.querySelectorAll('.ai-bot-item').length;
             const botTypes = Object.keys(AI_BOT_TYPES);
             const nextBotType = botTypes[existingBots % botTypes.length];
             const nextTeamIndex = existingBots % colorTeamColors.length;
@@ -1216,7 +1454,6 @@
             botDiv.className = 'ai-bot-item';
             botDiv.id = botId;
 
-            // Use dynamic team colors from color manager instead of hardcoded TEAM_CONFIGS
             const teamOptionsHtml = colorTeamColors.map((team, index) => {
                 const hexColor = rgbToHexAdmin(team.rgb);
                 const displayName = team.name.charAt(0).toUpperCase() + team.name.slice(1);
@@ -1249,8 +1486,8 @@
 
             container.appendChild(botDiv);
             updateAdminAIBotDisplay(botId);
+            updateAddBotButtonState();
 
-            // Sync bot changes to server (debounced)
             clearTimeout(botSettingsUpdateTimeout);
             botSettingsUpdateTimeout = setTimeout(() => sendSettingsUpdate(), 500);
         }
@@ -1260,13 +1497,12 @@
             if (botDiv) {
                 botDiv.remove();
 
-                // Add empty message if no bots left
                 const container = document.getElementById('admin-ai-bots');
                 if (container.querySelectorAll('.ai-bot-item').length === 0) {
                     container.innerHTML = '<div class="ai-bots-empty">No AI bots added yet</div>';
                 }
 
-                // Sync bot changes to server (debounced)
+                updateAddBotButtonState();
                 clearTimeout(botSettingsUpdateTimeout);
                 botSettingsUpdateTimeout = setTimeout(() => sendSettingsUpdate(), 500);
             }
@@ -1292,7 +1528,6 @@
             const teamIndex = parseInt(teamSelect.value);
             const aggression = parseInt(aggressionSelect.value);
 
-            // Update cube appearance using dynamic team colors
             const teamColor = colorTeamColors[teamIndex] ? rgbToHexAdmin(colorTeamColors[teamIndex].rgb) : '#00FFFF';
             const opacity = 0.3 + ((aggression - 1) / 8 * 0.7);
 
@@ -1303,7 +1538,6 @@
             cube.title = `${AI_BOT_TYPES[botType].name} on ${teamName} team (Level ${aggression} aggression)`;
         }
 
-        // Helper function to convert RGB array to hex string
         function rgbToHexAdmin(rgb) {
             return `#${rgb.map(c => Math.round(c).toString(16).padStart(2, '0')).join('')}`;
         }
@@ -1328,23 +1562,13 @@
             return aiBots;
         }
 
-        // Initialize AI bot display updates
-        document.addEventListener('change', function (e) {
-            if (e.target.classList.contains('ai-team-select') || e.target.classList.contains('ai-aggression-select')) {
-                const botDiv = e.target.closest('.ai-bot-item');
-                if (botDiv) {
-                    updateAdminAIBotDisplay(botDiv.id);
-                }
-            }
-        });
-
         // Colyseus Connection
         let client = null;
         let currentRoom = null;
         let selectedRoomId = null;
+        let clientSessionId = null;
 
         function getServerUrl() {
-            // Use WebSocket protocol
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const host = window.location.host || 'localhost:2567';
             return `${protocol}//${host}`;
@@ -1380,12 +1604,10 @@
         }
 
         function updateRoomPlayers(data) {
-            // Render and manage connected players for the selected room
             if (!data || !selectedRoomId || data.roomId !== selectedRoomId) return;
 
             const players = Array.isArray(data.players) ? data.players : [];
 
-            // Sync to color manager - this now handles all player display
             if (typeof syncColyseusPlayersToColorManager === 'function') {
                 syncColyseusPlayersToColorManager(players);
             }
@@ -1394,26 +1616,25 @@
         async function initializeColyseus() {
             try {
                 const serverUrl = getServerUrl();
-                console.log('Connecting to Colyseus server:', serverUrl);
+                console.log('[INIT] Connecting to Colyseus server:', serverUrl);
 
                 client = new Colyseus.Client(serverUrl);
 
-                // Join or create admin room
                 try {
                     currentRoom = await client.joinOrCreate('admin');
-                    console.log('Connected to admin room:', currentRoom.roomId);
+                    clientSessionId = currentRoom.sessionId;
+                    console.log('[INIT] Connected to admin room:', currentRoom.roomId);
 
-                    // Setup admin room listeners
                     setupAdminRoomListeners();
-
                     updateConnectionStatus('Connected');
-                    console.log('Successfully connected to Colyseus server');
+                    console.log('[INIT] Successfully connected to Colyseus server');
                 } catch (error) {
-                    console.error('Failed to join admin room:', error);
+                    console.error('[ERROR] Failed to join admin room:', error);
+                    logSuspiciousActivity('CONNECTION_FAILED', { error: error.message });
                     throw error;
                 }
             } catch (error) {
-                console.error('Failed to connect to Colyseus server:', error);
+                console.error('[ERROR] Failed to connect to Colyseus server:', error);
                 updateConnectionStatus('Disconnected');
                 document.getElementById('reconnect-btn').style.display = 'inline-block';
             }
@@ -1422,51 +1643,50 @@
         function setupAdminRoomListeners() {
             if (!currentRoom) return;
 
-            // Listen for room updates
             currentRoom.onMessage('rooms_update', (rooms) => {
-                console.log('Rooms update received:', rooms);
+                console.log('[MESSAGE] Rooms update received:', rooms.length, 'rooms');
                 updateRoomsList(rooms);
+                updateCreateButtonState(rooms);
             });
 
             currentRoom.onMessage('room_created', (data) => {
-                console.log('Room created response:', data);
+                console.log('[MESSAGE] Room created response:', data);
                 if (data.success) {
-                    alert(`Game created! Room ID: ${data.roomId}`);
-                    // Request updated rooms list
+                    showNotification(`Game created! Room ID: ${data.roomId}`);
                     setTimeout(() => {
                         currentRoom.send('request_rooms_list');
                     }, 200);
                 } else {
-                    alert(`Failed to create game: ${data.error}`);
+                    showNotification(`Failed to create game: ${data.error}`, 'error');
                 }
             });
 
             currentRoom.onMessage('game_started', (data) => {
-                console.log('Game started:', data);
+                console.log('[MESSAGE] Game started:', data);
                 if (data.success) {
-                    alert(`Game ${data.roomId} started!`);
+                    showNotification(`Game ${data.roomId} started!`);
                 }
             });
 
             currentRoom.onMessage('room_deleted', (data) => {
-                console.log('Room deleted:', data);
+                console.log('[MESSAGE] Room deleted:', data);
                 if (data.success) {
-                    alert(`Game ${data.roomId} deleted!`);
+                    showNotification(`Game ${data.roomId} deleted!`);
                 }
             });
 
             currentRoom.onMessage('player_update', (data) => {
-                console.log('Player update:', data);
-                // Update UI for specific room
+                console.log('[MESSAGE] Player update:', data);
                 updateRoomPlayers(data);
             });
 
             currentRoom.onError((code, message) => {
-                console.error('Admin room error:', code, message);
+                console.error('[ERROR] Admin room error:', code, message);
+                logSuspiciousActivity('ROOM_ERROR', { code, message });
             });
 
             currentRoom.onLeave((code) => {
-                console.log('Left admin room:', code);
+                console.log('[INFO] Left admin room:', code);
                 currentRoom = null;
                 startReconnectTimer();
             });
@@ -1494,13 +1714,32 @@
 
         let latestRoomsData = [];
 
+        function updateCreateButtonState(rooms) {
+            const createBtn = document.getElementById('create-btn');
+            const warning = document.getElementById('game-limit-warning');
+            
+            // Count user's active games (waiting or playing) that they created
+            const userGames = rooms.filter(r => 
+                (r.state === 'waiting' || r.state === 'playing') && 
+                r.metadata?.creatorName === currentUserName &&
+                currentUserName !== ''
+            );
+            
+            if (userGames.length >= SECURITY_CONFIG.MAX_GAMES_PER_USER) {
+                createBtn.disabled = true;
+                warning.style.display = 'block';
+            } else {
+                createBtn.disabled = false;
+                warning.style.display = 'none';
+            }
+        }
+
         function updateRoomsList(rooms) {
             latestRoomsData = rooms || [];
             const pendingGames = document.getElementById('pending-games');
             const activeGames = document.getElementById('active-games');
             const pastGames = document.getElementById('past-games');
 
-            // Clear existing content
             pendingGames.innerHTML = '';
             activeGames.innerHTML = '';
             pastGames.innerHTML = '';
@@ -1509,7 +1748,21 @@
             let activeCount = 0;
             let pastCount = 0;
 
+            // Limit past instances to prevent overwhelming server
+            const pastRooms = rooms.filter(r => r.state === 'finished');
+            const limitedPastRooms = pastRooms.slice(0, SECURITY_CONFIG.MAX_PAST_INSTANCES);
+            
+            // Log if we're hitting the limit
+            if (pastRooms.length > SECURITY_CONFIG.MAX_PAST_INSTANCES) {
+                console.log(`[INFO] Limiting past games display: ${pastRooms.length} total, showing ${SECURITY_CONFIG.MAX_PAST_INSTANCES}`);
+            }
+
             rooms.forEach(room => {
+                // Skip past games beyond the limit
+                if (room.state === 'finished' && !limitedPastRooms.includes(room)) {
+                    return;
+                }
+
                 const roomEl = createRoomElement(room);
 
                 if (room.state === 'waiting') {
@@ -1524,12 +1777,10 @@
                 }
             });
 
-            // Update counts
             document.getElementById('pending-count').textContent = pendingCount;
             document.getElementById('active-count').textContent = activeCount;
             document.getElementById('past-count').textContent = pastCount;
 
-            // Show empty messages if needed
             if (pendingCount === 0) {
                 pendingGames.innerHTML = '<p>No games pending start</p>';
             }
@@ -1544,12 +1795,18 @@
         function createRoomElement(room) {
             const div = document.createElement('div');
             div.className = 'game-item';
+            
+            // Check if this room was created by the current user
+            const isMyRoom = room.metadata?.creatorName === currentUserName && currentUserName !== '';
+            if (!isMyRoom) {
+                div.classList.add('not-mine');
+            }
+            
             div.onclick = () => selectRoom(room.roomId);
 
             const name = room.metadata?.name || `Game ${room.roomId.substring(0, 6)}`;
             const playerCount = room.clients || 0;
 
-            // Generate proper game URL
             const protocol = window.location.protocol;
             const hostname = window.location.hostname;
             const port = window.location.port ? `:${window.location.port}` : '';
@@ -1567,9 +1824,8 @@
         }
 
         function resetRoomSettingsToDefaults() {
-            console.log('Resetting room settings to defaults');
+            console.log('[RESET] Resetting room settings to defaults');
 
-            // Reset form fields to default values
             document.getElementById('edit-rounds').value = 10;
             document.getElementById('edit-roundTime').value = 30;
             document.getElementById('edit-countdownTime').value = 5;
@@ -1577,28 +1833,24 @@
             document.getElementById('edit-hqMax').value = 2;
             document.getElementById('edit-movesPerRound').value = 15;
 
-            // Reset multipliers to defaults
             document.getElementById('edit-countMultiplier').value = 500;
             document.getElementById('edit-distanceMultiplier').value = 1;
             document.getElementById('edit-hqMultiplier').value = 10;
             document.getElementById('edit-destructionMultiplier').value = 1;
 
-            // Clear map JSON
             document.getElementById('edit-mapJson').value = '';
 
-            // Reset AI bots to empty
             const container = document.getElementById('admin-ai-bots');
             if (container) {
                 container.innerHTML = '<div class="ai-bots-empty">No AI bots added yet</div>';
             }
+            updateAddBotButtonState();
 
-            // Reset button states to waiting/new game state
             document.getElementById('start-btn').style.display = 'inline-block';
             document.getElementById('pause-btn').style.display = 'none';
             document.getElementById('resume-btn').style.display = 'none';
             isPaused = false;
 
-            // Reset color management to setup mode (not game mode)
             colorGameMode = false;
             const startBtn = document.getElementById('colorStartGameBtn');
             const stopBtn = document.getElementById('colorStopGameBtn');
@@ -1607,7 +1859,6 @@
                 stopBtn.style.display = 'none';
             }
 
-            // Clear players
             colorPlayers = [];
             renderColorPlayerPool();
             renderColorTeamAssignments();
@@ -1615,25 +1866,34 @@
         }
 
         function selectRoom(roomId) {
-            console.log('Selected room:', roomId);
+            console.log('[SELECT] Selected room:', roomId);
             selectedRoomId = roomId;
 
-            // Populate settings if available
             const roomData = latestRoomsData.find(r => r.roomId === roomId);
 
+            // Check ownership for delete button
+            const isMyRoom = roomData?.metadata?.creatorName === currentUserName && currentUserName !== '';
+            const deleteBtn = document.querySelector('.btn-delete');
+            if (deleteBtn) {
+                if (isMyRoom) {
+                    deleteBtn.style.display = 'inline-block';
+                    deleteBtn.disabled = false;
+                } else {
+                    deleteBtn.style.display = 'none';
+                }
+            }
+
             if (!roomData) {
-                console.log('No room data found, resetting to defaults');
+                console.log('[SELECT] No room data found, resetting to defaults');
                 resetRoomSettingsToDefaults();
             } else {
-                // CRITICAL: Sync players from room data to color manager
                 if (roomData.players && Array.isArray(roomData.players)) {
-                    console.log('Syncing players from room data:', roomData.players);
+                    console.log('[SELECT] Syncing players from room data:', roomData.players);
                     if (typeof syncColyseusPlayersToColorManager === 'function') {
                         syncColyseusPlayersToColorManager(roomData.players);
                     }
                 } else {
-                    // Clear players if no players in room data
-                    console.log('No players in room data, clearing player list');
+                    console.log('[SELECT] No players in room data, clearing player list');
                     colorPlayers = [];
                     renderColorPlayerPool();
                     renderColorTeamAssignments();
@@ -1643,20 +1903,14 @@
 
             if (roomData && roomData.config) {
                 const cfg = roomData.config;
-                // Regular settings
                 if (cfg.rounds) document.getElementById('edit-rounds').value = cfg.rounds;
                 if (cfg.roundLength) document.getElementById('edit-roundTime').value = cfg.roundLength;
                 if (cfg.countdownLength) document.getElementById('edit-countdownTime').value = cfg.countdownLength;
                 if (cfg.steals) document.getElementById('edit-stealLimit').value = cfg.steals;
                 if (cfg.headquarters) document.getElementById('edit-hqMax').value = cfg.headquarters;
-                // Game usually has 'movesPerRound' stored as 'steals' count or custom prop? 
-                // Server code doesn't explicitly save 'moves', assumes defaults. client 'S' is moves.
-                // We'll leave moves default for now if not in config.
 
-                // Player team selection setting
                 document.getElementById('edit-allowPlayerTeamSelection').checked = cfg.allowPlayerTeamSelection || false;
 
-                // Multipliers
                 if (cfg.multipliers) {
                     if (cfg.multipliers.count) document.getElementById('edit-countMultiplier').value = cfg.multipliers.count;
                     if (cfg.multipliers.distance) document.getElementById('edit-distanceMultiplier').value = cfg.multipliers.distance;
@@ -1664,39 +1918,32 @@
                     if (cfg.multipliers.destruction) document.getElementById('edit-destructionMultiplier').value = cfg.multipliers.destruction;
                 }
 
-                // AI Bots logic
                 const container = document.getElementById('admin-ai-bots');
                 if (container) {
                     container.innerHTML = '<div class="ai-bots-empty">No AI bots added yet</div>';
                     if (Array.isArray(cfg.aiBots) && cfg.aiBots.length > 0) {
-                        // Clear empty message
                         const emptyMsg = container.querySelector('.ai-bots-empty');
                         if (emptyMsg) emptyMsg.remove();
 
-                        // We need to sync the UI counter or just append
                         cfg.aiBots.forEach(bot => {
-                            // Recreate bot UI
-                            const botId = `adminAiBot_${aiBotCounter++}`; // Use global counter
+                            const botId = `adminAiBot_${aiBotCounter++}`;
                             const botDiv = document.createElement('div');
                             botDiv.className = 'ai-bot-item';
                             botDiv.id = botId;
-
-                            // Determine next team/type for selection state
-                            // We need to reconstruct the select values
-                            // This is a bit verbose to inline, but manageable
 
                             const botTypesHtml = Object.keys(AI_BOT_TYPES).map(key =>
                                 `<option value="${key}" ${key === bot.type ? 'selected' : ''}>${AI_BOT_TYPES[key].name} - ${AI_BOT_TYPES[key].description}</option>`
                             ).join('');
 
-                            const teamsHtml = TEAM_CONFIGS.map((team, index) =>
-                                `<option value="${index}" ${index === bot.teamIndex ? 'selected' : ''} style="color: #${team.color.toString(16).padStart(6, '0')}">${team.displayName}</option>`
-                            ).join('');
+                            const teamsHtml = colorTeamColors.map((team, index) => {
+                                const hexColor = rgbToHexAdmin(team.rgb);
+                                const displayName = team.name.charAt(0).toUpperCase() + team.name.slice(1);
+                                return `<option value="${index}" ${index === bot.teamIndex ? 'selected' : ''} style="color: ${hexColor}">${displayName}</option>`;
+                            }).join('');
 
-                            // Aggression select
                             let aggHtml = '';
                             for (let i = 1; i <= 9; i++) {
-                                aggHtml += `<option value="${i}" ${i === bot.aggression ? 'selected' : ''}>Level ${i} - ${i === 9 ? 'Maximum Aggression' : i === 1 ? 'Very Passive' : ''}</option>`;
+                                aggHtml += `<option value="${i}" ${i === bot.aggression ? 'selected' : ''}>Level ${i}</option>`;
                             }
 
                             botDiv.innerHTML = `
@@ -1710,25 +1957,23 @@
                             updateAdminAIBotDisplay(botId);
                         });
                     }
+                    updateAddBotButtonState();
                 }
 
-                // Map? 
                 if (cfg.customMap) {
                     document.getElementById('edit-mapJson').value = JSON.stringify(cfg.customMap, null, 2);
                 }
             }
 
-            // Show game content panel
             document.getElementById('no-game-selected').style.display = 'none';
             document.getElementById('game-content').style.display = 'block';
 
-            // Update game link - CRITICAL: Use window.location for correct URL
             const protocol = window.location.protocol;
             const hostname = window.location.hostname;
             const port = window.location.port ? `:${window.location.port}` : '';
             const gameUrl = `${protocol}//${hostname}${port}/game/${roomId}`;
 
-            console.log('Generated game URL:', gameUrl);
+            console.log('[SELECT] Generated game URL:', gameUrl);
 
             const linkElement = document.getElementById('game-direct-link');
             linkElement.href = gameUrl;
@@ -1736,7 +1981,6 @@
 
             document.getElementById('scenario-name').textContent = `Game ${roomId.substring(0, 8)}`;
 
-            // Update button states based on room state
             const startBtn = document.getElementById('start-btn');
             const pauseBtn = document.getElementById('pause-btn');
             const resumeBtn = document.getElementById('resume-btn');
@@ -1753,7 +1997,6 @@
                     isPaused = false;
                 }
 
-                // Set color management to game mode for playing rooms
                 colorGameMode = true;
                 const colorStartBtn = document.getElementById('colorStartGameBtn');
                 const colorStopBtn = document.getElementById('colorStopGameBtn');
@@ -1767,7 +2010,6 @@
                 resumeBtn.style.display = 'none';
                 isPaused = false;
 
-                // Set color management to setup mode for waiting rooms
                 colorGameMode = false;
                 const colorStartBtn = document.getElementById('colorStartGameBtn');
                 const colorStopBtn = document.getElementById('colorStopGameBtn');
@@ -1783,13 +2025,17 @@
             document.getElementById('no-game-selected').style.display = 'block';
             document.getElementById('game-content').style.display = 'none';
 
-            // Reset button states
             document.getElementById('start-btn').style.display = 'inline-block';
             document.getElementById('pause-btn').style.display = 'none';
             document.getElementById('resume-btn').style.display = 'none';
             isPaused = false;
 
-            // Reset color management to setup mode
+            // Hide delete button
+            const deleteBtn = document.querySelector('.btn-delete');
+            if (deleteBtn) {
+                deleteBtn.style.display = 'none';
+            }
+
             colorGameMode = false;
             const colorStartBtn = document.getElementById('colorStartGameBtn');
             const colorStopBtn = document.getElementById('colorStopGameBtn');
@@ -1798,7 +2044,6 @@
                 colorStopBtn.style.display = 'none';
             }
 
-            // Clear player list when deselecting room
             colorPlayers = [];
             renderColorPlayerPool();
             renderColorTeamAssignments();
@@ -1807,78 +2052,102 @@
 
         async function createGame() {
             if (!client || !currentRoom) {
-                alert('Not connected to server. Please wait or click Reconnect.');
+                showNotification('Not connected to server. Please wait or click Reconnect.', 'error');
                 return;
             }
 
-            const gameName = document.getElementById('game-name').value.trim() || 'Unnamed Game';
+            // Check if user has set their name
+            if (!currentUserName) {
+                showNotification('Please set your name in the top right before creating a game.', 'warning');
+                document.getElementById('user-nameplate').focus();
+                return;
+            }
+
+            // Check game limit
+            const userGames = latestRoomsData.filter(r => 
+                (r.state === 'waiting' || r.state === 'playing') && 
+                r.metadata?.creatorName === currentUserName
+            );
+            if (userGames.length >= SECURITY_CONFIG.MAX_GAMES_PER_USER) {
+                showNotification(`Maximum ${SECURITY_CONFIG.MAX_GAMES_PER_USER} games reached. Please close an existing game first.`, 'warning');
+                logSuspiciousActivity('GAME_LIMIT_EXCEEDED', { currentGames: userGames.length, user: currentUserName });
+                return;
+            }
+
+            // Rate limiting check
+            if (messageRateLimiter.isLimited(clientSessionId)) {
+                showNotification('Too many requests. Please slow down.', 'warning');
+                return;
+            }
+
+            const gameNameInput = document.getElementById('game-name');
+            let gameName = gameNameInput.value.trim();
+            
+            // Validate game name
+            if (gameName.length > SECURITY_CONFIG.MAX_GAME_NAME_LENGTH) {
+                showNotification(`Game name too long. Max ${SECURITY_CONFIG.MAX_GAME_NAME_LENGTH} characters.`, 'error');
+                logSuspiciousActivity('INVALID_GAME_NAME', { length: gameName.length });
+                gameName = gameName.substring(0, SECURITY_CONFIG.MAX_GAME_NAME_LENGTH);
+                gameNameInput.value = gameName;
+                return;
+            }
+            
+            if (!gameName) {
+                gameName = 'Unnamed Game';
+            }
+
             const gameType = document.getElementById('game-type').value;
             const aiBots = getAdminAIBots();
 
-            console.log('Creating game with settings:', {
+            // Validate AI bots
+            if (aiBots.length > SECURITY_CONFIG.MAX_AI_BOTS) {
+                showNotification(`Too many AI bots. Max ${SECURITY_CONFIG.MAX_AI_BOTS} allowed.`, 'error');
+                logSuspiciousActivity('TOO_MANY_BOTS', { count: aiBots.length });
+                return;
+            }
+
+            console.log('[CREATE] Creating game with settings:', {
                 name: gameName,
                 gameType: gameType,
-                aiBots: aiBots
+                aiBots: aiBots,
+                creator: currentUserName
             });
 
             try {
                 const roomOptions = {
                     name: gameName,
                     gameType: gameType,
-                    maxPlayers: 20
+                    maxPlayers: 20,
+                    creatorName: currentUserName // Attach creator name
                 };
 
                 if (aiBots.length > 0) {
                     roomOptions.aiBots = aiBots;
                 }
 
-                // Use official Colyseus client.create() to create the room
                 const room = await client.create('constellation', roomOptions);
-                console.log('✓ Room created:', room.roomId);
+                console.log('[CREATE] ✓ Room created:', room.roomId);
 
-                // Clear the game name input
-                document.getElementById('game-name').value = '';
+                gameNameInput.value = '';
 
-                // Select the newly created room (this will reset to defaults since room data doesn't exist yet)
                 selectRoom(room.roomId);
 
-                // Request updated rooms list to get the new room data
                 if (currentRoom) {
                     setTimeout(() => {
                         currentRoom.send('request_rooms_list');
-                        // After rooms list is updated, re-select the room to get proper data
                         setTimeout(() => {
                             if (selectedRoomId === room.roomId) {
-                                console.log('Re-selecting room after rooms list update');
+                                console.log('[CREATE] Re-selecting room after rooms list update');
                                 selectRoom(room.roomId);
                             }
                         }, 300);
                     }, 200);
                 }
             } catch (error) {
-                console.error('Failed to create game:', error);
-                alert(`Failed to create game: ${error.message}`);
+                console.error('[ERROR] Failed to create game:', error);
+                showNotification(`Failed to create game: ${error.message}`, 'error');
+                logSuspiciousActivity('CREATE_GAME_FAILED', { error: error.message });
             }
-        }
-        function setupRoomListeners(room) {
-            room.onStateChange((state) => {
-                console.log('Room state changed:', state);
-                // Update UI based on state changes
-            });
-
-            room.onMessage('player_joined', (data) => {
-                console.log('Player joined:', data);
-                // Update player list
-            });
-
-            room.onError((code, message) => {
-                console.error('Room error:', code, message);
-            });
-
-            room.onLeave((code) => {
-                console.log('Left room:', code);
-                currentRoom = null;
-            });
         }
 
         function toggleScenario() {
@@ -1893,73 +2162,31 @@
             }
         }
 
-        function updateTeamCount() {
-            // Placeholder for team count update logic
-            console.log('Team count updated');
-        }
-
-        function autoSetupTeams() {
-            // Placeholder for auto team setup
-            console.log('Auto setup teams');
-        }
-
-        // Assign a player's team via AdminRoom (no need to join the game room)
-        function assignPlayerTeam(playerId, teamIndex) {
-            if (!currentRoom || !selectedRoomId) {
-                alert('Connect to admin and select a game first');
-                return;
-            }
-            const payload = {
-                roomId: selectedRoomId,
-                playerId,
-                teamIndex: teamIndex === '' ? null : parseInt(teamIndex, 10)
-            };
-            try {
-                currentRoom.send('assign_team', payload);
-                console.log('✓ Sent assign_team', payload);
-            } catch (e) {
-                console.error('Failed to assign team:', e);
-                alert('Failed to assign team. See console for details.');
-            }
-        }
-
-        // Kick a player from the selected game via AdminRoom
-        function kickPlayer(playerId) {
-            if (!currentRoom || !selectedRoomId) {
-                alert('Connect to admin and select a game first');
-                return;
-            }
-            const payload = { roomId: selectedRoomId, playerId };
-            try {
-                currentRoom.send('kick_player', payload);
-                console.log('✓ Sent kick_player', payload);
-            } catch (e) {
-                console.error('Failed to kick player:', e);
-                alert('Failed to kick player. See console for details.');
-            }
-        }
-
         async function startGame() {
             if (!selectedRoomId) {
-                alert('Select a game first');
+                showNotification('Select a game first', 'error');
                 return;
             }
+            
+            // Rate limiting check
+            if (messageRateLimiter.isLimited(clientSessionId)) {
+                showNotification('Too many requests. Please slow down.', 'warning');
+                return;
+            }
+            
             try {
-                // Send start command via AdminRoom
                 currentRoom.send('start_game', { roomId: selectedRoomId });
-                console.log('✓ Game start command sent via AdminRoom');
+                console.log('[ACTION] ✓ Game start command sent via AdminRoom');
 
-                // Show pause button, hide start button
                 document.getElementById('start-btn').style.display = 'none';
                 document.getElementById('pause-btn').style.display = 'inline-block';
 
-                // Auto-start color mode when game starts
                 if (!colorGameMode) {
                     document.getElementById('colorStartGameBtn').click();
                 }
             } catch (error) {
-                console.error('Failed to start game:', error);
-                alert(`Failed to start game: ${error.message}`);
+                console.error('[ERROR] Failed to start game:', error);
+                showNotification(`Failed to start game: ${error.message}`, 'error');
             }
         }
 
@@ -1983,8 +2210,14 @@
 
             if (!selectedRoomId || !currentRoom) return;
 
+            // Rate limiting check
+            if (messageRateLimiter.isLimited(clientSessionId)) {
+                showNotification('Too many requests. Please slow down.', 'warning');
+                return;
+            }
+
             currentRoom.send('pause_game', { roomId: selectedRoomId, reason: reason });
-            console.log('✓ Game pause command sent via AdminRoom');
+            console.log('[ACTION] ✓ Game pause command sent via AdminRoom');
 
             isPaused = true;
             document.getElementById('pause-btn').style.display = 'none';
@@ -1994,15 +2227,20 @@
         function resumeGame() {
             if (!selectedRoomId || !currentRoom) return;
 
+            // Rate limiting check
+            if (messageRateLimiter.isLimited(clientSessionId)) {
+                showNotification('Too many requests. Please slow down.', 'warning');
+                return;
+            }
+
             currentRoom.send('resume_game', { roomId: selectedRoomId });
-            console.log('✓ Game resume command sent via AdminRoom');
+            console.log('[ACTION] ✓ Game resume command sent via AdminRoom');
 
             isPaused = false;
             document.getElementById('resume-btn').style.display = 'none';
             document.getElementById('pause-btn').style.display = 'inline-block';
         }
 
-        // Close pause popup when clicking outside
         document.addEventListener('click', function (e) {
             const popup = document.getElementById('pause-popup');
             const pauseBtn = document.getElementById('pause-btn');
@@ -2013,48 +2251,69 @@
 
         async function deleteGame() {
             if (!selectedRoomId) {
-                alert('Select a game first');
+                showNotification('Select a game first', 'error');
                 return;
             }
+
+            // Check ownership
+            const roomData = latestRoomsData.find(r => r.roomId === selectedRoomId);
+            const isMyRoom = roomData?.metadata?.creatorName === currentUserName && currentUserName !== '';
+            
+            if (!isMyRoom) {
+                showNotification('You can only delete games you created', 'error');
+                logSuspiciousActivity('UNAUTHORIZED_DELETE_ATTEMPT', { 
+                    roomId: selectedRoomId, 
+                    user: currentUserName,
+                    creator: roomData?.metadata?.creatorName 
+                });
+                return;
+            }
+            
+            // Rate limiting check
+            if (messageRateLimiter.isLimited(clientSessionId)) {
+                showNotification('Too many requests. Please slow down.', 'warning');
+                return;
+            }
+            
             try {
                 if (confirm('Are you sure you want to delete this game?')) {
-                    // Send delete command via AdminRoom
                     currentRoom.send('delete_room', { roomId: selectedRoomId });
-                    console.log('✓ Room delete command sent via AdminRoom');
+                    console.log('[ACTION] ✓ Room delete command sent via AdminRoom');
 
-                    // Clear selection
                     document.getElementById('no-game-selected').style.display = 'block';
                     document.getElementById('game-content').style.display = 'none';
 
                     selectedRoomId = null;
                 }
             } catch (error) {
-                console.error('Failed to delete game:', error);
-                alert(`Failed to delete game: ${error.message}`);
+                console.error('[ERROR] Failed to delete game:', error);
+                showNotification(`Failed to delete game: ${error.message}`, 'error');
             }
         }
 
-        // Debounce timer for settings updates
         let settingsUpdateTimeout = null;
+        let lastSentSettingsJson = '';
 
         function sendSettingsUpdate() {
             if (!currentRoom || !selectedRoomId) return;
 
-            // Debounce settings updates to prevent excessive server calls
             if (settingsUpdateTimeout) {
                 clearTimeout(settingsUpdateTimeout);
             }
 
             settingsUpdateTimeout = setTimeout(() => {
                 sendSettingsUpdateImmediate();
-            }, 300); // 300ms debounce
+            }, 300);
         }
-
-        // Track last sent settings to avoid duplicate notifications
-        let lastSentSettingsJson = '';
 
         function sendSettingsUpdateImmediate() {
             if (!currentRoom || !selectedRoomId) return;
+
+            // Rate limiting check
+            if (messageRateLimiter.isLimited(clientSessionId)) {
+                showNotification('Too many settings updates. Please slow down.', 'warning');
+                return;
+            }
 
             const multipliers = {
                 count: parseInt(document.getElementById('edit-countMultiplier').value) || 0,
@@ -2063,11 +2322,8 @@
                 destruction: parseInt(document.getElementById('edit-destructionMultiplier').value) || 0
             };
 
-            // Convert colorTeamColors (RGB arrays) to server format (hex numbers)
             const teamColors = colorTeamColors.map(tc => {
-                // Convert RGB array to hex number
                 const hexColor = (tc.rgb[0] << 16) | (tc.rgb[1] << 8) | tc.rgb[2];
-                // Capitalize first letter for displayName
                 const displayName = tc.name.charAt(0).toUpperCase() + tc.name.slice(1);
                 return {
                     color: hexColor,
@@ -2077,62 +2333,50 @@
             });
 
             const settings = {
-                // movesPerRound is usually hardcoded in game or passed, checking server it's not in gameConfig top level but passed... 
-                // wait, ConstellationRoom gameConfig doesn't show movesPerRound explicitly in default but let's send it.
-                // Looking at server.js gameConfig: roundLength, rounds, countdownLength, steals, headquarters, multipliers
-                // 'moves' is often client side or part of validation. Admin UI has 'edit-movesPerRound'.
-                // I will include it.
                 moves: parseInt(document.getElementById('edit-movesPerRound').value) || 15,
                 rounds: parseInt(document.getElementById('edit-rounds').value) || 10,
                 roundLength: parseInt(document.getElementById('edit-roundTime').value) || 30,
                 countdownLength: parseInt(document.getElementById('edit-countdownTime').value) || 5,
                 steals: parseInt(document.getElementById('edit-stealLimit').value) || 15,
                 headquarters: parseInt(document.getElementById('edit-hqMax').value) || 2,
-                // NOTE: customMapFilename is added below only when a map is selected
                 multipliers: multipliers,
                 aiBots: getAdminAIBots(),
                 teamColors: teamColors,
                 allowPlayerTeamSelection: document.getElementById('edit-allowPlayerTeamSelection').checked
             };
 
-            // Send map filename instead of full JSON to avoid Colyseus presence message size limits
             const selectedMapFilename = document.getElementById('map-selector').value;
             const mapJsonValue = document.getElementById('edit-mapJson').value.trim();
 
             if (selectedMapFilename) {
-                // Map selected from dropdown
                 settings.customMapFilename = selectedMapFilename;
-                console.log('📍 Sending map filename:', selectedMapFilename);
+                console.log('[SETTINGS] 📍 Sending map filename:', selectedMapFilename);
             } else if (mapJsonValue) {
-                // Manual JSON in textarea
                 try {
-                    // Validate JSON
                     JSON.parse(mapJsonValue);
                     settings.customMapFilename = '__manual_json__';
-                    settings.customMapJson = mapJsonValue; // Send raw JSON string for manual entry
-                    console.log('📍 Sending manual map JSON');
+                    settings.customMapJson = mapJsonValue;
+                    console.log('[SETTINGS] 📍 Sending manual map JSON');
                 } catch (e) {
-                    console.error('❌ Failed to parse map JSON:', e.message);
-                    // Don't send customMapFilename if JSON is invalid
+                    console.error('[ERROR] ❌ Failed to parse map JSON:', e.message);
+                    showNotification('Invalid map JSON format', 'error');
+                    return;
                 }
             }
-            // If neither dropdown nor textarea has a map, don't include customMapFilename
-            // This preserves the existing map on the server
 
-            // Only send if settings actually changed
             const settingsJson = JSON.stringify(settings);
             if (settingsJson === lastSentSettingsJson) {
-                return; // No change, skip update
+                return;
             }
             lastSentSettingsJson = settingsJson;
 
             try {
-                // Send update command via AdminRoom
                 currentRoom.send('update_settings', { roomId: selectedRoomId, settings: settings });
-                console.log('✓ Settings update sent', settings);
+                console.log('[SETTINGS] ✓ Settings update sent', settings);
                 showNotification('Game settings updated');
             } catch (e) {
-                console.error('Failed to send settings update:', e);
+                console.error('[ERROR] Failed to send settings update:', e);
+                showNotification('Failed to update settings', 'error');
             }
         }
 
@@ -2142,14 +2386,12 @@
                 const maps = await response.json();
                 const selector = document.getElementById('map-selector');
 
-                // Keep the default option
                 selector.innerHTML = '<option value="">-- Load Map from File --</option>';
 
                 if (Array.isArray(maps)) {
                     maps.forEach(mapFile => {
                         const option = document.createElement('option');
                         option.value = mapFile;
-                        // Format nice name from filename
                         let name = mapFile.replace('.json', '');
                         name = name.replace(/Untitled Map\(\d+\)\s?-?/, '').trim();
                         if (!name) name = mapFile;
@@ -2159,7 +2401,7 @@
                     });
                 }
             } catch (err) {
-                console.error('Failed to load map list:', err);
+                console.error('[ERROR] Failed to load map list:', err);
             }
         }
 
@@ -2167,46 +2409,48 @@
             const filename = document.getElementById('map-selector').value;
 
             if (!filename) {
-                // Map was cleared - clear the textarea and send explicit clear command
                 document.getElementById('edit-mapJson').value = '';
 
-                // Send settings with explicit null to clear the map
                 if (currentRoom && selectedRoomId) {
                     const settings = {
-                        customMapFilename: null // Explicitly clear the map
+                        customMapFilename: null
                     };
                     currentRoom.send('update_settings', { roomId: selectedRoomId, settings: settings });
-                    console.log('📍 Map cleared - sent null customMapFilename');
+                    console.log('[MAP] 📍 Map cleared - sent null customMapFilename');
                     showNotification('Map cleared');
                 }
                 return;
             }
 
             try {
-                // Fetch map to display in textarea (for preview/editing)
                 const response = await fetch(`/api/maps/${encodeURIComponent(filename)}`);
                 const mapData = await response.json();
 
-                // Format nicely in the textarea for preview
                 const mapJsonString = JSON.stringify(mapData, null, 2);
                 document.getElementById('edit-mapJson').value = mapJsonString;
 
-                // Trigger update - this will send the filename, server will fetch the map
                 sendSettingsUpdate();
-                console.log(`Selected map: ${filename}`);
+                console.log(`[MAP] Selected map: ${filename}`);
             } catch (err) {
-                console.error('Failed to load map data:', err);
-                alert('Failed to load map data');
+                console.error('[ERROR] Failed to load map data:', err);
+                showNotification('Failed to load map data', 'error');
             }
         }
 
-        function showNotification(message) {
+        function showNotification(message, type = 'success') {
             let toast = document.getElementById('notification-toast');
             if (!toast) {
                 toast = document.createElement('div');
                 toast.id = 'notification-toast';
                 toast.className = 'notification-toast';
                 document.body.appendChild(toast);
+            }
+
+            toast.className = 'notification-toast';
+            if (type === 'error') {
+                toast.classList.add('error');
+            } else if (type === 'warning') {
+                toast.classList.add('warning');
             }
 
             toast.textContent = message;
@@ -2217,15 +2461,16 @@
             }, 3000);
         }
 
-        // Initialize on load
         window.addEventListener('load', () => {
+            loadUserName();
             initializeColyseus();
             loadMapList();
             initColorManager();
+            renderSecurityLogs();
         });
 
         // ============================================
-        // COLOR MANAGER - Right Sidebar Integration
+        // COLOR MANAGER
         // ============================================
 
         let colorPlayers = [];
@@ -2236,7 +2481,6 @@
         let colorIframeExpanded = false;
         let colorPlayerIdCounter = 0;
 
-        // Color blindness simulation matrices
         const COLOR_CB_MATRICES = {
             deuteranopia: [[0.625, 0.375, 0], [0.7, 0.3, 0], [0, 0.3, 0.7]],
             protanopia: [[0.567, 0.433, 0], [0.558, 0.442, 0], [0, 0.242, 0.758]],
@@ -2244,7 +2488,6 @@
         };
 
         function initColorManager() {
-            // Initialize default team colors
             colorTeamColors = [
                 { name: 'cyan', rgb: [0, 255, 255] },
                 { name: 'magenta', rgb: [255, 0, 255] },
@@ -2254,7 +2497,6 @@
                 { name: 'red', rgb: [255, 0, 0] }
             ];
 
-            // Setup vision toggle buttons (excluding info button)
             document.querySelectorAll('.vision-toggle:not(#colorInfoBtn)').forEach(btn => {
                 btn.addEventListener('click', () => {
                     document.querySelectorAll('.vision-toggle:not(#colorInfoBtn)').forEach(b => b.classList.remove('active'));
@@ -2265,7 +2507,6 @@
                 });
             });
 
-            // Team count input and slider sync
             const teamCountInput = document.getElementById('colorTeamCount');
             const teamSizeSlider = document.getElementById('colorTeamSize');
 
@@ -2287,7 +2528,6 @@
                 }
             });
 
-            // Game control buttons
             document.getElementById('colorStartGameBtn').addEventListener('click', () => {
                 colorGameMode = true;
                 const startBtn = document.getElementById('colorStartGameBtn');
@@ -2329,14 +2569,12 @@
                 }
             });
 
-            // Listen for messages from color iframe
             window.addEventListener('message', handleColorIframeMessage);
 
             renderColorTeamAssignments();
             updateColorStats();
         }
 
-        // Track last sent colors to avoid duplicate updates
         let lastSentColorsJson = '';
 
         function handleColorIframeMessage(event) {
@@ -2345,15 +2583,12 @@
 
             switch (data.type) {
                 case 'colorsUpdated':
-                    // Only update if colors actually changed
                     const newColorsJson = JSON.stringify(data.colors);
                     if (newColorsJson !== lastSentColorsJson) {
                         lastSentColorsJson = newColorsJson;
                         colorTeamColors = data.colors;
                         renderColorTeamAssignments();
-                        // Refresh AI bot team dropdowns with new colors
                         refreshAIBotTeamDropdowns();
-                        // Sync updated colors to game clients
                         sendSettingsUpdate();
                     }
                     break;
@@ -2361,19 +2596,15 @@
                     colorTeamColors.push(data.color);
                     lastSentColorsJson = JSON.stringify(colorTeamColors);
                     renderColorTeamAssignments();
-                    // Refresh AI bot team dropdowns with new colors
                     refreshAIBotTeamDropdowns();
-                    // Sync new color to game clients
                     sendSettingsUpdate();
                     break;
                 case 'ready':
-                    // Iframe is ready, send initial data
                     syncPlayersToIframe();
                     break;
             }
         }
 
-        // Refresh AI bot team dropdowns when team colors change
         function refreshAIBotTeamDropdowns() {
             const container = document.getElementById('admin-ai-bots');
             const botDivs = container.querySelectorAll('.ai-bot-item');
@@ -2383,7 +2614,6 @@
                 if (teamSelect) {
                     const currentValue = teamSelect.value;
 
-                    // Rebuild options with new colors including hex code in text
                     const teamOptionsHtml = colorTeamColors.map((team, index) => {
                         const hexColor = rgbToHexAdmin(team.rgb);
                         const displayName = team.name.charAt(0).toUpperCase() + team.name.slice(1);
@@ -2391,8 +2621,6 @@
                     }).join('');
 
                     teamSelect.innerHTML = teamOptionsHtml;
-
-                    // Update the bot display
                     updateAdminAIBotDisplay(botDiv.id);
                 }
             });
@@ -2425,10 +2653,8 @@
             colorIframeExpanded = !colorIframeExpanded;
 
             if (colorIframeExpanded) {
-                // Show expanded pane
                 pane.classList.add('visible');
 
-                // Scroll the expanded iframe to bottom
                 const expandedFrame = document.getElementById('colorOptimizerFrameExpanded');
                 if (expandedFrame && expandedFrame.contentWindow) {
                     setTimeout(() => {
@@ -2436,7 +2662,6 @@
                     }, 100);
                 }
             } else {
-                // Hide expanded pane
                 pane.classList.remove('visible');
             }
         }
@@ -2444,7 +2669,6 @@
         function colorAutoAssignPlayers() {
             if (colorPlayers.length === 0 || colorTeamColors.length === 0) return;
 
-            // Clear all assignments first, then redistribute all players
             colorPlayers.forEach((player, index) => {
                 player.colorTeam = index % colorTeamColors.length;
             });
@@ -2542,7 +2766,6 @@
 
                     if (colorDraggedPlayer) {
                         colorDraggedPlayer.colorTeam = index;
-                        // Sync to game server
                         syncColorTeamToGame(colorDraggedPlayer);
                         renderColorPlayerPool();
                         renderColorTeamAssignments();
@@ -2565,7 +2788,6 @@
                         <span class="player-chip-type ${player.isBot ? 'bot' : player.visionType}">${typeLabel}</span>
                     `;
                     
-                    // Add drag events for team players
                     el.addEventListener('dragstart', () => {
                         colorDraggedPlayer = player;
                         el.classList.add('dragging');
@@ -2578,7 +2800,6 @@
                     
                     el.onclick = () => {
                         player.colorTeam = null;
-                        // Sync to game server (unassign)
                         syncColorTeamToGame(player);
                         renderColorPlayerPool();
                         renderColorTeamAssignments();
@@ -2590,7 +2811,6 @@
             });
         }
 
-        // Sync color team assignment to game server
         function syncColorTeamToGame(player) {
             if (!currentRoom || !selectedRoomId || !player.colyseusId) return;
 
@@ -2602,22 +2822,16 @@
 
             try {
                 currentRoom.send('assign_team', payload);
-                console.log('✓ Synced color team assignment:', payload);
+                console.log('[TEAM] ✓ Synced color team assignment:', payload);
                 
-                // If this is a bot, update its display in the AI bots section
                 if (player.isBot && player.colyseusId) {
-                    // Find the bot div by matching the colyseusId
                     const botContainer = document.getElementById('admin-ai-bots');
                     if (botContainer) {
                         const botDivs = botContainer.querySelectorAll('.ai-bot-item');
                         botDivs.forEach(botDiv => {
-                            const botSelect = botDiv.querySelector('.ai-bot-select');
                             const teamSelect = botDiv.querySelector('.ai-team-select');
                             
-                            // Check if this bot div corresponds to the moved bot
-                            // We need to match by some identifier - let's use the bot ID pattern
                             if (botDiv.id && botDiv.id.includes('bot_')) {
-                                // Update team selection if it doesn't match
                                 if (teamSelect && player.colorTeam !== null && player.colorTeam !== undefined) {
                                     teamSelect.value = player.colorTeam;
                                     updateAdminAIBotDisplay(botDiv.id);
@@ -2627,7 +2841,7 @@
                     }
                 }
             } catch (e) {
-                console.error('Failed to sync color team:', e);
+                console.error('[ERROR] Failed to sync color team:', e);
             }
         }
 
@@ -2640,16 +2854,13 @@
                 tritanopia: assignedPlayers.filter(p => p.visionType === 'tritanopia').length
             };
 
-            const totalAssigned = assignedPlayers.length;
             const totalPlayers = colorPlayers.length;
 
-            // Update vision toggle text
             document.getElementById('normalToggle').textContent = `N${counts.normal}`;
             document.getElementById('deutToggle').textContent = `D${counts.deuteranopia}`;
             document.getElementById('protToggle').textContent = `P${counts.protanopia}`;
             document.getElementById('tritToggle').textContent = `T${counts.tritanopia}`;
 
-            // Update total attendees count
             document.getElementById('totalAttendeesCount').textContent = totalPlayers;
         }
 
@@ -2663,37 +2874,25 @@
             ];
         }
 
-        function rgbToHexAdmin(rgb) {
-            return '#' + rgb.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
-        }
-
-        // Sync connected players from Colyseus to color manager
         function syncColyseusPlayersToColorManager(players) {
-            // Map Colyseus players to color players
-            const existingIds = new Set(colorPlayers.map(p => p.colyseusId));
             const newPlayers = [];
 
             players.forEach(p => {
-                // Check if player already exists
                 const existingPlayer = colorPlayers.find(cp => cp.colyseusId === p.id);
 
                 if (existingPlayer) {
-                    // Update existing player's team if it changed on server
                     if (p.team !== null && p.team !== undefined) {
                         existingPlayer.colorTeam = p.team;
                     }
-                    // Update name if changed
                     existingPlayer.name = p.name || existingPlayer.name;
                     existingPlayer.isBot = p.isBot || p.id.startsWith('bot_');
                 } else {
-                    // Create new player entry
                     const isBot = p.isBot || p.id.startsWith('bot_');
                     const newPlayer = {
                         id: `color-player-${Date.now()}-${colorPlayerIdCounter++}`,
                         colyseusId: p.id,
                         name: p.name || `Player ${p.id.substring(0, 6)}`,
                         visionType: p.visionType || 'normal',
-                        // Bots come with team pre-assigned from server
                         colorTeam: (p.team !== null && p.team !== undefined) ? p.team : null,
                         isBot: isBot
                     };
@@ -2702,14 +2901,10 @@
                 }
             });
 
-            // Auto-assign new HUMAN players if game is started and teams are balanced
-            // (Bots already have teams assigned from config)
             if (colorGameMode && newPlayers.length > 0 && colorTeamColors.length > 0) {
                 newPlayers.forEach(player => {
-                    // Skip bots - they already have team assignments
                     if (player.isBot) return;
 
-                    // Check if teams are balanced (all teams have same number of players)
                     const teamCounts = colorTeamColors.map((_, idx) =>
                         colorPlayers.filter(p => p.colorTeam === idx && p.id !== player.id).length
                     );
@@ -2717,9 +2912,7 @@
                     const maxCount = Math.max(...teamCounts);
 
                     if (maxCount - minCount <= 1) {
-                        // Teams are balanced, add new team if needed
                         sendToColorIframe({ type: 'addTeamColor' });
-                        // Assign to the new team (will be last index)
                         setTimeout(() => {
                             player.colorTeam = colorTeamColors.length - 1;
                             syncColorTeamToGame(player);
@@ -2729,7 +2922,6 @@
                             syncPlayersToIframe();
                         }, 100);
                     } else {
-                        // Assign to smallest team
                         const targetTeam = teamCounts.findIndex(count => count === minCount);
                         player.colorTeam = targetTeam;
                         syncColorTeamToGame(player);
@@ -2737,7 +2929,6 @@
                 });
             }
 
-            // Remove players that disconnected (but keep bots unless they're removed from config)
             const currentIds = new Set(players.map(p => p.id));
             colorPlayers = colorPlayers.filter(p => !p.colyseusId || currentIds.has(p.colyseusId));
 
