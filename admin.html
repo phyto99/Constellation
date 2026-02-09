@@ -40,15 +40,12 @@
         }
 
         .nameplate-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 100;
             background: white;
             border: 1px solid #ccc;
             border-radius: 4px;
             padding: 8px 12px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 8px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
         }
 
         .nameplate-container label {
@@ -950,11 +947,6 @@
 </head>
 
 <body>
-    <!-- Nameplate in top right -->
-    <div class="nameplate-container">
-        <label>Your Name:</label>
-        <input type="text" id="user-nameplate" placeholder="Enter your name" maxlength="30" onchange="saveUserName()">
-    </div>
     <div class="sidebar">
         <div class="sidebar-content">
             <div class="game-section">
@@ -977,6 +969,10 @@
             </div>
         </div>
         <div class="sidebar-bottom">
+            <div class="nameplate-container">
+                <label>Your Name:</label>
+                <input type="text" id="user-nameplate" placeholder="Enter your name" maxlength="30" onchange="saveUserName()">
+            </div>
             <div class="create-section">
                 <h3>Create New Session</h3>
                 <select id="game-type">
@@ -2058,7 +2054,7 @@
 
             // Check if user has set their name
             if (!currentUserName) {
-                showNotification('Please set your name in the top right before creating a game.', 'warning');
+                showNotification('Please set your name above before creating a game.', 'warning');
                 document.getElementById('user-nameplate').focus();
                 return;
             }

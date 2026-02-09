@@ -220,9 +220,6 @@ class ConstellationRoom extends Room {
                             // CRITICAL: Distribute moves when started via Admin presence (isGameStart = true)
                             this.distributeMoves(true);
 
-                            // Initialize server game state from config so human and bot moves validate and sync for all clients
-                            this.initializeGameStateFromConfig();
-
                             this.broadcast('game_started', { gameState: 'playing', config: this.gameConfig, currentRound: 1, botPlayers: this.getBotPlayerIds() });
 
                             // Start the Game Loop
@@ -470,10 +467,6 @@ class ConstellationRoom extends Room {
 
                 // Initialize Round State
                 this.state.game.round = 1;
-
-                // Initialize server game state from config so human and bot moves validate and sync for all clients
-                this.initializeGameStateFromConfig();
-
                 this.broadcast('game_started', { gameState: 'playing', config: this.gameConfig, currentRound: 1, botPlayers: this.getBotPlayerIds() });
 
                 // Start the Game Loop
@@ -697,38 +690,26 @@ class ConstellationRoom extends Room {
                 // Track team moves sum (optional but good for consistency)
                 if (team) {
                     team.movesLeft--;
+                    if (isHQ) team.hqCount++;
                 }
 
-                // Update server-authoritative star state so authoritative_scores and new joiners stay correct
-                if (this.state.game.stars && data.starIndex < this.state.game.stars.length) {
-                    this.state.game.stars[data.starIndex].tm = teamIndex;
-                    this.state.game.stars[data.starIndex].hq = isHQ;
-                }
-                if (isHQ && team) {
-                    team.hqCount++;
+                // Update authoritative server state so all clients and late joiners stay in sync
+                if (this.state.game.initialized && data.starIndex >= 0 && data.starIndex < this.state.game.stars.length) {
+                    const star = this.state.game.stars[data.starIndex];
+                    star.tm = teamIndex;
+                    star.hq = isHQ;
                 }
 
-                // Broadcast star update and absolute team state (all clients apply same values, no double-decrement for actor)
                 const starUpdate = { index: data.starIndex, tm: teamIndex, hq: isHQ };
-                const teamUpdate = {
-                    index: teamIndex,
-                    movesLeft: team ? team.movesLeft : undefined,
-                    stealsLeft: team ? team.stealsLeft : undefined,
-                    hqCount: team ? team.hqCount : undefined
-                };
+                const teamUpdate = { index: teamIndex, movesLeft: -1 };
+                if (isHQ) teamUpdate.hqCount = 1;
 
-                // Include bot move info in broadcast for client-side bot sync
-                const stateChange = {
-                    stars: [starUpdate],
-                    teams: [teamUpdate]
-                };
+                const stateChange = { stars: [starUpdate], teams: [teamUpdate] };
                 if (data.botId) {
                     stateChange.botMove = { botId: data.botId, movesLeft: player.movesLeft };
                 }
 
                 this.broadcast('state_changed', stateChange);
-
-                // Broadcast authoritative scores after significant moves to prevent drift
                 this.broadcastAuthoritativeScores();
 
                 console.log(`✅ Star ${data.starIndex} claimed by team ${teamIndex}${isHQ ? ' (HQ)' : ''} (player: ${player.id})`);
@@ -789,38 +770,26 @@ class ConstellationRoom extends Room {
                 if (team) {
                     team.movesLeft--;
                     if (team.stealsLeft > 0) team.stealsLeft--;
+                    if (isHQ) team.hqCount++;
                 }
 
-                // Update server-authoritative star state
-                if (this.state.game.stars && data.starIndex < this.state.game.stars.length) {
-                    this.state.game.stars[data.starIndex].tm = teamIndex;
-                    this.state.game.stars[data.starIndex].hq = isHQ;
-                }
-                if (isHQ && team) {
-                    team.hqCount++;
+                // Update authoritative server state
+                if (this.state.game.initialized && data.starIndex >= 0 && data.starIndex < this.state.game.stars.length) {
+                    const star = this.state.game.stars[data.starIndex];
+                    star.tm = teamIndex;
+                    star.hq = isHQ;
                 }
 
-                // Broadcast star update and absolute team state
-                const starUpdate = { index: data.starIndex, tm: teamIndex, hq: isHQ };
-                const teamUpdate = {
-                    index: teamIndex,
-                    movesLeft: team ? team.movesLeft : undefined,
-                    stealsLeft: team ? team.stealsLeft : undefined,
-                    hqCount: team ? team.hqCount : undefined
-                };
+                const starUpdate = { index: data.starIndex, tm: teamIndex, hq: isHQ, stolen: true };
+                const teamUpdate = { index: teamIndex, movesLeft: -1, stealsLeft: -1 };
+                if (isHQ) teamUpdate.hqCount = 1;
 
-                // Include bot move info in broadcast for client-side bot sync
-                const stateChange = {
-                    stars: [starUpdate],
-                    teams: [teamUpdate]
-                };
+                const stateChange = { stars: [starUpdate], teams: [teamUpdate] };
                 if (data.botId) {
                     stateChange.botMove = { botId: data.botId, movesLeft: player.movesLeft };
                 }
 
                 this.broadcast('state_changed', stateChange);
-
-                // Broadcast authoritative scores after steals to prevent drift
                 this.broadcastAuthoritativeScores();
 
                 console.log(`✅ Star ${data.starIndex} stolen by team ${teamIndex}${isHQ ? ' (HQ)' : ''} (player: ${player.id})`);
@@ -867,35 +836,28 @@ class ConstellationRoom extends Room {
                 // Decrement player moves
                 player.movesLeft--;
 
-                const gameTeam = this.state.game.teams[teamIndex];
-                if (gameTeam) {
-                    gameTeam.movesLeft--;
-                    gameTeam.hqCount++;
+                if (this.state.game.teams[teamIndex]) {
+                    this.state.game.teams[teamIndex].movesLeft--;
+                    this.state.game.teams[teamIndex].hqCount++;
                 }
 
-                // Update server-authoritative star state (HQ placement on existing star)
-                if (this.state.game.stars && data.starIndex < this.state.game.stars.length) {
-                    this.state.game.stars[data.starIndex].hq = true;
-                    if (this.state.game.stars[data.starIndex].tm === -1) {
-                        this.state.game.stars[data.starIndex].tm = teamIndex;
-                    }
+                // Update authoritative server state
+                if (this.state.game.initialized && data.starIndex >= 0 && data.starIndex < this.state.game.stars.length) {
+                    const star = this.state.game.stars[data.starIndex];
+                    star.tm = teamIndex;
+                    star.hq = true;
                 }
 
-                // Broadcast absolute team state
                 const stateChange = {
                     stars: [{ index: data.starIndex, tm: teamIndex, hq: true }],
-                    teams: [{
-                        index: teamIndex,
-                        movesLeft: gameTeam ? gameTeam.movesLeft : undefined,
-                        stealsLeft: gameTeam ? gameTeam.stealsLeft : undefined,
-                        hqCount: gameTeam ? gameTeam.hqCount : undefined
-                    }]
+                    teams: [{ index: teamIndex, movesLeft: -1, hqCount: 1 }]
                 };
                 if (data.botId) {
                     stateChange.botMove = { botId: data.botId, movesLeft: player.movesLeft };
                 }
 
                 this.broadcast('state_changed', stateChange);
+                this.broadcastAuthoritativeScores();
 
                 console.log(`✅ HQ placed at star ${data.starIndex} by team ${teamIndex} (player: ${player.id})`);
             } else {
@@ -1061,40 +1023,6 @@ class ConstellationRoom extends Room {
             clearInterval(this.gameLoopInterval);
         }
         console.log(`Room ${this.roomId} disposed`);
-    }
-
-    // Initialize server game state from gameConfig (customMap) when game starts.
-    // This ensures human and bot moves are validated and broadcast so all clients see them.
-    initializeGameStateFromConfig() {
-        const map = this.gameConfig.customMap;
-        if (!map || !Array.isArray(map.stars)) {
-            console.log(`⚠️ No customMap.stars for room ${this.roomId}, skipping game state init`);
-            return;
-        }
-        // Clear existing stars (e.g. from a previous game)
-        if (this.state.game.stars.length > 0) {
-            this.state.game.stars.splice(0, this.state.game.stars.length);
-        }
-        map.stars.forEach((starData, index) => {
-            const star = new StarSchema();
-            star.x = starData.x;
-            star.y = starData.y;
-            star.ty = starData.ty || 0;
-            star.tm = (starData.tm !== null && starData.tm !== undefined) ? starData.tm : -1;
-            star.hq = starData.hq || false;
-            star.pr = starData.pr || false;
-            star.destroyed = starData.destroyed || false;
-            if (starData.ty === 2 || starData.ty === 3) {
-                const minReq = starData.min_value != null ? starData.min_value : (starData.ty === 2 ? 2 : 2);
-                const maxReq = starData.max_value != null ? starData.max_value : (starData.ty === 2 ? 4 : 3);
-                star.req = Math.floor(Math.random() * (maxReq - minReq + 1)) + minReq;
-            } else {
-                star.req = starData.req || 0;
-            }
-            this.state.game.stars.push(star);
-        });
-        this.state.game.initialized = true;
-        console.log(`✅ Game state initialized from config for room ${this.roomId}: ${this.state.game.stars.length} stars, ${this.state.game.teams.length} teams`);
     }
 
     distributeMoves(isGameStart = false) {

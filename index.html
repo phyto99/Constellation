@@ -429,7 +429,7 @@
 
         .header {
             position: fixed;
-            top: 42px;
+            top: 8px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 1003;
@@ -455,7 +455,7 @@
 
         .player-name-input {
             position: fixed;
-            top: 8px;
+            bottom: 20px;
             left: 20px;
             z-index: 1004;
             background: rgba(0, 0, 0, 0.8);
@@ -5732,46 +5732,40 @@
                 // Check if this will be an HQ placement
                 const willBeHQ = this.tms[this.tm].h < this.HM;
 
+                const isMultiplayerMove = this.ml && gameClientManager && gameClientManager.isConnected;
+
                 if (s.tm !== null && s.tm !== this.tm) {
                     // Stealing logic
                     if (s.hq || s.pr || this.tms[this.tm].st <= 0) return;
 
-                    // Send steal to server in multiplayer mode
-                    if (this.ml && gameClientManager && gameClientManager.isConnected) {
-                        gameClientManager.room.send('steal_star', {
-                            starIndex: i,
-                            isHQ: willBeHQ
-                        });
-                        // OPTIMISTIC UPDATE
+                    if (isMultiplayerMove) {
+                        gameClientManager.room.send('steal_star', { starIndex: i, isHQ: willBeHQ });
                         if (this.myMoves > 0) this.myMoves--;
                         this.updateMovesUI();
                     }
-
-                    this.tms[this.tm].st--;
-                    this.tms[this.tm].movesLeft--;
+                    if (!isMultiplayerMove) {
+                        this.tms[this.tm].st--;
+                        this.tms[this.tm].movesLeft--;
+                    }
                     s.tm = this.tm;
                     stolen = true;
                 } else {
                     // Regular claim
-                    // Send claim to server in multiplayer mode
-                    if (this.ml && gameClientManager && gameClientManager.isConnected) {
-                        gameClientManager.room.send('claim_star', {
-                            starIndex: i,
-                            isHQ: willBeHQ
-                        });
-                        // OPTIMISTIC UPDATE
+                    if (isMultiplayerMove) {
+                        gameClientManager.room.send('claim_star', { starIndex: i, isHQ: willBeHQ });
                         if (this.myMoves > 0) this.myMoves--;
                         this.updateMovesUI();
                     }
-
+                    if (!isMultiplayerMove) {
+                        this.tms[this.tm].movesLeft--;
+                    }
                     s.tm = this.tm;
-                    this.tms[this.tm].movesLeft--;
                 }
 
                 // First X moves should be HQs regardless of whether they're steals or regular claims
                 if (willBeHQ) {
                     s.hq = true;
-                    this.tms[this.tm].h++;
+                    if (!isMultiplayerMove) this.tms[this.tm].h++;
                     isHQPlacement = true;
                 }
 
@@ -6623,14 +6617,32 @@
                     const x = cursor.x * this.G;
                     const y = cursor.y * this.G;
 
-                    // Figma-style cursor: arrow head only (no stem), tip at (x, y)
-                    const size = 16;
+                    // Figma-style cursor - tip pointing top-left (45° angle)
+                    const angle = -Math.PI / 4; // -45 degrees
+                    const cos = Math.cos(angle);
+                    const sin = Math.sin(angle);
+
+                    const rotate = (px, py) => ({
+                        x: x + (px * cos - py * sin),
+                        y: y + (px * sin + py * cos)
+                    });
+
                     this.cursorGfx.lineStyle(0);
                     this.cursorGfx.beginFill(teamColor, 1);
-                    this.cursorGfx.moveTo(x, y);
-                    this.cursorGfx.lineTo(x - size, y - size * 0.85);
-                    this.cursorGfx.lineTo(x - size * 0.55, y);
-                    this.cursorGfx.lineTo(x, y);
+
+                    const p0 = rotate(0, 0);    // Tip
+                    const p1 = rotate(-10, 30); // Left outer
+                    const p2 = rotate(-2, 25);  // Left notch
+                    const p3 = rotate(2, 25);   // Right notch
+                    const p4 = rotate(10, 30);  // Right outer
+
+                    this.cursorGfx.moveTo(p0.x, p0.y);
+                    this.cursorGfx.lineTo(p1.x, p1.y);
+                    this.cursorGfx.lineTo(p2.x, p2.y);
+                    this.cursorGfx.lineTo(p3.x, p3.y);
+                    this.cursorGfx.lineTo(p4.x, p4.y);
+                    this.cursorGfx.lineTo(p0.x, p0.y);
+
                     this.cursorGfx.endFill();
                 }
             }
@@ -8119,22 +8131,19 @@
 
                     // Update client scores to match server authority
                     if (data.teamScores) {
-                        currentGame.tms.forEach((team, idx) => {
-                            team.s = data.teamScores[idx] != null ? data.teamScores[idx] : 0;
+                        // Reset all team scores to 0 first
+                        currentGame.tms.forEach(team => team.s = 0);
+
+                        // Apply server scores
+                        Object.entries(data.teamScores).forEach(([teamIndex, score]) => {
+                            const idx = parseInt(teamIndex);
+                            if (idx >= 0 && idx < currentGame.tms.length) {
+                                currentGame.tms[idx].s = score;
+                            }
                         });
 
-                        // Sync teamScoreData so leaderboard display and sort order match server
-                        if (currentGame.teamScoreData && currentGame.teamScoreData.length === currentGame.tms.length) {
-                            currentGame.teamScoreData.forEach((data, idx) => {
-                                const score = currentGame.tms[idx].s;
-                                data.finalScore = score;
-                                data.count = score; // Server sends star count; keep detail in sync
-                            });
-                        }
-
-                        // Force immediate leaderboard/score UI update
+                        // Force UI update with server-authoritative scores
                         currentGame.needsFullUIUpdate = true;
-                        currentGame.lastScoreUpdate = 0; // Bypass multiplayer throttle so display updates now
                         currentGame.updateUI();
 
                         console.log('✅ Client scores synchronized with server');
@@ -8210,8 +8219,6 @@
 
                 // Server-authoritative game state synchronization
                 this.room.onMessage('state_changed', (delta) => {
-                    console.log('📡 State changed from server:', delta, 'currentGame exists:', !!currentGame);
-
                     if (!currentGame) {
                         console.error('❌ currentGame is null! Cannot apply state changes');
                         return;
@@ -8240,16 +8247,34 @@
                         });
                     }
 
-                    // Apply team changes (server sends absolute values so all clients stay in sync, including actor)
+                    // Apply team changes
                     if (delta.teams) {
                         delta.teams.forEach(change => {
                             if (change.index < 0 || change.index >= currentGame.tms.length) return;
 
                             const team = currentGame.tms[change.index];
-                            // Server sends absolute movesLeft, stealsLeft, hqCount after each move
-                            if (change.movesLeft !== undefined) team.movesLeft = change.movesLeft;
-                            if (change.stealsLeft !== undefined) team.st = change.stealsLeft;
-                            if (change.hqCount !== undefined) team.h = change.hqCount;
+                            // Handle deltas: negative values mean decrement, positive mean increment/set
+                            if (change.movesLeft !== undefined) {
+                                if (change.movesLeft < 0) {
+                                    team.movesLeft += change.movesLeft; // Decrement (e.g., += -1)
+                                } else {
+                                    team.movesLeft = change.movesLeft; // Absolute value
+                                }
+                            }
+                            if (change.stealsLeft !== undefined) {
+                                if (change.stealsLeft < 0) {
+                                    team.st += change.stealsLeft; // Decrement
+                                } else {
+                                    team.st = change.stealsLeft; // Absolute value
+                                }
+                            }
+                            if (change.hqCount !== undefined) {
+                                if (change.hqCount > 0 && change.hqCount < 10) {
+                                    team.h += change.hqCount; // Increment
+                                } else {
+                                    team.h = change.hqCount; // Absolute value
+                                }
+                            }
 
                             currentGame.changedTeams.add(change.index);
                         });
@@ -8264,22 +8289,16 @@
                         }
                     }
 
-                    // Force line layer redraw so connected lines show correct team color for all clients
-                    currentGame.needsStaticLineRedraw = true;
-                    currentGame.needsAnimatedLineRedraw = true;
-
-                    // Update UI and recalculate scores (only in single-player)
+                    // In multiplayer, force full UI refresh so leaderboard and map stay in sync for all clients
                     const isMultiplayer = gameClientManager && gameClientManager.isConnected;
-                    if (!isMultiplayer) {
-                        // In single-player, client calculates scores
-                        currentGame.deferredScoreUpdate = true;
+                    if (isMultiplayer) {
+                        currentGame.needsFullUIUpdate = true;
                         currentGame.deferredSpecialCheck = true;
                         currentGame.deferredNetworkAnalysis = true;
                     } else {
-                        // In multiplayer, server sends authoritative_scores next; force score refresh when it arrives
+                        currentGame.deferredScoreUpdate = true;
                         currentGame.deferredSpecialCheck = true;
                         currentGame.deferredNetworkAnalysis = true;
-                        currentGame.needsFullUIUpdate = true; // Ensure leaderboard refreshes after authoritative_scores
                     }
                     currentGame.updateUI();
                 });
