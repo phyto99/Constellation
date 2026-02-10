@@ -802,6 +802,9 @@
                     computer players.</p>
             </div>
             <button class="button" onclick="addAIBot()">Add AI Bot</button>
+            <a href="bot-creator.html" target="_blank" style="display: inline-block; margin-top: 10px; color: #0066cc; text-decoration: none; font-size: 14px;">
+                ✨ Create Custom Bot Personality →
+            </a>
         </div>
         <div style="text-align:center;margin-top:20px;">
             <button class="button start" onclick="startNewGame()">Start New Game</button>
@@ -4371,6 +4374,12 @@
                 description: 'An advocate of chaos',
                 icon: '🌪️',
                 strategy: 'chaotic'
+            },
+            CUSTOM: {
+                name: 'Custom',
+                description: 'Create your own bot personality',
+                icon: '✨',
+                strategy: 'custom'
             }
         };
 
@@ -4381,6 +4390,27 @@
                 // Set server-assigned ID and moves if provided
                 if (data.id) bot.playerId = data.id;
                 if (data.movesLeft !== undefined) bot.movesLeft = data.movesLeft;
+                
+                // Handle custom bot configuration
+                if (data.customConfig) {
+                    bot.config = {
+                        name: data.customConfig.name,
+                        description: data.customConfig.description || 'Custom Bot',
+                        icon: data.customConfig.icon || '✨',
+                        strategy: 'custom'
+                    };
+                    
+                    // Parse and attach custom priorities function
+                    if (typeof data.customConfig.customPriorities === 'string') {
+                        try {
+                            bot.customPriorities = new Function('return ' + data.customConfig.customPriorities)();
+                        } catch (e) {
+                            console.error('Error parsing customPriorities function:', e);
+                            bot.customPriorities = null;
+                        }
+                    }
+                }
+                
                 return bot;
             }
 
@@ -4388,7 +4418,7 @@
                 this.type = type;
                 this.teamIndex = teamIndex;
                 this.aggression = Math.max(1, Math.min(9, aggression)); // 1-9 range
-                this.config = AI_BOT_TYPES[type];
+                this.config = AI_BOT_TYPES[type] || AI_BOT_TYPES['HAL'];
                 this.lastMoveTime = 0;
                 this.moveDelay = this.calculateMoveDelay();
                 this.hqPlaced = false;
@@ -4523,6 +4553,9 @@
                         break;
                     case 'chaotic':
                         move = this.chaoticStrategy(game, gameState);
+                        break;
+                    case 'custom':
+                        move = this.customStrategy(game, gameState);
                         break;
                 }
 
@@ -4674,6 +4707,23 @@
                 return this.executeTopPriority(game, gameState, priorities);
             }
 
+            customStrategy(game, gameState) {
+                // Custom bot strategy - uses stored custom priorities or falls back to balanced
+                if (this.customPriorities) {
+                    return this.executeTopPriority(game, gameState, this.customPriorities(gameState));
+                }
+                
+                // Default balanced strategy if no custom priorities defined
+                const priorities = [
+                    { action: 'hq', weight: gameState.teamHQs.length < game.HM ? 150 : 0 },
+                    { action: 'steal', weight: this.totalStealsThisRound < this.calculateMaxSteals(gameState) ? 80 : 0 },
+                    { action: 'expand', weight: 90 },
+                    { action: 'connect', weight: 70 }
+                ];
+
+                return this.executeTopPriority(game, gameState, priorities);
+            }
+
             // Core decision engine - simple rules create emergent behavior
             executeTopPriority(game, gameState, priorities) {
                 // Weighted random selection instead of deterministic top priority
@@ -4739,15 +4789,25 @@
             }
 
             tryPlaceHQ(game, gameState) {
-                const candidates = game.st
-                    .map((star, index) => ({ star, index }))
-                    .filter(({ star }) => star.tm === null && !star.destroyed);
+                // PERFORMANCE: Limit search on large maps
+                const maxCandidates = Math.min(game.st.length, 100);
+                const candidates = [];
+                
+                // Sample stars efficiently instead of filtering all
+                const step = Math.max(1, Math.floor(game.st.length / maxCandidates));
+                for (let i = 0; i < game.st.length && candidates.length < maxCandidates; i += step) {
+                    const star = game.st[i];
+                    if (star.tm === null && !star.destroyed) {
+                        candidates.push({ star, index: i });
+                    }
+                }
 
                 if (candidates.length === 0) return null;
 
                 // Score based on connections and star type
                 let best = null;
                 let bestScore = -1;
+                const centerX = game.MW / 2, centerY = game.MH / 2;
 
                 candidates.forEach(({ star, index }) => {
                     const connections = game.adjacencyCache[index] || [];
@@ -4757,9 +4817,8 @@
                     if (star.ty === T.W) score += 5; // Wormholes are good
 
                     // Prefer central positions
-                    const centerX = game.MW / 2, centerY = game.MH / 2;
                     const distFromCenter = Math.sqrt((star.x - centerX) ** 2 + (star.y - centerY) ** 2);
-                    score += Math.max(0, 10 - distFromCenter);
+                    score += Math.max(0, 10 - distFromCenter * 0.1);
 
                     if (score > bestScore) {
                         bestScore = score;
@@ -4774,37 +4833,67 @@
                 if (this.totalStealsThisRound >= this.calculateMaxSteals(gameState)) return null;
                 if (gameState.stealsLeft <= 0) return null;
 
-                // Find stealable targets
-                const candidates = game.st
-                    .map((star, index) => ({ star, index }))
-                    .filter(({ star, index }) =>
-                        star.tm !== null &&
-                        star.tm !== this.teamIndex &&
-                        !star.hq &&
-                        !star.pr &&
-                        !star.destroyed &&
-                        star.ty !== T.C && // Cannot steal cluster stars
-                        star.ty !== T.B && // Cannot steal black holes
-                        !this.isRecentlyRejected(index) // Skip recently rejected targets
-                    );
+                // PERFORMANCE: Limit search on large maps - sample strategically
+                const maxCandidates = Math.min(game.st.length, 80);
+                const candidates = [];
+                
+                // Prioritize stars near our territory for faster search
+                const myStarIndices = new Set();
+                game.st.forEach((star, idx) => {
+                    if (star.tm === this.teamIndex) myStarIndices.add(idx);
+                });
+
+                // First pass: Check stars adjacent to our territory
+                for (const myIdx of myStarIndices) {
+                    if (candidates.length >= maxCandidates) break;
+                    const connections = game.adjacencyCache[myIdx] || [];
+                    for (const adjIdx of connections) {
+                        const star = game.st[adjIdx];
+                        if (star.tm !== null && star.tm !== this.teamIndex && 
+                            !star.hq && !star.pr && !star.destroyed &&
+                            star.ty !== T.C && star.ty !== T.B && 
+                            !this.isRecentlyRejected(adjIdx)) {
+                            candidates.push({ star, index: adjIdx });
+                            if (candidates.length >= maxCandidates) break;
+                        }
+                    }
+                }
+
+                // Second pass: Sample remaining stars if needed
+                if (candidates.length < maxCandidates / 2) {
+                    const step = Math.max(1, Math.floor(game.st.length / maxCandidates));
+                    for (let i = 0; i < game.st.length && candidates.length < maxCandidates; i += step) {
+                        const star = game.st[i];
+                        if (star.tm !== null && star.tm !== this.teamIndex && 
+                            !star.hq && !star.pr && !star.destroyed &&
+                            star.ty !== T.C && star.ty !== T.B && 
+                            !this.isRecentlyRejected(i)) {
+                            candidates.push({ star, index: i });
+                        }
+                    }
+                }
 
                 if (candidates.length === 0) return null;
 
                 // Calculate steal threshold based on remaining steals
                 const stealThreshold = this.calculateStealThreshold(gameState);
 
-                // Find best steal that meets threshold
+                // Find best steal that meets threshold - early termination
                 let best = null;
                 let bestValue = -1;
+                const goodEnoughValue = stealThreshold * 2; // Stop if we find something really good
 
-                candidates.forEach(({ star, index }) => {
+                for (const { star, index } of candidates) {
                     const stealValue = this.calculateStealValue(game, gameState, index, star);
 
                     if (stealValue >= stealThreshold && stealValue > bestValue) {
                         bestValue = stealValue;
                         best = index;
+                        
+                        // Early termination for performance
+                        if (bestValue >= goodEnoughValue) break;
                     }
-                });
+                }
 
                 return best !== null ? { type: 'steal', target: best } : null;
             }
@@ -4878,9 +4967,38 @@
             }
 
             tryExpand(game, gameState) {
-                const candidates = game.st
-                    .map((star, index) => ({ star, index }))
-                    .filter(({ star, index }) => star.tm === null && !star.destroyed && !this.isRecentlyRejected(index));
+                // PERFORMANCE: Prioritize stars near our territory
+                const maxCandidates = Math.min(game.st.length, 100);
+                const candidates = [];
+                
+                // First: Check stars adjacent to our territory (most strategic)
+                const myStarIndices = new Set();
+                game.st.forEach((star, idx) => {
+                    if (star.tm === this.teamIndex) myStarIndices.add(idx);
+                });
+
+                for (const myIdx of myStarIndices) {
+                    if (candidates.length >= maxCandidates) break;
+                    const connections = game.adjacencyCache[myIdx] || [];
+                    for (const adjIdx of connections) {
+                        const star = game.st[adjIdx];
+                        if (star.tm === null && !star.destroyed && !this.isRecentlyRejected(adjIdx)) {
+                            candidates.push({ star, index: adjIdx });
+                            if (candidates.length >= maxCandidates) break;
+                        }
+                    }
+                }
+
+                // Second: Sample remaining neutral stars if needed
+                if (candidates.length < maxCandidates / 3) {
+                    const step = Math.max(1, Math.floor(game.st.length / maxCandidates));
+                    for (let i = 0; i < game.st.length && candidates.length < maxCandidates; i += step) {
+                        const star = game.st[i];
+                        if (star.tm === null && !star.destroyed && !this.isRecentlyRejected(i)) {
+                            candidates.push({ star, index: i });
+                        }
+                    }
+                }
 
                 if (candidates.length === 0) return null;
 
@@ -4941,10 +5059,18 @@
             }
 
             tryWormhole(game, gameState) {
-                // Einstein's specialty: target wormholes
-                const wormholes = game.st
-                    .map((star, index) => ({ star, index }))
-                    .filter(({ star }) => star.ty === T.W && (star.tm === null || star.tm === this.teamIndex));
+                // Einstein's specialty: target wormholes - PERFORMANCE OPTIMIZED
+                const maxSearch = Math.min(game.st.length, 50);
+                const wormholes = [];
+                
+                // Sample efficiently
+                const step = Math.max(1, Math.floor(game.st.length / maxSearch));
+                for (let i = 0; i < game.st.length && wormholes.length < maxSearch; i += step) {
+                    const star = game.st[i];
+                    if (star.ty === T.W && (star.tm === null || star.tm === this.teamIndex)) {
+                        wormholes.push({ star, index: i });
+                    }
+                }
 
                 if (wormholes.length === 0) return null;
 
@@ -4958,17 +5084,20 @@
             }
 
             tryDisrupt(game, gameState) {
-                // Lorenz's chaos: disrupt enemy connections
-                const enemyStars = game.st
-                    .map((star, index) => ({ star, index }))
-                    .filter(({ star }) =>
-                        star.tm !== null &&
-                        star.tm !== this.teamIndex &&
-                        !star.hq &&
-                        !star.pr &&
-                        star.ty !== T.C && // Cannot steal cluster stars
-                        star.ty !== T.B    // Cannot steal black holes
-                    );
+                // Lorenz's chaos: disrupt enemy connections - PERFORMANCE OPTIMIZED
+                const maxSearch = Math.min(game.st.length, 60);
+                const enemyStars = [];
+                
+                // Sample efficiently
+                const step = Math.max(1, Math.floor(game.st.length / maxSearch));
+                for (let i = 0; i < game.st.length && enemyStars.length < maxSearch; i += step) {
+                    const star = game.st[i];
+                    if (star.tm !== null && star.tm !== this.teamIndex &&
+                        !star.hq && !star.pr &&
+                        star.ty !== T.C && star.ty !== T.B) {
+                        enemyStars.push({ star, index: i });
+                    }
+                }
 
                 if (enemyStars.length === 0) return null;
 
@@ -5005,53 +5134,32 @@
                 }
 
                 // In multiplayer mode, send moves to server for validation
-                // Server is authoritative - minimal client-side validation
+                // Server is authoritative - NO optimistic updates to prevent negative moves
                 if (game.ml && gameClientManager && gameClientManager.room && gameClientManager.isConnected) {
                     try {
                         // Determine move type and send to server
-                        // Server will validate and reject if invalid
+                        // Server will validate and update authoritative state
                         if (move.type === 'steal' && star.tm !== null && star.tm !== this.teamIndex) {
                             // Basic sanity checks only - server does full validation
                             if (star.hq || star.pr) return false; // Obviously invalid
 
                             gameClientManager.room.send('steal_star', { starIndex: move.target, botId: this.playerId });
-
-                            // Optimistic update - will be rolled back if server rejects
-                            game.tms[this.teamIndex].st--;
-                            game.tms[this.teamIndex].movesLeft--;
-                            this.movesLeft--;
-                            star.tm = this.teamIndex;
-                            this.stealsUsed++;
-                            this.totalStealsThisRound++;
-                            game.addFx(star.x * game.G, star.y * game.G, 'steal');
+                            
+                            // NO optimistic update - wait for server confirmation
+                            // Server will broadcast state_changed with authoritative move count
 
                         } else if (move.type === 'hq' && star.tm === null) {
                             gameClientManager.room.send('place_hq', { starIndex: move.target, botId: this.playerId });
-
-                            // Optimistic update
-                            star.tm = this.teamIndex;
-                            star.hq = true;
-                            game.tms[this.teamIndex].h++;
-                            game.tms[this.teamIndex].movesLeft--;
-                            this.movesLeft--;
-                            this.hqPlaced = true;
+                            
+                            // NO optimistic update - wait for server confirmation
 
                         } else if (move.type === 'capture' && star.tm === null) {
                             gameClientManager.room.send('claim_star', { starIndex: move.target, botId: this.playerId });
-
-                            // Optimistic update
-                            star.tm = this.teamIndex;
-                            game.tms[this.teamIndex].movesLeft--;
-                            this.movesLeft--;
+                            
+                            // NO optimistic update - wait for server confirmation
                         } else {
                             return false;
                         }
-
-                        // Trigger deferred updates (optimistic)
-                        game.changedTeams.add(this.teamIndex);
-                        game.deferredScoreUpdate = true;
-                        game.deferredSpecialCheck = true;
-                        game.deferredNetworkAnalysis = true;
 
                         return true;
                     } catch (error) {
@@ -5199,9 +5307,32 @@
                 // AI Bot System
                 this.aiBots = (s.aiBots || []).map(b => b instanceof AIBot ? b : AIBot.fromData(b));
                 this.lastAIUpdate = 0;
-                this.aiUpdateInterval = 150; // Check AI every 150ms for better performance
-                this.aiBotsPerUpdate = Math.max(1, Math.floor(this.aiBots.length / 3)); // Spread load
+                
+                // INTELLIGENT BOT THROTTLING based on map complexity
+                const mapComplexity = this.calculateMapComplexity();
+                const botCount = this.aiBots.length;
+                
+                // Base interval increases with map complexity and bot count
+                // Small maps (complexity < 500): 100-150ms
+                // Medium maps (500-2000): 150-250ms  
+                // Large maps (2000-5000): 250-400ms
+                // Huge maps (5000+): 400-600ms
+                let baseInterval = 100;
+                if (mapComplexity > 5000) baseInterval = 400;
+                else if (mapComplexity > 2000) baseInterval = 250;
+                else if (mapComplexity > 500) baseInterval = 150;
+                
+                // Increase interval with more bots (more bots = more processing)
+                const botMultiplier = 1 + (botCount * 0.15); // +15% per bot
+                this.aiUpdateInterval = Math.floor(baseInterval * botMultiplier);
+                
+                // Stagger bots - never update all at once
+                // More bots = smaller batches to spread load
+                this.aiBotsPerUpdate = Math.max(1, Math.ceil(botCount / 4)); // Update 25% of bots per cycle
                 this.currentAIBotIndex = 0; // Round-robin bot updates
+                
+                console.log(`🤖 Bot throttling: ${botCount} bots, complexity ${mapComplexity}, interval ${this.aiUpdateInterval}ms, ${this.aiBotsPerUpdate} bots/update`);
+                
                 this.lastFrameTime = performance.now(); // For performance monitoring
                 this.lastScoreUpdate = 0; // For throttling score updates in multiplayer
 
@@ -6012,6 +6143,43 @@
                 this.needsFullUIUpdate = true;
                 this.updateUI();
                 this.checkStateChanges();
+            }
+
+            // Calculate map complexity for bot throttling
+            // Returns a complexity score based on stars, connections, and density variance
+            calculateMapComplexity() {
+                const starCount = this.st.length;
+                const lineCount = this.lineData.length;
+                
+                // Base complexity from star and line count
+                let complexity = starCount + (lineCount * 0.5);
+                
+                // Calculate density variance (how unevenly distributed stars are)
+                // Divide map into grid cells and measure variance
+                const gridSize = 10; // 10x10 grid
+                const cellWidth = this.MW / gridSize;
+                const cellHeight = this.MH / gridSize;
+                const grid = Array(gridSize).fill(0).map(() => Array(gridSize).fill(0));
+                
+                // Count stars per cell
+                this.st.forEach(star => {
+                    const cellX = Math.min(gridSize - 1, Math.floor(star.x / cellWidth));
+                    const cellY = Math.min(gridSize - 1, Math.floor(star.y / cellHeight));
+                    grid[cellX][cellY]++;
+                });
+                
+                // Calculate variance (higher variance = more uneven = more complex for bots)
+                const cellCounts = grid.flat();
+                const avgDensity = starCount / (gridSize * gridSize);
+                const variance = cellCounts.reduce((sum, count) => {
+                    return sum + Math.pow(count - avgDensity, 2);
+                }, 0) / cellCounts.length;
+                
+                // Add variance factor (normalized)
+                const densityFactor = Math.sqrt(variance) * 10;
+                complexity += densityFactor;
+                
+                return Math.floor(complexity);
             }
 
             calcScores() {
@@ -7913,7 +8081,7 @@
             botDiv.id = botId;
 
             botDiv.innerHTML = `
-                <select class="ai-bot-select" onchange="updateAIBotDisplay('${botId}')">
+                <select class="ai-bot-select" onchange="handleBotTypeChange('${botId}')">
                     ${Object.keys(AI_BOT_TYPES).map(key =>
                 `<option value="${key}" ${key === nextBotType ? 'selected' : ''}>${AI_BOT_TYPES[key].name} - ${AI_BOT_TYPES[key].description}</option>`
             ).join('')}
@@ -7936,9 +8104,32 @@
                 </select>
                 <div class="ai-bot-cube" style="background: #00FFFF; opacity: 0.8;"></div>
                 <button class="remove-bot-btn" onclick="removeAIBot('${botId}')">Remove</button>
+                <div class="custom-bot-config" style="display: none; margin-top: 10px;">
+                    <label style="display: block; margin-bottom: 5px; font-size: 12px;">Paste Custom Bot JSON:</label>
+                    <textarea class="custom-bot-json" placeholder='{"name": "MyBot", "description": "...", "customPriorities": "function(gameState) { ... }"}' style="width: 100%; height: 80px; font-family: monospace; font-size: 11px; padding: 5px; border: 1px solid #555; background: #1a1a1a; color: #0f0; border-radius: 4px;"></textarea>
+                    <div class="custom-bot-error" style="color: #ff6666; font-size: 11px; margin-top: 5px; display: none;"></div>
+                </div>
             `;
 
             botsList.appendChild(botDiv);
+            handleBotTypeChange(botId);
+        }
+
+        function handleBotTypeChange(botId) {
+            const botDiv = document.getElementById(botId);
+            if (!botDiv) return;
+
+            const botSelect = botDiv.querySelector('.ai-bot-select');
+            const customConfig = botDiv.querySelector('.custom-bot-config');
+            const botType = botSelect.value;
+
+            // Show/hide custom config based on selection
+            if (botType === 'CUSTOM') {
+                customConfig.style.display = 'block';
+            } else {
+                customConfig.style.display = 'none';
+            }
+
             updateAIBotDisplay(botId);
         }
 
@@ -7986,12 +8177,64 @@
                 const botSelect = botDiv.querySelector('.ai-bot-select');
                 const teamSelect = botDiv.querySelector('.ai-team-select');
                 const aggressionSelect = botDiv.querySelector('.ai-aggression-select');
+                const customJsonTextarea = botDiv.querySelector('.custom-bot-json');
+                const customError = botDiv.querySelector('.custom-bot-error');
 
                 const botType = botSelect.value;
                 const teamIndex = parseInt(teamSelect.value);
                 const aggression = parseInt(aggressionSelect.value);
 
-                aiBots.push(new AIBot(botType, teamIndex, aggression));
+                // Handle custom bot JSON
+                if (botType === 'CUSTOM' && customJsonTextarea) {
+                    const jsonText = customJsonTextarea.value.trim();
+                    if (jsonText) {
+                        try {
+                            const customConfig = JSON.parse(jsonText);
+                            
+                            // Validate required fields
+                            if (!customConfig.name || !customConfig.customPriorities) {
+                                throw new Error('Custom bot must have "name" and "customPriorities" fields');
+                            }
+                            
+                            // Create custom bot with parsed config
+                            const bot = new AIBot('CUSTOM', teamIndex, customConfig.aggression || aggression);
+                            bot.config = {
+                                name: customConfig.name,
+                                description: customConfig.description || 'Custom Bot',
+                                icon: customConfig.icon || '✨',
+                                strategy: 'custom'
+                            };
+                            
+                            // Parse and attach custom priorities function
+                            if (typeof customConfig.customPriorities === 'string') {
+                                // Safely evaluate the function string
+                                try {
+                                    bot.customPriorities = new Function('return ' + customConfig.customPriorities)();
+                                } catch (e) {
+                                    console.error('Error parsing customPriorities function:', e);
+                                    bot.customPriorities = null;
+                                }
+                            }
+                            
+                            aiBots.push(bot);
+                            if (customError) customError.style.display = 'none';
+                        } catch (e) {
+                            console.error('Error parsing custom bot JSON:', e);
+                            if (customError) {
+                                customError.textContent = `Error: ${e.message}`;
+                                customError.style.display = 'block';
+                            }
+                            // Fall back to default custom bot
+                            aiBots.push(new AIBot('CUSTOM', teamIndex, aggression));
+                        }
+                    } else {
+                        // No JSON provided, use default custom bot
+                        aiBots.push(new AIBot('CUSTOM', teamIndex, aggression));
+                    }
+                } else {
+                    // Standard bot
+                    aiBots.push(new AIBot(botType, teamIndex, aggression));
+                }
             });
 
             return aiBots;

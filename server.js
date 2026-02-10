@@ -1199,7 +1199,8 @@ class ConstellationRoom extends Room {
                     team: player.team,
                     type: botConfig.type || 'HAL',
                     aggression: botConfig.aggression || 5,
-                    movesLeft: player.movesLeft
+                    movesLeft: player.movesLeft,
+                    customConfig: botConfig.customConfig || null // Pass custom config if present
                 };
                 botIds.push(botData);
                 console.log(`🤖 getBotPlayerIds: Bot ${id} has ${player.movesLeft} moves (team ${player.team})`);

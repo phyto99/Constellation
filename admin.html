@@ -1407,6 +1407,12 @@
                 description: 'An advocate of chaos',
                 icon: '🌪️',
                 strategy: 'chaotic'
+            },
+            CUSTOM: {
+                name: 'Custom',
+                description: 'Create your own bot',
+                icon: '✨',
+                strategy: 'custom'
             }
         };
 
@@ -1457,7 +1463,7 @@
             }).join('');
 
             botDiv.innerHTML = `
-                <select class="ai-bot-select" onchange="updateAdminAIBotDisplay('${botId}'); debouncedBotSettingsUpdate();">
+                <select class="ai-bot-select" onchange="handleAdminBotTypeChange('${botId}'); debouncedBotSettingsUpdate();">
                     ${Object.keys(AI_BOT_TYPES).map(key =>
                 `<option value="${key}" ${key === nextBotType ? 'selected' : ''}>${AI_BOT_TYPES[key].name} - ${AI_BOT_TYPES[key].description}</option>`
             ).join('')}
@@ -1478,14 +1484,284 @@
                 </select>
                 <div class="ai-bot-cube" style="background: #00FFFF; opacity: 0.8;"></div>
                 <button class="remove-bot-btn" onclick="removeAdminAIBot('${botId}')">Remove</button>
+                <div class="custom-bot-config" style="display: none; margin-top: 10px; width: 100%;">
+                    <!-- Step 1: Input Form (shown initially) -->
+                    <div class="custom-bot-input-step" style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 12px;">
+                        <div style="font-weight: 600; color: #0369a1; margin-bottom: 12px; font-size: 14px;">✨ Custom Bot Strategy Creator</div>
+                        
+                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #374151; font-weight: 600;">
+                            Bot Name:
+                        </label>
+                        <input type="text" class="custom-bot-name" placeholder="e.g., Napoleon, Sherlock, Tesla" style="width: 100%; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; margin-bottom: 10px;" />
+                        
+                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #374151; font-weight: 600;">
+                            Strategy Description (Be as detailed as possible):
+                        </label>
+                        <textarea class="custom-bot-description" placeholder="Example: 'A cautious strategist that focuses on building strong HQ networks in the first 3 rounds. Avoids stealing unless behind by more than 20%. In late game (rounds 7+), becomes aggressive and targets enemy wormholes. Prioritizes connecting isolated stars over expanding. When winning, plays defensively and conserves steals.'" style="width: 100%; height: 100px; font-family: inherit; font-size: 12px; padding: 8px; border: 1px solid #d1d5db; background: white; color: #111827; border-radius: 6px; resize: vertical; margin-bottom: 10px;"></textarea>
+                        
+                        <button type="button" onclick="generateBotPrompt('${botId}')" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;">
+                            📋 Generate AI Prompt
+                        </button>
+                    </div>
+                    
+                    <!-- Step 2: JSON Paste (shown after generating prompt) -->
+                    <div class="custom-bot-json-step" style="display: none;">
+                        <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 12px; margin-bottom: 10px;">
+                            <div style="color: #16a34a; font-weight: 600; margin-bottom: 5px;">✅ Copied to clipboard!</div>
+                            <div style="font-size: 12px; color: #15803d;">
+                                Paste into ChatGPT or Claude, then paste the JSON generated below.
+                            </div>
+                        </div>
+                        
+                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #374151; font-weight: 600;">
+                            Paste AI-Generated JSON Here:
+                        </label>
+                        <textarea class="custom-bot-json" placeholder='Paste the JSON response from ChatGPT/Claude here...' style="width: 100%; height: 150px; font-family: 'Courier New', monospace; font-size: 11px; padding: 8px; border: 1px solid #d1d5db; background: #f9fafb; color: #111827; border-radius: 6px; resize: vertical;"></textarea>
+                        <div class="custom-bot-error" style="color: #ef4444; font-size: 11px; margin-top: 5px; display: none;"></div>
+                        
+                        <button type="button" onclick="resetBotCreator('${botId}')" style="background: #6b7280; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-top: 8px;">
+                            ← Back to Edit Strategy
+                        </button>
+                    </div>
+                </div>
             `;
 
             container.appendChild(botDiv);
-            updateAdminAIBotDisplay(botId);
+            handleAdminBotTypeChange(botId);
             updateAddBotButtonState();
 
             clearTimeout(botSettingsUpdateTimeout);
             botSettingsUpdateTimeout = setTimeout(() => sendSettingsUpdate(), 500);
+        }
+
+        function handleAdminBotTypeChange(botId) {
+            const botDiv = document.getElementById(botId);
+            if (!botDiv) return;
+
+            const botSelect = botDiv.querySelector('.ai-bot-select');
+            const customConfig = botDiv.querySelector('.custom-bot-config');
+            const botType = botSelect.value;
+
+            // Show/hide custom config based on selection
+            if (botType === 'CUSTOM') {
+                customConfig.style.display = 'block';
+            } else {
+                customConfig.style.display = 'none';
+            }
+
+            updateAdminAIBotDisplay(botId);
+        }
+
+        function generateBotPrompt(botId) {
+            const botDiv = document.getElementById(botId);
+            if (!botDiv) return;
+
+            const nameInput = botDiv.querySelector('.custom-bot-name');
+            const descriptionInput = botDiv.querySelector('.custom-bot-description');
+            const teamSelect = botDiv.querySelector('.ai-team-select');
+            const aggressionSelect = botDiv.querySelector('.ai-aggression-select');
+            
+            const botName = nameInput.value.trim() || 'Custom Bot';
+            const botDescription = descriptionInput.value.trim();
+            const teamIndex = parseInt(teamSelect.value);
+            const aggression = parseInt(aggressionSelect.value);
+            const teamName = colorTeamColors[teamIndex] ? colorTeamColors[teamIndex].name : 'Unknown';
+
+            if (!botDescription) {
+                showNotification('⚠️ Please describe your bot strategy first!', 'warning');
+                return;
+            }
+
+            // Generate PERFECT, MODULAR AI prompt
+            const prompt = `# Star Conquest Custom Bot Generator
+
+You are an expert AI system that generates highly optimized, performant bot strategies for the Star Conquest multiplayer game. Generate a bot based on the user's detailed strategy description.
+
+---
+
+## USER'S BOT SPECIFICATION
+
+**Bot Name:** ${botName}
+**Team:** ${teamName}
+**Base Aggression Level:** ${aggression}/9
+
+**Strategy Description:**
+${botDescription}
+
+---
+
+## GAME MECHANICS REFERENCE
+
+### Core Actions (What bots can do):
+1. **hq** - Place headquarters on stars (limited to 2 per team, required early game)
+2. **steal** - Steal enemy-controlled stars (costs 1 steal token, limited resource ~50 total)
+3. **expand** - Capture neutral/unclaimed stars (main expansion method, unlimited)
+4. **connect** - Prioritize capturing stars that connect isolated friendly territories
+5. **wormhole** - Specifically target wormhole stars (special star type with strategic value)
+6. **disrupt** - Steal stars that break enemy networks (aggressive stealing strategy)
+
+### Game State Variables Available:
+\`\`\`javascript
+gameState = {
+    // Game info
+    gameProgress: 0.5,        // 0.0-1.0 (current round / total rounds)
+    currentRound: 5,          // Current round number
+    totalRounds: 10,          // Total rounds in game
+    roundProgress: 0.5,       // 0.0-1.0 (time elapsed in current round)
+    timeLeft: 15000,          // Milliseconds remaining in round
+    roundLength: 30000,       // Total round length in ms
+    
+    // Team status
+    myPosition: 2,            // Team ranking: 1=winning, 7=last place
+    team: {
+        s: 5000,              // Current score
+        st: 15,               // Steals remaining
+        movesLeft: 10         // Moves left this round
+    },
+    stealsLeft: 15,           // Steals remaining (same as team.st)
+    teamStars: [...],         // Array of stars controlled by this team
+    teamHQs: [...],           // Array of HQ stars controlled by this team
+    
+    // Opponent info
+    allScores: [              // All team scores sorted by rank
+        {score: 8000, index: 0},
+        {score: 5000, index: 1},  // This team
+        {score: 3000, index: 2}
+    ],
+    
+    // Game rules
+    game: {
+        HM: 2,                // Max HQs allowed per team
+        S: 50,                // Total steals in entire game
+        TR: 10,               // Total rounds
+        r: 5                  // Current round
+    },
+    
+    // Score multipliers (for understanding value)
+    multipliers: {
+        count: 500,           // Points per star connection
+        distance: 1,          // Points per distance unit
+        hq: 10,              // HQ bonus multiplier
+        destruction: 1        // Destruction bonus
+    }
+}
+\`\`\`
+
+### Bot Decision System:
+Your bot returns a **priority array** where each action has a **weight (0-200)**:
+- **0** = Never do this action
+- **50** = Low priority
+- **100** = Medium priority  
+- **150** = High priority
+- **200** = Maximum priority
+
+The bot will attempt actions in weighted-random order (higher weight = more likely).
+
+---
+
+## MODULAR STRATEGY COMPONENTS
+
+Your bot strategy should be built from these modular components:
+
+### 1. PHASE-BASED PRIORITIES
+Adjust weights based on game phase:
+- **Early Game** (gameProgress < 0.3): Focus on HQ placement and expansion
+- **Mid Game** (0.3 ≤ gameProgress < 0.7): Balanced approach, build networks
+- **Late Game** (gameProgress ≥ 0.7): Aggressive plays, use remaining steals
+
+### 2. POSITION-BASED ADAPTATION
+Adjust based on team ranking:
+- **Winning** (myPosition ≤ 2): Defensive, conserve steals, protect lead
+- **Middle** (3 ≤ myPosition ≤ 5): Balanced, opportunistic stealing
+- **Losing** (myPosition ≥ 6): Aggressive, desperate steals, high-risk plays
+
+### 3. RESOURCE MANAGEMENT
+Adjust based on remaining resources:
+- **Abundant Steals** (stealsLeft > 30): Liberal stealing
+- **Moderate Steals** (10 < stealsLeft ≤ 30): Selective stealing
+- **Scarce Steals** (stealsLeft ≤ 10): Extremely conservative, only high-value steals
+
+### 4. TIME PRESSURE
+Adjust based on round time:
+- **Early Round** (roundProgress < 0.3): Methodical planning
+- **Mid Round** (0.3 ≤ roundProgress < 0.7): Normal pace
+- **Late Round** (roundProgress ≥ 0.7): Urgent, use remaining moves
+
+### 5. SPECIAL FOCUS
+Optional strategic focuses:
+- **Wormhole Hunter**: Prioritize wormhole stars
+- **Network Builder**: Prioritize connecting isolated stars
+- **Disruptor**: Target enemy network hubs
+- **Expansionist**: Maximize territory quickly
+
+---
+
+## PERFORMANCE REQUIREMENTS
+
+⚠️ **CRITICAL**: Your function will run on maps with 1000+ stars and must be FAST:
+- Use ONLY the provided gameState variables (pre-calculated)
+- NO loops, NO array iterations, NO complex calculations
+- Simple arithmetic and conditionals only
+- Return immediately
+
+---
+
+## OUTPUT FORMAT
+
+Generate a JSON object with this EXACT structure (single line, no formatting):
+
+\`\`\`json
+{
+  "name": "${botName}",
+  "description": "Brief 1-sentence summary",
+  "icon": "🤖",
+  "strategy": "custom",
+  "aggression": ${aggression},
+  "customPriorities": "function(gameState) { const gp = gameState.gameProgress; const pos = gameState.myPosition; const st = gameState.stealsLeft; const rp = gameState.roundProgress; const early = gp < 0.3 ? 1.2 : 1; const mid = (gp >= 0.3 && gp < 0.7) ? 1.1 : 1; const late = gp >= 0.7 ? 1.3 : 1; const winning = pos <= 2 ? 0.8 : 1; const losing = pos >= 6 ? 1.5 : 1; const desperate = pos >= 6 && gp > 0.7 ? 2.0 : 1; const stealAbundant = st > 30 ? 1.2 : 1; const stealScarce = st <= 10 ? 0.5 : 1; return [ { action: 'hq', weight: gameState.teamHQs.length < gameState.game.HM ? 180 * early : 0 }, { action: 'steal', weight: this.totalStealsThisRound < this.calculateMaxSteals(gameState) && st > 0 ? 100 * losing * desperate * stealAbundant * stealScarce : 0 }, { action: 'expand', weight: 120 * early * (1 - rp * 0.3) }, { action: 'connect', weight: 90 * mid * winning }, { action: 'wormhole', weight: 70 }, { action: 'disrupt', weight: 80 * late * losing * desperate } ]; }"
+}
+\`\`\`
+
+---
+
+## YOUR TASK
+
+Based on the user's strategy description above, generate a bot that:
+
+1. **Interprets their strategy** - Understand what they want (defensive/aggressive, early/late game focus, etc.)
+2. **Sets appropriate base weights** - Each action gets a base weight (0-200) matching their strategy
+3. **Adds dynamic multipliers** - Adjust weights based on game state (phase, position, resources, time)
+4. **Remains performant** - Use ONLY simple arithmetic, no loops or complex logic
+5. **Returns valid JSON** - Single-line string, properly escaped
+
+**Generate the complete JSON configuration now.**`;
+
+            // Copy to clipboard and switch UI
+            navigator.clipboard.writeText(prompt).then(() => {
+                // Switch to JSON paste step
+                const inputStep = botDiv.querySelector('.custom-bot-input-step');
+                const jsonStep = botDiv.querySelector('.custom-bot-json-step');
+                inputStep.style.display = 'none';
+                jsonStep.style.display = 'block';
+            }).catch(err => {
+                showNotification('❌ Failed to copy to clipboard. Please try again.', 'error');
+            });
+        }
+
+        function resetBotCreator(botId) {
+            const botDiv = document.getElementById(botId);
+            if (!botDiv) return;
+
+            // Switch back to input step
+            const inputStep = botDiv.querySelector('.custom-bot-input-step');
+            const jsonStep = botDiv.querySelector('.custom-bot-json-step');
+            inputStep.style.display = 'block';
+            jsonStep.style.display = 'none';
+
+            // Clear JSON textarea and error
+            const jsonTextarea = botDiv.querySelector('.custom-bot-json');
+            const errorDiv = botDiv.querySelector('.custom-bot-error');
+            if (jsonTextarea) jsonTextarea.value = '';
+            if (errorDiv) errorDiv.style.display = 'none';
         }
 
         function removeAdminAIBot(botId) {
@@ -1547,12 +1823,63 @@
                 const botSelect = botDiv.querySelector('.ai-bot-select');
                 const teamSelect = botDiv.querySelector('.ai-team-select');
                 const aggressionSelect = botDiv.querySelector('.ai-aggression-select');
+                const customJsonTextarea = botDiv.querySelector('.custom-bot-json');
+                const customError = botDiv.querySelector('.custom-bot-error');
 
-                aiBots.push({
-                    type: botSelect.value,
-                    teamIndex: parseInt(teamSelect.value),
-                    aggression: parseInt(aggressionSelect.value)
-                });
+                const botType = botSelect.value;
+                const teamIndex = parseInt(teamSelect.value);
+                const aggression = parseInt(aggressionSelect.value);
+
+                // Handle custom bot JSON
+                if (botType === 'CUSTOM' && customJsonTextarea) {
+                    const jsonText = customJsonTextarea.value.trim();
+                    if (jsonText) {
+                        try {
+                            const customConfig = JSON.parse(jsonText);
+                            
+                            // Validate required fields
+                            if (!customConfig.name || !customConfig.customPriorities) {
+                                throw new Error('Custom bot must have "name" and "customPriorities" fields');
+                            }
+                            
+                            // Store custom config with bot data
+                            aiBots.push({
+                                type: botType,
+                                teamIndex: teamIndex,
+                                aggression: customConfig.aggression || aggression,
+                                customConfig: customConfig // Pass full custom config
+                            });
+                            
+                            if (customError) customError.style.display = 'none';
+                        } catch (e) {
+                            console.error('Error parsing custom bot JSON:', e);
+                            if (customError) {
+                                customError.textContent = `Error: ${e.message}`;
+                                customError.style.display = 'block';
+                            }
+                            // Fall back to default custom bot
+                            aiBots.push({
+                                type: botType,
+                                teamIndex: teamIndex,
+                                aggression: aggression
+                            });
+                        }
+                    } else {
+                        // No JSON provided, use default custom bot
+                        aiBots.push({
+                            type: botType,
+                            teamIndex: teamIndex,
+                            aggression: aggression
+                        });
+                    }
+                } else {
+                    // Standard bot
+                    aiBots.push({
+                        type: botSelect.value,
+                        teamIndex: teamIndex,
+                        aggression: aggression
+                    });
+                }
             });
 
             return aiBots;
