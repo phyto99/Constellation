@@ -1679,7 +1679,8 @@ app.use('/colyseus', basicAuthMiddleware, monitor({
 }));
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'other.html')));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
+app.get('/other', (req, res) => res.sendFile(path.join(__dirname, 'other.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 app.get('/game/:roomId', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.use(express.static(path.join(__dirname), { index: false }));
