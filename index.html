@@ -4437,16 +4437,42 @@
 
                 // Move rejection tracking - prevents retrying failed moves
                 this.lastRejectedMove = null; // { starIndex, reason, timestamp }
+                
+                // PERFORMANCE: Per-bot cooldowns to prevent spam
+                this.lastSuccessfulMoveTime = 0;  // Last successful move
+                this.lastFailedMoveTime = 0;      // Last failed/rejected move
+                this.successCooldown = 500;       // 500ms after successful move
+                this.failureCooldown = 1000;      // 1000ms after failed move
+                this.consecutiveFailures = 0;     // Track repeated failures
+                
+                // PERFORMANCE: Cached game state analysis
+                this.cachedGameState = null;
+                this.cachedGameStateTime = 0;
             }
 
             calculateMoveDelay() {
-                // Aggression 1-9 maps to delays: 3000ms to 300ms
-                const baseDelay = 3300 - (this.aggression * 300);
-                const randomVariation = Math.random() * 400 - 200;
-                return Math.max(200, baseDelay + randomVariation);
+                // INCREASED delays for better performance: 500ms to 1500ms
+                const baseDelay = 1800 - (this.aggression * 150);
+                const randomVariation = Math.random() * 200 - 100;
+                return Math.max(500, baseDelay + randomVariation);
             }
 
             shouldMakeMove(currentTime, gameState) {
+                // PERFORMANCE: Check cooldowns first (cheapest check)
+                const timeSinceSuccess = currentTime - this.lastSuccessfulMoveTime;
+                const timeSinceFailure = currentTime - this.lastFailedMoveTime;
+                
+                // Enforce cooldowns
+                if (timeSinceSuccess < this.successCooldown) return false;
+                if (timeSinceFailure < this.failureCooldown) return false;
+                
+                // Exponential backoff for repeated failures
+                if (this.consecutiveFailures > 0) {
+                    const backoffTime = this.failureCooldown * Math.pow(1.5, Math.min(this.consecutiveFailures, 4));
+                    if (timeSinceFailure < backoffTime) return false;
+                }
+                
+                // Original delay check
                 if (currentTime - this.lastMoveTime < this.moveDelay) return false;
 
                 // Check steal limits based on aggression and philosophy
@@ -4492,6 +4518,12 @@
             }
 
             analyzeGameState(game) {
+                // PERFORMANCE: Use cached game state if recent (< 1 second old)
+                const now = Date.now();
+                if (this.cachedGameState && (now - this.cachedGameStateTime) < 1000) {
+                    return this.cachedGameState;
+                }
+                
                 // Update special stars cache
                 this.specialStars.clear();
                 game.st.forEach((star, index) => {
@@ -4510,7 +4542,7 @@
                     .sort((a, b) => b.score - a.score);
                 const myPosition = allScores.findIndex(t => t.index === this.teamIndex) + 1;
 
-                return {
+                const gameState = {
                     game,
                     team,
                     teamStars,
@@ -4526,9 +4558,19 @@
                     totalRounds: game.TR,
                     gameProgress: game.r / game.TR // 0.0 to 1.0
                 };
+                
+                // Cache the result
+                this.cachedGameState = gameState;
+                this.cachedGameStateTime = now;
+                
+                return gameState;
             }
 
             makeMove(game) {
+                // PERFORMANCE: Skip if no moves left (lazy activation)
+                const hasMovesLeft = game.ml ? (this.movesLeft > 0) : (game.tms[this.teamIndex].movesLeft > 0);
+                if (!hasMovesLeft) return false;
+                
                 if (!this.shouldMakeMove(Date.now(), game)) return false;
 
                 const gameState = this.analyzeGameState(game);
@@ -4560,10 +4602,21 @@
                 }
 
                 if (move) {
-                    this.executeMove(game, move);
+                    const success = this.executeMove(game, move);
                     this.lastMoveTime = Date.now();
                     this.moveDelay = this.calculateMoveDelay();
-                    return true;
+                    
+                    // PERFORMANCE: Track success for cooldown
+                    if (success) {
+                        this.lastSuccessfulMoveTime = Date.now();
+                        this.consecutiveFailures = 0;
+                    }
+                    
+                    return success;
+                } else {
+                    // PERFORMANCE: Track failure for cooldown
+                    this.lastFailedMoveTime = Date.now();
+                    this.consecutiveFailures++;
                 }
 
                 return false;
@@ -5312,24 +5365,34 @@
                 const mapComplexity = this.calculateMapComplexity();
                 const botCount = this.aiBots.length;
                 
-                // Base interval increases with map complexity and bot count
-                // Small maps (complexity < 500): 100-150ms
-                // Medium maps (500-2000): 150-250ms  
-                // Large maps (2000-5000): 250-400ms
-                // Huge maps (5000+): 400-600ms
-                let baseInterval = 100;
-                if (mapComplexity > 5000) baseInterval = 400;
-                else if (mapComplexity > 2000) baseInterval = 250;
-                else if (mapComplexity > 500) baseInterval = 150;
+                // INCREASED base intervals for better performance (200-1000ms)
+                // Small maps (complexity < 500): 200-300ms
+                // Medium maps (500-2000): 300-500ms  
+                // Large maps (2000-5000): 500-800ms
+                // Huge maps (5000+): 800-1000ms
+                let baseInterval = 200;
+                if (mapComplexity > 5000) baseInterval = 800;
+                else if (mapComplexity > 2000) baseInterval = 500;
+                else if (mapComplexity > 500) baseInterval = 300;
                 
                 // Increase interval with more bots (more bots = more processing)
-                const botMultiplier = 1 + (botCount * 0.15); // +15% per bot
+                const botMultiplier = 1 + (botCount * 0.2); // +20% per bot
                 this.aiUpdateInterval = Math.floor(baseInterval * botMultiplier);
                 
-                // Stagger bots - never update all at once
-                // More bots = smaller batches to spread load
-                this.aiBotsPerUpdate = Math.max(1, Math.ceil(botCount / 4)); // Update 25% of bots per cycle
+                // AGGRESSIVE staggering - only 1-2 bots per cycle on large maps
+                if (mapComplexity > 2000) {
+                    this.aiBotsPerUpdate = Math.max(1, Math.ceil(botCount / 8)); // Update 12.5% of bots
+                } else if (mapComplexity > 500) {
+                    this.aiBotsPerUpdate = Math.max(1, Math.ceil(botCount / 5)); // Update 20% of bots
+                } else {
+                    this.aiBotsPerUpdate = Math.max(1, Math.ceil(botCount / 3)); // Update 33% of bots
+                }
                 this.currentAIBotIndex = 0; // Round-robin bot updates
+                
+                // Game state analysis cache (reuse for 1 second)
+                this.gameStateCache = null;
+                this.gameStateCacheTime = 0;
+                this.gameStateCacheDuration = 1000; // 1 second cache
                 
                 console.log(`🤖 Bot throttling: ${botCount} bots, complexity ${mapComplexity}, interval ${this.aiUpdateInterval}ms, ${this.aiBotsPerUpdate} bots/update`);
                 
@@ -7233,42 +7296,49 @@
                     });
                 }
 
-                // Performance-based adaptive AI update interval
+                // PERFORMANCE: Adaptive AI update interval based on frame time
                 const frameTime = performance.now() - (this.lastFrameTime || performance.now());
                 this.lastFrameTime = performance.now();
 
-                // If frame time is high (>20ms = <50fps), reduce AI frequency
-                if (frameTime > 20) {
-                    this.aiUpdateInterval = Math.min(500, this.aiUpdateInterval * 1.1); // Slow down
+                // AGGRESSIVE adaptive throttling - react to poor performance
+                if (frameTime > 33) {
+                    // < 30 FPS: DOUBLE interval (emergency slowdown)
+                    this.aiUpdateInterval = Math.min(2000, this.aiUpdateInterval * 2);
+                } else if (frameTime > 20) {
+                    // < 50 FPS: Increase interval by 20%
+                    this.aiUpdateInterval = Math.min(1500, this.aiUpdateInterval * 1.2);
                 } else if (frameTime < 10) {
-                    this.aiUpdateInterval = Math.max(100, this.aiUpdateInterval * 0.95); // Speed up
+                    // > 100 FPS: Can afford to speed up slightly
+                    this.aiUpdateInterval = Math.max(200, this.aiUpdateInterval * 0.95);
                 }
 
                 if (!this.p && !this.go && this.aiBots.length > 0) {
                     // Only update AI during active gameplay, not planning or game over
                     if (currentTime - this.lastAIUpdate > this.aiUpdateInterval) {
                         let anyMovesMade = false;
+                        let botsProcessed = 0;
 
                         // Round-robin update: only update a subset of bots per cycle for performance
                         const botsToUpdate = Math.min(this.aiBotsPerUpdate, this.aiBots.length);
                         for (let i = 0; i < botsToUpdate; i++) {
                             const botIndex = (this.currentAIBotIndex + i) % this.aiBots.length;
                             const bot = this.aiBots[botIndex];
+                            botsProcessed++;
 
                             if (bot.makeMove(this)) {
                                 // AI move executed - visual updates already handled in executeMove
                                 this.deferredScoreUpdate = true;
                                 anyMovesMade = true;
 
-                                // Limit moves per frame to prevent lag spikes
+                                // PERFORMANCE: Stop if frame time is getting high
                                 if (frameTime > 16) {
                                     break; // Stop processing more bots this frame
                                 }
                             }
                         }
 
-                        // Advance the round-robin index
-                        this.currentAIBotIndex = (this.currentAIBotIndex + botsToUpdate) % this.aiBots.length;
+                        // Advance the round-robin index by actual bots processed
+                        this.currentAIBotIndex = (this.currentAIBotIndex + botsProcessed) % this.aiBots.length;
 
                         // Only update UI if moves were made (less frequent UI updates)
                         if (anyMovesMade) {
