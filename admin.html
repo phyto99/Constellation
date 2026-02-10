@@ -1410,7 +1410,7 @@
             },
             CUSTOM: {
                 name: 'Custom',
-                description: 'Create your own bot',
+                description: '',
                 icon: '✨',
                 strategy: 'custom'
             }
@@ -1487,7 +1487,7 @@
                 <div class="custom-bot-config" style="display: none; margin-top: 10px; width: 100%;">
                     <!-- Step 1: Input Form (shown initially) -->
                     <div class="custom-bot-input-step" style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 12px;">
-                        <div style="font-weight: 600; color: #0369a1; margin-bottom: 12px; font-size: 14px;">✨ Custom Bot Strategy Creator</div>
+                        <div style="font-weight: 600; color: #0369a1; margin-bottom: 12px; font-size: 14px;">Custom Bot Strategy Creator</div>
                         
                         <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #374151; font-weight: 600;">
                             Bot Name:
@@ -1499,8 +1499,8 @@
                         </label>
                         <textarea class="custom-bot-description" placeholder="Example: 'A cautious strategist that focuses on building strong HQ networks in the first 3 rounds. Avoids stealing unless behind by more than 20%. In late game (rounds 7+), becomes aggressive and targets enemy wormholes. Prioritizes connecting isolated stars over expanding. When winning, plays defensively and conserves steals.'" style="width: 100%; height: 100px; font-family: inherit; font-size: 12px; padding: 8px; border: 1px solid #d1d5db; background: white; color: #111827; border-radius: 6px; resize: vertical; margin-bottom: 10px;"></textarea>
                         
-                        <button type="button" onclick="generateBotPrompt('${botId}')" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;">
-                            📋 Generate AI Prompt
+                        <button type="button" onclick="generateBotPrompt('${botId}')" style="background: #4b5563; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;">
+                            Generate AI Prompt
                         </button>
                     </div>
                     
