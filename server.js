@@ -623,14 +623,25 @@ class ConstellationRoom extends Room {
         };
 
 
-        // Broadcast cursor movements to all other players
+        // Cursor movement throttling - limit broadcasts to reduce network overhead
+        this.cursorThrottleMap = new Map(); // Track last broadcast time per client
+        const CURSOR_THROTTLE_MS = 50; // Only broadcast cursor every 50ms per player
+
+        // Broadcast cursor movements to all other players (throttled)
         this.onMessage('cursor_move', (client, data) => {
-            this.broadcast('cursor_move', {
-                playerId: client.sessionId,
-                x: data.x,
-                y: data.y,
-                teamIndex: data.teamIndex
-            }, { except: client });
+            const now = Date.now();
+            const lastBroadcast = this.cursorThrottleMap.get(client.sessionId) || 0;
+            
+            // Throttle: only broadcast if enough time has passed
+            if (now - lastBroadcast >= CURSOR_THROTTLE_MS) {
+                this.broadcast('cursor_move', {
+                    playerId: client.sessionId,
+                    x: data.x,
+                    y: data.y,
+                    teamIndex: data.teamIndex
+                }, { except: client });
+                this.cursorThrottleMap.set(client.sessionId, now);
+            }
         });
 
         // Broadcast pointer effects to all other players
@@ -710,7 +721,7 @@ class ConstellationRoom extends Room {
                 }
 
                 this.broadcast('state_changed', stateChange);
-                this.broadcastAuthoritativeScores();
+                // Score broadcast removed - handled by 5-second timer for performance
 
                 console.log(`✅ Star ${data.starIndex} claimed by team ${teamIndex}${isHQ ? ' (HQ)' : ''} (player: ${player.id})`);
             } else {
@@ -790,7 +801,7 @@ class ConstellationRoom extends Room {
                 }
 
                 this.broadcast('state_changed', stateChange);
-                this.broadcastAuthoritativeScores();
+                // Score broadcast removed - handled by 5-second timer for performance
 
                 console.log(`✅ Star ${data.starIndex} stolen by team ${teamIndex}${isHQ ? ' (HQ)' : ''} (player: ${player.id})`);
             } else {
@@ -857,7 +868,7 @@ class ConstellationRoom extends Room {
                 }
 
                 this.broadcast('state_changed', stateChange);
-                this.broadcastAuthoritativeScores();
+                // Score broadcast removed - handled by 5-second timer for performance
 
                 console.log(`✅ HQ placed at star ${data.starIndex} by team ${teamIndex} (player: ${player.id})`);
             } else {
@@ -1257,6 +1268,11 @@ class ConstellationRoom extends Room {
 
     onLeave(client, consented) {
         console.log(`Player ${client.sessionId} left room ${this.roomId}`);
+        
+        // Clean up cursor throttle tracking
+        if (this.cursorThrottleMap) {
+            this.cursorThrottleMap.delete(client.sessionId);
+        }
         this.state.players.delete(client.sessionId);
         // update monitor metadata clients count
         this.setMetadata({ ...this.metadata, clients: this.clients.length });

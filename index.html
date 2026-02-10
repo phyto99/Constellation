@@ -8289,12 +8289,26 @@
                         }
                     }
 
-                    // In multiplayer, force full UI refresh so leaderboard and map stay in sync for all clients
+                    // In multiplayer, defer expensive operations intelligently
                     const isMultiplayer = gameClientManager && gameClientManager.isConnected;
                     if (isMultiplayer) {
+                        // Only trigger full UI update for score display
                         currentGame.needsFullUIUpdate = true;
+                        
+                        // Run network analysis if:
+                        // 1. HQ was placed (affects HQ connections)
+                        // 2. Any star changed team (could affect protection networks)
+                        if (delta.stars && delta.stars.length > 0) {
+                            const hasHQ = delta.stars.some(s => s.hq);
+                            const hasTeamChange = delta.stars.some(s => s.tm !== undefined);
+                            
+                            if (hasHQ || hasTeamChange) {
+                                currentGame.deferredNetworkAnalysis = true;
+                            }
+                        }
+                        
+                        // Special checks are cheap, can run them
                         currentGame.deferredSpecialCheck = true;
-                        currentGame.deferredNetworkAnalysis = true;
                     } else {
                         currentGame.deferredScoreUpdate = true;
                         currentGame.deferredSpecialCheck = true;
