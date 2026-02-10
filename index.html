@@ -8945,10 +8945,17 @@
                     }
                 }
 
-                // Update UI to show game has started
-                const planningElement = document.getElementById('planning');
-                if (planningElement) {
-                    planningElement.style.display = 'none';
+                // Start the countdown timer instead of immediately hiding planning
+                if (currentGame) {
+                    currentGame.notStarted = false;
+                    currentGame.gameStartTime = Date.now();
+                    currentGame.p = true; // Keep in planning mode for countdown
+                    
+                    const planningElement = document.getElementById('planning');
+                    if (planningElement) {
+                        planningElement.style.display = 'block';
+                        // The update loop will handle the countdown display
+                    }
                 }
 
                 const roundElement = document.getElementById('round');
