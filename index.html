@@ -5198,18 +5198,21 @@
 
                             gameClientManager.room.send('steal_star', { starIndex: move.target, botId: this.playerId });
                             
-                            // NO optimistic update - wait for server confirmation
-                            // Server will broadcast state_changed with authoritative move count
+                            // Optimistically decrement bot's local move counter
+                            // Server will send authoritative count back via state_changed
+                            this.movesLeft--;
 
                         } else if (move.type === 'hq' && star.tm === null) {
                             gameClientManager.room.send('place_hq', { starIndex: move.target, botId: this.playerId });
                             
-                            // NO optimistic update - wait for server confirmation
+                            // Optimistically decrement bot's local move counter
+                            this.movesLeft--;
 
                         } else if (move.type === 'capture' && star.tm === null) {
                             gameClientManager.room.send('claim_star', { starIndex: move.target, botId: this.playerId });
                             
-                            // NO optimistic update - wait for server confirmation
+                            // Optimistically decrement bot's local move counter
+                            this.movesLeft--;
                         } else {
                             return false;
                         }
@@ -7984,13 +7987,7 @@
                     this.starGfx.beginFill(color).drawCircle(x, y, sz).endFill();
                 }
 
-                if (s.pr && s.ty !== T.C) {
-                    // Draw yellow X for protected stars
-                    this.starGfx.lineStyle(3, 0xFFFF00);
-                    const xSize = sz * 0.8;
-                    this.starGfx.moveTo(x - xSize, y - xSize).lineTo(x + xSize, y + xSize);
-                    this.starGfx.moveTo(x + xSize, y - xSize).lineTo(x - xSize, y + xSize);
-                }
+
 
                 // Draw text for special stars with crisp rendering
                 if (s.ty >= T.B) {
@@ -8554,7 +8551,7 @@
                         return;
                     }
 
-                    // Apply star changes
+                    // Apply star changes to game state immediately (data update)
                     if (delta.stars) {
                         delta.stars.forEach(change => {
                             if (change.index < 0 || change.index >= currentGame.st.length) return;
@@ -8570,11 +8567,13 @@
                                 currentGame.addFx(star.x * currentGame.G, star.y * currentGame.G, 'steal');
                             }
 
-                            // Redraw the star
-                            currentGame.drawStar(star, change.index);
-                            currentGame.renderConnectedLines(change.index);
+                            // PERFORMANCE: Just mark dirty, don't render synchronously
+                            // This prevents blocking the main thread during bot moves
                             currentGame.markStarDirty(change.index);
                         });
+                        
+                        // Trigger line redraw flag (will happen in next render cycle)
+                        currentGame.needsStaticLineRedraw = true;
                     }
 
                     // Apply team changes
