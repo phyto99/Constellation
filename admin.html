@@ -1250,8 +1250,11 @@
             currentUserName = name;
             if (name) {
                 localStorage.setItem('constellation_user_name', name);
+                // Also save to playerName for game client consistency
+                localStorage.setItem('playerName', name);
             } else {
                 localStorage.removeItem('constellation_user_name');
+                localStorage.removeItem('playerName');
             }
         }
 
@@ -2497,7 +2500,89 @@ Based on the user's strategy description above, generate a bot that:
                 return;
             }
             
+            // Validation checks
+            const warnings = [];
+            
+            // Check if map is set
+            const mapJsonValue = document.getElementById('edit-mapJson')?.value?.trim();
+            const selectedMapFilename = document.getElementById('map-selector')?.value;
+            if (!mapJsonValue && !selectedMapFilename) {
+                warnings.push('No map selected');
+            }
+            
+            // Check for unassigned players (excluding host)
+            const roomData = latestRoomsData.find(r => r.roomId === selectedRoomId);
+            if (roomData && roomData.players) {
+                const unassignedNonHost = colorPlayers.filter(p => 
+                    p.colorTeam === null && 
+                    !p.isBot && 
+                    p.colyseusId !== roomData.hostId
+                );
+                
+                if (unassignedNonHost.length > 0) {
+                    warnings.push(`${unassignedNonHost.length} player(s) not assigned to a team`);
+                }
+            }
+            
+            // Show warning popup if there are issues
+            if (warnings.length > 0 && !window.startGameWarningShown) {
+                const warningMsg = warnings.join('\n• ');
+                const confirmed = confirm(`⚠️ Warning:\n• ${warningMsg}\n\nClick OK to start anyway, or Cancel to fix these issues.`);
+                if (!confirmed) {
+                    return;
+                }
+                window.startGameWarningShown = true;
+            }
+            
             try {
+                // Auto-assign unassigned players (excluding host) to teams when game starts
+                if (roomData && roomData.players) {
+                    const unassignedNonHost = colorPlayers.filter(p => 
+                        p.colorTeam === null && 
+                        !p.isBot && 
+                        p.colyseusId !== roomData.hostId
+                    );
+                    
+                    if (unassignedNonHost.length > 0) {
+                        // Find available teams (teams with space)
+                        const teamCounts = new Map();
+                        colorPlayers.forEach(p => {
+                            if (p.colorTeam !== null) {
+                                teamCounts.set(p.colorTeam, (teamCounts.get(p.colorTeam) || 0) + 1);
+                            }
+                        });
+                        
+                        // Assign to teams in round-robin fashion
+                        let teamIndex = 0;
+                        for (const player of unassignedNonHost) {
+                            // Find next available team
+                            while (teamCounts.get(teamIndex) >= 1) {
+                                teamIndex = (teamIndex + 1) % colorTeamColors.length;
+                            }
+                            
+                            // Assign player to team
+                            player.colorTeam = teamIndex;
+                            teamCounts.set(teamIndex, (teamCounts.get(teamIndex) || 0) + 1);
+                            
+                            // Send to server
+                            if (currentRoom && player.colyseusId) {
+                                currentRoom.send('assign_team', {
+                                    roomId: selectedRoomId,
+                                    playerId: player.colyseusId,
+                                    teamIndex: teamIndex
+                                });
+                                console.log(`[AUTO-ASSIGN] Player ${player.name} assigned to team ${teamIndex}`);
+                            }
+                            
+                            teamIndex = (teamIndex + 1) % colorTeamColors.length;
+                        }
+                        
+                        // Update UI
+                        renderColorPlayerPool();
+                        renderColorTeamAssignments();
+                    }
+                }
+                
                 currentRoom.send('start_game', { roomId: selectedRoomId });
                 console.log('[ACTION] ✓ Game start command sent via AdminRoom');
 
@@ -2507,6 +2592,9 @@ Based on the user's strategy description above, generate a bot that:
                 if (!colorGameMode) {
                     document.getElementById('colorStartGameBtn').click();
                 }
+                
+                // Reset warning flag for next time
+                window.startGameWarningShown = false;
             } catch (error) {
                 console.error('[ERROR] Failed to start game:', error);
                 showNotification(`Failed to start game: ${error.message}`, 'error');
@@ -3224,9 +3312,17 @@ Based on the user's strategy description above, generate a bot that:
                 }
             });
 
-            if (colorGameMode && newPlayers.length > 0 && colorTeamColors.length > 0) {
+            // Auto-assign new players to teams
+            // This happens when: 1) colorGameMode is active, OR 2) game is already playing
+            const roomData = latestRoomsData.find(r => r.roomId === selectedRoomId);
+            const isGamePlaying = roomData && roomData.state === 'playing';
+            
+            if ((colorGameMode || isGamePlaying) && newPlayers.length > 0 && colorTeamColors.length > 0) {
                 newPlayers.forEach(player => {
                     if (player.isBot) return;
+                    
+                    // Skip host if they're unassigned (they can stay unassigned)
+                    if (roomData && player.colyseusId === roomData.hostId) return;
 
                     const teamCounts = colorTeamColors.map((_, idx) =>
                         colorPlayers.filter(p => p.colorTeam === idx && p.id !== player.id).length
@@ -3248,6 +3344,7 @@ Based on the user's strategy description above, generate a bot that:
                         const targetTeam = teamCounts.findIndex(count => count === minCount);
                         player.colorTeam = targetTeam;
                         syncColorTeamToGame(player);
+                        console.log(`[AUTO-ASSIGN] Late joiner ${player.name} assigned to team ${targetTeam}`);
                     }
                 });
             }
