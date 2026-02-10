@@ -7312,49 +7312,66 @@
                     this.aiUpdateInterval = Math.max(200, this.aiUpdateInterval * 0.95);
                 }
 
+                // CRITICAL: Process bots asynchronously to prevent blocking rendering
                 if (!this.p && !this.go && this.aiBots.length > 0) {
                     // Only update AI during active gameplay, not planning or game over
                     if (currentTime - this.lastAIUpdate > this.aiUpdateInterval) {
-                        let anyMovesMade = false;
-                        let botsProcessed = 0;
+                        // Schedule bot updates during idle time (non-blocking)
+                        this.scheduleBotUpdates(currentTime, frameTime);
+                        this.lastAIUpdate = currentTime;
+                    }
+                }
+            }
 
-                        // Round-robin update: only update a subset of bots per cycle for performance
-                        const botsToUpdate = Math.min(this.aiBotsPerUpdate, this.aiBots.length);
-                        for (let i = 0; i < botsToUpdate; i++) {
-                            const botIndex = (this.currentAIBotIndex + i) % this.aiBots.length;
-                            const bot = this.aiBots[botIndex];
-                            botsProcessed++;
+            scheduleBotUpdates(currentTime, frameTime) {
+                // PERFORMANCE: Use requestIdleCallback for non-blocking bot updates
+                // This ensures player input and camera remain smooth even under heavy load
+                
+                const botsToUpdate = Math.min(this.aiBotsPerUpdate, this.aiBots.length);
+                let botsProcessed = 0;
+                let anyMovesMade = false;
 
-                            if (bot.makeMove(this)) {
-                                // AI move executed - visual updates already handled in executeMove
-                                this.deferredScoreUpdate = true;
-                                anyMovesMade = true;
+                const processBotBatch = () => {
+                    // Process bots in small batches to avoid blocking
+                    const batchSize = Math.min(2, botsToUpdate - botsProcessed);
+                    
+                    for (let i = 0; i < batchSize && botsProcessed < botsToUpdate; i++) {
+                        const botIndex = (this.currentAIBotIndex + botsProcessed) % this.aiBots.length;
+                        const bot = this.aiBots[botIndex];
+                        botsProcessed++;
 
-                                // PERFORMANCE: Stop if frame time is getting high
-                                if (frameTime > 16) {
-                                    break; // Stop processing more bots this frame
-                                }
-                            }
+                        if (bot.makeMove(this)) {
+                            this.deferredScoreUpdate = true;
+                            anyMovesMade = true;
                         }
+                    }
 
-                        // Advance the round-robin index by actual bots processed
+                    // If more bots to process, schedule next batch
+                    if (botsProcessed < botsToUpdate) {
+                        // Use setTimeout with 0 delay to yield to browser
+                        setTimeout(processBotBatch, 0);
+                    } else {
+                        // All bots processed, update UI if needed
                         this.currentAIBotIndex = (this.currentAIBotIndex + botsProcessed) % this.aiBots.length;
-
-                        // Only update UI if moves were made (less frequent UI updates)
+                        
                         if (anyMovesMade) {
-                            // In multiplayer, reduce UI update frequency to prevent score flickering
                             const isMultiplayer = gameClientManager && gameClientManager.isConnected;
                             if (!isMultiplayer) {
                                 this.calcScores();
                                 this.updateUI();
                             } else {
-                                // In multiplayer, just mark for deferred update
                                 this.deferredScoreUpdate = true;
                             }
                         }
-
-                        this.lastAIUpdate = currentTime;
                     }
+                };
+
+                // Start processing first batch
+                // Use requestIdleCallback if available, otherwise setTimeout
+                if (typeof requestIdleCallback !== 'undefined') {
+                    requestIdleCallback(processBotBatch, { timeout: 50 });
+                } else {
+                    setTimeout(processBotBatch, 0);
                 }
             }
 
