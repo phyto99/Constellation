@@ -187,8 +187,8 @@ class ConstellationRoom extends Room {
                 { color: 0xFF00FF, name: 'magenta', displayName: 'Magenta' },
                 { color: 0x00FF00, name: 'lime', displayName: 'Lime' },
                 { color: 0xFFD700, name: 'gold', displayName: 'Gold' },
-                { color: 0x0066FF, name: 'blue', displayName: 'Blue' },
-                { color: 0xFF3333, name: 'red', displayName: 'Red' },
+                { color: 0x0000FF, name: 'blue', displayName: 'Blue' },
+                { color: 0xFF0000, name: 'red', displayName: 'Red' },
                 { color: 0x006400, name: 'dark green', displayName: 'Dark Green' }
             ]
         };

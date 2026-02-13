@@ -95,6 +95,44 @@
             user-select: none
         }
 
+        .view-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            pointer-events: none;
+        }
+        .view-controls .view-control-btn {
+            pointer-events: auto;
+            width: 26px;
+            height: 26px;
+            border: none;
+            border-radius: 0;
+            background: #fff;
+            color: #000;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: -1px -1px 1px rgba(0, 0, 0, 0.5);
+            transition: all 0.2s ease;
+        }
+        .view-controls .view-control-btn:hover {
+            background: #f0f0f0;
+            box-shadow: 2px 0px 4px rgba(0, 0, 0, 0.3);
+        }
+        .view-controls .view-control-btn:active {
+            transform: translateX(-1px);
+        }
+        .view-controls .view-control-btn svg {
+            width: 14px;
+            height: 14px;
+            fill: currentColor;
+        }
+
         .score-row {
             margin-bottom: 1px;
             height: 30px;
@@ -124,6 +162,14 @@
 
         .score-row.multiplier-row {
             cursor: default;
+        }
+
+        .scores.team-selection-locked .score-row:not(.multiplier-row) {
+            cursor: pointer;
+        }
+        .scores.team-selection-locked .score-row:not(.multiplier-row):hover {
+            transform: translateX(-2px);
+            box-shadow: 2px 0px 4px rgba(0, 0, 0, 0.3);
         }
 
         /* Shake animation for rejected team selection */
@@ -643,6 +689,17 @@
                     <span class="multiplier-col" style="color:#ccc;width:24px;">1x</span>
                 </div>
             </div>
+        </div>
+        <div class="view-controls" id="viewControls">
+            <button type="button" class="view-control-btn" id="viewZoomIn" title="Zoom in" aria-label="Zoom in">
+                <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            </button>
+            <button type="button" class="view-control-btn" id="viewZoomOut" title="Zoom out" aria-label="Zoom out">
+                <svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
+            </button>
+            <button type="button" class="view-control-btn" id="viewRefresh" title="Reset view" aria-label="Reset view">
+                <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+            </button>
         </div>
     </div>
     <div class="settings-panel hidden" id="settingsPanel">
@@ -5288,6 +5345,8 @@
 
                 // Store reference to game client manager for multiplayer
                 this.gameClientManager = gameClientManager;
+                // When false (admin panel "Allow Player Team Selection" off), leaderboard only expands/collapses; team is locked
+                this.allowPlayerTeamSelection = s.allowPlayerTeamSelection !== false;
 
                 // Initialize teams based on TEAM_CONFIGS
                 this.tms = TEAM_CONFIGS.map(config => ({
@@ -5755,6 +5814,20 @@
                 if (nz === this.cam.z) return; const mx = e.clientX, my = e.clientY, wx = (mx - this.cam.x) / this.cam.z, wy = (my - this.cam.y) / this.cam.z;
                 this.cam.z = nz; this.cam.x = mx - wx * nz; this.cam.y = my - wy * nz; this.updateCam();
             }
+            zoomIn() {
+                const mx = this.app.screen.width / 2, my = this.app.screen.height / 2;
+                const f = 1.2, nz = Math.max(0.2, Math.min(3, this.cam.z * f));
+                if (nz === this.cam.z) return;
+                const wx = (mx - this.cam.x) / this.cam.z, wy = (my - this.cam.y) / this.cam.z;
+                this.cam.z = nz; this.cam.x = mx - wx * nz; this.cam.y = my - wy * nz; this.updateCam();
+            }
+            zoomOut() {
+                const mx = this.app.screen.width / 2, my = this.app.screen.height / 2;
+                const f = 1 / 1.2, nz = Math.max(0.2, Math.min(3, this.cam.z * f));
+                if (nz === this.cam.z) return;
+                const wx = (mx - this.cam.x) / this.cam.z, wy = (my - this.cam.y) / this.cam.z;
+                this.cam.z = nz; this.cam.x = mx - wx * nz; this.cam.y = my - wy * nz; this.updateCam();
+            }
 
             onMouseLeave(e) {
                 this.showCursorInfo = false;
@@ -5778,12 +5851,19 @@
 
                         // Add fresh event handler
                         newScoresEl.addEventListener('click', (e) => {
+                            // When team selection is locked (admin setting), only expand/collapse leaderboard
+                            if (!this.allowPlayerTeamSelection) {
+                                newScoresEl.classList.toggle('expanded');
+                                return;
+                            }
+
                             // Check if clicking on a team row
                             const scoreRow = e.target.closest('.score-row');
                             if (scoreRow && !scoreRow.classList.contains('multiplier-row')) {
                                 const teamIndex = parseInt(scoreRow.getAttribute('data-team-index'));
 
                                 if (!isNaN(teamIndex) && teamIndex >= 0 && teamIndex < this.tms.length) {
+                                    this._tmBeforePending = this.tm;
                                     this.tm = teamIndex;
 
                                     // Notify server of team change in multiplayer
@@ -7587,9 +7667,14 @@
                 const scoresEl = document.getElementById('scores');
                 if (!scoresEl) return;
 
+                scoresEl.classList.toggle('team-selection-locked', !this.allowPlayerTeamSelection);
+
                 // Get existing team rows (excluding multiplier row)
                 const existingRows = scoresEl.querySelectorAll('.score-row:not(.multiplier-row)');
                 const multiplierRow = scoresEl.querySelector('.multiplier-row');
+                const rowTitle = this.allowPlayerTeamSelection
+                    ? (teamName) => `Click to select ${teamName} team`
+                    : (teamName) => `${teamName}`;
 
                 // Create or update team rows
                 this.tms.forEach((team, index) => {
@@ -7602,7 +7687,7 @@
                         scoreRow = document.createElement('div');
                         scoreRow.className = 'score-row';
                         scoreRow.setAttribute('data-team-index', index);
-                        scoreRow.title = `Click to select ${teamName} team`;
+                        scoreRow.title = rowTitle(teamName);
                         scoreRow.innerHTML = `
                             <div class="main-score-section">
                                 <div class="score-highlight" style="background:${hexColor};width:45px;"></div>
@@ -7637,7 +7722,7 @@
                             col.style.color = hexColor;
                         });
 
-                        scoreRow.title = `Click to select ${teamName} team`;
+                        scoreRow.title = rowTitle(teamName);
                     }
 
                     // Update team selection outline
@@ -7694,7 +7779,10 @@
                     const teamBorder = isCurrentTeam ? `outline: 2px solid ${color}; outline-offset: -2px; padding: 0 4px;` : '';
                     const selectedClass = isCurrentTeam ? ' selected-team' : '';
 
-                    html += `<div class="score-row${selectedClass}" data-team-index="${data.teamIdx}" style="${teamBorder}" title="Click to select ${data.team.displayName} team${aiBot ? ' (AI: ' + aiBot.config.name + ')' : ''}">
+                    const rowTitleText = this.allowPlayerTeamSelection
+                        ? `Click to select ${data.team.displayName} team${aiBot ? ' (AI: ' + aiBot.config.name + ')' : ''}`
+                        : `${data.team.displayName}${aiBot ? ' (AI: ' + aiBot.config.name + ')' : ''}`;
+                    html += `<div class="score-row${selectedClass}" data-team-index="${data.teamIdx}" style="${teamBorder}" title="${rowTitleText}">
                             <div class="main-score-section">
                                 <div class="score-highlight" style="background:${color};width:${scoreWidth}px;"></div>
                                 <div class="score-content">
@@ -8072,6 +8160,15 @@
         }
 
         let currentGame = null;
+
+        (function setupViewControlButtons() {
+            const zoomInBtn = document.getElementById('viewZoomIn');
+            const zoomOutBtn = document.getElementById('viewZoomOut');
+            const refreshBtn = document.getElementById('viewRefresh');
+            if (zoomInBtn) zoomInBtn.addEventListener('click', () => { if (currentGame && currentGame.zoomIn) currentGame.zoomIn(); });
+            if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => { if (currentGame && currentGame.zoomOut) currentGame.zoomOut(); });
+            if (refreshBtn) refreshBtn.addEventListener('click', () => { if (currentGame && currentGame.setupCam) currentGame.setupCam(); });
+        })();
 
         function getSettings() {
             return {
@@ -8707,6 +8804,29 @@
                     currentGame.updateUI();
                 });
 
+                this.room.onMessage('team_change_rejected', (data) => {
+                    if (!currentGame) return;
+                    console.warn('❌ Team change rejected:', data.reason);
+                    if (currentGame._tmBeforePending !== undefined) {
+                        currentGame.tm = currentGame._tmBeforePending;
+                        currentGame._tmBeforePending = undefined;
+                    }
+                    currentGame.updateLeaderboardColors();
+                    currentGame.needsFullUIUpdate = true;
+                    currentGame.updateUI();
+                    const scoresEl = document.getElementById('scores');
+                    if (scoresEl) {
+                        const row = scoresEl.querySelector(`.score-row[data-team-index="${data.teamIndex}"]`);
+                        if (row && !row.classList.contains('multiplier-row')) {
+                            row.classList.remove('shake');
+                            void row.offsetWidth;
+                            row.classList.add('shake');
+                            setTimeout(() => row.classList.remove('shake'), 500);
+                        }
+                    }
+                    showNotification(data.reason === 'not_allowed' ? 'Team selection is locked by host' : (data.reason || 'Team change rejected'));
+                });
+
                 // Handle server-generated star requirements for special stars (black holes, wormholes)
                 // Server generates random req values between minReq and maxReq to ensure consistency across all clients
                 this.room.onMessage('star_requirements', (data) => {
@@ -8840,6 +8960,9 @@
                         container.innerHTML = '';
                     }
                     currentGame = new Game(settings);
+                    if (data.config && typeof data.config.allowPlayerTeamSelection === 'boolean') {
+                        currentGame.allowPlayerTeamSelection = data.config.allowPlayerTeamSelection;
+                    }
 
                     const debugEl = document.getElementById('debug-settings');
                     if (debugEl && data.config) {
@@ -8872,6 +8995,9 @@
                     // Apply team colors from server config
                     if (cfg.teamColors && Array.isArray(cfg.teamColors)) {
                         currentGame.updateTeamColors(cfg.teamColors);
+                    }
+                    if (typeof cfg.allowPlayerTeamSelection === 'boolean') {
+                        currentGame.allowPlayerTeamSelection = cfg.allowPlayerTeamSelection;
                     }
 
                     // NOTE: Removed init_game_state message - payload too large for WebSocket
@@ -8982,6 +9108,10 @@
                     // Update team colors if provided (dynamic color sync from admin panel)
                     if (data.config.teamColors && Array.isArray(data.config.teamColors)) {
                         currentGame.updateTeamColors(data.config.teamColors);
+                    }
+                    if (typeof data.config.allowPlayerTeamSelection === 'boolean') {
+                        currentGame.allowPlayerTeamSelection = data.config.allowPlayerTeamSelection;
+                        currentGame.updateLeaderboardColors();
                     }
 
                     // Update multipliers
