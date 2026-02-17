@@ -5742,9 +5742,19 @@
                     ['mousedown', e => this.onDown(e)], ['mousemove', e => this.onMove(e)], ['mouseup', e => this.onUp(e)],
                     ['wheel', e => this.onWheel(e)], ['contextmenu', e => e.preventDefault()],
                     ['mouseleave', e => this.onMouseLeave(e)],
-                    ['touchstart', e => this.onDown(e.touches[0])], ['touchmove', e => { e.preventDefault(); this.onMove(e.touches[0]); }],
-                    ['touchend', e => this.onUp(e.changedTouches[0])]
+                    ['touchstart', e => this.onTouchStart(e)], 
+                    ['touchmove', e => this.onTouchMove(e)],
+                    ['touchend', e => this.onTouchEnd(e)]
                 ]; events.forEach(([n, h]) => v.addEventListener(n, h));
+
+                // Touch state for pinch zoom and double tap
+                this.touchState = {
+                    touches: [],
+                    lastTapTime: 0,
+                    lastTapPos: null,
+                    initialPinchDistance: 0,
+                    initialZoom: 1
+                };
 
                 // Add global mouse up listener to catch mouse up events outside the canvas
                 document.addEventListener('mouseup', (e) => {
@@ -5761,6 +5771,112 @@
                         this.d.m = false;
                     }
                 });
+            }
+
+            onTouchStart(e) {
+                e.preventDefault();
+                const touches = Array.from(e.touches);
+                this.touchState.touches = touches;
+
+                if (touches.length === 1) {
+                    // Single touch - check for double tap
+                    const touch = touches[0];
+                    const now = Date.now();
+                    const tapPos = { x: touch.clientX, y: touch.clientY };
+                    
+                    // Double tap detection: within 300ms and within 30px of last tap
+                    if (this.touchState.lastTapTime && 
+                        now - this.touchState.lastTapTime < 300 &&
+                        this.touchState.lastTapPos) {
+                        const dx = tapPos.x - this.touchState.lastTapPos.x;
+                        const dy = tapPos.y - this.touchState.lastTapPos.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < 30) {
+                            // Double tap detected - trigger pointer effect
+                            const wx = (tapPos.x - this.cam.x) / this.cam.z;
+                            const wy = (tapPos.y - this.cam.y) / this.cam.z;
+                            this.addFx(wx, wy, 'pointer');
+                            
+                            // Send pointer effect to multiplayer
+                            if (gameClientManager && gameClientManager.isConnected) {
+                                gameClientManager.room.send('pointer_effect', {
+                                    x: wx, y: wy, teamIndex: this.tm,
+                                    zoom: this.cam.z
+                                });
+                            }
+                            
+                            // Reset tap tracking
+                            this.touchState.lastTapTime = 0;
+                            this.touchState.lastTapPos = null;
+                            return;
+                        }
+                    }
+                    
+                    // Store tap info for potential double tap
+                    this.touchState.lastTapTime = now;
+                    this.touchState.lastTapPos = tapPos;
+                    
+                    // Start drag
+                    this.onDown(touch);
+                } else if (touches.length === 2) {
+                    // Two finger pinch - start pinch zoom
+                    const dx = touches[0].clientX - touches[1].clientX;
+                    const dy = touches[0].clientY - touches[1].clientY;
+                    this.touchState.initialPinchDistance = Math.sqrt(dx * dx + dy * dy);
+                    this.touchState.initialZoom = this.cam.z;
+                    
+                    // Store center point for zoom
+                    this.touchState.pinchCenter = {
+                        x: (touches[0].clientX + touches[1].clientX) / 2,
+                        y: (touches[0].clientY + touches[1].clientY) / 2
+                    };
+                }
+            }
+
+            onTouchMove(e) {
+                e.preventDefault();
+                const touches = Array.from(e.touches);
+                
+                if (touches.length === 1) {
+                    // Single touch - pan
+                    this.onMove(touches[0]);
+                } else if (touches.length === 2) {
+                    // Two finger pinch - zoom
+                    const dx = touches[0].clientX - touches[1].clientX;
+                    const dy = touches[0].clientY - touches[1].clientY;
+                    const currentDistance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (this.touchState.initialPinchDistance > 0) {
+                        const scale = currentDistance / this.touchState.initialPinchDistance;
+                        const newZoom = Math.max(0.2, Math.min(3, this.touchState.initialZoom * scale));
+                        
+                        // Zoom towards pinch center
+                        const center = this.touchState.pinchCenter;
+                        const wx = (center.x - this.cam.x) / this.cam.z;
+                        const wy = (center.y - this.cam.y) / this.cam.z;
+                        
+                        this.cam.z = newZoom;
+                        this.cam.x = center.x - wx * newZoom;
+                        this.cam.y = center.y - wy * newZoom;
+                        this.updateCam();
+                    }
+                }
+            }
+
+            onTouchEnd(e) {
+                e.preventDefault();
+                const touches = Array.from(e.touches);
+                
+                if (touches.length === 0) {
+                    // All touches ended
+                    this.onUp(e.changedTouches[0]);
+                    this.touchState.initialPinchDistance = 0;
+                } else if (touches.length === 1) {
+                    // One finger remaining - reset to single touch mode
+                    this.touchState.initialPinchDistance = 0;
+                    this.onDown(touches[0]);
+                }
             }
 
             onDown(e) {
