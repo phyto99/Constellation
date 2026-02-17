@@ -11,6 +11,7 @@ let rooms = [];
 let selectedRoomId = null;
 let scenarioExpanded = true;
 let adminAIBots = [];
+let deploymentTimestamp = null;
 
 // AI Bot types
 const AI_BOT_TYPES = {
@@ -42,11 +43,17 @@ async function connectToColyseus() {
         console.log('✓ Connected successfully');
         updateStatus('Connected', '#10b981');
         
+        // Load deployment info
+        await loadDeploymentInfo();
+        
         // Load rooms immediately
         await loadRooms();
         
         // Auto-refresh every 3 seconds
         setInterval(loadRooms, 3000);
+        
+        // Update deployment timestamp once per day (only shows days anyway)
+        setInterval(updateDeploymentDisplay, 1000 * 60 * 60 * 24);
         
     } catch (error) {
         console.error('✗ Connection failed:', error);
@@ -70,13 +77,53 @@ async function loadRooms() {
             mode: room.metadata?.gameMode || 'competitive',
             state: room.metadata?.gameState || 'waiting',
             createdAt: room.createdAt || new Date().toISOString(),
-            metadata: room.metadata || {}
+            metadata: room.metadata || {},
+            sessionNumber: room.metadata?.sessionNumber || null
         }));
         
         updateUI();
         
     } catch (error) {
         console.error('Failed to load rooms:', error);
+    }
+}
+
+async function loadDeploymentInfo() {
+    try {
+        const response = await fetch('/api/deployment-info');
+        const data = await response.json();
+        deploymentTimestamp = new Date(data.deployedAt);
+        updateDeploymentDisplay();
+    } catch (error) {
+        console.error('Failed to load deployment info:', error);
+        document.getElementById('deployment-timestamp').textContent = 'Deployment info unavailable';
+    }
+}
+
+function updateDeploymentDisplay() {
+    if (!deploymentTimestamp) return;
+    
+    const now = new Date();
+    const diffMs = now - deploymentTimestamp;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    let displayText = '';
+    if (diffDays === 1) {
+        displayText = 'Updated 1 day ago';
+    } else {
+        displayText = `Updated ${diffDays} days ago`;
+    }
+    
+    const timestampEl = document.getElementById('deployment-timestamp');
+    if (timestampEl) {
+        timestampEl.textContent = displayText;
+        timestampEl.title = `Server started: ${deploymentTimestamp.toLocaleString()}`;
+    }
+    
+    const timestampGameEl = document.getElementById('deployment-timestamp-game');
+    if (timestampGameEl) {
+        timestampGameEl.textContent = displayText;
+        timestampGameEl.title = `Server started: ${deploymentTimestamp.toLocaleString()}`;
     }
 }
 
@@ -246,19 +293,22 @@ function renderGameList(containerId, gameList) {
         return;
     }
 
-    container.innerHTML = gameList.map(game => `
+    container.innerHTML = gameList.map(game => {
+        const displayId = game.sessionNumber ? `#${game.sessionNumber}` : game.roomId.substring(0, 6);
+        return `
         <div class="game-item ${selectedRoomId === game.roomId ? 'selected' : ''}" 
              onclick="selectGame('${game.roomId}')">
             <div style="display:flex;align-items:center;gap:6px">
                 <div class="status-dot" style="background-color:${getStatusColor(game.state)}"></div>
-                <span>${game.name}</span>
+                <span>${game.name} (${displayId})</span>
             </div>
             <div style="font-size:10px;color:#666">
                 <div>${formatDateTime(game.createdAt)}</div>
                 <div>${game.players} players</div>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 function updateSelectedGame() {

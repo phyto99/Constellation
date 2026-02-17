@@ -14,6 +14,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Track server start time for deployment info
+const SERVER_START_TIME = new Date();
+
 // Airtable configuration
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || 'appTD6mhx60nuMHtd';
 const AIRTABLE_TABLE_ID = process.env.AIRTABLE_TABLE_ID || 'tblbareHvl8s0hjAg';
@@ -106,6 +109,11 @@ app.get('/api/maps/:filename', async (req, res) => {
     }
 });
 
+// Deployment timestamp endpoint - returns server start time
+app.get('/api/deployment-info', (req, res) => {
+    res.json({ deployedAt: SERVER_START_TIME.toISOString() });
+});
+
 // Schema definitions
 class Player extends Schema {
     constructor() {
@@ -167,6 +175,9 @@ class ConstellationRoom extends Room {
         this.autoDispose = false;
 
         this.maxClients = options.maxPlayers || 20;
+
+        // Assign sequential session number from counter
+        this.sessionNumber = this.getNextSessionNumber();
         // Ensure gameConfig has defaults so clients receive full settings
         this.gameConfig = {
             name: options.name || `Game ${this.roomId.substring(0, 6)}`,
@@ -199,7 +210,8 @@ class ConstellationRoom extends Room {
             gameState: 'waiting',
             createdAt: new Date().toISOString(),
             maxPlayers: this.maxClients,
-            clients: 0
+            clients: 0,
+            sessionNumber: this.sessionNumber
         });
 
         // Listen for admin presence commands so the admin UI doesn't need to join game rooms
@@ -576,6 +588,11 @@ class ConstellationRoom extends Room {
                         if (tiedTeams.length > 1) {
                             winningTeam = -1; // Indicates tie
                         }
+
+                        // Mark game as finished
+                        this.state.gameState = 'finished';
+                        this.setMetadata({ ...this.metadata, gameState: 'finished' });
+                        this.updateAdminRoom();
 
                         this.broadcast('game_ended', {
                             finalRound: this.state.game.round,
@@ -1209,6 +1226,26 @@ class ConstellationRoom extends Room {
         });
         console.log(`🤖 getBotPlayerIds returning ${botIds.length} bots:`, botIds.map(b => `${b.id}:${b.movesLeft}`));
         return botIds;
+    }
+
+    // Get next sequential session number from persistent counter
+    getNextSessionNumber() {
+        const counterPath = path.join(__dirname, 'game_counter.json');
+        try {
+            let counterData = { counter: 1 };
+            if (fs.existsSync(counterPath)) {
+                const fileContent = fs.readFileSync(counterPath, 'utf8');
+                counterData = JSON.parse(fileContent);
+            }
+            const sessionNumber = counterData.counter;
+            counterData.counter++;
+            fs.writeFileSync(counterPath, JSON.stringify(counterData, null, 2));
+            console.log(`📊 Assigned session number: ${sessionNumber}`);
+            return sessionNumber;
+        } catch (error) {
+            console.error('Error managing session counter:', error);
+            return Date.now(); // Fallback to timestamp
+        }
     }
 
     onJoin(client, options) {
