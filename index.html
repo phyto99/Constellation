@@ -8563,6 +8563,7 @@
                 this.reconnectAttempts = 0;
                 this.maxReconnectAttempts = 5;
                 this.roomId = null;
+                this.sessionNumber = null; // Sequential session number from server
 
                 // Timer interpolation variables
                 this.lastServerTime = null;
@@ -8594,10 +8595,17 @@
                     console.log('Successfully connected to game room');
                     this.updateConnectionStatus(true);
 
-                    // Update Game ID display
+                    // Store session number from room metadata
+                    this.sessionNumber = this.room.metadata?.sessionNumber || null;
+
+                    // Update Game ID display with session number if available
                     const gameIdDisplay = document.getElementById('gameIdDisplay');
                     if (gameIdDisplay) {
-                        gameIdDisplay.textContent = roomId.substring(0, 8);
+                        if (this.sessionNumber) {
+                            gameIdDisplay.textContent = `Session #${this.sessionNumber}`;
+                        } else {
+                            gameIdDisplay.textContent = roomId.substring(0, 8);
+                        }
                     }
 
                     // Update Player ID display
@@ -9344,7 +9352,13 @@
                     } else {
                         const stateText = state.gameState === 'playing' ? 'In Progress' :
                             state.gameState === 'finished' ? 'Finished' : 'Waiting';
-                        titleText = `Game Room: ${this.roomId} (${stateText})`;
+                        
+                        // Use session number if available, otherwise use room ID
+                        if (this.sessionNumber) {
+                            titleText = `Session #${this.sessionNumber} (${stateText})`;
+                        } else {
+                            titleText = `Game Room: ${this.roomId} (${stateText})`;
+                        }
                     }
                     titleLine.textContent = titleText;
                 }
@@ -9587,7 +9601,13 @@
 
                 if (connected) {
                     if (titleLine) {
-                        titleLine.textContent = `Game Room: ${roomId.substring(0, 8)}`;
+                        // Use session number if available from room metadata
+                        const sessionNumber = gameClientManager.sessionNumber;
+                        if (sessionNumber) {
+                            titleLine.textContent = `Session #${sessionNumber}`;
+                        } else {
+                            titleLine.textContent = `Game Room: ${roomId.substring(0, 8)}`;
+                        }
                     }
 
                     // Setup player name input functionality
