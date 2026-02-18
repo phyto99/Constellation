@@ -550,9 +550,9 @@
     </div>
     <div class="header" id="gameHeader">
         <div id="titleLine">Game Room</div>
-        <div class="info-line">Game ID: <span id="gameIdDisplay" style="font-weight:bold;"></span>.⠀ Player:
-            <span id="playerIdDisplay" style="font-weight:bold;"></span>.⠀ Team: <span id="teamColor"
-                style="color: rgb(0, 255, 255);">cyan</span>.⠀
+        <div class="info-line">Game ID: <span id="gameIdDisplay" style="font-weight:bold;"></span>.⠀ Team: <span id="teamColor"
+                style="color: rgb(0, 255, 255);">cyan</span>.⠀ Player:
+            <span id="playerIdDisplay" style="font-weight:bold;"></span>.⠀
             Status: <span id="connection-status" style="color: rgb(255, 255, 255);">connecting...</span>
         </div>
     </div>
@@ -8595,18 +8595,8 @@
                     console.log('Successfully connected to game room');
                     this.updateConnectionStatus(true);
 
-                    // Store session number from room metadata
-                    this.sessionNumber = this.room.metadata?.sessionNumber || null;
-
-                    // Update Game ID display with session number if available
-                    const gameIdDisplay = document.getElementById('gameIdDisplay');
-                    if (gameIdDisplay) {
-                        if (this.sessionNumber) {
-                            gameIdDisplay.textContent = this.sessionNumber;
-                        } else {
-                            gameIdDisplay.textContent = roomId.substring(0, 8);
-                        }
-                    }
+                    // Session number will be received via settings_update message
+                    // which is automatically sent when joining
 
                     // Update Player ID display
                     const playerIdDisplay = document.getElementById('playerIdDisplay');
@@ -9228,6 +9218,19 @@
             handleSettingsUpdate(data) {
                 if (currentGame && data.config) {
                     console.log('🔄 Received real-time settings update:', data.config);
+
+                    // Extract and store session number if available
+                    if (data.config.sessionNumber) {
+                        this.sessionNumber = data.config.sessionNumber;
+                        console.log('📊 Session number from config:', this.sessionNumber);
+                        
+                        // Update Game ID display
+                        const gameIdDisplay = document.getElementById('gameIdDisplay');
+                        if (gameIdDisplay) {
+                            gameIdDisplay.textContent = this.sessionNumber;
+                            console.log('✓ Updated gameIdDisplay to:', this.sessionNumber);
+                        }
+                    }
 
                     // Update team colors if provided (dynamic color sync from admin panel)
                     if (data.config.teamColors && Array.isArray(data.config.teamColors)) {

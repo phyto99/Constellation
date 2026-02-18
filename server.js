@@ -190,6 +190,7 @@ class ConstellationRoom extends Room {
             moves: options.moves || 15,
             multipliers: options.multipliers || { count: 500, distance: 1, hq: 10, destruction: 1 },
             aiBots: options.aiBots || [],
+            sessionNumber: this.sessionNumber, // Add session number to config
             // Allow players to select their own team from the game client
             allowPlayerTeamSelection: options.allowPlayerTeamSelection !== undefined ? options.allowPlayerTeamSelection : false,
             // Dynamic team colors - synced from admin panel to all clients
