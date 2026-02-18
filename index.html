@@ -8602,7 +8602,7 @@
                     const gameIdDisplay = document.getElementById('gameIdDisplay');
                     if (gameIdDisplay) {
                         if (this.sessionNumber) {
-                            gameIdDisplay.textContent = `Session #${this.sessionNumber}`;
+                            gameIdDisplay.textContent = this.sessionNumber;
                         } else {
                             gameIdDisplay.textContent = roomId.substring(0, 8);
                         }
@@ -9355,7 +9355,7 @@
                         
                         // Use session number if available, otherwise use room ID
                         if (this.sessionNumber) {
-                            titleText = `Session #${this.sessionNumber} (${stateText})`;
+                            titleText = `Game ${this.sessionNumber} (${stateText})`;
                         } else {
                             titleText = `Game Room: ${this.roomId} (${stateText})`;
                         }
@@ -9604,7 +9604,7 @@
                         // Use session number if available from room metadata
                         const sessionNumber = gameClientManager.sessionNumber;
                         if (sessionNumber) {
-                            titleLine.textContent = `Session #${sessionNumber}`;
+                            titleLine.textContent = `Game ${sessionNumber}`;
                         } else {
                             titleLine.textContent = `Game Room: ${roomId.substring(0, 8)}`;
                         }

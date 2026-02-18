@@ -415,19 +415,6 @@
             margin-bottom: 10px;
         }
 
-        #deployment-info {
-            background: #f8f9fa;
-            border: 1px solid #e5e7eb;
-            border-radius: 4px;
-            padding: 8px 12px;
-            min-width: 150px;
-        }
-
-        #deployment-timestamp {
-            font-weight: 500;
-            color: #374151;
-        }
-
         .game-link {
             font-size: 12px;
             color: #3b82f6;
@@ -1018,8 +1005,8 @@
                     <h2>Select a Game</h2>
                     <p>No games created yet. Create a new game to get started.</p>
                 </div>
-                <div id="deployment-info" style="text-align: right; font-size: 12px; color: #666; padding: 10px;">
-                    <div id="deployment-timestamp">Loading...</div>
+                <div id="deployment-timestamp" style="text-align: right; font-size: 14px; color: #666; padding: 10px;">
+                    Loading...
                 </div>
             </div>
         </div>
@@ -1045,10 +1032,7 @@
                             style="background: #6b7280; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Close
                             Game</button>
                     </div>
-                    <div style="display: flex; gap: 15px; align-items: center;">
-                        <div id="deployment-info-game" style="font-size: 12px; color: #666;">
-                            <div id="deployment-timestamp-game">Loading...</div>
-                        </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
                         <button class="btn-start" id="start-btn" onclick="startGame()"
                             style="background: #6b7280; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Start
                             Game</button>

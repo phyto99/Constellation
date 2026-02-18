@@ -119,12 +119,6 @@ function updateDeploymentDisplay() {
         timestampEl.textContent = displayText;
         timestampEl.title = `Server started: ${deploymentTimestamp.toLocaleString()}`;
     }
-    
-    const timestampGameEl = document.getElementById('deployment-timestamp-game');
-    if (timestampGameEl) {
-        timestampGameEl.textContent = displayText;
-        timestampGameEl.title = `Server started: ${deploymentTimestamp.toLocaleString()}`;
-    }
 }
 
 function updateStatus(text, color) {
