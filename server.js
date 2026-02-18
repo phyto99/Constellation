@@ -798,7 +798,10 @@ class ConstellationRoom extends Room {
                 player.movesLeft--;
                 if (team) {
                     team.movesLeft--;
-                    if (team.stealsLeft > 0) team.stealsLeft--;
+                    // Ensure steals don't go below 0
+                    if (team.stealsLeft > 0) {
+                        team.stealsLeft--;
+                    }
                     if (isHQ) team.hqCount++;
                 }
 
@@ -810,7 +813,11 @@ class ConstellationRoom extends Room {
                 }
 
                 const starUpdate = { index: data.starIndex, tm: teamIndex, hq: isHQ, stolen: true };
-                const teamUpdate = { index: teamIndex, movesLeft: -1, stealsLeft: -1 };
+                // Only send steal decrement if steals were actually decremented
+                const teamUpdate = { index: teamIndex, movesLeft: -1 };
+                if (team && team.stealsLeft >= 0) {
+                    teamUpdate.stealsLeft = -1;
+                }
                 if (isHQ) teamUpdate.hqCount = 1;
 
                 const stateChange = { stars: [starUpdate], teams: [teamUpdate] };

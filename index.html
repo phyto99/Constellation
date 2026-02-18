@@ -6128,12 +6128,20 @@
                 const isMultiplayerMove = this.ml && gameClientManager && gameClientManager.isConnected;
 
                 if (s.tm !== null && s.tm !== this.tm) {
-                    // Stealing logic
-                    if (s.hq || s.pr || this.tms[this.tm].st <= 0) return;
+                    // Stealing logic - check if team has steals remaining
+                    if (s.hq || s.pr) return; // Can't steal HQ or protected stars
+                    
+                    // Check steals for both single and multiplayer
+                    if (this.tms[this.tm].st <= 0) {
+                        showNotification('Out of steals!');
+                        return;
+                    }
 
                     if (isMultiplayerMove) {
                         gameClientManager.room.send('steal_star', { starIndex: i, isHQ: willBeHQ });
                         if (this.myMoves > 0) this.myMoves--;
+                        // Optimistically decrement steals (server will send authoritative count back)
+                        this.tms[this.tm].st--;
                         this.updateMovesUI();
                     }
                     if (!isMultiplayerMove) {
@@ -6277,14 +6285,12 @@
                     this.networkAnalysisTimer += dt;
 
                     // In multiplayer, be more conservative with score updates to prevent flickering
-                    const isMultiplayer = gameClientManager && gameClientManager.isConnected;
-                    const scoreUpdateDelay = isMultiplayer ? 0.2 : 0.05; // 200ms vs 50ms
-
-                    // Wait longer for score update in multiplayer, 150ms for heavy operations
-                    if (this.networkAnalysisTimer > scoreUpdateDelay && this.deferredScoreUpdate) {
+                    // PERFORMANCE: Update scores in render loop when changes occur
+                    // Only recalculate if there are actual team changes
+                    if (this.deferredScoreUpdate && this.changedTeams.size > 0) {
                         this.calcScoresIncremental();
-                        this.updateUI();
                         this.deferredScoreUpdate = false;
+                        // updateUI will be called at the end of the frame
                     }
                 }
 
@@ -6347,6 +6353,11 @@
 
                 // Update cursor info display
                 this.updateCursorDisplay();
+                
+                // Update UI (leaderboard) if needed - happens after all rendering
+                if (this.needsFullUIUpdate) {
+                    this.updateUI();
+                }
             }
 
             markAllDirty() {
@@ -8789,6 +8800,7 @@
 
                     // Apply team changes
                     if (delta.teams) {
+                        let hasScoreChange = false;
                         delta.teams.forEach(change => {
                             if (change.index < 0 || change.index >= currentGame.tms.length) return;
 
@@ -8804,8 +8816,14 @@
                             if (change.stealsLeft !== undefined) {
                                 if (change.stealsLeft < 0) {
                                     team.st += change.stealsLeft; // Decrement
+                                    // Ensure steals don't go below 0
+                                    if (team.st < 0) team.st = 0;
                                 } else {
                                     team.st = change.stealsLeft; // Absolute value
+                                }
+                                // Update teamScoreData steals immediately for UI
+                                if (currentGame.teamScoreData[change.index]) {
+                                    currentGame.teamScoreData[change.index].steals = team.st;
                                 }
                             }
                             if (change.hqCount !== undefined) {
@@ -8814,54 +8832,53 @@
                                 } else {
                                     team.h = change.hqCount; // Absolute value
                                 }
+                                hasScoreChange = true;
                             }
 
                             currentGame.changedTeams.add(change.index);
                         });
+                        
+                        // Always update UI when team data changes (for steal counter)
+                        currentGame.needsFullUIUpdate = true;
+                        
+                        // Only recalculate scores if there's an actual score change
+                        if (hasScoreChange) {
+                            currentGame.deferredScoreUpdate = true;
+                        }
                     }
 
                     // Sync bot moves from server (authoritative update)
+                    // PERFORMANCE FIX: Removed console.log that was firing on every bot move
                     if (delta.botMove && currentGame.aiBots) {
                         const bot = currentGame.aiBots.find(b => b.playerId === delta.botMove.botId);
                         if (bot) {
                             bot.movesLeft = delta.botMove.movesLeft;
-                            console.log(`🤖 Bot ${bot.playerId} moves synced from server: ${bot.movesLeft}`);
                         }
                     }
-
-                    // In multiplayer, defer expensive operations intelligently
-                    const isMultiplayer = gameClientManager && gameClientManager.isConnected;
-                    if (isMultiplayer) {
-                        // Only trigger full UI update for score display
-                        currentGame.needsFullUIUpdate = true;
+                    
+                    // Run network analysis if HQ or team changes occurred
+                    if (delta.stars && delta.stars.length > 0) {
+                        const hasHQ = delta.stars.some(s => s.hq);
+                        const hasTeamChange = delta.stars.some(s => s.tm !== undefined);
                         
-                        // Run network analysis if:
-                        // 1. HQ was placed (affects HQ connections)
-                        // 2. Any star changed team (could affect protection networks)
-                        if (delta.stars && delta.stars.length > 0) {
-                            const hasHQ = delta.stars.some(s => s.hq);
-                            const hasTeamChange = delta.stars.some(s => s.tm !== undefined);
-                            
-                            if (hasHQ || hasTeamChange) {
-                                currentGame.deferredNetworkAnalysis = true;
-                            }
+                        if (hasHQ || hasTeamChange) {
+                            currentGame.deferredNetworkAnalysis = true;
+                            currentGame.deferredScoreUpdate = true;
                         }
-                        
-                        // Special checks are cheap, can run them
-                        currentGame.deferredSpecialCheck = true;
-                    } else {
-                        currentGame.deferredScoreUpdate = true;
-                        currentGame.deferredSpecialCheck = true;
-                        currentGame.deferredNetworkAnalysis = true;
                     }
-                    currentGame.updateUI();
+                    
+                    // Special checks
+                    currentGame.deferredSpecialCheck = true;
                 });
 
                 // Handle move rejections with resource refunding and rollback
                 this.room.onMessage('move_rejected', (data) => {
                     if (!currentGame) return;
 
-                    console.warn('❌ Move rejected by server:', data.reason, data);
+                    // PERFORMANCE FIX: Only log rejections for human players, not bots
+                    if (!data.botId) {
+                        console.warn('❌ Move rejected by server:', data.reason, data);
+                    }
 
                     // Check if this is a bot rejection
                     if (data.botId && currentGame.aiBots) {
@@ -8877,7 +8894,7 @@
                                 reason: data.reason,
                                 timestamp: Date.now()
                             };
-                            console.log(`🤖 Bot ${bot.playerId} move rejected, moves refunded: ${bot.movesLeft}`);
+                            // Removed console.log for performance
                         }
                     } else {
                         // Human player rejection - refund resources
