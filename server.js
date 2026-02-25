@@ -742,6 +742,18 @@ class ConstellationRoom extends Room {
                 // Score broadcast removed - handled by 5-second timer for performance
 
                 console.log(`✅ Star ${data.starIndex} claimed by team ${teamIndex}${isHQ ? ' (HQ)' : ''} (player: ${player.id})`);
+
+                // Check for special star activations after the move
+                this.checkBlackHoleActivation(teamIndex);
+                const wormholeWin = this.checkWormHoleActivation(teamIndex);
+                if (wormholeWin) {
+                    this.broadcast('game_ended', { 
+                        winner: teamIndex, 
+                        reason: 'wormhole',
+                        message: `Team ${teamIndex} wins by connecting wormholes!`
+                    });
+                    this.state.gameState = 'ended';
+                }
             } else {
                 client.send('move_rejected', {
                     starIndex: data.starIndex,
@@ -829,6 +841,18 @@ class ConstellationRoom extends Room {
                 // Score broadcast removed - handled by 5-second timer for performance
 
                 console.log(`✅ Star ${data.starIndex} stolen by team ${teamIndex}${isHQ ? ' (HQ)' : ''} (player: ${player.id})`);
+
+                // Check for special star activations after the move
+                this.checkBlackHoleActivation(teamIndex);
+                const wormholeWin = this.checkWormHoleActivation(teamIndex);
+                if (wormholeWin) {
+                    this.broadcast('game_ended', { 
+                        winner: teamIndex, 
+                        reason: 'wormhole',
+                        message: `Team ${teamIndex} wins by connecting wormholes!`
+                    });
+                    this.state.gameState = 'ended';
+                }
             } else {
                 client.send('move_rejected', {
                     starIndex: data.starIndex,
@@ -896,6 +920,18 @@ class ConstellationRoom extends Room {
                 // Score broadcast removed - handled by 5-second timer for performance
 
                 console.log(`✅ HQ placed at star ${data.starIndex} by team ${teamIndex} (player: ${player.id})`);
+
+                // Check for special star activations after the move
+                this.checkBlackHoleActivation(teamIndex);
+                const wormholeWin = this.checkWormHoleActivation(teamIndex);
+                if (wormholeWin) {
+                    this.broadcast('game_ended', { 
+                        winner: teamIndex, 
+                        reason: 'wormhole',
+                        message: `Team ${teamIndex} wins by connecting wormholes!`
+                    });
+                    this.state.gameState = 'ended';
+                }
             } else {
                 client.send('move_rejected', {
                     starIndex: data.starIndex,
@@ -979,7 +1015,7 @@ class ConstellationRoom extends Room {
 
                         // SERVER-SIDE RANDOM REQUIREMENT GENERATION
                         // For black holes (ty=2) and wormholes (ty=3), generate random req
-                        // Type mapping: T.B = 2 (black hole), T.W = 3 (wormhole)
+                        // Type mapping: 0=Normal, 1=Cluster, 2=Black hole, 3=Wormhole
                         if (starData.ty === 2 || starData.ty === 3) {
                             const minReq = starData.min_value || (starData.ty === 2 ? 2 : 2);
                             const maxReq = starData.max_value || (starData.ty === 2 ? 4 : 3);
@@ -1409,8 +1445,8 @@ class ConstellationRoom extends Room {
             return { valid: false, reason: 'Star is protected' };
         }
 
-        // Type 2 = cluster, Type 3 = blackhole
-        if (star.ty === 2 || star.ty === 3) {
+        // Type 1 = cluster, Type 2 = blackhole
+        if (star.ty === 1 || star.ty === 2) {
             return { valid: false, reason: 'Cannot steal cluster or blackhole' };
         }
 
@@ -1464,6 +1500,280 @@ class ConstellationRoom extends Room {
 
         return { valid: true };
     }
+
+    // Check for black hole activation and handle destruction
+    checkBlackHoleActivation(teamIndex) {
+        if (!this.state.game.initialized) return;
+
+        const stars = this.state.game.stars;
+        const lines = this.state.game.lines;
+
+        // Build adjacency cache
+        const adjacency = Array(stars.length).fill(null).map(() => []);
+        lines.forEach(line => {
+            if (!line.destroyed) {
+                adjacency[line.f].push(line.t);
+                adjacency[line.t].push(line.f);
+            }
+        });
+
+        // Find all black holes fulfilled by this team
+        const fulfilledBlackHoles = [];
+
+        for (let i = 0; i < stars.length; i++) {
+            const star = stars[i];
+            if (star.ty === 2 && !star.destroyed) { // Type 2 = black hole
+                const connectedBlackHoles = this.countConnectedBlackHoles(i, teamIndex, adjacency);
+                if (connectedBlackHoles >= star.req) {
+                    fulfilledBlackHoles.push(i);
+                }
+            }
+        }
+
+        // If 2+ black holes are fulfilled and connected, destroy paths between them
+        if (fulfilledBlackHoles.length >= 2) {
+            for (let i = 0; i < fulfilledBlackHoles.length; i++) {
+                for (let j = i + 1; j < fulfilledBlackHoles.length; j++) {
+                    const path = this.findPathBetweenBlackHoles(
+                        fulfilledBlackHoles[i],
+                        fulfilledBlackHoles[j],
+                        teamIndex,
+                        adjacency
+                    );
+
+                    if (path.length > 0) {
+                        // Destroy the lines in the path
+                        this.destroyBlackHolePath(path, teamIndex);
+                        console.log(`💥 Black hole activation: Team ${teamIndex} destroyed path between black holes ${fulfilledBlackHoles[i]} and ${fulfilledBlackHoles[j]}`);
+                    }
+                }
+            }
+        }
+    }
+
+    // Count connected black holes for a team (including the black hole itself if connected)
+    countConnectedBlackHoles(blackHoleIndex, teamIndex, adjacency) {
+        const stars = this.state.game.stars;
+        let count = 0;
+        const visited = new Set();
+        const queue = [blackHoleIndex];
+        visited.add(blackHoleIndex);
+
+        while (queue.length > 0) {
+            const current = queue.shift();
+            const star = stars[current];
+
+            // If this is a black hole and connected to the team, count it
+            if (star.ty === 2 && this.isBlackHoleConnectedToTeam(current, teamIndex, adjacency)) {
+                count++;
+            }
+
+            // Explore neighbors through valid paths
+            const neighbors = adjacency[current] || [];
+            for (const neighborIndex of neighbors) {
+                if (!visited.has(neighborIndex) &&
+                    this.isValidBlackHolePath(current, neighborIndex, teamIndex)) {
+                    visited.add(neighborIndex);
+                    queue.push(neighborIndex);
+                }
+            }
+        }
+
+        return count;
+    }
+
+    // Check if a black hole is connected to a team
+    isBlackHoleConnectedToTeam(blackHoleIndex, teamIndex, adjacency) {
+        const stars = this.state.game.stars;
+        const neighbors = adjacency[blackHoleIndex] || [];
+
+        for (const neighborIndex of neighbors) {
+            const neighbor = stars[neighborIndex];
+            if (neighbor.tm === teamIndex) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Check if a path between two stars is valid for black hole connections
+    isValidBlackHolePath(fromIndex, toIndex, teamIndex) {
+        const stars = this.state.game.stars;
+        const toStar = stars[toIndex];
+
+        // Path cannot have HQ dots, wormholes (type 3), or cluster dots (type 1)
+        if (toStar.hq || toStar.ty === 3 || toStar.ty === 1) {
+            return false;
+        }
+
+        // If destination is a black hole (type 2), it's valid
+        if (toStar.ty === 2) {
+            return true;
+        }
+
+        // If destination is a normal star (type 0) owned by the team, it's valid
+        if (toStar.ty === 0 && toStar.tm === teamIndex) {
+            return true;
+        }
+
+        return false;
+    }
+
+    // Find path between two black holes
+    findPathBetweenBlackHoles(bh1, bh2, teamIndex, adjacency) {
+        const stars = this.state.game.stars;
+        const visited = new Set();
+        const queue = [{ index: bh1, path: [bh1] }];
+        visited.add(bh1);
+
+        while (queue.length > 0) {
+            const { index: currentIndex, path } = queue.shift();
+
+            if (currentIndex === bh2) {
+                return path;
+            }
+
+            const neighbors = adjacency[currentIndex] || [];
+            for (const neighborIndex of neighbors) {
+                if (!visited.has(neighborIndex) &&
+                    this.isValidBlackHolePath(currentIndex, neighborIndex, teamIndex)) {
+                    visited.add(neighborIndex);
+                    queue.push({ index: neighborIndex, path: [...path, neighborIndex] });
+                }
+            }
+        }
+
+        return [];
+    }
+
+    // Destroy lines in black hole path
+    destroyBlackHolePath(path, teamIndex) {
+        const lines = this.state.game.lines;
+        const destroyedLines = [];
+
+        for (let i = 0; i < path.length - 1; i++) {
+            const from = path[i];
+            const to = path[i + 1];
+
+            // Find and destroy the line
+            for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+                const line = lines[lineIdx];
+                if (!line.destroyed &&
+                    ((line.f === from && line.t === to) || (line.f === to && line.t === from))) {
+                    line.destroyed = true;
+                    destroyedLines.push(lineIdx);
+                }
+            }
+        }
+
+        // Broadcast the destruction
+        if (destroyedLines.length > 0) {
+            this.broadcast('black_hole_destruction', {
+                team: teamIndex,
+                lines: destroyedLines,
+                path: path
+            });
+        }
+    }
+
+    // Check for wormhole activation and handle game end
+    checkWormHoleActivation(teamIndex) {
+        if (!this.state.game.initialized) return false;
+
+        const stars = this.state.game.stars;
+        const lines = this.state.game.lines;
+
+        // Build adjacency cache
+        const adjacency = Array(stars.length).fill(null).map(() => []);
+        lines.forEach(line => {
+            if (!line.destroyed) {
+                adjacency[line.f].push(line.t);
+                adjacency[line.t].push(line.f);
+            }
+        });
+
+        // Find all activated wormholes for this team
+        const activatedWormholes = [];
+
+        for (let i = 0; i < stars.length; i++) {
+            const star = stars[i];
+            if (star.ty === 3 && star.tm === teamIndex && !star.destroyed) { // Type 3 = wormhole
+                const connectedCount = this.countConnectedStars(i, teamIndex, adjacency);
+                if (connectedCount >= star.req) {
+                    activatedWormholes.push(i);
+                }
+            }
+        }
+
+        // If 2+ wormholes are activated and connected, team wins
+        if (activatedWormholes.length >= 2) {
+            if (this.areWormholesConnected(activatedWormholes, teamIndex, adjacency)) {
+                console.log(`🌀 Wormhole victory: Team ${teamIndex} has connected ${activatedWormholes.length} wormholes!`);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Count connected stars of the same team
+    countConnectedStars(starIndex, teamIndex, adjacency) {
+        const stars = this.state.game.stars;
+        let count = 0;
+        const neighbors = adjacency[starIndex] || [];
+
+        for (const neighborIndex of neighbors) {
+            const neighbor = stars[neighborIndex];
+            if (neighbor.tm === teamIndex && !neighbor.destroyed) {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    // Check if wormholes are connected through team's network
+    areWormholesConnected(wormholes, teamIndex, adjacency) {
+        for (let i = 0; i < wormholes.length - 1; i++) {
+            for (let j = i + 1; j < wormholes.length; j++) {
+                if (this.canReachThroughTeamNetwork(wormholes[i], wormholes[j], teamIndex, adjacency)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // BFS to check if two wormholes can reach each other through team's network
+    canReachThroughTeamNetwork(startWormhole, endWormhole, teamIndex, adjacency) {
+        const stars = this.state.game.stars;
+        const visited = new Set();
+        const queue = [startWormhole];
+        visited.add(startWormhole);
+
+        while (queue.length > 0) {
+            const current = queue.shift();
+
+            if (current === endWormhole) {
+                return true;
+            }
+
+            const connections = adjacency[current] || [];
+            for (const neighborIndex of connections) {
+                const neighbor = stars[neighborIndex];
+
+                if (!visited.has(neighborIndex) &&
+                    neighbor.tm === teamIndex &&
+                    !neighbor.destroyed) {
+                    visited.add(neighborIndex);
+                    queue.push(neighborIndex);
+                }
+            }
+        }
+
+        return false;
+    }
+
 
     updateAdminRoom() {
         if (this.presence) {

@@ -9485,6 +9485,24 @@
                 }
             }
 
+            handleGameEnd(data) {
+                if (currentGame) {
+                    // Set game over state
+                    currentGame.go = true;
+                    
+                    // If it's a wormhole victory, set the winner
+                    if (data.reason === 'wormhole' && typeof data.winner === 'number') {
+                        currentGame.wormholeWinner = data.winner;
+                    }
+                    
+                    // Force UI update to show game over state
+                    currentGame.needsFullUIUpdate = true;
+                    currentGame.updateUI();
+                    
+                    console.log(`🎉 Game ended - Winner: Team ${data.winner}, Reason: ${data.reason}`);
+                }
+            }
+
             handleGamePaused(data) {
                 if (currentGame) {
                     currentGame.isPaused = true;

@@ -4,9 +4,9 @@
 // Star types (matching client)
 const T = {
     N: 0, // Normal
-    W: 1, // Wormhole
-    C: 2, // Cluster
-    B: 3  // Black hole
+    C: 1, // Cluster
+    B: 2, // Black hole
+    W: 3  // Wormhole
 };
 
 // Bot type configurations
