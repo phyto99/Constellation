@@ -1115,8 +1115,12 @@
                                 <input type="number" id="edit-hqMax" value="2" min="0" max="20" onchange="validateAndUpdate(this, 0, 20)">
                             </div>
                             <div class="form-group">
-                                <label>Score Multipliers <span class="sublabel">(Count, Distance, HQ,
-                                        Destruction)</span></label>
+                                <label style="display: flex; align-items: center; justify-content: space-between;">
+                                    <span>Score Multipliers <span class="sublabel" id="multiplier-order-label">(Count, Distance, HQ, Destruction)</span></span>
+                                    <button onclick="randomizeMultiplierOrder()" 
+                                        style="width: 16px; height: 16px; padding: 0; background: #6b7280; border: none; border-radius: 0; color: white; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"
+                                        title="Randomize multiplier order">⤨</button>
+                                </label>
                                 <div style="display: flex; gap: 5px;">
                                     <input type="number" id="edit-countMultiplier" value="500" placeholder="Count"
                                         style="width: 25%;" min="0" max="10000" onchange="validateAndUpdate(this, 0, 10000)">
@@ -2711,6 +2715,44 @@ Based on the user's strategy description above, generate a bot that:
 
         let settingsUpdateTimeout = null;
         let lastSentSettingsJson = '';
+        
+        // Track the current order of multipliers
+        let multiplierOrder = ['count', 'distance', 'hq', 'destruction'];
+        
+        function randomizeMultiplierOrder() {
+            // Get current values
+            const values = {
+                count: parseInt(document.getElementById('edit-countMultiplier').value) || 0,
+                distance: parseInt(document.getElementById('edit-distanceMultiplier').value) || 0,
+                hq: parseInt(document.getElementById('edit-hqMultiplier').value) || 0,
+                destruction: parseInt(document.getElementById('edit-destructionMultiplier').value) || 0
+            };
+            
+            // Shuffle the order array
+            const newOrder = [...multiplierOrder];
+            for (let i = newOrder.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newOrder[i], newOrder[j]] = [newOrder[j], newOrder[i]];
+            }
+            multiplierOrder = newOrder;
+            
+            // Update the input fields with values in new order
+            document.getElementById('edit-countMultiplier').value = values[newOrder[0]];
+            document.getElementById('edit-distanceMultiplier').value = values[newOrder[1]];
+            document.getElementById('edit-hqMultiplier').value = values[newOrder[2]];
+            document.getElementById('edit-destructionMultiplier').value = values[newOrder[3]];
+            
+            // Update the label to show new order
+            const orderNames = newOrder.map(key => {
+                return key.charAt(0).toUpperCase() + key.slice(1);
+            });
+            document.getElementById('multiplier-order-label').textContent = `(${orderNames.join(', ')})`;
+            
+            // Send the update with the order information
+            sendSettingsUpdateImmediate();
+            
+            showNotification('Multiplier order randomized!');
+        }
 
         function sendSettingsUpdate() {
             if (!currentRoom || !selectedRoomId) return;
@@ -2737,7 +2779,8 @@ Based on the user's strategy description above, generate a bot that:
                 count: parseInt(document.getElementById('edit-countMultiplier').value) || 0,
                 distance: parseInt(document.getElementById('edit-distanceMultiplier').value) || 0,
                 hq: parseInt(document.getElementById('edit-hqMultiplier').value) || 0,
-                destruction: parseInt(document.getElementById('edit-destructionMultiplier').value) || 0
+                destruction: parseInt(document.getElementById('edit-destructionMultiplier').value) || 0,
+                order: multiplierOrder // Include the order
             };
 
             const teamColors = colorTeamColors.map(tc => {
