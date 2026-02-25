@@ -5714,15 +5714,23 @@
                     let f, t; if (Array.isArray(d)) { f = d[0]; t = d[1]; } else { f = d.from; t = d.to; }
                     if (f < this.st.length && t < this.st.length) this.ln.push({ f, t, destroyed: false, destroyedBy: null, destroyedScore: 0 });
                 });
+                // Don't generate req values here - they will come from server
+                // this.st.forEach(s => {
+                //     if (s.ty === T.B) {
+                //         const min = s.min_value || 2, max = s.max_value || 4;
+                //         s.req = Math.floor(Math.random() * (max - min + 1)) + min;
+                //         s.ful = [];
+                //     }
+                //     else if (s.ty === T.W) {
+                //         const min = s.min_value || 2, max = s.max_value || 3;
+                //         s.req = Math.floor(Math.random() * (max - min + 1)) + min;
+                //     }
+                // });
+                
+                // Initialize ful array for black holes
                 this.st.forEach(s => {
                     if (s.ty === T.B) {
-                        const min = s.min_value || 2, max = s.max_value || 4;
-                        s.req = Math.floor(Math.random() * (max - min + 1)) + min;
                         s.ful = [];
-                    }
-                    else if (s.ty === T.W) {
-                        const min = s.min_value || 2, max = s.max_value || 3;
-                        s.req = Math.floor(Math.random() * (max - min + 1)) + min;
                     }
                 });
             }
@@ -6367,7 +6375,8 @@
             startGame() {
                 this.p = false; document.getElementById('planning').style.display = 'none'; document.getElementById('timer').style.display = 'block';
                 // Don't reset myMoves - let server handle move synchronization
-                this.st.forEach(s => { if (s.ty >= T.B && s.req === undefined) s.req = Math.floor(Math.random() * 3) + 2; });
+                // Don't generate req values - they come from server
+                // this.st.forEach(s => { if (s.ty >= T.B && s.req === undefined) s.req = Math.floor(Math.random() * 3) + 2; });
 
                 // Reset timing for smooth round timer
                 this.roundStartTime = Date.now();
@@ -9148,6 +9157,16 @@
                             currentGame.updateUI();
                             console.log('✅ Map applied from game_started config');
                         }
+                    }
+                    
+                    // Apply server-authoritative star requirements (black holes and wormholes)
+                    if (data.starRequirements && Array.isArray(data.starRequirements)) {
+                        data.starRequirements.forEach(starReq => {
+                            if (starReq.index >= 0 && starReq.index < currentGame.st.length) {
+                                currentGame.st[starReq.index].req = starReq.req;
+                                console.log(`🎲 Applied server req=${starReq.req} for ${starReq.ty === 2 ? 'black hole' : 'wormhole'} at index ${starReq.index}`);
+                            }
+                        });
                     }
                     if (Array.isArray(cfg.aiBots)) {
                         // Properly instantiate AIBot objects

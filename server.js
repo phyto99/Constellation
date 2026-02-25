@@ -233,7 +233,18 @@ class ConstellationRoom extends Room {
                             // CRITICAL: Distribute moves when started via Admin presence (isGameStart = true)
                             this.distributeMoves(true);
 
-                            this.broadcast('game_started', { gameState: 'playing', config: this.gameConfig, currentRound: 1, botPlayers: this.getBotPlayerIds() });
+                            // Prepare star requirements for client sync (black holes and wormholes)
+                            const starRequirements = this.state.game.stars
+                                .map((star, index) => ({ index, req: star.req, ty: star.ty }))
+                                .filter(s => s.ty === 2 || s.ty === 3); // Only special stars
+
+                            this.broadcast('game_started', { 
+                                gameState: 'playing', 
+                                config: this.gameConfig, 
+                                currentRound: 1, 
+                                botPlayers: this.getBotPlayerIds(),
+                                starRequirements: starRequirements
+                            });
 
                             // Start the Game Loop
                             this.startGameLoop();
@@ -480,7 +491,19 @@ class ConstellationRoom extends Room {
 
                 // Initialize Round State
                 this.state.game.round = 1;
-                this.broadcast('game_started', { gameState: 'playing', config: this.gameConfig, currentRound: 1, botPlayers: this.getBotPlayerIds() });
+                
+                // Prepare star requirements for client sync (black holes and wormholes)
+                const starRequirements = this.state.game.stars
+                    .map((star, index) => ({ index, req: star.req, ty: star.ty }))
+                    .filter(s => s.ty === 2 || s.ty === 3); // Only special stars
+
+                this.broadcast('game_started', { 
+                    gameState: 'playing', 
+                    config: this.gameConfig, 
+                    currentRound: 1, 
+                    botPlayers: this.getBotPlayerIds(),
+                    starRequirements: starRequirements
+                });
 
                 // Start the Game Loop
                 this.startGameLoop();
