@@ -222,6 +222,29 @@ class ConstellationRoom extends Room {
                     if (!msg || !msg.type) return;
                     if (msg.type === 'start_game') {
                         if (this.state.gameState === 'waiting') {
+                            // Validate: Check if there are any human players (non-bot, non-admin)
+                            let humanPlayerCount = 0;
+                            this.state.players.forEach((player, id) => {
+                                // Count only human players (not bots, not admin accounts)
+                                if (!player.isBot && !id.startsWith('bot_') && !player.name.includes('Admin')) {
+                                    humanPlayerCount++;
+                                }
+                            });
+
+                            if (humanPlayerCount === 0) {
+                                console.log(`❌ Cannot start game: No human players connected (only bots/admin)`);
+                                // Notify admin that game cannot start
+                                if (this.presence) {
+                                    this.presence.publish('admin_update', {
+                                        roomId: this.roomId,
+                                        error: 'Cannot start game without human players',
+                                        state: 'waiting'
+                                    });
+                                }
+                                return;
+                            }
+
+                            console.log(`✅ Starting game with ${humanPlayerCount} human player(s)`);
                             this.state.gameState = 'playing';
 
                             // Initialize Round State
@@ -362,6 +385,22 @@ class ConstellationRoom extends Room {
 
                                 // Merge other top-level settings
                                 Object.assign(this.gameConfig, msg.settings);
+
+                                // Update team steals if the steals setting changed
+                                if (msg.settings.steals !== undefined && this.state.game.teams.length > 0) {
+                                    const newStealLimit = parseInt(msg.settings.steals, 10);
+                                    this.state.game.teams.forEach((team, index) => {
+                                        team.stealsLeft = newStealLimit;
+                                    });
+                                    console.log(`� Updated all team steals to ${newStealLimit}`);
+                                    
+                                    // Broadcast steals update to all clients
+                                    const teamUpdates = this.state.game.teams.map((team, index) => ({
+                                        index: index,
+                                        stealsLeft: newStealLimit
+                                    }));
+                                    this.broadcast('state_changed', { teams: teamUpdates });
+                                }
 
                                 // Sync AI bots when settings are updated (only during waiting phase)
                                 if (this.state.gameState === 'waiting' && msg.settings.aiBots !== undefined) {
@@ -1157,6 +1196,15 @@ class ConstellationRoom extends Room {
                         this.state.game.teams[teamIdx].hqCount = 0;
                         const stealLimit = parseInt(this.gameConfig.steals || 15, 10);
                         this.state.game.teams[teamIdx].stealsLeft = stealLimit;
+                        
+                        // Broadcast steals initialization to all clients
+                        this.broadcast('state_changed', {
+                            teams: [{
+                                index: teamIdx,
+                                stealsLeft: stealLimit
+                            }]
+                        });
+                        console.log(`🔄 Initialized team ${teamIdx} steals to ${stealLimit}`);
                     }
                 }
 

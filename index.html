@@ -6581,6 +6581,9 @@
                         data.distance = Math.round(data.distance);
                         data.hqDistance = Math.round(data.hqDistance);
                         data.destruction = Math.round(data.destruction);
+                        
+                        // Sync steals from team object to ensure consistency
+                        data.steals = this.tms[teamId].st;
                     }
                 });
 

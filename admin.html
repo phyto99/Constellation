@@ -3089,6 +3089,7 @@ Based on the user's strategy description above, generate a bot that:
 
             colorPlayers.forEach((player, index) => {
                 player.colorTeam = index % colorTeamColors.length;
+                syncColorTeamToGame(player); // Actually sync to server
             });
 
             renderColorPlayerPool();
@@ -3098,7 +3099,10 @@ Based on the user's strategy description above, generate a bot that:
         }
 
         function colorClearAssignments() {
-            colorPlayers.forEach(p => p.colorTeam = null);
+            colorPlayers.forEach(p => {
+                p.colorTeam = null;
+                syncColorTeamToGame(p); // Actually sync to server
+            });
             renderColorPlayerPool();
             renderColorTeamAssignments();
             updateColorStats();
