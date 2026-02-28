@@ -794,7 +794,7 @@ class ConstellationRoom extends Room {
                 console.log(`✅ Star ${data.starIndex} claimed by team ${teamIndex}${isHQ ? ' (HQ)' : ''} (player: ${player.id})`);
 
                 // Check for special star activations after the move
-                this.checkBlackHoleActivation(teamIndex);
+                // Check wormhole first - it takes priority over blackhole
                 const wormholeWin = this.checkWormHoleActivation(teamIndex);
                 if (wormholeWin) {
                     this.state.gameState = 'ended';
@@ -811,6 +811,9 @@ class ConstellationRoom extends Room {
                         reason: 'wormhole',
                         message: `Team ${teamIndex} wins by connecting wormholes!`
                     });
+                } else {
+                    // Only check blackhole if wormhole didn't trigger
+                    this.checkBlackHoleActivation(teamIndex);
                 }
             } else {
                 client.send('move_rejected', {
@@ -901,7 +904,7 @@ class ConstellationRoom extends Room {
                 console.log(`✅ Star ${data.starIndex} stolen by team ${teamIndex}${isHQ ? ' (HQ)' : ''} (player: ${player.id})`);
 
                 // Check for special star activations after the move
-                this.checkBlackHoleActivation(teamIndex);
+                // Check wormhole first - it takes priority over blackhole
                 const wormholeWin = this.checkWormHoleActivation(teamIndex);
                 if (wormholeWin) {
                     this.state.gameState = 'ended';
@@ -918,6 +921,9 @@ class ConstellationRoom extends Room {
                         reason: 'wormhole',
                         message: `Team ${teamIndex} wins by connecting wormholes!`
                     });
+                } else {
+                    // Only check blackhole if wormhole didn't trigger
+                    this.checkBlackHoleActivation(teamIndex);
                 }
             } else {
                 client.send('move_rejected', {
@@ -988,7 +994,7 @@ class ConstellationRoom extends Room {
                 console.log(`✅ HQ placed at star ${data.starIndex} by team ${teamIndex} (player: ${player.id})`);
 
                 // Check for special star activations after the move
-                this.checkBlackHoleActivation(teamIndex);
+                // Check wormhole first - it takes priority over blackhole
                 const wormholeWin = this.checkWormHoleActivation(teamIndex);
                 if (wormholeWin) {
                     this.state.gameState = 'ended';
@@ -1005,6 +1011,9 @@ class ConstellationRoom extends Room {
                         reason: 'wormhole',
                         message: `Team ${teamIndex} wins by connecting wormholes!`
                     });
+                } else {
+                    // Only check blackhole if wormhole didn't trigger
+                    this.checkBlackHoleActivation(teamIndex);
                 }
             } else {
                 client.send('move_rejected', {

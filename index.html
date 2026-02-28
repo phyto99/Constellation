@@ -6274,7 +6274,13 @@
 
                         // Update timer bar every frame for maximum smoothness
                         const te = document.getElementById('timer');
-                        te.style.width = `${newWidth.toFixed(2)}%`;
+                        
+                        // Freeze timer at 0% if game is over
+                        if (this.go) {
+                            te.style.width = '0%';
+                        } else {
+                            te.style.width = `${newWidth.toFixed(2)}%`;
+                        }
 
                         if (remainingTime <= 0) this.nextRound();
                     } else {
@@ -9379,10 +9385,15 @@
                     const seconds = Math.ceil(state.timeRemaining / 1000);
                     const timerElement = document.getElementById('timer');
                     if (timerElement) {
-                        // Use actual round length instead of hardcoded 30 seconds
-                        const roundLength = (currentGame && currentGame.RT) ? currentGame.RT * 1000 : 30000;
-                        const percentage = (state.timeRemaining / roundLength) * 100;
-                        timerElement.style.width = `${percentage}%`;
+                        // Freeze timer at 0% if game is over
+                        if (currentGame && currentGame.go) {
+                            timerElement.style.width = '0%';
+                        } else {
+                            // Use actual round length instead of hardcoded 30 seconds
+                            const roundLength = (currentGame && currentGame.RT) ? currentGame.RT * 1000 : 30000;
+                            const percentage = (state.timeRemaining / roundLength) * 100;
+                            timerElement.style.width = `${percentage}%`;
+                        }
                         timerElement.style.display = state.gameState === 'playing' ? 'block' : 'none';
                     }
                 }
@@ -9441,8 +9452,13 @@
                 // Update timer display immediately
                 const timerElement = document.getElementById('timer');
                 if (timerElement) {
-                    const percentage = (data.timeRemaining / this.serverRoundLength) * 100;
-                    timerElement.style.width = `${Math.max(0, percentage).toFixed(2)}%`;
+                    // Freeze timer at 0% if game is over
+                    if (currentGame && currentGame.go) {
+                        timerElement.style.width = '0%';
+                    } else {
+                        const percentage = (data.timeRemaining / this.serverRoundLength) * 100;
+                        timerElement.style.width = `${Math.max(0, percentage).toFixed(2)}%`;
+                    }
                     timerElement.style.display = 'block';
                 }
 
@@ -9491,7 +9507,12 @@
                 // INSTANT TIMER RESET (Visual sync)
                 const timerElement = document.getElementById('timer');
                 if (timerElement) {
-                    timerElement.style.width = '100%';
+                    // Don't reset timer if game is over
+                    if (currentGame && currentGame.go) {
+                        timerElement.style.width = '0%';
+                    } else {
+                        timerElement.style.width = '100%';
+                    }
                 }
 
                 // INSTANT MOVE UPDATE
