@@ -5712,6 +5712,8 @@
                             s.min_value = it === T.B ? 2 : 2;
                             s.max_value = it === T.B ? 4 : 3;
                         }
+                        // Set req to minimum value for consistency
+                        s.req = s.min_value;
                     }
                     this.st.push(s);
                 });
@@ -6089,8 +6091,8 @@
                 });
 
                 for (let i = 0; i < 35; i++)this.st.push(this.makeStar(Math.random() * this.MW, Math.random() * this.MH, Math.random() < 0.2 ? T.C : T.N));
-                for (let i = 0; i < 5; i++) { const s = this.makeStar(Math.random() * this.MW, Math.random() * this.MH, T.B); s.req = Math.floor(Math.random() * 3) + 2; s.ful = []; this.st.push(s); }
-                for (let i = 0; i < 3; i++) { const s = this.makeStar(Math.random() * this.MW, Math.random() * this.MH, T.W); s.req = Math.floor(Math.random() * 2) + 2; this.st.push(s); }
+                for (let i = 0; i < 5; i++) { const s = this.makeStar(Math.random() * this.MW, Math.random() * this.MH, T.B); s.req = 2; s.min_value = 2; s.max_value = 4; s.ful = []; this.st.push(s); }
+                for (let i = 0; i < 3; i++) { const s = this.makeStar(Math.random() * this.MW, Math.random() * this.MH, T.W); s.req = 2; s.min_value = 2; s.max_value = 3; this.st.push(s); }
                 for (let i = 0; i < this.st.length; i++)for (let j = i + 1; j < this.st.length; j++)if (Math.random() < 0.2) this.ln.push({ f: i, t: j, destroyed: false, destroyedBy: null, destroyedScore: 0 });
             }
             makeStar(x, y, ty) { return { x, y, tm: null, hq: false, ty, pr: false, destroyed: false, destroyedBy: null, destroyedScore: 0 }; }
@@ -8232,9 +8234,17 @@
 
                 // Draw text for special stars with crisp rendering
                 if (s.ty >= T.B) {
-                    let rt = this.p ? (s.min_value !== undefined && s.max_value !== undefined ?
-                        (s.min_value === s.max_value ? s.min_value.toString() : `${s.min_value}-${s.max_value}`) :
-                        (s.ty === T.B ? '2-4' : '2-3')) : (s.req ? s.req.toString() : null);
+                    let rt;
+                    if (this.p) {
+                        // During planning, show the range or single value
+                        rt = (s.min_value !== undefined && s.max_value !== undefined ?
+                            (s.min_value === s.max_value ? s.min_value.toString() : `${s.min_value}-${s.max_value}`) :
+                            (s.ty === T.B ? '2-4' : '2-3'));
+                    } else {
+                        // After game starts, use the minimum value (or req if set)
+                        rt = s.req ? s.req.toString() : (s.min_value || (s.ty === T.B ? 2 : 2)).toString();
+                    }
+                    
                     if (rt) {
                         const tc = s.ty === T.B ? 0xFFFFFF : 0x000000;
                         this.getText(rt, x, y, {
@@ -8984,28 +8994,6 @@
                     showNotification(data.reason === 'not_allowed' ? 'Team selection is locked by host' : (data.reason || 'Team change rejected'));
                 });
 
-                // Handle server-generated star requirements for special stars (black holes, wormholes)
-                // Server generates random req values between minReq and maxReq to ensure consistency across all clients
-                this.room.onMessage('star_requirements', (data) => {
-                    if (!currentGame || !data.requirements) return;
-
-                    console.log('🎲 Received star requirements from server:', data.requirements);
-
-                    data.requirements.forEach(({ index, req, ty }) => {
-                        if (index >= 0 && index < currentGame.st.length) {
-                            const star = currentGame.st[index];
-                            star.req = req;
-                            console.log(`🎲 Star ${index} (${ty === 2 ? 'black hole' : 'wormhole'}) req set to ${req}`);
-
-                            // Redraw the star to show the actual requirement instead of range
-                            currentGame.drawStar(star, index);
-                        }
-                    });
-
-                    // Update UI to reflect new requirements
-                    currentGame.updateUI();
-                });
-
                 // Handle move transfers when a player leaves
                 this.room.onMessage('moves_transferred', (data) => {
                     console.log('🔄 Moves transferred:', data);
@@ -9180,15 +9168,6 @@
                         }
                     }
                     
-                    // Apply server-authoritative star requirements (black holes and wormholes)
-                    if (data.starRequirements && Array.isArray(data.starRequirements)) {
-                        data.starRequirements.forEach(starReq => {
-                            if (starReq.index >= 0 && starReq.index < currentGame.st.length) {
-                                currentGame.st[starReq.index].req = starReq.req;
-                                console.log(`🎲 Applied server req=${starReq.req} for ${starReq.ty === 2 ? 'black hole' : 'wormhole'} at index ${starReq.index}`);
-                            }
-                        });
-                    }
                     if (Array.isArray(cfg.aiBots)) {
                         // Properly instantiate AIBot objects
                         currentGame.aiBots = cfg.aiBots.map(botData => {
@@ -9257,8 +9236,12 @@
 
                 const roundElement = document.getElementById('round');
                 if (roundElement) {
-                    const roundNum = (data && typeof data.currentRound === 'number') ? data.currentRound : 1;
-                    roundElement.textContent = `Round #${roundNum}`;
+                    if (currentGame && currentGame.go) {
+                        roundElement.textContent = 'Game Over';
+                    } else {
+                        const roundNum = (data && typeof data.currentRound === 'number') ? data.currentRound : 1;
+                        roundElement.textContent = `Round #${roundNum}`;
+                    }
                 }
             }
 
@@ -9383,7 +9366,11 @@
                 // Update round display
                 const roundElement = document.getElementById('round');
                 if (roundElement && state.currentRound) {
-                    roundElement.textContent = `Round #${state.currentRound}`;
+                    if (currentGame && currentGame.go) {
+                        roundElement.textContent = 'Game Over';
+                    } else {
+                        roundElement.textContent = `Round #${state.currentRound}`;
+                    }
                 }
 
                 // Update timer display (only in single-player mode)
@@ -9443,7 +9430,11 @@
                 // Update round display
                 const roundElement = document.getElementById('round');
                 if (roundElement) {
-                    roundElement.textContent = `Round #${data.currentRound}`;
+                    if (currentGame && currentGame.go) {
+                        roundElement.textContent = 'Game Over';
+                    } else {
+                        roundElement.textContent = `Round #${data.currentRound}`;
+                    }
                 }
 
                 // Update timer display immediately
@@ -9465,6 +9456,12 @@
                 const timerElement = document.getElementById('timer');
                 if (!timerElement) return;
 
+                // Stop timer if game is over
+                if (currentGame && currentGame.go) {
+                    timerElement.style.width = '0%';
+                    return;
+                }
+
                 // Calculate interpolated time
                 const now = Date.now();
                 const timeSinceUpdate = now - this.lastServerTimestamp;
@@ -9483,7 +9480,11 @@
 
                 const roundElement = document.getElementById('round');
                 if (roundElement) {
-                    roundElement.textContent = `Round #${data.currentRound}`;
+                    if (currentGame && currentGame.go) {
+                        roundElement.textContent = 'Game Over';
+                    } else {
+                        roundElement.textContent = `Round #${data.currentRound}`;
+                    }
                 }
 
                 // INSTANT TIMER RESET (Visual sync)

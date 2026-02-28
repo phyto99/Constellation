@@ -256,17 +256,11 @@ class ConstellationRoom extends Room {
                             // CRITICAL: Distribute moves when started via Admin presence (isGameStart = true)
                             this.distributeMoves(true);
 
-                            // Prepare star requirements for client sync (black holes and wormholes)
-                            const starRequirements = this.state.game.stars
-                                .map((star, index) => ({ index, req: star.req, ty: star.ty }))
-                                .filter(s => s.ty === 2 || s.ty === 3); // Only special stars
-
                             this.broadcast('game_started', { 
                                 gameState: 'playing', 
                                 config: this.gameConfig, 
                                 currentRound: 1, 
-                                botPlayers: this.getBotPlayerIds(),
-                                starRequirements: starRequirements
+                                botPlayers: this.getBotPlayerIds()
                             });
 
                             // Start the Game Loop
@@ -530,18 +524,12 @@ class ConstellationRoom extends Room {
 
                 // Initialize Round State
                 this.state.game.round = 1;
-                
-                // Prepare star requirements for client sync (black holes and wormholes)
-                const starRequirements = this.state.game.stars
-                    .map((star, index) => ({ index, req: star.req, ty: star.ty }))
-                    .filter(s => s.ty === 2 || s.ty === 3); // Only special stars
 
                 this.broadcast('game_started', { 
                     gameState: 'playing', 
                     config: this.gameConfig, 
                     currentRound: 1, 
-                    botPlayers: this.getBotPlayerIds(),
-                    starRequirements: starRequirements
+                    botPlayers: this.getBotPlayerIds()
                 });
 
                 // Start the Game Loop
@@ -603,7 +591,7 @@ class ConstellationRoom extends Room {
 
             this.gameLoopInterval = setInterval(() => {
                 // Check if game ended or disposed
-                if (this.locked) {
+                if (this.locked || this.state.gameState === 'ended' || this.state.gameState === 'finished') {
                     clearInterval(this.gameLoopInterval);
                     return;
                 }
@@ -809,12 +797,20 @@ class ConstellationRoom extends Room {
                 this.checkBlackHoleActivation(teamIndex);
                 const wormholeWin = this.checkWormHoleActivation(teamIndex);
                 if (wormholeWin) {
+                    this.state.gameState = 'ended';
+                    
+                    // Stop the timer immediately
+                    this.broadcast('time_update', {
+                        timeRemaining: 0,
+                        currentRound: this.state.game.round,
+                        state: 'ended'
+                    });
+                    
                     this.broadcast('game_ended', { 
                         winner: teamIndex, 
                         reason: 'wormhole',
                         message: `Team ${teamIndex} wins by connecting wormholes!`
                     });
-                    this.state.gameState = 'ended';
                 }
             } else {
                 client.send('move_rejected', {
@@ -908,12 +904,20 @@ class ConstellationRoom extends Room {
                 this.checkBlackHoleActivation(teamIndex);
                 const wormholeWin = this.checkWormHoleActivation(teamIndex);
                 if (wormholeWin) {
+                    this.state.gameState = 'ended';
+                    
+                    // Stop the timer immediately
+                    this.broadcast('time_update', {
+                        timeRemaining: 0,
+                        currentRound: this.state.game.round,
+                        state: 'ended'
+                    });
+                    
                     this.broadcast('game_ended', { 
                         winner: teamIndex, 
                         reason: 'wormhole',
                         message: `Team ${teamIndex} wins by connecting wormholes!`
                     });
-                    this.state.gameState = 'ended';
                 }
             } else {
                 client.send('move_rejected', {
@@ -987,12 +991,20 @@ class ConstellationRoom extends Room {
                 this.checkBlackHoleActivation(teamIndex);
                 const wormholeWin = this.checkWormHoleActivation(teamIndex);
                 if (wormholeWin) {
+                    this.state.gameState = 'ended';
+                    
+                    // Stop the timer immediately
+                    this.broadcast('time_update', {
+                        timeRemaining: 0,
+                        currentRound: this.state.game.round,
+                        state: 'ended'
+                    });
+                    
                     this.broadcast('game_ended', { 
                         winner: teamIndex, 
                         reason: 'wormhole',
                         message: `Team ${teamIndex} wins by connecting wormholes!`
                     });
-                    this.state.gameState = 'ended';
                 }
             } else {
                 client.send('move_rejected', {
@@ -1075,14 +1087,12 @@ class ConstellationRoom extends Room {
                         star.pr = starData.pr || false;
                         star.destroyed = starData.destroyed || false;
 
-                        // SERVER-SIDE RANDOM REQUIREMENT GENERATION
-                        // For black holes (ty=2) and wormholes (ty=3), generate random req
+                        // Set requirements for special stars to minimum value
+                        // For black holes (ty=2) and wormholes (ty=3), use min_value or default to 2
                         // Type mapping: 0=Normal, 1=Cluster, 2=Black hole, 3=Wormhole
                         if (starData.ty === 2 || starData.ty === 3) {
-                            const minReq = starData.min_value || (starData.ty === 2 ? 2 : 2);
-                            const maxReq = starData.max_value || (starData.ty === 2 ? 4 : 3);
-                            star.req = Math.floor(Math.random() * (maxReq - minReq + 1)) + minReq;
-                            console.log(`🎲 Generated req=${star.req} for ${starData.ty === 2 ? 'black hole' : 'wormhole'} at index ${index} (range: ${minReq}-${maxReq})`);
+                            star.req = starData.min_value || 2;
+                            console.log(`✓ Set req=${star.req} for ${starData.ty === 2 ? 'black hole' : 'wormhole'} at index ${index}`);
                         } else {
                             star.req = starData.req || 0;
                         }
