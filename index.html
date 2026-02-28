@@ -6275,9 +6275,10 @@
                         // Update timer bar every frame for maximum smoothness
                         const te = document.getElementById('timer');
                         
-                        // Freeze timer at 0% if game is over
+                        // Keep timer at 100% with winning team color if game is over
                         if (this.go) {
-                            te.style.width = '0%';
+                            // Timer color is set by updateUI, just keep it at 100%
+                            te.style.width = '100%';
                         } else {
                             te.style.width = `${newWidth.toFixed(2)}%`;
                         }
@@ -9385,9 +9386,9 @@
                     const seconds = Math.ceil(state.timeRemaining / 1000);
                     const timerElement = document.getElementById('timer');
                     if (timerElement) {
-                        // Freeze timer at 0% if game is over
+                        // Keep timer at 100% if game is over (color set by updateUI)
                         if (currentGame && currentGame.go) {
-                            timerElement.style.width = '0%';
+                            timerElement.style.width = '100%';
                         } else {
                             // Use actual round length instead of hardcoded 30 seconds
                             const roundLength = (currentGame && currentGame.RT) ? currentGame.RT * 1000 : 30000;
@@ -9452,9 +9453,9 @@
                 // Update timer display immediately
                 const timerElement = document.getElementById('timer');
                 if (timerElement) {
-                    // Freeze timer at 0% if game is over
+                    // Keep timer at 100% if game is over (color set by updateUI)
                     if (currentGame && currentGame.go) {
-                        timerElement.style.width = '0%';
+                        timerElement.style.width = '100%';
                     } else {
                         const percentage = (data.timeRemaining / this.serverRoundLength) * 100;
                         timerElement.style.width = `${Math.max(0, percentage).toFixed(2)}%`;
@@ -9473,9 +9474,9 @@
                 const timerElement = document.getElementById('timer');
                 if (!timerElement) return;
 
-                // Stop timer if game is over
+                // Keep timer at 100% if game is over (color set by updateUI)
                 if (currentGame && currentGame.go) {
-                    timerElement.style.width = '0%';
+                    timerElement.style.width = '100%';
                     return;
                 }
 
@@ -9507,9 +9508,9 @@
                 // INSTANT TIMER RESET (Visual sync)
                 const timerElement = document.getElementById('timer');
                 if (timerElement) {
-                    // Don't reset timer if game is over
+                    // Keep timer at 100% if game is over (color set by updateUI)
                     if (currentGame && currentGame.go) {
-                        timerElement.style.width = '0%';
+                        timerElement.style.width = '100%';
                     } else {
                         timerElement.style.width = '100%';
                     }
