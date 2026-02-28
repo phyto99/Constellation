@@ -1797,10 +1797,13 @@ class ConstellationRoom extends Room {
         return false;
     }
 
-    // Count connected stars of the same team
+    // Count connected stars of the same team (including the wormhole itself)
     countConnectedStars(starIndex, teamIndex, adjacency) {
         const stars = this.state.game.stars;
-        let count = 0;
+        const star = stars[starIndex];
+        
+        // Start with 1 to count the wormhole itself
+        let count = 1;
         const neighbors = adjacency[starIndex] || [];
 
         for (const neighborIndex of neighbors) {

@@ -7199,9 +7199,10 @@
                 return count;
             }
 
-            // Optimized version using cached adjacency
+            // Optimized version using cached adjacency (includes the star itself in count)
             countConnCached(star, team) {
-                let count = 0;
+                // Start with 1 to count the wormhole itself
+                let count = 1;
                 const neighbors = this.adjacencyCache[star];
                 for (let i = 0; i < neighbors.length; i++) {
                     if (this.st[neighbors[i]].tm === team) {
