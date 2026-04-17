@@ -1,0 +1,220 @@
+DEPRECATION WARNING: 'pingInterval', 'pingMaxRetries', 'server', and 'verifyClient' Server options will be permanently moved to WebSocketTransport on v0.15
+new Server({
+  transport: new WebSocketTransport({
+    pingInterval: ...,
+    pingMaxRetries: ...,
+    server: ...,
+    verifyClient: ...
+  })
+})
+👉 Documentation: https://docs.colyseus.io/server/transport/
+
+       ___      _
+      / __\___ | |_   _ ___  ___ _   _ ___
+     / /  / _ \| | | | / __|/ _ \ | | / __|
+    / /__| (_) | | |_| \__ \  __/ |_| \__ \
+    \____/\___/|_|\__, |___/\___|\__,_|___/
+                  |___/
+
+     · Multiplayer Framework for Node.js ·
+
+💖 Consider becoming a Sponsor on GitHub → https://github.com/sponsors/endel
+🌟 Give us a star on GitHub → https://github.com/colyseus/colyseus
+☁️  Deploy and scale your project on Colyseus Cloud → https://cloud.colyseus.io
+
+
+
+========================================
+✓ Server running on http://localhost:2567
+✓ Admin: http://localhost:2567/admin
+========================================
+
+✓ TTClub signaling: ws://localhost:2567/ttclub-lobby
+📍 Found 14 maps in local folder: [
+  '6 Syn Wormholes.json',
+  '6 Syn.json',
+  'Ad Astra by Josh Dahn.json',
+  'Butterfly Effect by X.json',
+  'CITYSCAPE.json',
+  'Castle Conundrum.json',
+  'Championship.json',
+  'FLOW by Winston Tang.json',
+  'Hand.json',
+  'LOTR ROSE.json',
+  'Last map (goodbye).json',
+  'PROVIDENCE.json',
+  'Pattern Recognition (alt).json',
+  'Suzanne.json'
+]
+AdminRoom created
+Admin client R9ecFDjOB joined
+✓ Rooms list updated: 0 rooms
+✓ Rooms list updated: 0 rooms
+ConstellationRoom created with options: { name: 'Unnamed Game', gameType: 'Tabletop Club', maxPlayers: 20 }
+📊 Assigned session number: 87
+Player fYCHxCWIm joined room Xw402wNZG
+📤 Sent current config to new player fYCHxCWIm, customMap: null
+📡 Room Xw402wNZG publishing admin_update (Players: 1)
+📡 Room Xw402wNZG publishing admin_update (Players: 1)
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+✓ Rooms list updated: 1 rooms
+Admin client R9ecFDjOB left
+AdminRoom disposed
