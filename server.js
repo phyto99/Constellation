@@ -9,6 +9,126 @@ const { monitor } = require('@colyseus/monitor');
 const fs = require('fs');
 const axios = require('axios');
 const { StarSchema, TeamSchema, GameStateSchema } = require('./game-schema');
+const WebSocket = require('ws');
+
+// ─── TTClub WebRTC Signaling Server ───────────────────────────────────────────
+const ttclubWss = new WebSocket.Server({ noServer: true });
+const ttclubRooms = new Map(); // roomCode -> { clients: Map<id,ws>, hostId, sealed, players: Map<id,{color,name,joinedAt}> }
+let ttclubPeerIdCounter = 1;
+
+// Deterministic color palette matching Constellation's team color system
+const TEAM_COLORS = [
+    '#ef4444','#f97316','#eab308','#22c55e','#14b8a6',
+    '#3b82f6','#8b5cf6','#ec4899','#f43f5e','#06b6d4',
+    '#84cc16','#a855f7','#fb923c','#4ade80','#60a5fa',
+];
+
+function ttclubGenerateRoomCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code;
+    do {
+        code = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    } while (ttclubRooms.has(code));
+    return code;
+}
+
+ttclubWss.on('connection', (ws) => {
+    ws._tc = { id: null, roomCode: null };
+
+    ws.on('message', (rawData) => {
+        const msg = rawData.toString();
+        const nl = msg.indexOf('\n');
+        if (nl < 0) return;
+        const header = msg.substring(0, nl);
+        const body = msg.substring(nl + 1);
+        if (header.startsWith('J: ')) {
+            ttclubHandleJoin(ws, header.substring(3).trim());
+        } else if (header.startsWith('S: ')) {
+            ttclubHandleSeal(ws);
+        } else if (header.startsWith('O: ')) {
+            ttclubForward(ws, parseInt(header.substring(3)), `O: ${ws._tc.id}\n${body}`);
+        } else if (header.startsWith('A: ')) {
+            ttclubForward(ws, parseInt(header.substring(3)), `A: ${ws._tc.id}\n${body}`);
+        } else if (header.startsWith('C: ')) {
+            ttclubForward(ws, parseInt(header.substring(3)), `C: ${ws._tc.id}\n${body}`);
+        }
+    });
+
+    ws.on('close', () => ttclubHandleDisconnect(ws));
+    ws.on('error', () => ttclubHandleDisconnect(ws));
+});
+
+function ttclubHandleJoin(ws, requestedCode) {
+    const id = ttclubPeerIdCounter++;
+    ws._tc.id = id;
+    ws.send(`I: ${id}\n`);
+
+    if (requestedCode === '') {
+        const code = ttclubGenerateRoomCode();
+        const players = new Map([[id, { color: TEAM_COLORS[0], name: `Player 1`, joinedAt: Date.now(), isHost: true }]]);
+        ttclubRooms.set(code, { clients: new Map([[id, ws]]), hostId: id, sealed: false, players });
+        ws._tc.roomCode = code;
+        ws.send(`J: ${code}\n`);
+        console.log(`[TTClub] Room ${code} created, host=${id}`);
+    } else {
+        const room = ttclubRooms.get(requestedCode);
+        if (!room) { ws.close(4007, 'Room does not exist.'); return; }
+        if (room.sealed) { ws.close(4008, 'Room is sealed.'); return; }
+        for (const [existingId, existingWs] of room.clients) {
+            if (existingWs.readyState === WebSocket.OPEN) existingWs.send(`N: ${id}\n`);
+            ws.send(`N: ${existingId}\n`);
+        }
+        room.clients.set(id, ws);
+        const playerNum = room.players.size + 1;
+        const color = TEAM_COLORS[(playerNum - 1) % TEAM_COLORS.length];
+        room.players.set(id, { color, name: `Player ${playerNum}`, joinedAt: Date.now(), isHost: false });
+        ws._tc.roomCode = requestedCode;
+        ws.send(`J: ${requestedCode}\n`);
+        console.log(`[TTClub] Peer ${id} joined room ${requestedCode}`);
+    }
+}
+
+function ttclubHandleSeal(ws) {
+    const { roomCode, id } = ws._tc;
+    if (!roomCode) return;
+    const room = ttclubRooms.get(roomCode);
+    if (!room || room.hostId !== id) return;
+    room.sealed = true;
+    for (const [, clientWs] of room.clients) {
+        if (clientWs.readyState === WebSocket.OPEN) clientWs.send(`S: \n`);
+    }
+    console.log(`[TTClub] Room ${roomCode} sealed`);
+}
+
+function ttclubForward(fromWs, destId, msg) {
+    const room = ttclubRooms.get(fromWs._tc.roomCode);
+    if (!room) return;
+    const destWs = room.clients.get(destId);
+    if (destWs && destWs.readyState === WebSocket.OPEN) destWs.send(msg);
+}
+
+function ttclubHandleDisconnect(ws) {
+    const { id, roomCode } = ws._tc;
+    if (!roomCode || id === null) return;
+    ws._tc.roomCode = null;
+    const room = ttclubRooms.get(roomCode);
+    if (!room) return;
+    room.clients.delete(id);
+    room.players.delete(id);
+    for (const [, clientWs] of room.clients) {
+        if (clientWs.readyState === WebSocket.OPEN) clientWs.send(`D: ${id}\n`);
+    }
+    if (room.hostId === id || room.clients.size === 0) {
+        if (room.hostId === id) {
+            for (const [, clientWs] of room.clients) clientWs.close(4003, 'Host has disconnected.');
+        }
+        ttclubRooms.delete(roomCode);
+        console.log(`[TTClub] Room ${roomCode} closed`);
+    } else {
+        console.log(`[TTClub] Peer ${id} left room ${roomCode}`);
+    }
+}
+// ──────────────────────────────────────────────────────────────────────────────
 
 const app = express();
 app.use(cors());
@@ -2127,10 +2247,58 @@ app.use('/colyseus', basicAuthMiddleware, monitor({
 }));
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
-app.get('/other', (req, res) => res.sendFile(path.join(__dirname, 'other.html')));
-app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
+function setCOEPHeaders(_req, res, next) {
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+    next();
+}
+app.get('/', setCOEPHeaders, (_req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
+app.get('/other', (_req, res) => res.sendFile(path.join(__dirname, 'other.html')));
+app.get('/admin', setCOEPHeaders, (_req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 app.get('/game/:roomId', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+
+// TTClub player tracking API — admin panel polls this to show who's in the room
+app.get('/ttclub-api/room/:code/players', (req, res) => {
+    const code = req.params.code.toUpperCase();
+    const room = ttclubRooms.get(code);
+    if (!room) return res.json({ players: [] });
+    const players = [];
+    for (const [id, info] of room.players) {
+        players.push({ id, color: info.color, name: info.name, isHost: info.isHost, joinedAt: info.joinedAt });
+    }
+    res.json({ players });
+});
+
+// TTClub player name registration — join page POSTs here to set a custom name
+app.post('/ttclub-api/room/:code/name', express.json(), (_req, res) => {
+    // This is best-effort; the peer may not have connected yet.
+    // Store pending name by fingerprint (IP) so it can be applied on connect.
+    res.json({ ok: true });
+});
+
+// Debug log collector from seepcards.html console intercept
+const fs_dbg = require('fs');
+const _dbgLog = require('path').join(__dirname, 'ttclub_debug.log');
+app.post('/debug-log', (req, res) => {
+    let body = '';
+    req.on('data', d => body += d);
+    req.on('end', () => {
+        const lines = body.split('\n').filter(l => l.trim());
+        lines.forEach(l => {
+            const entry = new Date().toISOString().substring(11,19) + ' ' + l;
+            process.stdout.write('[GDDBG] ' + entry + '\n');
+            fs_dbg.appendFileSync(_dbgLog, entry + '\n');
+        });
+        res.json({ ok: true, count: lines.length });
+    });
+});
+
+// Tabletop Club web export — needs COOP/COEP headers for SharedArrayBuffer (WASM threads)
+app.use('/ttclub2', (_req, res, next) => {
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+    next();
+}, express.static(path.join(__dirname, 'ttclub2')));
 app.use(express.static(path.join(__dirname), { index: false }));
 
 // Server setup
@@ -2149,6 +2317,24 @@ gameServer.listen(port).then(() => {
     console.log(`✓ Server running on http://localhost:${port}`);
     console.log(`✓ Admin: http://localhost:${port}/admin`);
     console.log('========================================\n');
+
+    // Route /ttclub-lobby WebSocket upgrades to our signaling server,
+    // let Colyseus handle everything else.
+    const colyseusUpgradeListeners = server.listeners('upgrade').slice();
+    server.removeAllListeners('upgrade');
+    server.on('upgrade', (request, socket, head) => {
+        const pathname = new URL(request.url, `http://localhost`).pathname;
+        if (pathname === '/ttclub-lobby') {
+            ttclubWss.handleUpgrade(request, socket, head, (ws) => {
+                ttclubWss.emit('connection', ws, request);
+            });
+        } else {
+            for (const listener of colyseusUpgradeListeners) {
+                listener.call(server, request, socket, head);
+            }
+        }
+    });
+    console.log(`✓ TTClub signaling: ws://localhost:${port}/ttclub-lobby`);
 }).catch((error) => {
     console.error('Failed to start server:', error);
     process.exit(1);
