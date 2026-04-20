@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/x-icon" href="/golad-src/favicon.ico">
+    <title>GOLAD | Game of Life and Death</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        html, body { width:100%; height:100%; overflow:hidden; background:#000; }
+        canvas { display:block; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
+    <script src="https://unpkg.com/colyseus.js@0.15.24/dist/colyseus.js"></script>
+</head>
+<body>
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+//  GOLAD Multiplayer Client
+//  Visual style: exact original GOLAD (Ezequiel Keimel / Cary Huang)
+//  Modular hooks for future: move history, timer, takeback (see HOOKS section)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── Layout constants ─────────────────────────────────────────────────────────
+var RATIO = 16 / 9;          // canvas aspect ratio
+var boardDimension = 720;    // recalculated on setup/resize to fill window
+var boardSize = 16;
+var cellSize, edgeThickness;
+
+function calcBoardDimension() {
+    if (windowWidth / windowHeight >= RATIO) return windowHeight;
+    return windowWidth / RATIO;
+}
+function rebuildSizing() {
+    cellSize      = boardDimension / (boardSize * 1.1 + 0.1);
+    edgeThickness = cellSize * 0.1;
+}
+
+// ─── Colors — index 0=DEAD, 1=P1, 2=P2, 3=GRAY ───────────────────────────────
+// Filled from server; defaults match original (Red / Blue)
+var colorR = [50, 200,   0, 140];
+var colorG = [50,   0,  80, 140];
+var colorB = [50,  40, 200, 140];
+
+function setColors(p1rgb, p2rgb) {
+    colorR = [50, p1rgb[0], p2rgb[0], 140];
+    colorG = [50, p1rgb[1], p2rgb[1], 140];
+    colorB = [50, p1rgb[2], p2rgb[2], 140];
+}
+
+// ─── Game state ───────────────────────────────────────────────────────────────
+var cells = [];
+var myTeamIndex  = -1;   // -1=spectator, 0=P1, 1=P2
+var myTeamState  = 0;    // cell value for my team: teamIndex+1
+var currentTurn  = 0;
+var gamePhase    = 'waiting'; // waiting|playing|finished
+var winnerTeam   = -1;
+var team0Count   = 0;
+var team1Count   = 0;
+
+// ─── Display settings (synced from server) ────────────────────────────────────
+var hintEnabled  = true;
+var animEnabled  = true;
+var cellShape    = 'square';
+var gameRules    = 'B3/S23';
+var birthRules   = [3];
+var surviveRules = [2, 3];
+var hintsize     = 3;
+var transitionframes   = 15;
+var shapetransitionframes = 12;
+
+// ─── Edit state ───────────────────────────────────────────────────────────────
+var editingX = -1, editingY = -1;
+var prevstate = 0;
+var borning = false;
+var ventricle1 = -1, ventricle2 = -1;
+var showVentricle1 = false, showVentricle2 = false;
+var shapeTransitions = [];
+var waitingForServer = false;
+var pressInterval = -8;
+
+// ─── HOOKS — future timer / move-history / takeback integration ───────────────
+// Implement these functions externally (e.g. inject via script tag after this file)
+// or override them before DOMContentLoaded.
+var Hooks = {
+    onGameStarted:   function(data) {},   // data: { cells, currentTurn, team0Count, team1Count }
+    onMoveApplied:   function(data) {},   // data: { cells, currentTurn, team0Count, team1Count }
+    onGameOver:      function(data) {},   // data: { winner, team0Count, team1Count }
+    onTurnChanged:   function(turn) {},   // turn: 0|1
+    renderOverlay:   function() {},       // called each draw() after side panel — draw HUD overlays here
+};
+
+// ─── Colyseus ─────────────────────────────────────────────────────────────────
+var colyseusRoom = null;
+var statusMessage = 'Connecting...';
+
+function getRoomId() {
+    var p = window.location.pathname.split('/');
+    return p[p.length - 1];
+}
+function getServerUrl() {
+    return (window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host;
+}
+
+async function connectColyseus() {
+    try {
+        var client = new Colyseus.Client(getServerUrl());
+        statusMessage = 'Joining room...';
+        colyseusRoom = await client.joinById(getRoomId());
+        statusMessage = 'Waiting for players...';
+
+        colyseusRoom.onMessage('assigned_team', function(d) {
+            myTeamIndex = d.teamIndex;
+            myTeamState = myTeamIndex + 1;
+            boardSize   = d.boardSize || 16;
+            if (d.p1Color && d.p2Color) setColors(d.p1Color, d.p2Color);
+            applyDisplaySettings(d);
+            rebuildSizing();
+            rebuildButtons();
+            statusMessage = myTeamIndex < 0 ? 'Spectating' : 'Waiting for opponent...';
+        });
+
+        colyseusRoom.onMessage('game_started', function(d) {
+            boardSize = d.boardSize || boardSize;
+            if (d.p1Color && d.p2Color) setColors(d.p1Color, d.p2Color);
+            applyDisplaySettings(d);
+            rebuildSizing();
+            rebuildButtons();
+            team0Count = d.team0Count || 0;
+            team1Count = d.team1Count || 0;
+            currentTurn = d.currentTurn || 0;
+            gamePhase = 'playing';
+            if (d.birth && d.survive) { birthRules=d.birth; surviveRules=d.survive; gameRules='B'+d.birth.join('')+'/S'+d.survive.join(''); }
+            generateBoardFromServer(d.cells);
+            computeHints();
+            statusMessage = '';
+            Hooks.onGameStarted(d);
+            Hooks.onTurnChanged(currentTurn);
+        });
+
+        colyseusRoom.onMessage('full_state', function(d) {
+            boardSize = d.boardSize || boardSize;
+            if (d.p1Color && d.p2Color) setColors(d.p1Color, d.p2Color);
+            applyDisplaySettings(d);
+            rebuildSizing();
+            rebuildButtons();
+            team0Count  = d.team0Count || 0;
+            team1Count  = d.team1Count || 0;
+            currentTurn = d.currentTurn || 0;
+            gamePhase   = d.gamePhase || gamePhase;
+            winnerTeam  = (d.winner !== undefined) ? d.winner : winnerTeam;
+            if (d.birth && d.survive) { birthRules=d.birth; surviveRules=d.survive; gameRules='B'+d.birth.join('')+'/S'+d.survive.join(''); }
+            generateBoardFromServer(d.cells);
+            computeHints();
+        });
+
+        colyseusRoom.onMessage('state_update', function(d) {
+            waitingForServer = false;
+            currentTurn  = d.currentTurn;
+            team0Count   = d.team0Count || 0;
+            team1Count   = d.team1Count || 0;
+            applyCellsFromServer(d.cells);
+            computeHints();
+            Hooks.onMoveApplied(d);
+            Hooks.onTurnChanged(currentTurn);
+        });
+
+        colyseusRoom.onMessage('game_over', function(d) {
+            waitingForServer = false;
+            gamePhase  = 'finished';
+            winnerTeam = d.winner;
+            team0Count = d.team0Count || 0;
+            team1Count = d.team1Count || 0;
+            applyCellsFromServer(d.cells);
+            computeHints();
+            Hooks.onGameOver(d);
+        });
+
+        colyseusRoom.onError(function(code, msg) { statusMessage = 'Connection error'; });
+        colyseusRoom.onLeave(function()           { statusMessage = 'Disconnected'; });
+
+    } catch(e) {
+        statusMessage = 'Could not join room';
+        console.error('GOLAD connect failed:', e);
+    }
+}
+
+function applyDisplaySettings(d) {
+    if (d.hints      !== undefined) hintEnabled = d.hints;
+    if (d.animations !== undefined) animEnabled = d.animations;
+    if (d.cellShape)                cellShape   = d.cellShape;
+}
+
+// ─── Board ────────────────────────────────────────────────────────────────────
+function generateBoardFromServer(serverCells) {
+    cells = [];
+    for (var y = 0; y < boardSize; y++) {
+        for (var x = 0; x < boardSize; x++) {
+            var idx = y * boardSize + x;
+            var c = new Cell(x, y);
+            c.nextstate = serverCells[idx] || 0;
+            c.transitioning = true;
+            cells[idx] = c;
+        }
+    }
+    cancelEditing();
+}
+function applyCellsFromServer(serverCells) {
+    if (!cells.length) { generateBoardFromServer(serverCells); return; }
+    for (var i = 0; i < cells.length; i++) {
+        var ns = serverCells[i] || 0;
+        if (cells[i].state !== ns) { cells[i].nextstate = ns; cells[i].transitioning = true; }
+    }
+    cancelEditing();
+}
+function computeHints() {
+    for (var i = 0; i < cells.length; i++) {
+        var x = cells[i].numX, y = cells[i].numY;
+        var t1=0,t2=0,tg=0;
+        for (var dy=-1;dy<=1;dy++) for (var dx=-1;dx<=1;dx++) {
+            if (!dx&&!dy) continue;
+            var nx=x+dx,ny=y+dy;
+            if (nx>=0&&nx<boardSize&&ny>=0&&ny<boardSize) {
+                var v=cells[ny*boardSize+nx].state;
+                if(v===1)t1++;else if(v===2)t2++;else if(v===3)tg++;
+            }
+        }
+        var tot=t1+t2+tg, cur=cells[i].state;
+        if (cur===0) {
+            cells[i].nextstate = birthRules.indexOf(tot)>=0 ? (t1>t2?1:t2>t1?2:3) : 0;
+        } else {
+            cells[i].nextstate = surviveRules.indexOf(tot)>=0 ? cur : 0;
+        }
+    }
+}
+function cancelEditing() {
+    editingX=-1; editingY=-1; ventricle1=-1; ventricle2=-1;
+    showVentricle1=false; showVentricle2=false; borning=false;
+    shapeTransitions=[];
+    for (var i=0;i<cells.length;i++) if(cells[i]) cells[i].locked=false;
+}
+function countTransitions() {
+    var n=0; for (var i=0;i<cells.length;i++) if(cells[i].transitioning) n++;
+    return n;
+}
+
+// ─── Finish move → server ─────────────────────────────────────────────────────
+function finishMove() {
+    if (gamePhase !== 'playing') return;
+    if (myTeamIndex < 0 || currentTurn !== myTeamIndex) return;
+    if (waitingForServer || shapeTransitions.length > 0) return;
+    var ci = editingX === -1 ? -1 : editingY * boardSize + editingX;
+    if (!borning && ci !== -1) {
+        waitingForServer = true;
+        colyseusRoom.send('make_move', {action:'remove', cellIndex:ci});
+        cancelEditing(); return;
+    }
+    if (borning && ci !== -1 && ventricle1 !== -1 && ventricle2 !== -1) {
+        waitingForServer = true;
+        colyseusRoom.send('make_move', {action:'place', cellIndex:ci, ventricle1:ventricle1, ventricle2:ventricle2});
+    }
+}
+
+// ─── Cell ─────────────────────────────────────────────────────────────────────
+function Cell(x, y) {
+    this.numX=x; this.numY=y;
+    this.state=0; this.nextstate=0;
+    this.transitioning=false; this.transitionstate=hintsize;
+    this.locked=false;
+    this.posX = x*(cellSize+edgeThickness)+edgeThickness;
+    this.posY = y*(cellSize+edgeThickness)+edgeThickness;
+}
+Cell.prototype.show = function() {
+    fill(colorR[this.state], colorG[this.state], colorB[this.state]);
+    if (cellShape==='square') rect(this.posX,this.posY,cellSize,cellSize);
+    else ellipse(this.posX,this.posY,cellSize,cellSize);
+
+    if (borning && this.numX===editingX && this.numY===editingY) {
+        fill(showVentricle1 ? color(colorR[myTeamState],colorG[myTeamState],colorB[myTeamState])
+                            : color(colorR[0],colorG[0],colorB[0]));
+        if (cellShape==='square') rect(this.posX+edgeThickness,this.posY+edgeThickness,(cellSize-3*edgeThickness)/2,cellSize-2*edgeThickness);
+        else ellipse(this.posX+edgeThickness,this.posY+edgeThickness,(cellSize-3*edgeThickness)/2,cellSize-2*edgeThickness);
+        fill(showVentricle2 ? color(colorR[myTeamState],colorG[myTeamState],colorB[myTeamState])
+                            : color(colorR[0],colorG[0],colorB[0]));
+        if (cellShape==='square') rect(this.posX+cellSize/2+edgeThickness/2,this.posY+edgeThickness,(cellSize-3*edgeThickness)/2,cellSize-2*edgeThickness);
+        else ellipse(this.posX+cellSize/2+edgeThickness/2,this.posY+edgeThickness,(cellSize-3*edgeThickness)/2,cellSize-2*edgeThickness);
+    }
+
+    if (hintEnabled || this.transitionstate!==hintsize) {
+        fill(colorR[this.nextstate],colorG[this.nextstate],colorB[this.nextstate]);
+        var ns=this.transitionstate*cellSize/transitionframes;
+        rectMode(CENTER);
+        if (cellShape==='square') rect(this.posX+cellSize/2,this.posY+cellSize/2,ns,ns);
+        else ellipse(this.posX+cellSize/2,this.posY+cellSize/2,ns,ns);
+        rectMode(CORNER);
+    }
+};
+Cell.prototype.transition = function() {
+    if (!animEnabled) this.transitionstate=transitionframes;
+    this.transitionstate++;
+    if (this.transitionstate>transitionframes) {
+        this.state=this.nextstate; this.transitionstate=hintsize; this.transitioning=false;
+    }
+};
+Cell.prototype.clicked = function(x,y) {
+    return x>=this.posX&&x<=this.posX+cellSize&&y>=this.posY&&y<=this.posY+cellSize&&!this.transitioning;
+};
+Cell.prototype.addremove = function() {
+    if (waitingForServer||myTeamIndex<0||currentTurn!==myTeamIndex||gamePhase!=='playing') return;
+    var ci=this.numY*boardSize+this.numX;
+    if (editingX===-1&&editingY===-1) {
+        if (this.locked) return;
+        if (this.state===0) { borning=true; prevstate=0; this.state=myTeamState; }
+        else { prevstate=this.state; this.state=0; }
+        editingX=this.numX; editingY=this.numY;
+    } else if (this.numX===editingX&&this.numY===editingY) {
+        if (borning&&shapeTransitions.length===0) {
+            if (ventricle1!==-1) {
+                shapeTransitions.push(new ShapeTransition(
+                    this.posX+edgeThickness,this.posY+edgeThickness,cellSize/2-edgeThickness,cellSize-2*edgeThickness,
+                    cells[ventricle1].posX,cells[ventricle1].posY,cellSize,cellSize,0,ventricle1));
+                cells[ventricle1].locked=true; ventricle1=-1;
+            }
+            if (ventricle2!==-1) {
+                shapeTransitions.push(new ShapeTransition(
+                    this.posX+edgeThickness,this.posY+edgeThickness,cellSize/2-edgeThickness,cellSize-2*edgeThickness,
+                    cells[ventricle2].posX,cells[ventricle2].posY,cellSize,cellSize,0,ventricle2));
+                cells[ventricle2].locked=true; ventricle2=-1;
+            }
+            showVentricle1=false; showVentricle2=false; borning=false;
+            this.state=prevstate; editingX=-1; editingY=-1;
+        } else if (!borning) { this.state=prevstate; editingX=-1; editingY=-1; }
+    } else if (borning&&this.state===myTeamState) {
+        if (ventricle1===-1) {
+            this.state=0; ventricle1=ci;
+            shapeTransitions.push(new ShapeTransition(this.posX,this.posY,cellSize,cellSize,
+                editingX*(cellSize+edgeThickness)+edgeThickness,
+                editingY*(cellSize+edgeThickness)+edgeThickness,cellSize/2,cellSize,1,-1));
+        } else if (ventricle2===-1) {
+            this.state=0; ventricle2=ci;
+            shapeTransitions.push(new ShapeTransition(this.posX,this.posY,cellSize,cellSize,
+                editingX*(cellSize+edgeThickness)+edgeThickness+cellSize/2+edgeThickness/2,
+                editingY*(cellSize+edgeThickness)+edgeThickness,cellSize/2,cellSize,2,-1));
+        }
+    }
+};
+
+// ─── ShapeTransition (identical to original) ──────────────────────────────────
+function ShapeTransition(xi,yi,wi,hi,xf,yf,wf,hf,ventr,cellNum) {
+    this.xi=xi;this.yi=yi;this.wi=wi;this.hi=hi;
+    this.xf=xf;this.yf=yf;this.wf=wf;this.hf=hf;
+    this.ventr=ventr;this.cellNum=cellNum;
+    this.currentframe=0;
+    this.xinc=(xf-xi)/shapetransitionframes;this.yinc=(yf-yi)/shapetransitionframes;
+    this.winc=(wf-wi)/shapetransitionframes;this.hinc=(hf-hi)/shapetransitionframes;
+}
+ShapeTransition.prototype.nextframe=function(){
+    var ts=myTeamState>0?myTeamState:1;
+    fill(colorR[ts],colorG[ts],colorB[ts]);
+    if(cellShape==='square')rect(this.xi,this.yi,this.wi,this.hi);
+    else ellipse(this.xi,this.yi,this.wi,this.hi);
+    this.xi+=this.xinc;this.yi+=this.yinc;this.wi+=this.winc;this.hi+=this.hinc;
+    this.currentframe++;
+    if(this.currentframe===shapetransitionframes){
+        if(this.ventr===1&&borning)showVentricle1=true;
+        if(this.ventr===2&&borning)showVentricle2=true;
+        if(this.cellNum!==-1){cells[this.cellNum].state=myTeamState;cells[this.cellNum].locked=false;}
+    }
+};
+
+// ─── gameButton (identical to original) ───────────────────────────────────────
+function gameButton(name,px,py,sx,sy,style,ts){
+    this.btnName=name;this.btnPosX=px;this.btnPosY=py;
+    this.sizeX=sx;this.sizeY=sy;this.btnStyle=style;this.btnTextSize=ts;this.pressed=false;
+}
+gameButton.prototype.showBtn=function(){
+    textSize(this.btnTextSize*boardDimension/720);textStyle(this.btnStyle);textAlign(CENTER,CENTER);
+    if(!this.pressed){
+        fill(0,110,100);rect(this.btnPosX,this.btnPosY+height/150,this.sizeX,this.sizeY,15);
+        fill(0,150,140);rect(this.btnPosX,this.btnPosY,this.sizeX,this.sizeY,15);
+        fill(255);text(this.btnName,this.btnPosX+this.sizeX/2,this.btnPosY+this.sizeY/2);
+    }else{
+        fill(0,60,55);rect(this.btnPosX,this.btnPosY,this.sizeX,this.sizeY,15);
+        fill(0,100,90);rect(this.btnPosX,this.btnPosY+height/150,this.sizeX,this.sizeY,15);
+        fill(180);text(this.btnName,this.btnPosX+this.sizeX/2,this.btnPosY+this.sizeY/2+height/150);
+    }
+};
+gameButton.prototype.onButton=function(x,y){
+    return x>=this.btnPosX&&y>=this.btnPosY&&x<=this.btnPosX+this.sizeX&&y<=this.btnPosY+this.sizeY;
+};
+
+// ─── Buttons (rebuilt on resize) ──────────────────────────────────────────────
+var finishButton, cancelButton, menuButton;
+function rebuildButtons(){
+    var px=height,pw=width-height;
+    finishButton=new gameButton('Finish Move',px+pw/6,height*5/8,pw*4/6,height/10,BOLD,40);
+    cancelButton =new gameButton('Cancel',     px+pw/6,height*3/4,pw*4/6,height/16,NORMAL,28);
+    menuButton   =new gameButton('← Back',    px+pw/4,height*7/8,pw*3/6,height/12,BOLD,36);
+}
+
+// ─── p5 setup / draw ──────────────────────────────────────────────────────────
+var glowing=0, bright=128;
+var loadScreen=80, logoAlpha=-5, loading=true;
+
+function setup(){
+    boardDimension=calcBoardDimension();
+    createCanvas(RATIO*boardDimension,boardDimension);
+    ellipseMode(CORNER);rectMode(CORNER);
+    frameRate(30);textFont('Arial');
+    rebuildSizing();rebuildButtons();
+    connectColyseus();
+}
+
+function windowResized(){
+    boardDimension=calcBoardDimension();
+    resizeCanvas(RATIO*boardDimension,boardDimension);
+    rebuildSizing();rebuildButtons();
+    // Reposition all cells
+    for(var i=0;i<cells.length;i++){
+        cells[i].posX=cells[i].numX*(cellSize+edgeThickness)+edgeThickness;
+        cells[i].posY=cells[i].numY*(cellSize+edgeThickness)+edgeThickness;
+    }
+}
+
+function draw(){
+    background(0);noStroke();
+
+    for(var i=0;i<cells.length;i++){
+        cells[i].show();
+        if(cells[i].transitioning)cells[i].transition();
+    }
+    for(var j=0;j<shapeTransitions.length;j++){
+        if(shapeTransitions[j].currentframe<shapetransitionframes){shapeTransitions[j].nextframe();}
+        else{shapeTransitions.splice(j,1);j--;}
+    }
+    if(mouseIsPressed&&finishButton&&finishButton.pressed){
+        pressInterval++;
+        if(pressInterval>3){pressInterval=0;finishMove();}
+    }
+
+    drawSidePanel();
+    Hooks.renderOverlay();
+    nowLoading();
+}
+
+// ─── Side panel ───────────────────────────────────────────────────────────────
+function drawSidePanel(){
+    textAlign(CENTER,CENTER);
+    var px=height, pw=width-height;
+
+    fill(206,240,247); rect(px,0,pw,height);
+
+    fill(10,60,70);textStyle(BOLD);textSize(28*boardDimension/720);
+    text(gameRules,px+pw/2,height/20);
+
+    if(gamePhase==='waiting'){
+        fill(10,60,70);textStyle(BOLD);textSize(30*boardDimension/720);
+        text(statusMessage,px+pw/2,height*0.5);
+        if(myTeamIndex>=0){
+            var ts=myTeamIndex+1;
+            fill(colorR[ts],colorG[ts],colorB[ts]);
+            textSize(22*boardDimension/720);
+            text('You are Player '+(myTeamIndex+1),px+pw/2,height*0.6);
+        }
+    }else{
+        drawPlayerSlots(px,pw);
+        drawStatus(px,pw);
+    }
+
+    if(menuButton)menuButton.showBtn();
+}
+
+function drawPlayerSlots(px,pw){
+    glowing+=PI/15; if(glowing>TAU)glowing=0;
+    bright=128+sin(glowing)*127;
+
+    var slotH=height/5, gap=height/50;
+    var startY=height/10;
+
+    for(var t=0;t<2;t++){
+        var ts=t+1;
+        var yTop=startY+t*(slotH+gap);
+        fill(colorR[ts],colorG[ts],colorB[ts]);
+        rect(px,yTop,pw,slotH);
+
+        var active=(gamePhase==='playing'&&currentTurn===t);
+        fill(active?bright:0);
+        textStyle(BOLD);textSize(36*boardDimension/720);
+        text('Player '+ts,px+pw/2,yTop+slotH*0.38);
+        textStyle(NORMAL);textSize(26*boardDimension/720);
+        var cnt=(t===0?team0Count:team1Count)||0;
+        text((cellShape==='square'?'◻':'⭘')+'×'+cnt,px+pw/2,yTop+slotH*0.68);
+        if(t===myTeamIndex){
+            textSize(17*boardDimension/720);
+            text('(you)',px+pw/2,yTop+slotH*0.90);
+        }
+    }
+}
+
+function drawStatus(px,pw){
+    var statusY=height*0.55;
+    textStyle(NORMAL);textSize(22*boardDimension/720);fill(10,60,70);
+
+    if(gamePhase==='finished'){
+        textStyle(BOLD);textSize(36*boardDimension/720);
+        if(winnerTeam<0||winnerTeam>1){
+            text('TIE!',px+pw/2,statusY+height/16);
+        }else{
+            fill(colorR[winnerTeam+1],colorG[winnerTeam+1],colorB[winnerTeam+1]);
+            text('Player '+(winnerTeam+1)+' Wins!',px+pw/2,statusY+height/16);
+        }
+    }else if(waitingForServer){
+        text('Waiting...',px+pw/2,statusY);
+    }else if(myTeamIndex<0){
+        text('Spectating',px+pw/2,statusY);
+    }else if(currentTurn===myTeamIndex){
+        var ts2=myTeamIndex+1;
+        fill(colorR[ts2],colorG[ts2],colorB[ts2]);
+        textStyle(BOLD);textSize(30*boardDimension/720);
+        text('Your Turn!',px+pw/2,statusY);
+        fill(10,60,70);textStyle(NORMAL);textSize(18*boardDimension/720);
+        if(editingX===-1&&!borning)         text('Click a cell to act',px+pw/2,statusY+height/14);
+        else if(borning&&ventricle1===-1)    text('Select 1st source cell',px+pw/2,statusY+height/14);
+        else if(borning&&ventricle2===-1)    text('Select 2nd source cell',px+pw/2,statusY+height/14);
+        else                                 text('Click Finish Move',px+pw/2,statusY+height/14);
+        if(finishButton)finishButton.showBtn();
+        if((editingX!==-1||borning)&&cancelButton)cancelButton.showBtn();
+    }else{
+        text("Player "+(currentTurn+1)+"'s Turn",px+pw/2,statusY);
+    }
+}
+
+// ─── Logo / loading screen (exact original) ───────────────────────────────────
+function generateLogo(a){
+    rectMode(CENTER);noStroke();
+    fill(15,a);rect(width/6,height/2,height/2,height/2);
+    fill(190,0,40,a);rect(width/6,height/2,height*3/8,height*3/8);
+    fill(10,a);rect(width/6,height/2,height/12,height/12);
+    fill(255,a);textStyle(NORMAL);textAlign(RIGHT,CENTER);
+    textSize(38*boardDimension/720);text('Game of Life',width/6+height/7,height/2-height/7);
+    textSize(24*boardDimension/720);text('-John Conway',width/6+height/7,height/2-height/10);
+    fill(0,a);textSize(38*boardDimension/720);text('and Death',width/6+height/7,height/2+height/10);
+    textSize(24*boardDimension/720);text('-Cary Huang',width/6+height/7,height/2+height/7);
+    textStyle(ITALIC);fill(150,a);textAlign(RIGHT,CENTER);
+    textSize(22*boardDimension/720);text('-Ezequiel Keimel',width/6+height/4,height/2+height/3);
+    textSize(34*boardDimension/720);text('Javascript Edition',width/6+height/4,height/2+height*2/7);
+}
+function nowLoading(){
+    if(loadScreen>0){
+        fill(0,map(loadScreen,0,15,0,255));rectMode(CORNER);rect(0,0,width,height);
+        push();
+        var t=(width/3)*(1+sin(sin(map(loadScreen,15,60,-PI/2,PI/2))*PI/2))/2;
+        if(loadScreen>60)t=width/3;else if(loadScreen<15)t=0;
+        translate(t,0);generateLogo(map(logoAlpha,0,15,0,255));
+        pop();loadScreen--;
+    }else if(loading){loading=false;}
+    if(logoAlpha<15)logoAlpha++;
+}
+
+// ─── Mouse ────────────────────────────────────────────────────────────────────
+function mousePressed(){
+    if(loading)return false;
+    if(mouseX>height){
+        if(finishButton&&finishButton.onButton(mouseX,mouseY))finishButton.pressed=true;
+        if(cancelButton&&cancelButton.onButton(mouseX,mouseY))cancelButton.pressed=true;
+        if(menuButton&&menuButton.onButton(mouseX,mouseY))menuButton.pressed=true;
+    }else if(gamePhase==='playing'&&!waitingForServer&&myTeamIndex>=0&&currentTurn===myTeamIndex){
+        for(var i=0;i<cells.length;i++){
+            if(cells[i].clicked(mouseX,mouseY)){cells[i].addremove();break;}
+        }
+    }
+    return false;
+}
+function mouseReleased(){
+    if(loading)return false;
+    if(mouseX>height){
+        if(finishButton&&finishButton.onButton(mouseX,mouseY)&&finishButton.pressed)finishMove();
+        if(cancelButton&&cancelButton.onButton(mouseX,mouseY)&&cancelButton.pressed){
+            cancelEditing();
+            if(colyseusRoom)colyseusRoom.send('request_state');
+        }
+        if(menuButton&&menuButton.onButton(mouseX,mouseY)&&menuButton.pressed)window.history.back();
+    }
+    if(finishButton)finishButton.pressed=false;
+    if(cancelButton)cancelButton.pressed=false;
+    if(menuButton)menuButton.pressed=false;
+    pressInterval=-8;
+    return false;
+}
+</script>
+</body>
+</html>

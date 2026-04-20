@@ -138,6 +138,20 @@ const GAME_REGISTRY = {
     ]
   },
 
+  GOLAD: {
+    label: 'GOLAD',
+    description: 'Game of Life and Death — turn-based cellular automaton (2 players)',
+    roomType: 'golad',
+    joinPath: (roomId) => `/golad/${roomId}`,
+    fields: [
+      {
+        key: 'boardSize', type: 'number',
+        label: 'Board Size', sublabel: 'Grid width/height (N×N)',
+        default: 16, min: 8, max: 30
+      },
+    ]
+  },
+
   'No game focus': {
     label: 'No game focus',
     description: 'Freeform session without a specific game',

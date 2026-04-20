@@ -2031,6 +2031,400 @@ class ConstellationRoom extends Room {
 }
 
 // AdminRoom class
+
+// ─── GOLAD colour palette (matches client/admin) ──────────────────────────────
+const GOLAD_PALETTE = [
+    [255,255,255],[248,218,184],[255,105,180],[200,0,40],[255,100,0],
+    [210,180,45],[255,220,0],[160,220,0],[0,150,40],[0,152,117],
+    [0,204,255],[0,80,200],[160,0,255],[150,0,110],[220,0,90],
+    [100,0,25],[80,30,0]
+];
+
+// ─── GOLAD AI helpers ─────────────────────────────────────────────────────────
+function _goladNeighbors(cells, bs, idx) {
+    const x = idx % bs, y = Math.floor(idx / bs);
+    let t1 = 0, t2 = 0, tg = 0;
+    for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+            if (!dx && !dy) continue;
+            const nx = x+dx, ny = y+dy;
+            if (nx >= 0 && nx < bs && ny >= 0 && ny < bs) {
+                const v = cells[ny*bs+nx];
+                if (v===1) t1++; else if (v===2) t2++; else if (v===3) tg++;
+            }
+        }
+    }
+    return [t1, t2, tg];
+}
+function _goladStep(cells, bs, birth, survive) {
+    const next = new Array(cells.length).fill(0);
+    for (let i = 0; i < cells.length; i++) {
+        const [t1,t2,tg] = _goladNeighbors(cells, bs, i);
+        const total = t1+t2+tg, cur = cells[i];
+        if (cur === 0) { if (birth.includes(total)) next[i] = t1>t2?1:t2>t1?2:3; }
+        else           { next[i] = survive.includes(total) ? cur : 0; }
+    }
+    return next;
+}
+function _goladRatio(cells, myState) {
+    let mine = 0, opp = 0;
+    const os = myState===1?2:1;
+    for (const c of cells) { if (c===myState) mine++; else if (c===os) opp++; }
+    return opp===0 ? (mine>0?1e9:0) : mine/opp;
+}
+function goladDumbAI(cells, bs, myState) {
+    let best=-1, bestScore=-1;
+    for (let i=0;i<cells.length;i++) {
+        if (cells[i]!==0) {
+            const [t1,t2,tg]=_goladNeighbors(cells,bs,i);
+            const oppN=myState===1?t2+tg:t1+tg;
+            if (oppN>bestScore){bestScore=oppN;best=i;}
+        }
+    }
+    return best!==-1?{action:'remove',cellIndex:best}:null;
+}
+function goladOkayAI(cells, bs, myState, birth, survive) {
+    const mine=[];
+    for (let i=0;i<cells.length;i++) if (cells[i]===myState) mine.push(i);
+
+    let bv1=-1,bv2=-1,bestVR=-1;
+    for (let m=0;m<mine.length-1;m++) {
+        for (let n=m+1;n<mine.length;n++) {
+            const t=cells.slice(); t[mine[m]]=0; t[mine[n]]=0;
+            const r=_goladRatio(_goladStep(t,bs,birth,survive),myState);
+            if (r>bestVR){bestVR=r;bv1=mine[m];bv2=mine[n];}
+        }
+    }
+    let bestRatio=-1,bestCell=-1,bestV1=-1,bestV2=-1;
+    if (bv1!==-1) {
+        for (let i=0;i<cells.length;i++) {
+            if (cells[i]===0) {
+                const t=cells.slice(); t[i]=myState; t[bv1]=0; t[bv2]=0;
+                const r=_goladRatio(_goladStep(t,bs,birth,survive),myState);
+                if (r>bestRatio){bestRatio=r;bestCell=i;bestV1=bv1;bestV2=bv2;}
+            }
+        }
+    }
+    for (let i=0;i<cells.length;i++) {
+        if (cells[i]!==0) {
+            const t=cells.slice(); t[i]=0;
+            const r=_goladRatio(_goladStep(t,bs,birth,survive),myState);
+            if (r>bestRatio){bestRatio=r;bestCell=i;bestV1=-1;bestV2=-1;}
+        }
+    }
+    if (bestCell===-1)  return goladDumbAI(cells,bs,myState);
+    if (bestV1===-1)    return {action:'remove',cellIndex:bestCell};
+    return {action:'place',cellIndex:bestCell,ventricle1:bestV1,ventricle2:bestV2};
+}
+
+// ─── GOLAD Room ───────────────────────────────────────────────────────────────
+class GoladRoom extends Room {
+    onCreate(options) {
+        console.log('GoladRoom created:', options.name || options.roomName);
+        this.autoDispose = false;
+        this.maxClients  = options.maxPlayers || 20;
+
+        const state = new RoomState();
+        state.gameState = 'waiting';
+        state.hostId    = '';
+        this.setState(state);
+
+        this.goladConfig = {
+            name:       options.name || options.roomName || `GOLAD ${this.roomId.substring(0, 6)}`,
+            gameType:   'GOLAD',
+            boardSize:  options.boardSize || 16,
+            birth:      options.birth    || [3],
+            survive:    options.survive  || [2, 3],
+            p1Type:     'human',
+            p2Type:     'human',
+            p1Color:    GOLAD_PALETTE[3],   // Red
+            p2Color:    GOLAD_PALETTE[11],  // Blue
+            cellShape:  'square',
+            hints:      true,
+            animations: true,
+        };
+
+        const bs = this.goladConfig.boardSize;
+        this.goladState = {
+            cells:       new Array(bs * bs).fill(0),
+            currentTurn: 0,
+            gamePhase:   'waiting',
+            winner:      -1,
+            team0Count:  0,
+            team1Count:  0
+        };
+
+        this.playerTeams = new Map(); // sessionId → 0|1 or -1 (observer)
+
+        this.setMetadata({
+            name:       this.goladConfig.name,
+            type:       'GOLAD',
+            gameState:  'waiting',
+            createdAt:  new Date().toISOString(),
+            maxPlayers: this.maxClients,
+            clients:    0
+        });
+
+        if (this.presence) {
+            this.presence.subscribe(`room_${this.roomId}`, (msg) => {
+                if (!msg || !msg.type) return;
+                if (msg.type === 'start_game') {
+                    if (this.goladState.gamePhase === 'waiting') this.startGoladGame();
+                } else if (msg.type === 'force_dispose') {
+                    this.disconnect();
+                } else if (msg.type === 'update_settings' && msg.settings) {
+                    const s = msg.settings;
+                    if (s.boardSize   !== undefined) this.goladConfig.boardSize  = s.boardSize;
+                    if (s.birth)                     this.goladConfig.birth      = s.birth;
+                    if (s.survive)                   this.goladConfig.survive    = s.survive;
+                    if (s.p1Type)                    this.goladConfig.p1Type     = s.p1Type;
+                    if (s.p2Type)                    this.goladConfig.p2Type     = s.p2Type;
+                    if (s.p1Color)                   this.goladConfig.p1Color    = s.p1Color;
+                    if (s.p2Color)                   this.goladConfig.p2Color    = s.p2Color;
+                    if (s.cellShape)                 this.goladConfig.cellShape  = s.cellShape;
+                    if (s.hints      !== undefined)  this.goladConfig.hints      = s.hints;
+                    if (s.animations !== undefined)  this.goladConfig.animations = s.animations;
+                    if (s.name)                      this.goladConfig.name       = s.name;
+                    this.refreshMetadata();
+                }
+            });
+        }
+
+        this.onMessage('make_move',    (client, data) => this.handleMove(client, data));
+        this.onMessage('request_state',(client)       => this.sendFullState(client));
+        this.onMessage('start_game',   ()             => {
+            if (this.goladState.gamePhase === 'waiting') this.startGoladGame();
+        });
+    }
+
+    onJoin(client, options) {
+        const isAdmin   = !!(options && options.isAdmin);
+        const assigned  = [...this.playerTeams.values()].filter(t => t >= 0).length;
+        const teamIndex = isAdmin ? -1 : (assigned < 2 ? assigned : -1);
+        this.playerTeams.set(client.sessionId, teamIndex);
+
+        client.send('assigned_team', {
+            teamIndex,
+            boardSize:  this.goladConfig.boardSize,
+            birth:      this.goladConfig.birth,
+            survive:    this.goladConfig.survive,
+            p1Color:    this.goladConfig.p1Color,
+            p2Color:    this.goladConfig.p2Color,
+            p1Type:     this.goladConfig.p1Type,
+            p2Type:     this.goladConfig.p2Type,
+            cellShape:  this.goladConfig.cellShape,
+            hints:      this.goladConfig.hints,
+            animations: this.goladConfig.animations,
+        });
+
+        if (this.goladState.gamePhase !== 'waiting') this.sendFullState(client);
+
+        const humanCount = [...this.playerTeams.values()].filter(t => t >= 0).length;
+        const p1AI = this.goladConfig.p1Type !== 'human';
+        const p2AI = this.goladConfig.p2Type !== 'human';
+        const neededHumans = (p1AI ? 0 : 1) + (p2AI ? 0 : 1);
+        if (humanCount >= neededHumans && neededHumans > 0 && this.goladState.gamePhase === 'waiting') {
+            setTimeout(() => this.startGoladGame(), 1500);
+        }
+
+        this.refreshMetadata();
+    }
+
+    refreshMetadata() {
+        this.setMetadata({
+            name:       this.goladConfig.name,
+            type:       'GOLAD',
+            gameState:  this.goladState.gamePhase,
+            maxPlayers: this.maxClients,
+            clients:    this.clients.length
+        });
+        if (this.presence) {
+            const players = this.clients.map(c => ({
+                id: c.sessionId, teamIndex: this.playerTeams.get(c.sessionId) ?? -1
+            }));
+            this.presence.publish('admin_update', {
+                roomId:   this.roomId,
+                name:     this.goladConfig.name,
+                state:    this.goladState.gamePhase,
+                gameType: 'GOLAD',
+                config: {
+                    boardSize:  this.goladConfig.boardSize,
+                    birth:      this.goladConfig.birth,
+                    survive:    this.goladConfig.survive,
+                    p1Type:     this.goladConfig.p1Type,
+                    p2Type:     this.goladConfig.p2Type,
+                    p1Color:    this.goladConfig.p1Color,
+                    p2Color:    this.goladConfig.p2Color,
+                    cellShape:  this.goladConfig.cellShape,
+                    hints:      this.goladConfig.hints,
+                    animations: this.goladConfig.animations,
+                },
+                players
+            });
+        }
+    }
+
+    startGoladGame() {
+        if (this.goladState.gamePhase !== 'waiting') return;
+
+        const bs = this.goladConfig.boardSize;
+        this.goladState.cells = new Array(bs * bs).fill(0); // resize if boardSize changed
+        const cells = this.goladState.cells;
+        const total = bs * bs;
+
+        for (let i = 0; i < Math.floor(total / 2); i++) {
+            const r = Math.random();
+            if (r < 0.25)      { cells[i] = 1; cells[total-1-i] = 2; }
+            else if (r < 0.5)  { cells[i] = 2; cells[total-1-i] = 1; }
+        }
+
+        this.goladState.gamePhase   = 'playing';
+        this.goladState.currentTurn = 0;
+        this.countCells();
+        this.state.gameState = 'playing';
+        this.refreshMetadata();
+
+        this.broadcast('game_started', { ...this._payload(), currentTurn: 0,
+            birth: this.goladConfig.birth, survive: this.goladConfig.survive });
+        console.log(`GoladRoom ${this.roomId}: game started (${bs}×${bs})`);
+
+        this.scheduleAIMove();
+    }
+
+    handleMove(client, data) {
+        const teamIndex = this.playerTeams.get(client.sessionId);
+        if (teamIndex === undefined || teamIndex < 0)  return;
+        if (this.goladState.gamePhase !== 'playing')   return;
+        if (this.goladState.currentTurn !== teamIndex) return;
+        this._applyMove(teamIndex, data);
+    }
+
+    _applyMove(teamIndex, data) {
+        const { action, cellIndex, ventricle1, ventricle2 } = data;
+        const cells = this.goladState.cells;
+        const ps    = teamIndex + 1; // cell value: 1 or 2
+
+        if (cellIndex < 0 || cellIndex >= cells.length) return;
+
+        if (action === 'place') {
+            if (cells[cellIndex] !== 0)                               return;
+            if (ventricle1 < 0 || ventricle1 >= cells.length)        return;
+            if (ventricle2 < 0 || ventricle2 >= cells.length)        return;
+            if (cells[ventricle1] !== ps || cells[ventricle2] !== ps) return;
+            if (ventricle1 === ventricle2)                            return;
+            if (ventricle1 === cellIndex || ventricle2 === cellIndex) return;
+            cells[cellIndex] = ps; cells[ventricle1] = 0; cells[ventricle2] = 0;
+        } else if (action === 'remove') {
+            if (cells[cellIndex] === 0) return;
+            cells[cellIndex] = 0;
+        } else { return; }
+
+        this.stepGolad();
+        this.countCells();
+
+        const t0 = this.goladState.team0Count;
+        const t1 = this.goladState.team1Count;
+
+        if (t0 === 0 || t1 === 0) {
+            const w = (t0===0 && t1>0)?1 : (t1===0 && t0>0)?0 : 2;
+            this.goladState.gamePhase = 'finished';
+            this.goladState.winner    = w;
+            this.state.gameState = 'finished';
+            this.refreshMetadata();
+            this.broadcast('game_over', { winner:w, cells:Array.from(cells), team0Count:t0, team1Count:t1 });
+        } else {
+            this.goladState.currentTurn = teamIndex === 0 ? 1 : 0;
+            this.broadcast('state_update', {
+                cells: Array.from(cells), currentTurn: this.goladState.currentTurn,
+                team0Count: t0, team1Count: t1
+            });
+            this.scheduleAIMove();
+        }
+    }
+
+    scheduleAIMove() {
+        const turn   = this.goladState.currentTurn;
+        const aiType = turn === 0 ? this.goladConfig.p1Type : this.goladConfig.p2Type;
+        if (!aiType || aiType === 'human') return;
+
+        setTimeout(() => {
+            if (this.goladState.gamePhase !== 'playing') return;
+            if (this.goladState.currentTurn !== turn) return;
+            const myState = turn + 1;
+            const cells   = this.goladState.cells.slice();
+            const bs      = this.goladConfig.boardSize;
+            const birth   = this.goladConfig.birth;
+            const survive = this.goladConfig.survive;
+            const move = (aiType === 'dumb')
+                ? goladDumbAI(cells, bs, myState)
+                : goladOkayAI(cells, bs, myState, birth, survive);
+            if (move) this._applyMove(turn, move);
+        }, 900);
+    }
+
+    stepGolad() {
+        const bs=this.goladConfig.boardSize, birth=this.goladConfig.birth,
+              survive=this.goladConfig.survive, cells=this.goladState.cells;
+        const next = new Array(cells.length).fill(0);
+        for (let y=0;y<bs;y++) {
+            for (let x=0;x<bs;x++) {
+                const idx=y*bs+x;
+                let t0n=0,t1n=0,gn=0;
+                for (let dy=-1;dy<=1;dy++) for (let dx=-1;dx<=1;dx++) {
+                    if (!dx&&!dy) continue;
+                    const nx=x+dx,ny=y+dy;
+                    if (nx>=0&&nx<bs&&ny>=0&&ny<bs) {
+                        const ns=cells[ny*bs+nx];
+                        if(ns===1)t0n++;else if(ns===2)t1n++;else if(ns===3)gn++;
+                    }
+                }
+                const tot=t0n+t1n+gn, cur=cells[idx];
+                if (cur===0) { if(birth.indexOf(tot)>=0) next[idx]=t0n>t1n?1:t1n>t0n?2:3; }
+                else         { next[idx]=survive.indexOf(tot)>=0?cur:0; }
+            }
+        }
+        for (let i=0;i<cells.length;i++) cells[i]=next[i];
+    }
+
+    countCells() {
+        let t0=0,t1=0;
+        for (const c of this.goladState.cells) { if(c===1)t0++;else if(c===2)t1++; }
+        this.goladState.team0Count=t0; this.goladState.team1Count=t1;
+    }
+
+    _payload() {
+        return {
+            cells:      Array.from(this.goladState.cells),
+            boardSize:  this.goladConfig.boardSize,
+            p1Color:    this.goladConfig.p1Color,
+            p2Color:    this.goladConfig.p2Color,
+            cellShape:  this.goladConfig.cellShape,
+            hints:      this.goladConfig.hints,
+            animations: this.goladConfig.animations,
+            team0Count: this.goladState.team0Count,
+            team1Count: this.goladState.team1Count,
+        };
+    }
+
+    sendFullState(client) {
+        client.send('full_state', {
+            ...this._payload(),
+            currentTurn: this.goladState.currentTurn,
+            gamePhase:   this.goladState.gamePhase,
+            winner:      this.goladState.winner,
+            birth:       this.goladConfig.birth,
+            survive:     this.goladConfig.survive,
+        });
+    }
+
+    onLeave(client) {}
+
+    onDispose() {
+        if (this.presence) this.presence.unsubscribe(`room_${this.roomId}`);
+        console.log(`GoladRoom ${this.roomId} disposed`);
+    }
+}
+
 class AdminRoom extends Room {
     onCreate(options) {
         console.log('AdminRoom created');
@@ -2189,7 +2583,11 @@ class AdminRoom extends Room {
 
     async updateRoomsList() {
         try {
-            const rooms = await matchMaker.query({ name: 'constellation' });
+            const [constRooms, goladRooms] = await Promise.all([
+                matchMaker.query({ name: 'constellation' }),
+                matchMaker.query({ name: 'golad' })
+            ]);
+            const rooms = [...constRooms, ...goladRooms];
             const roomsData = rooms.map(room => {
                 const roomState = this.roomStates.get(room.roomId);
                 return {
@@ -2204,7 +2602,7 @@ class AdminRoom extends Room {
             });
 
             this.broadcast('rooms_update', roomsData);
-            console.log(`✓ Rooms list updated: ${rooms.length} rooms`);
+            console.log(`✓ Rooms list updated: ${rooms.length} rooms (${constRooms.length} constellation, ${goladRooms.length} golad)`);
         } catch (error) {
             console.error('Error updating rooms list:', error);
         }
@@ -2255,7 +2653,8 @@ function setCOEPHeaders(_req, res, next) {
 app.get('/', setCOEPHeaders, (_req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 app.get('/other', (_req, res) => res.sendFile(path.join(__dirname, 'other.html')));
 app.get('/admin', setCOEPHeaders, (_req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
-app.get('/game/:roomId', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/game/:roomId',  (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/golad/:roomId', (req, res) => res.sendFile(path.join(__dirname, 'golad.html')));
 
 // TTClub player tracking API — admin panel polls this to show who's in the room
 app.get('/ttclub-api/room/:code/players', (req, res) => {
@@ -2307,6 +2706,7 @@ const gameServer = new Server({ server, express: app });
 
 // Define rooms
 gameServer.define('constellation', ConstellationRoom);
+gameServer.define('golad', GoladRoom);
 gameServer.define('admin', AdminRoom);
 
 // Start server

@@ -920,6 +920,7 @@
                     <option value="Tabletop Club">Tabletop Club</option>
                     <option value="Geobridge">Geobridge</option>
                     <option value="No game focus">No game focus</option>
+                    <option value="GOLAD">GOLAD</option>
                 </select>
                 <div class="create-row">
                     <input type="text" id="game-name" placeholder="Session name">
@@ -1078,6 +1079,75 @@
                             <span id="settings-status">Settings are saved automatically</span>
                         </div>
                     </div>
+                    <!-- GOLAD Panel (shown only for GOLAD rooms) -->
+                    <div id="golad-settings" class="settings-section" style="display:none;">
+                        <h3>GOLAD Settings</h3>
+                        <div class="settings-grid">
+                            <div class="form-group">
+                                <label>Player 1 <span class="sublabel">(Red)</span></label>
+                                <select id="golad-p1-type" onchange="sendSettingsUpdate()">
+                                    <option value="human">Human</option>
+                                    <option value="dumb">Dumb AI</option>
+                                    <option value="okay">Okay AI</option>
+                                    <option value="smart">Smart AI</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Player 1 Color</label>
+                                <select id="golad-p1-color" onchange="sendSettingsUpdate()"></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Player 2 <span class="sublabel">(Blue)</span></label>
+                                <select id="golad-p2-type" onchange="sendSettingsUpdate()">
+                                    <option value="human">Human</option>
+                                    <option value="dumb">Dumb AI</option>
+                                    <option value="okay">Okay AI</option>
+                                    <option value="smart">Smart AI</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Player 2 Color</label>
+                                <select id="golad-p2-color" onchange="sendSettingsUpdate()"></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Board Size <span class="sublabel">(N×N, 8–30)</span></label>
+                                <input type="number" id="golad-boardSize" value="16" min="8" max="30" onchange="sendSettingsUpdate()">
+                            </div>
+                            <div class="form-group">
+                                <label>Cell Shape</label>
+                                <select id="golad-cellShape" onchange="sendSettingsUpdate()">
+                                    <option value="square">Square</option>
+                                    <option value="ellipse">Circle</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Birth Rules <span class="sublabel">(neighbor counts, e.g. "3")</span></label>
+                                <input type="text" id="golad-birth" value="3" placeholder="3" onchange="sendSettingsUpdate()">
+                            </div>
+                            <div class="form-group">
+                                <label>Survive Rules <span class="sublabel">(neighbor counts, e.g. "23")</span></label>
+                                <input type="text" id="golad-survive" value="23" placeholder="23" onchange="sendSettingsUpdate()">
+                            </div>
+                            <div class="form-group">
+                                <label>Hints</label>
+                                <select id="golad-hints" onchange="sendSettingsUpdate()">
+                                    <option value="true">On</option>
+                                    <option value="false">Off</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Animations</label>
+                                <select id="golad-animations" onchange="sendSettingsUpdate()">
+                                    <option value="true">On</option>
+                                    <option value="false">Off</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="margin-top:10px;font-size:12px;color:#666;">
+                            <span id="golad-settings-status">Settings saved automatically</span>
+                        </div>
+                    </div>
+
                     <!-- TTClub Panel (shown only for Tabletop Club rooms) -->
                     <div id="ttclub-panel" class="settings-section" style="display:none;">
                         <h3>Tabletop Club Session</h3>
@@ -1382,6 +1452,13 @@
         let currentRoomGameType = 'Constellation';
         let ttclubRoomCode = null;
 
+        function getJoinUrl(roomId, metadata) {
+            const base = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`;
+            const type = metadata?.type || '';
+            if (type === 'GOLAD') return `${base}/golad/${roomId}`;
+            return `${base}/game/${roomId}`;
+        }
+
         function getServerUrl() {
             // Use WebSocket protocol
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -1588,11 +1665,7 @@
             const name = room.metadata?.name || `Game ${room.roomId.substring(0, 6)}`;
             const playerCount = room.clients || 0;
 
-            // Generate proper game URL
-            const protocol = window.location.protocol;
-            const hostname = window.location.hostname;
-            const port = window.location.port ? `:${window.location.port}` : '';
-            const gameUrl = `${protocol}//${hostname}${port}/game/${room.roomId}`;
+            const gameUrl = getJoinUrl(room.roomId, room.metadata);
 
             div.innerHTML = `
         <div style="flex: 1;">
@@ -1755,7 +1828,28 @@
                     }
                 }
 
-                // Map? 
+                // GOLAD settings
+                if (currentRoomGameType === 'GOLAD') {
+                    initGoladColorPickers();
+                    if (cfg.boardSize  !== undefined) document.getElementById('golad-boardSize').value  = cfg.boardSize;
+                    if (cfg.birth)                    document.getElementById('golad-birth').value      = cfg.birth.join('');
+                    if (cfg.survive)                  document.getElementById('golad-survive').value    = cfg.survive.join('');
+                    if (cfg.p1Type)                   document.getElementById('golad-p1-type').value    = cfg.p1Type;
+                    if (cfg.p2Type)                   document.getElementById('golad-p2-type').value    = cfg.p2Type;
+                    if (cfg.cellShape)                document.getElementById('golad-cellShape').value  = cfg.cellShape;
+                    if (cfg.hints     !== undefined)  document.getElementById('golad-hints').value      = String(cfg.hints);
+                    if (cfg.animations!== undefined)  document.getElementById('golad-animations').value = String(cfg.animations);
+                    if (cfg.p1Color) {
+                        const i = GOLAD_PALETTE.findIndex(c => c.rgb[0]===cfg.p1Color[0]&&c.rgb[1]===cfg.p1Color[1]&&c.rgb[2]===cfg.p1Color[2]);
+                        if (i >= 0) document.getElementById('golad-p1-color').value = i;
+                    }
+                    if (cfg.p2Color) {
+                        const i = GOLAD_PALETTE.findIndex(c => c.rgb[0]===cfg.p2Color[0]&&c.rgb[1]===cfg.p2Color[1]&&c.rgb[2]===cfg.p2Color[2]);
+                        if (i >= 0) document.getElementById('golad-p2-color').value = i;
+                    }
+                }
+
+                // Map?
                 if (cfg.customMap) {
                     document.getElementById('edit-mapJson').value = JSON.stringify(cfg.customMap, null, 2);
                 }
@@ -1765,14 +1859,8 @@
             document.getElementById('no-game-selected').style.display = 'none';
             document.getElementById('game-content').style.display = 'block';
 
-            // Update game link - CRITICAL: Use window.location for correct URL
-            const protocol = window.location.protocol;
-            const hostname = window.location.hostname;
-            const port = window.location.port ? `:${window.location.port}` : '';
-            const gameUrl = `${protocol}//${hostname}${port}/game/${roomId}`;
-
-            console.log('Generated game URL:', gameUrl);
-
+            // Update game link – uses metadata.type to route GOLAD → /golad/:id, others → /game/:id
+            const gameUrl = getJoinUrl(roomId, roomData?.metadata);
             const linkElement = document.getElementById('game-direct-link');
             linkElement.href = gameUrl;
             linkElement.textContent = 'Join Game';
@@ -1821,14 +1909,58 @@
             }
         }
 
-        // ── TTClub helpers ──────────────────────────────────────────────────────
+        // ── GOLAD palette (matches server/client) ──────────────────────────────────
+        const GOLAD_PALETTE = [
+            {name:'White',      rgb:[255,255,255]},{name:'Beige',     rgb:[248,218,184]},
+            {name:'Pink',       rgb:[255,105,180]},{name:'Red',       rgb:[200,  0, 40]},
+            {name:'Orange',     rgb:[255,100,  0]},{name:'Gold',      rgb:[210,180, 45]},
+            {name:'Yellow',     rgb:[255,220,  0]},{name:'Lime',      rgb:[160,220,  0]},
+            {name:'Green',      rgb:[  0,150, 40]},{name:'Emerald',   rgb:[  0,152,117]},
+            {name:'Light Blue', rgb:[  0,204,255]},{name:'Blue',      rgb:[  0, 80,200]},
+            {name:'Violet',     rgb:[160,  0,255]},{name:'Purple',    rgb:[150,  0,110]},
+            {name:'Fuchsia',    rgb:[220,  0, 90]},{name:'Burgundy',  rgb:[100,  0, 25]},
+            {name:'Brown',      rgb:[ 80, 30,  0]},
+        ];
+        function initGoladColorPickers() {
+            ['golad-p1-color','golad-p2-color'].forEach((id, i) => {
+                const sel = document.getElementById(id);
+                if (!sel || sel.options.length > 0) return;
+                GOLAD_PALETTE.forEach((c, idx) => {
+                    const opt = document.createElement('option');
+                    opt.value = idx;
+                    opt.textContent = c.name;
+                    opt.style.background = `rgb(${c.rgb.join(',')})`;
+                    opt.style.color = (c.rgb[0]+c.rgb[1]+c.rgb[2] > 400) ? '#000' : '#fff';
+                    sel.appendChild(opt);
+                });
+                sel.value = i === 0 ? 3 : 11; // Red / Blue defaults
+            });
+        }
+        document.addEventListener('DOMContentLoaded', initGoladColorPickers);
+
+        // ── Game type UI — driven by a panel map so adding a new game only needs one entry ──
+        const GAME_PANEL_MAP = {
+            'Tabletop Club': 'ttclub-panel',
+            'GOLAD':         'golad-settings',
+        };
+        const DEFAULT_PANEL = 'constellation-settings';
+
         function updateGameTypeUI(gameType) {
             currentRoomGameType = gameType || 'Constellation';
-            const isTTClub = currentRoomGameType === 'Tabletop Club';
-            document.getElementById('constellation-settings').style.display = isTTClub ? 'none' : '';
-            document.getElementById('ttclub-panel').style.display = isTTClub ? '' : 'none';
-            if (isTTClub) loadTTClubIframe();
+
+            // Hide every known panel first — guarantees no stale panel is visible
+            document.getElementById(DEFAULT_PANEL).style.display = 'none';
+            Object.values(GAME_PANEL_MAP).forEach(id => {
+                document.getElementById(id).style.display = 'none';
+            });
+
+            // Show exactly the right one
+            const panelId = GAME_PANEL_MAP[currentRoomGameType] || DEFAULT_PANEL;
+            document.getElementById(panelId).style.display = '';
+
+            if (currentRoomGameType === 'Tabletop Club') loadTTClubIframe();
             else stopTTClubPlayerPolling();
+            if (currentRoomGameType === 'GOLAD') initGoladColorPickers();
         }
 
         function loadTTClubIframe() {
@@ -2018,7 +2150,8 @@
                 const roomOptions = {
                     name: gameName,
                     gameType: gameType,
-                    maxPlayers: 20
+                    maxPlayers: 20,
+                    isAdmin: true
                 };
 
                 if (aiBots.length > 0) {
@@ -2026,7 +2159,9 @@
                 }
 
                 // Use official Colyseus client.create() to create the room
-                const room = await client.create('constellation', roomOptions);
+                // GOLAD uses its own room type; all others use constellation
+                const roomType = gameType === 'GOLAD' ? 'golad' : 'constellation';
+                const room = await client.create(roomType, roomOptions);
                 console.log('✓ Room created:', room.roomId);
 
                 // Clear the game name input
@@ -2256,6 +2391,36 @@
 
         function sendSettingsUpdateImmediate() {
             if (!currentRoom || !selectedRoomId) return;
+
+            // GOLAD settings
+            if (currentRoomGameType === 'GOLAD') {
+                const birthStr   = (document.getElementById('golad-birth').value   || '3').replace(/\D/g,'');
+                const surviveStr = (document.getElementById('golad-survive').value || '23').replace(/\D/g,'');
+                const birth   = birthStr   ? [...new Set(birthStr.split('').map(Number).sort((a,b)=>a-b))]   : [3];
+                const survive = surviveStr ? [...new Set(surviveStr.split('').map(Number).sort((a,b)=>a-b))] : [2,3];
+                const p1Idx = parseInt(document.getElementById('golad-p1-color').value) || 3;
+                const p2Idx = parseInt(document.getElementById('golad-p2-color').value) || 11;
+                const settings = {
+                    boardSize:  parseInt(document.getElementById('golad-boardSize').value) || 16,
+                    birth, survive,
+                    p1Type:     document.getElementById('golad-p1-type').value,
+                    p2Type:     document.getElementById('golad-p2-type').value,
+                    p1Color:    GOLAD_PALETTE[p1Idx].rgb,
+                    p2Color:    GOLAD_PALETTE[p2Idx].rgb,
+                    cellShape:  document.getElementById('golad-cellShape').value,
+                    hints:      document.getElementById('golad-hints').value === 'true',
+                    animations: document.getElementById('golad-animations').value === 'true',
+                };
+                const settingsJson = JSON.stringify(settings);
+                if (settingsJson === lastSentSettingsJson) return;
+                lastSentSettingsJson = settingsJson;
+                try {
+                    currentRoom.send('update_settings', { roomId: selectedRoomId, settings });
+                    document.getElementById('golad-settings-status').textContent = 'Saved ✓';
+                    setTimeout(() => { document.getElementById('golad-settings-status').textContent = 'Settings saved automatically'; }, 1500);
+                } catch (e) { console.error('Failed to send GOLAD settings:', e); }
+                return;
+            }
 
             const multipliers = {
                 count: parseInt(document.getElementById('edit-countMultiplier').value) || 0,
