@@ -64,6 +64,12 @@ var cellShape    = 'square';
 var gameRules    = 'B3/S23';
 var birthRules   = [3];
 var surviveRules = [2, 3];
+var p1Type = 'human';
+var p2Type = 'human';
+
+// ─── Opponent cursor ──────────────────────────────────────────────────────────
+var oppCursorX = -1, oppCursorY = -1;
+var cursorSendFrame = 0;
 var hintsize     = 3;
 var transitionframes   = 15;
 var shapetransitionframes = 12;
@@ -175,6 +181,12 @@ async function connectColyseus() {
             Hooks.onGameOver(d);
         });
 
+        colyseusRoom.onMessage('opponent_cursor', function(d) {
+            // Convert normalized coords back to canvas pixels
+            oppCursorX = d.x * width;
+            oppCursorY = d.y * height;
+        });
+
         colyseusRoom.onError(function(code, msg) { statusMessage = 'Connection error'; });
         colyseusRoom.onLeave(function()           { statusMessage = 'Disconnected'; });
 
@@ -188,6 +200,11 @@ function applyDisplaySettings(d) {
     if (d.hints      !== undefined) hintEnabled = d.hints;
     if (d.animations !== undefined) animEnabled = d.animations;
     if (d.cellShape)                cellShape   = d.cellShape;
+    if (d.p1Type)                   p1Type      = d.p1Type;
+    if (d.p2Type)                   p2Type      = d.p2Type;
+}
+function typeLabel(t) {
+    return t === 'dumb' ? 'Dumb AI' : t === 'okay' ? 'Okay AI' : t === 'smart' ? 'Smart AI' : 'Human';
 }
 
 // ─── Board ────────────────────────────────────────────────────────────────────
@@ -450,6 +467,19 @@ function draw(){
         if(pressInterval>3){pressInterval=0;finishMove();}
     }
 
+    // Opponent cursor dot — visible only during opponent's turn, on the board area
+    if (gamePhase==='playing' && myTeamIndex>=0 && currentTurn!==myTeamIndex
+            && oppCursorX >= 0 && oppCursorX < height) {
+        var oppTs = currentTurn + 1;
+        noStroke();
+        fill(colorR[oppTs], colorG[oppTs], colorB[oppTs], 180);
+        ellipseMode(CENTER);
+        ellipse(oppCursorX, oppCursorY, cellSize*0.7, cellSize*0.7);
+        fill(255, 220);
+        ellipse(oppCursorX, oppCursorY, cellSize*0.25, cellSize*0.25);
+        ellipseMode(CORNER);
+    }
+
     drawSidePanel();
     Hooks.renderOverlay();
     nowLoading();
@@ -465,17 +495,11 @@ function drawSidePanel(){
     fill(10,60,70);textStyle(BOLD);textSize(28*boardDimension/720);
     text(gameRules,px+pw/2,height/20);
 
+    drawPlayerSlots(px,pw);
     if(gamePhase==='waiting'){
-        fill(10,60,70);textStyle(BOLD);textSize(30*boardDimension/720);
-        text(statusMessage,px+pw/2,height*0.5);
-        if(myTeamIndex>=0){
-            var ts=myTeamIndex+1;
-            fill(colorR[ts],colorG[ts],colorB[ts]);
-            textSize(22*boardDimension/720);
-            text('You are Player '+(myTeamIndex+1),px+pw/2,height*0.6);
-        }
+        fill(10,60,70);textStyle(BOLD);textSize(26*boardDimension/720);
+        text(statusMessage,px+pw/2,height*0.62);
     }else{
-        drawPlayerSlots(px,pw);
         drawStatus(px,pw);
     }
 
@@ -497,14 +521,23 @@ function drawPlayerSlots(px,pw){
 
         var active=(gamePhase==='playing'&&currentTurn===t);
         fill(active?bright:0);
-        textStyle(BOLD);textSize(36*boardDimension/720);
-        text('Player '+ts,px+pw/2,yTop+slotH*0.38);
-        textStyle(NORMAL);textSize(26*boardDimension/720);
+
+        // AI type label above player name (original GOLAD style)
+        var tLabel = typeLabel(t===0?p1Type:p2Type);
+        textStyle(NORMAL);textSize(22*boardDimension/720);
+        text(tLabel, px+pw/2, yTop+slotH*0.18);
+
+        textStyle(BOLD);textSize(32*boardDimension/720);
+        text('Player '+ts, px+pw/2, yTop+slotH*0.48);
+
+        textStyle(NORMAL);textSize(24*boardDimension/720);
         var cnt=(t===0?team0Count:team1Count)||0;
-        text((cellShape==='square'?'◻':'⭘')+'×'+cnt,px+pw/2,yTop+slotH*0.68);
+        if(gamePhase==='playing'||gamePhase==='finished'){
+            text((cellShape==='square'?'◻':'⭘')+'×'+cnt, px+pw/2, yTop+slotH*0.75);
+        }
         if(t===myTeamIndex){
-            textSize(17*boardDimension/720);
-            text('(you)',px+pw/2,yTop+slotH*0.90);
+            textSize(15*boardDimension/720);
+            text('(you)', px+pw/2, yTop+slotH*0.92);
         }
     }
 }
@@ -570,6 +603,14 @@ function nowLoading(){
 }
 
 // ─── Mouse ────────────────────────────────────────────────────────────────────
+function mouseMoved(){
+    // Send cursor to opponent during their turn so they see our dot on our turn,
+    // and we see their dot while they're thinking (currentTurn !== myTeamIndex)
+    if (!colyseusRoom || gamePhase !== 'playing' || myTeamIndex < 0) return;
+    cursorSendFrame++;
+    if (cursorSendFrame % 2 !== 0) return; // throttle to ~15fps
+    colyseusRoom.send('cursor_move', { x: mouseX / width, y: mouseY / height });
+}
 function mousePressed(){
     if(loading)return false;
     if(mouseX>height){

@@ -2195,6 +2195,9 @@ class GoladRoom extends Room {
         this.onMessage('start_game',   ()             => {
             if (this.goladState.gamePhase === 'waiting') this.startGoladGame();
         });
+        this.onMessage('cursor_move',  (client, data) => {
+            this.broadcast('opponent_cursor', { x: data.x, y: data.y }, { except: client });
+        });
     }
 
     onJoin(client, options) {
@@ -2396,6 +2399,8 @@ class GoladRoom extends Room {
         return {
             cells:      Array.from(this.goladState.cells),
             boardSize:  this.goladConfig.boardSize,
+            p1Type:     this.goladConfig.p1Type,
+            p2Type:     this.goladConfig.p2Type,
             p1Color:    this.goladConfig.p1Color,
             p2Color:    this.goladConfig.p2Color,
             cellShape:  this.goladConfig.cellShape,
