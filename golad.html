@@ -213,6 +213,8 @@ function applyCellsFromServer(serverCells) {
     cancelEditing();
 }
 function computeHints() {
+    // Use nextstate (the settled/incoming state) so this is safe to call mid-transition.
+    // Write to hintstate, never touching nextstate (which drives animation).
     for (var i = 0; i < cells.length; i++) {
         var x = cells[i].numX, y = cells[i].numY;
         var t1=0,t2=0,tg=0;
@@ -220,15 +222,17 @@ function computeHints() {
             if (!dx&&!dy) continue;
             var nx=x+dx,ny=y+dy;
             if (nx>=0&&nx<boardSize&&ny>=0&&ny<boardSize) {
-                var v=cells[ny*boardSize+nx].state;
+                var nb = cells[ny*boardSize+nx];
+                var v = nb.transitioning ? nb.nextstate : nb.state;
                 if(v===1)t1++;else if(v===2)t2++;else if(v===3)tg++;
             }
         }
-        var tot=t1+t2+tg, cur=cells[i].state;
+        var cur = cells[i].transitioning ? cells[i].nextstate : cells[i].state;
+        var tot = t1+t2+tg;
         if (cur===0) {
-            cells[i].nextstate = birthRules.indexOf(tot)>=0 ? (t1>t2?1:t2>t1?2:3) : 0;
+            cells[i].hintstate = birthRules.indexOf(tot)>=0 ? (t1>t2?1:t2>t1?2:3) : 0;
         } else {
-            cells[i].nextstate = surviveRules.indexOf(tot)>=0 ? cur : 0;
+            cells[i].hintstate = surviveRules.indexOf(tot)>=0 ? cur : 0;
         }
     }
 }
@@ -263,7 +267,7 @@ function finishMove() {
 // ─── Cell ─────────────────────────────────────────────────────────────────────
 function Cell(x, y) {
     this.numX=x; this.numY=y;
-    this.state=0; this.nextstate=0;
+    this.state=0; this.nextstate=0; this.hintstate=0;
     this.transitioning=false; this.transitionstate=hintsize;
     this.locked=false;
     this.posX = x*(cellSize+edgeThickness)+edgeThickness;
@@ -285,12 +289,21 @@ Cell.prototype.show = function() {
         else ellipse(this.posX+cellSize/2+edgeThickness/2,this.posY+edgeThickness,(cellSize-3*edgeThickness)/2,cellSize-2*edgeThickness);
     }
 
-    if (hintEnabled || this.transitionstate!==hintsize) {
+    if (this.transitionstate!==hintsize) {
+        // animation: grow dot from small to full using nextstate color
         fill(colorR[this.nextstate],colorG[this.nextstate],colorB[this.nextstate]);
         var ns=this.transitionstate*cellSize/transitionframes;
         rectMode(CENTER);
         if (cellShape==='square') rect(this.posX+cellSize/2,this.posY+cellSize/2,ns,ns);
         else ellipse(this.posX+cellSize/2,this.posY+cellSize/2,ns,ns);
+        rectMode(CORNER);
+    } else if (hintEnabled) {
+        // static hint dot showing predicted next GOL state
+        fill(colorR[this.hintstate],colorG[this.hintstate],colorB[this.hintstate]);
+        var hs=hintsize*cellSize/transitionframes;
+        rectMode(CENTER);
+        if (cellShape==='square') rect(this.posX+cellSize/2,this.posY+cellSize/2,hs,hs);
+        else ellipse(this.posX+cellSize/2,this.posY+cellSize/2,hs,hs);
         rectMode(CORNER);
     }
 };

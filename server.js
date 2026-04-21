@@ -2132,16 +2132,16 @@ class GoladRoom extends Room {
         this.goladConfig = {
             name:       options.name || options.roomName || `GOLAD ${this.roomId.substring(0, 6)}`,
             gameType:   'GOLAD',
-            boardSize:  options.boardSize || 16,
-            birth:      options.birth    || [3],
-            survive:    options.survive  || [2, 3],
-            p1Type:     'human',
-            p2Type:     'human',
-            p1Color:    GOLAD_PALETTE[3],   // Red
-            p2Color:    GOLAD_PALETTE[11],  // Blue
-            cellShape:  'square',
-            hints:      true,
-            animations: true,
+            boardSize:  options.boardSize  || 16,
+            birth:      options.birth      || [3],
+            survive:    options.survive    || [2, 3],
+            p1Type:     options.p1Type     || 'human',
+            p2Type:     options.p2Type     || 'human',
+            p1Color:    options.p1Color    || GOLAD_PALETTE[3],
+            p2Color:    options.p2Color    || GOLAD_PALETTE[11],
+            cellShape:  options.cellShape  || 'square',
+            hints:      options.hints      !== undefined ? options.hints      : true,
+            animations: options.animations !== undefined ? options.animations : true,
         };
 
         const bs = this.goladConfig.boardSize;

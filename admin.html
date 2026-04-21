@@ -2158,6 +2158,24 @@
                     roomOptions.aiBots = aiBots;
                 }
 
+                if (gameType === 'GOLAD') {
+                    initGoladColorPickers();
+                    const birthStr   = (document.getElementById('golad-birth').value   || '3').replace(/\D/g,'');
+                    const surviveStr = (document.getElementById('golad-survive').value || '23').replace(/\D/g,'');
+                    const p1Idx = parseInt(document.getElementById('golad-p1-color').value) || 3;
+                    const p2Idx = parseInt(document.getElementById('golad-p2-color').value) || 11;
+                    roomOptions.boardSize  = parseInt(document.getElementById('golad-boardSize').value) || 16;
+                    roomOptions.birth      = birthStr.split('').map(Number);
+                    roomOptions.survive    = surviveStr.split('').map(Number);
+                    roomOptions.p1Type     = document.getElementById('golad-p1-type').value;
+                    roomOptions.p2Type     = document.getElementById('golad-p2-type').value;
+                    roomOptions.p1Color    = GOLAD_PALETTE[p1Idx].rgb;
+                    roomOptions.p2Color    = GOLAD_PALETTE[p2Idx].rgb;
+                    roomOptions.cellShape  = document.getElementById('golad-cellShape').value;
+                    roomOptions.hints      = document.getElementById('golad-hints').value === 'true';
+                    roomOptions.animations = document.getElementById('golad-animations').value === 'true';
+                }
+
                 // Use official Colyseus client.create() to create the room
                 // GOLAD uses its own room type; all others use constellation
                 const roomType = gameType === 'GOLAD' ? 'golad' : 'constellation';
