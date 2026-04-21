@@ -1128,22 +1128,22 @@
                                 <label>Survive Rules <span class="sublabel">(neighbor counts, e.g. "23")</span></label>
                                 <input type="text" id="golad-survive" value="23" placeholder="23" onchange="sendSettingsUpdate()">
                             </div>
-                            <div class="form-group">
-                                <label>Hints</label>
-                                <select id="golad-hints" onchange="sendSettingsUpdate()">
-                                    <option value="true">On</option>
-                                    <option value="false">Off</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Animations</label>
-                                <select id="golad-animations" onchange="sendSettingsUpdate()">
-                                    <option value="true">On</option>
-                                    <option value="false">Off</option>
-                                </select>
+                            <div class="form-group" style="flex-direction:row;align-items:center;gap:16px;flex-wrap:wrap;">
+                                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                                    <input type="checkbox" id="golad-hints" checked onchange="sendSettingsUpdate()"> Hints
+                                </label>
+                                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                                    <input type="checkbox" id="golad-animations" checked onchange="sendSettingsUpdate()"> Animations
+                                </label>
+                                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                                    <input type="checkbox" id="golad-showCursor" checked onchange="sendSettingsUpdate()"> Show cursor
+                                </label>
+                                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;" title="Both off = replay animation after move">
+                                    <input type="checkbox" id="golad-showPreview" checked onchange="sendSettingsUpdate()"> Show previews
+                                </label>
                             </div>
                         </div>
-                        <div style="margin-top:10px;font-size:12px;color:#666;">
+                        <div style="margin-top:4px;font-size:12px;color:#666;">
                             <span id="golad-settings-status">Settings saved automatically</span>
                         </div>
                     </div>
@@ -1837,8 +1837,10 @@
                     if (cfg.p1Type)                   document.getElementById('golad-p1-type').value    = cfg.p1Type;
                     if (cfg.p2Type)                   document.getElementById('golad-p2-type').value    = cfg.p2Type;
                     if (cfg.cellShape)                document.getElementById('golad-cellShape').value  = cfg.cellShape;
-                    if (cfg.hints     !== undefined)  document.getElementById('golad-hints').value      = String(cfg.hints);
-                    if (cfg.animations!== undefined)  document.getElementById('golad-animations').value = String(cfg.animations);
+                    if (cfg.hints       !== undefined) document.getElementById('golad-hints').checked       = !!cfg.hints;
+                    if (cfg.animations  !== undefined) document.getElementById('golad-animations').checked  = !!cfg.animations;
+                    if (cfg.showCursor  !== undefined) document.getElementById('golad-showCursor').checked  = !!cfg.showCursor;
+                    if (cfg.showPreview !== undefined) document.getElementById('golad-showPreview').checked = !!cfg.showPreview;
                     if (cfg.p1Color) {
                         const i = GOLAD_PALETTE.findIndex(c => c.rgb[0]===cfg.p1Color[0]&&c.rgb[1]===cfg.p1Color[1]&&c.rgb[2]===cfg.p1Color[2]);
                         if (i >= 0) document.getElementById('golad-p1-color').value = i;
@@ -2171,9 +2173,11 @@
                     roomOptions.p2Type     = document.getElementById('golad-p2-type').value;
                     roomOptions.p1Color    = GOLAD_PALETTE[p1Idx].rgb;
                     roomOptions.p2Color    = GOLAD_PALETTE[p2Idx].rgb;
-                    roomOptions.cellShape  = document.getElementById('golad-cellShape').value;
-                    roomOptions.hints      = document.getElementById('golad-hints').value === 'true';
-                    roomOptions.animations = document.getElementById('golad-animations').value === 'true';
+                    roomOptions.cellShape   = document.getElementById('golad-cellShape').value;
+                    roomOptions.hints       = document.getElementById('golad-hints').checked;
+                    roomOptions.animations  = document.getElementById('golad-animations').checked;
+                    roomOptions.showCursor  = document.getElementById('golad-showCursor').checked;
+                    roomOptions.showPreview = document.getElementById('golad-showPreview').checked;
                 }
 
                 // Use official Colyseus client.create() to create the room
@@ -2425,9 +2429,11 @@
                     p2Type:     document.getElementById('golad-p2-type').value,
                     p1Color:    GOLAD_PALETTE[p1Idx].rgb,
                     p2Color:    GOLAD_PALETTE[p2Idx].rgb,
-                    cellShape:  document.getElementById('golad-cellShape').value,
-                    hints:      document.getElementById('golad-hints').value === 'true',
-                    animations: document.getElementById('golad-animations').value === 'true',
+                    cellShape:   document.getElementById('golad-cellShape').value,
+                    hints:       document.getElementById('golad-hints').checked,
+                    animations:  document.getElementById('golad-animations').checked,
+                    showCursor:  document.getElementById('golad-showCursor').checked,
+                    showPreview: document.getElementById('golad-showPreview').checked,
                 };
                 const settingsJson = JSON.stringify(settings);
                 if (settingsJson === lastSentSettingsJson) return;

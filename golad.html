@@ -67,9 +67,13 @@ var surviveRules = [2, 3];
 var p1Type = 'human';
 var p2Type = 'human';
 
-// ─── Opponent cursor ──────────────────────────────────────────────────────────
+// ─── Cursors & previews ───────────────────────────────────────────────────────
+var showCursor  = true;
+var showPreview = true;
 var oppCursorX = -1, oppCursorY = -1;
 var cursorSendFrame = 0;
+var aiCursorAnim = null;
+var oppPreview = null;  // {editingIdx, borning, v1, v2} from opponent
 var hintsize     = 3;
 var transitionframes   = 15;
 var shapetransitionframes = 12;
@@ -161,6 +165,7 @@ async function connectColyseus() {
 
         colyseusRoom.onMessage('state_update', function(d) {
             waitingForServer = false;
+            oppPreview = null;
             currentTurn  = d.currentTurn;
             team0Count   = d.team0Count || 0;
             team1Count   = d.team1Count || 0;
@@ -182,9 +187,17 @@ async function connectColyseus() {
         });
 
         colyseusRoom.onMessage('opponent_cursor', function(d) {
-            // Convert normalized coords back to canvas pixels
             oppCursorX = d.x * width;
             oppCursorY = d.y * height;
+        });
+        colyseusRoom.onMessage('ai_cursor_sequence', function(d) {
+            aiCursorAnim = new AICursor(d.sequence);
+        });
+        colyseusRoom.onMessage('opponent_preview', function(d) {
+            oppPreview = d.editingIdx >= 0 ? d : null;
+        });
+        colyseusRoom.onMessage('settings_changed', function(d) {
+            applyDisplaySettings(d);
         });
 
         colyseusRoom.onError(function(code, msg) { statusMessage = 'Connection error'; });
@@ -202,6 +215,8 @@ function applyDisplaySettings(d) {
     if (d.cellShape)                cellShape   = d.cellShape;
     if (d.p1Type)                   p1Type      = d.p1Type;
     if (d.p2Type)                   p2Type      = d.p2Type;
+    if (d.showCursor  !== undefined) showCursor  = d.showCursor;
+    if (d.showPreview !== undefined) showPreview = d.showPreview;
 }
 function typeLabel(t) {
     return t === 'dumb' ? 'Dumb AI' : t === 'okay' ? 'Okay AI' : t === 'smart' ? 'Smart AI' : 'Human';
@@ -258,6 +273,12 @@ function cancelEditing() {
     showVentricle1=false; showVentricle2=false; borning=false;
     shapeTransitions=[];
     for (var i=0;i<cells.length;i++) if(cells[i]) cells[i].locked=false;
+    sendPreviewUpdate();
+}
+function sendPreviewUpdate() {
+    if (!colyseusRoom || gamePhase !== 'playing' || myTeamIndex < 0) return;
+    var idx = editingX >= 0 ? editingY * boardSize + editingX : -1;
+    colyseusRoom.send('preview_update', { editingIdx: idx, borning: borning, v1: ventricle1, v2: ventricle2 });
 }
 function countTransitions() {
     var n=0; for (var i=0;i<cells.length;i++) if(cells[i].transitioning) n++;
@@ -342,6 +363,7 @@ Cell.prototype.addremove = function() {
         if (this.state===0) { borning=true; prevstate=0; this.state=myTeamState; }
         else { prevstate=this.state; this.state=0; }
         editingX=this.numX; editingY=this.numY;
+        sendPreviewUpdate();
     } else if (this.numX===editingX&&this.numY===editingY) {
         if (borning&&shapeTransitions.length===0) {
             if (ventricle1!==-1) {
@@ -365,11 +387,13 @@ Cell.prototype.addremove = function() {
             shapeTransitions.push(new ShapeTransition(this.posX,this.posY,cellSize,cellSize,
                 editingX*(cellSize+edgeThickness)+edgeThickness,
                 editingY*(cellSize+edgeThickness)+edgeThickness,cellSize/2,cellSize,1,-1));
+            sendPreviewUpdate();
         } else if (ventricle2===-1) {
             this.state=0; ventricle2=ci;
             shapeTransitions.push(new ShapeTransition(this.posX,this.posY,cellSize,cellSize,
                 editingX*(cellSize+edgeThickness)+edgeThickness+cellSize/2+edgeThickness/2,
                 editingY*(cellSize+edgeThickness)+edgeThickness,cellSize/2,cellSize,2,-1));
+            sendPreviewUpdate();
         }
     }
 };
@@ -416,6 +440,56 @@ gameButton.prototype.showBtn=function(){
 };
 gameButton.prototype.onButton=function(x,y){
     return x>=this.btnPosX&&y>=this.btnPosY&&x<=this.btnPosX+this.sizeX&&y<=this.btnPosY+this.sizeY;
+};
+
+// ─── AI cursor animation (matches original AItransition from golad-src) ──────
+var AI_TRANSITION_FRAMES = 14;
+function AICursor(sequence) {
+    this.sequence = sequence;
+    this.step     = -1;   // -1 = initial wait
+    this.aiframe  = 0;
+    // Start position: centre of side panel (same as original)
+    this.xi = 0; this.yi = 0;  // set in first draw when layout known
+    this.currentX = -1; this.currentY = -1;
+    this.started  = false;
+}
+AICursor.prototype.drawAndAdvance = function() {
+    if (!this.started) {
+        this.xi = height + (width - height) / 2;
+        this.yi = height / 2;
+        this.currentX = this.xi;
+        this.currentY = this.yi;
+        this.started = true;
+    }
+    // Draw white dot
+    noStroke();
+    fill(255);
+    ellipseMode(CENTER);
+    ellipse(this.currentX, this.currentY, cellSize / 3, cellSize / 3);
+    ellipseMode(CORNER);
+
+    if (this.step === -1) {
+        // Waiting before moving
+        this.aiframe++;
+        if (this.aiframe > AI_TRANSITION_FRAMES) { this.step = 0; this.aiframe = 0; }
+        return true;
+    }
+    if (this.step < this.sequence.length) {
+        var ci = this.sequence[this.step];
+        if (ci < 0 || !cells[ci]) { this.step++; this.aiframe = 0; return this.step < this.sequence.length; }
+        var tx = cells[ci].posX + cellSize / 2;
+        var ty = cells[ci].posY + cellSize / 2;
+        var t  = (1 + sin(-HALF_PI + PI * this.aiframe / AI_TRANSITION_FRAMES)) / 2;
+        this.currentX = this.xi + (tx - this.xi) * t;
+        this.currentY = this.yi + (ty - this.yi) * t;
+        this.aiframe++;
+        if (this.aiframe > AI_TRANSITION_FRAMES) {
+            this.xi = this.currentX; this.yi = this.currentY;
+            this.step++; this.aiframe = 0;
+        }
+        return true;
+    }
+    return false; // animation done
 };
 
 // ─── Buttons (rebuilt on resize) ──────────────────────────────────────────────
@@ -467,16 +541,38 @@ function draw(){
         if(pressInterval>3){pressInterval=0;finishMove();}
     }
 
-    // Opponent cursor dot — visible only during opponent's turn, on the board area
-    if (gamePhase==='playing' && myTeamIndex>=0 && currentTurn!==myTeamIndex
-            && oppCursorX >= 0 && oppCursorX < height) {
+    // Opponent preview overlay (live cell selections during their turn)
+    if (oppPreview && cells.length > 0 && gamePhase==='playing' && currentTurn!==myTeamIndex) {
         var oppTs = currentTurn + 1;
         noStroke();
-        fill(colorR[oppTs], colorG[oppTs], colorB[oppTs], 180);
+        if (oppPreview.editingIdx >= 0 && oppPreview.editingIdx < cells.length) {
+            var ec = cells[oppPreview.editingIdx];
+            fill(colorR[oppTs], colorG[oppTs], colorB[oppTs], oppPreview.borning ? 120 : 60);
+            if (cellShape==='square') rect(ec.posX, ec.posY, cellSize, cellSize);
+            else ellipse(ec.posX, ec.posY, cellSize, cellSize);
+        }
+        [oppPreview.v1, oppPreview.v2].forEach(function(vi) {
+            if (vi >= 0 && vi < cells.length) {
+                fill(255, 60);
+                var vc = cells[vi];
+                if (cellShape==='square') rect(vc.posX, vc.posY, cellSize, cellSize);
+                else ellipse(vc.posX, vc.posY, cellSize, cellSize);
+            }
+        });
+    }
+
+    // AI cursor animation (white flying dot, matches original AItransition)
+    if (aiCursorAnim) {
+        var active = aiCursorAnim.drawAndAdvance();
+        if (!active) aiCursorAnim = null;
+    }
+    // Human opponent cursor — white dot at their mouse position during their turn
+    if (!aiCursorAnim && gamePhase==='playing' && myTeamIndex>=0 && currentTurn!==myTeamIndex
+            && oppCursorX >= 0 && oppCursorX < height) {
+        noStroke();
+        fill(255);
         ellipseMode(CENTER);
-        ellipse(oppCursorX, oppCursorY, cellSize*0.7, cellSize*0.7);
-        fill(255, 220);
-        ellipse(oppCursorX, oppCursorY, cellSize*0.25, cellSize*0.25);
+        ellipse(oppCursorX, oppCursorY, cellSize/3, cellSize/3);
         ellipseMode(CORNER);
     }
 

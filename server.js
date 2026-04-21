@@ -2139,9 +2139,11 @@ class GoladRoom extends Room {
             p2Type:     options.p2Type     || 'human',
             p1Color:    options.p1Color    || GOLAD_PALETTE[3],
             p2Color:    options.p2Color    || GOLAD_PALETTE[11],
-            cellShape:  options.cellShape  || 'square',
-            hints:      options.hints      !== undefined ? options.hints      : true,
-            animations: options.animations !== undefined ? options.animations : true,
+            cellShape:   options.cellShape   || 'square',
+            hints:       options.hints       !== undefined ? options.hints       : true,
+            animations:  options.animations  !== undefined ? options.animations  : true,
+            showCursor:  options.showCursor  !== undefined ? options.showCursor  : true,
+            showPreview: options.showPreview !== undefined ? options.showPreview : true,
         };
 
         const bs = this.goladConfig.boardSize;
@@ -2182,10 +2184,20 @@ class GoladRoom extends Room {
                     if (s.p1Color)                   this.goladConfig.p1Color    = s.p1Color;
                     if (s.p2Color)                   this.goladConfig.p2Color    = s.p2Color;
                     if (s.cellShape)                 this.goladConfig.cellShape  = s.cellShape;
-                    if (s.hints      !== undefined)  this.goladConfig.hints      = s.hints;
-                    if (s.animations !== undefined)  this.goladConfig.animations = s.animations;
-                    if (s.name)                      this.goladConfig.name       = s.name;
+                    if (s.hints       !== undefined)  this.goladConfig.hints       = s.hints;
+                    if (s.animations  !== undefined)  this.goladConfig.animations  = s.animations;
+                    if (s.showCursor  !== undefined)  this.goladConfig.showCursor  = s.showCursor;
+                    if (s.showPreview !== undefined)  this.goladConfig.showPreview = s.showPreview;
+                    if (s.name)                       this.goladConfig.name        = s.name;
                     this.refreshMetadata();
+                    // Push changes to game clients so labels/behaviour update immediately
+                    this.broadcast('settings_changed', {
+                        p1Type:      this.goladConfig.p1Type,
+                        p2Type:      this.goladConfig.p2Type,
+                        showCursor:  this.goladConfig.showCursor,
+                        showPreview: this.goladConfig.showPreview,
+                    });
+                    this._checkAutoStart();
                 }
             });
         }
@@ -2196,7 +2208,12 @@ class GoladRoom extends Room {
             if (this.goladState.gamePhase === 'waiting') this.startGoladGame();
         });
         this.onMessage('cursor_move',  (client, data) => {
-            this.broadcast('opponent_cursor', { x: data.x, y: data.y }, { except: client });
+            if (this.goladConfig.showCursor)
+                this.broadcast('opponent_cursor', { x: data.x, y: data.y }, { except: client });
+        });
+        this.onMessage('preview_update', (client, data) => {
+            if (this.goladConfig.showPreview)
+                this.broadcast('opponent_preview', data, { except: client });
         });
     }
 
@@ -2213,23 +2230,18 @@ class GoladRoom extends Room {
             survive:    this.goladConfig.survive,
             p1Color:    this.goladConfig.p1Color,
             p2Color:    this.goladConfig.p2Color,
-            p1Type:     this.goladConfig.p1Type,
-            p2Type:     this.goladConfig.p2Type,
-            cellShape:  this.goladConfig.cellShape,
-            hints:      this.goladConfig.hints,
-            animations: this.goladConfig.animations,
+            p1Type:      this.goladConfig.p1Type,
+            p2Type:      this.goladConfig.p2Type,
+            cellShape:   this.goladConfig.cellShape,
+            hints:       this.goladConfig.hints,
+            animations:  this.goladConfig.animations,
+            showCursor:  this.goladConfig.showCursor,
+            showPreview: this.goladConfig.showPreview,
         });
 
         if (this.goladState.gamePhase !== 'waiting') this.sendFullState(client);
 
-        const humanCount = [...this.playerTeams.values()].filter(t => t >= 0).length;
-        const p1AI = this.goladConfig.p1Type !== 'human';
-        const p2AI = this.goladConfig.p2Type !== 'human';
-        const neededHumans = (p1AI ? 0 : 1) + (p2AI ? 0 : 1);
-        if (humanCount >= neededHumans && neededHumans > 0 && this.goladState.gamePhase === 'waiting') {
-            setTimeout(() => this.startGoladGame(), 1500);
-        }
-
+        this._checkAutoStart();
         this.refreshMetadata();
     }
 
@@ -2302,7 +2314,7 @@ class GoladRoom extends Room {
         this._applyMove(teamIndex, data);
     }
 
-    _applyMove(teamIndex, data) {
+    _applyMove(teamIndex, data, isAIMove = false) {
         const { action, cellIndex, ventricle1, ventricle2 } = data;
         const cells = this.goladState.cells;
         const ps    = teamIndex + 1; // cell value: 1 or 2
@@ -2337,32 +2349,65 @@ class GoladRoom extends Room {
             this.broadcast('game_over', { winner:w, cells:Array.from(cells), team0Count:t0, team1Count:t1 });
         } else {
             this.goladState.currentTurn = teamIndex === 0 ? 1 : 0;
-            this.broadcast('state_update', {
+            const payload = {
                 cells: Array.from(cells), currentTurn: this.goladState.currentTurn,
                 team0Count: t0, team1Count: t1
-            });
+            };
+            const replayMode = !isAIMove && !this.goladConfig.showCursor && !this.goladConfig.showPreview;
+            if (replayMode) {
+                // Send state immediately to mover; animate move for everyone else first
+                const mover = this.clients.find(c => this.playerTeams.get(c.sessionId) === teamIndex);
+                if (mover) mover.send('state_update', payload);
+                const sequence = data.action === 'place'
+                    ? [data.ventricle1, data.ventricle2, data.cellIndex]
+                    : [data.cellIndex];
+                this.broadcast('ai_cursor_sequence', { sequence, team: teamIndex }, mover ? { except: mover } : {});
+                setTimeout(() => this.broadcast('state_update', payload, mover ? { except: mover } : {}), 1800);
+            } else {
+                this.broadcast('state_update', payload);
+            }
             this.scheduleAIMove();
         }
     }
 
+    _checkAutoStart() {
+        if (this.goladState.gamePhase !== 'waiting') return;
+        const humanCount   = [...this.playerTeams.values()].filter(t => t >= 0).length;
+        const neededHumans = (this.goladConfig.p1Type !== 'human' ? 0 : 1)
+                           + (this.goladConfig.p2Type !== 'human' ? 0 : 1);
+        if (neededHumans > 0 && humanCount >= neededHumans) {
+            setTimeout(() => this.startGoladGame(), 1500);
+        }
+    }
+
     scheduleAIMove() {
-        const turn   = this.goladState.currentTurn;
-        const aiType = turn === 0 ? this.goladConfig.p1Type : this.goladConfig.p2Type;
+        const turn    = this.goladState.currentTurn;
+        const aiType  = turn === 0 ? this.goladConfig.p1Type : this.goladConfig.p2Type;
         if (!aiType || aiType === 'human') return;
+
+        const myState = turn + 1;
+        const cells   = this.goladState.cells.slice();
+        const bs      = this.goladConfig.boardSize;
+        const birth   = this.goladConfig.birth;
+        const survive = this.goladConfig.survive;
+
+        const move = (aiType === 'dumb')
+            ? goladDumbAI(cells, bs, myState)
+            : goladOkayAI(cells, bs, myState, birth, survive);
+
+        if (!move) return;
+
+        // Send cursor animation sequence to all clients before applying move
+        const sequence = move.action === 'place'
+            ? [move.ventricle1, move.ventricle2, move.cellIndex]
+            : [move.cellIndex];
+        this.broadcast('ai_cursor_sequence', { sequence, team: turn });
 
         setTimeout(() => {
             if (this.goladState.gamePhase !== 'playing') return;
             if (this.goladState.currentTurn !== turn) return;
-            const myState = turn + 1;
-            const cells   = this.goladState.cells.slice();
-            const bs      = this.goladConfig.boardSize;
-            const birth   = this.goladConfig.birth;
-            const survive = this.goladConfig.survive;
-            const move = (aiType === 'dumb')
-                ? goladDumbAI(cells, bs, myState)
-                : goladOkayAI(cells, bs, myState, birth, survive);
-            if (move) this._applyMove(turn, move);
-        }, 900);
+            this._applyMove(turn, move, true);
+        }, 1800);
     }
 
     stepGolad() {
@@ -2404,10 +2449,12 @@ class GoladRoom extends Room {
             p1Color:    this.goladConfig.p1Color,
             p2Color:    this.goladConfig.p2Color,
             cellShape:  this.goladConfig.cellShape,
-            hints:      this.goladConfig.hints,
-            animations: this.goladConfig.animations,
-            team0Count: this.goladState.team0Count,
-            team1Count: this.goladState.team1Count,
+            hints:       this.goladConfig.hints,
+            animations:  this.goladConfig.animations,
+            showCursor:  this.goladConfig.showCursor,
+            showPreview: this.goladConfig.showPreview,
+            team0Count:  this.goladState.team0Count,
+            team1Count:  this.goladState.team1Count,
         };
     }
 
