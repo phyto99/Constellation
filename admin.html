@@ -1062,6 +1062,13 @@
                                             team from the game client)</span></span>
                                 </label>
                             </div>
+                            <div class="form-group">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="edit-ithkuilNumerals"
+                                        onchange="sendSettingsUpdate()" style="width: auto; margin: 0;">
+                                    <span>Ithkuil numerals? <span class="sublabel">(Display all leaderboard numbers in Ithkuil script)</span></span>
+                                </label>
+                            </div>
                         </div>
 
                         <!-- AI Bots Section moved below standard settings -->
@@ -1771,6 +1778,7 @@
 
                 // Player team selection setting
                 document.getElementById('edit-allowPlayerTeamSelection').checked = cfg.allowPlayerTeamSelection || false;
+                document.getElementById('edit-ithkuilNumerals').checked = cfg.ithkuilNumerals || false;
 
                 // Multipliers
                 if (cfg.multipliers) {
@@ -2482,7 +2490,8 @@
                 multipliers: multipliers,
                 aiBots: getAdminAIBots(),
                 teamColors: teamColors,
-                allowPlayerTeamSelection: document.getElementById('edit-allowPlayerTeamSelection').checked
+                allowPlayerTeamSelection: document.getElementById('edit-allowPlayerTeamSelection').checked,
+                ithkuilNumerals: document.getElementById('edit-ithkuilNumerals').checked
             };
 
             // Send map filename instead of full JSON to avoid Colyseus presence message size limits
