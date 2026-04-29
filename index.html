@@ -570,7 +570,7 @@
                 style="outline: 2px solid #00ffff; outline-offset: -2px; padding: 0 4px;"
                 title="Click to select Cyan team">
                 <div class="main-score-section">
-                    <div class="score-highlight" style="background:#00ffff;width:89px;"></div>
+                    <div class="score-highlight" style="background:#00ffff;width:100%;"></div>
                     <div class="score-content">
 
                         <div class="steal-circle">15</div>
@@ -586,7 +586,7 @@
             </div>
             <div class="score-row" data-team-index="1" style="" title="Click to select Magenta team">
                 <div class="main-score-section">
-                    <div class="score-highlight" style="background:#ff00ff;width:45px;"></div>
+                    <div class="score-highlight" style="background:#ff00ff;width:100%;"></div>
                     <div class="score-content">
 
                         <div class="steal-circle">15</div>
@@ -602,7 +602,7 @@
             </div>
             <div class="score-row" data-team-index="2" style="" title="Click to select Lime team">
                 <div class="main-score-section">
-                    <div class="score-highlight" style="background:#00ff00;width:45px;"></div>
+                    <div class="score-highlight" style="background:#00ff00;width:100%;"></div>
                     <div class="score-content">
 
                         <div class="steal-circle">15</div>
@@ -618,7 +618,7 @@
             </div>
             <div class="score-row" data-team-index="3" style="" title="Click to select Gold team">
                 <div class="main-score-section">
-                    <div class="score-highlight" style="background:#ffd700;width:45px;"></div>
+                    <div class="score-highlight" style="background:#ffd700;width:100%;"></div>
                     <div class="score-content">
 
                         <div class="steal-circle">15</div>
@@ -634,7 +634,7 @@
             </div>
             <div class="score-row" data-team-index="4" style="" title="Click to select Blue team">
                 <div class="main-score-section">
-                    <div class="score-highlight" style="background:#0000ff;width:45px;"></div>
+                    <div class="score-highlight" style="background:#0000ff;width:100%;"></div>
                     <div class="score-content">
 
                         <div class="steal-circle">15</div>
@@ -650,7 +650,7 @@
             </div>
             <div class="score-row" data-team-index="5" style="" title="Click to select Red team">
                 <div class="main-score-section">
-                    <div class="score-highlight" style="background:#ff0000;width:45px;"></div>
+                    <div class="score-highlight" style="background:#ff0000;width:100%;"></div>
                     <div class="score-content">
 
                         <div class="steal-circle">15</div>
@@ -666,7 +666,7 @@
             </div>
             <div class="score-row" data-team-index="6" style="" title="Click to select Dark Green team">
                 <div class="main-score-section">
-                    <div class="score-highlight" style="background:#006400;width:45px;"></div>
+                    <div class="score-highlight" style="background:#006400;width:100%;"></div>
                     <div class="score-content">
 
                         <div class="steal-circle">15</div>
@@ -7862,7 +7862,7 @@
                         scoreRow.title = rowTitle(teamName);
                         scoreRow.innerHTML = `
                             <div class="main-score-section">
-                                <div class="score-highlight" style="background:${hexColor};width:45px;"></div>
+                                <div class="score-highlight" style="background:${hexColor};width:100%;"></div>
                                 <div class="score-content">
                                     <div class="steal-circle">${team.st || 0}</div>
                                     <span class="score-number">0</span>
@@ -7950,7 +7950,6 @@
 
                     // Display "Won" for wormhole winner, otherwise show score
                     const displayScore = isWormholeWinner ? "Won" : data.finalScore;
-                    const scoreWidth = displayScore.toString().length * 9 + 36 + (isCurrentTeam ? 8 : 0);
                     const teamBorder = isCurrentTeam ? `outline: 2px solid ${color}; outline-offset: -2px; padding: 0 4px;` : '';
                     const selectedClass = isCurrentTeam ? ' selected-team' : '';
 
@@ -7966,7 +7965,7 @@
 
                     html += `<div class="score-row${selectedClass}" data-team-index="${data.teamIdx}" style="${teamBorder}" title="${rowTitleText}">
                             <div class="main-score-section">
-                                <div class="score-highlight" style="background:${color};width:${scoreWidth}px;"></div>
+                                <div class="score-highlight" style="background:${color};width:100%;"></div>
                                 <div class="score-content">
                                     ${aiIndicator}
                                     <div class="steal-circle">${this.fmtN(data.steals)}</div>
