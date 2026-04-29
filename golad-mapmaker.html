@@ -89,6 +89,13 @@ input[type=range] { flex:1; height:4px; accent-color:var(--accent); }
   background:#0d0d20; border:1px solid var(--border); border-radius:3px; padding:4px 6px; }
 ::-webkit-scrollbar{width:5px;} ::-webkit-scrollbar-track{background:var(--bg);}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.topo-btns{display:flex;gap:3px;flex-wrap:wrap;}
+.topo-btn{padding:3px 8px;background:transparent;border:1px solid var(--border);
+  border-radius:3px;color:var(--dim);cursor:pointer;font-size:11px;}
+.topo-btn:hover{border-color:#aaaaff;color:var(--text);}
+.topo-btn.active{background:#1a1a3a;border-color:#6666cc;color:#aaaaff;}
+.topo-badge{padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;
+  background:#1a1a3a;border:1px solid #4444aa;color:#aaaaff;}
 </style>
 </head>
 <body>
@@ -186,6 +193,7 @@ input[type=range] { flex:1; height:4px; accent-color:var(--accent); }
       <button class="btn sec" id="play-btn" style="padding:3px 8px;font-size:11px;" onclick="togglePlay()">Play</button>
       <button class="btn sec" style="padding:3px 8px;font-size:11px;" onclick="clearSimCells()">Clear</button>
       <span style="font-size:11px;color:var(--dim);">Gen <strong id="gen-num" style="color:var(--text)">0</strong></span>
+      <span id="topo-badge" class="topo-badge" style="display:none;"></span>
     </div>
 
     <div id="stats-bar">
@@ -208,6 +216,19 @@ input[type=range] { flex:1; height:4px; accent-color:var(--accent); }
         <button style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:10px;text-decoration:underline" onclick="resetRules()">reset</button>
       </div>
       <div style="font-size:9px;color:var(--dim);" id="rule-note"></div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">Topology</div>
+      <div class="topo-btns" id="topo-btns">
+        <button class="topo-btn active" onclick="setTopology('flat')">Flat</button>
+        <button class="topo-btn" onclick="setTopology('toroidal')">Torus</button>
+        <button class="topo-btn" onclick="setTopology('cylinder')">Cylinder</button>
+        <button class="topo-btn" onclick="setTopology('mobius')">Möbius</button>
+      </div>
+      <div style="font-size:9px;color:var(--dim);line-height:1.5;margin-top:3px;" id="topo-note">
+        Bounded. Corner cells have 3–5 neighbors — natural fortresses. Gliders die at edges.
+      </div>
     </div>
 
     <div class="sec">
@@ -256,6 +277,25 @@ input[type=range] { flex:1; height:4px; accent-color:var(--accent); }
         <div class="bal-score" id="bal-score-txt"></div>
         <div id="analysis-bars"></div>
         <div style="font-size:9px;color:var(--dim);margin-top:4px;">Mean ± std across 100 simulations.</div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">Birth / Death Rates</div>
+      <div style="font-size:9px;color:var(--dim);margin-bottom:4px;line-height:1.5;">
+        10 trials × 30 gens from flat equal start. Shows equilibrium density and
+        contested-birth fairness for current rules, topology, and player count.
+      </div>
+      <button class="btn" onclick="runRateAnalysis()" id="rate-btn">Analyze Rates</button>
+      <div id="rate-box" style="display:none;">
+        <canvas id="rate-chart" width="255" height="80"
+          style="display:block;margin:5px 0 3px;border-radius:3px;"></canvas>
+        <div id="rate-stats"
+          style="font-size:9px;line-height:1.75;color:var(--dim);margin-bottom:3px;"></div>
+        <div id="rate-advisory"
+          style="font-size:9px;line-height:1.6;padding:5px 7px;
+            background:#0a0a18;border:1px solid var(--border);border-radius:3px;color:var(--dim);">
+        </div>
       </div>
     </div>
 
@@ -333,6 +373,7 @@ let simPaint = 1;
 let playing = false;
 let playTimer = null;
 let curTab = 'edit';
+let topology = 'flat'; // 'flat' | 'toroidal' | 'cylinder' | 'mobius'
 
 const CS = 22;
 
@@ -459,6 +500,38 @@ function drawSim() {
       ctx.strokeRect(px, py, CS, CS);
     }
   }
+  // Draw topology wrap indicators on canvas edges
+  if (topology !== 'flat') {
+    const W = mc.width, H = mc.height;
+    const hWrap = topology === 'toroidal' || topology === 'cylinder' || topology === 'mobius';
+    const vWrap = topology === 'toroidal';
+    const edgeCol = topology === 'mobius' ? 'rgba(200,140,60,0.55)' : 'rgba(100,100,255,0.45)';
+    ctx.strokeStyle = edgeCol;
+    ctx.lineWidth = 2;
+    if (hWrap) { ctx.strokeRect(0, 0, W, H); } // full border for LR wrap
+    else if (vWrap) { // just top+bottom
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(W,0); ctx.moveTo(0,H); ctx.lineTo(W,H); ctx.stroke();
+    }
+    // Small arrows pointing inward on wrapped edges
+    ctx.fillStyle = edgeCol;
+    const arrowSpacing = Math.max(2, Math.floor(G / 4));
+    if (hWrap) {
+      for (let row = arrowSpacing; row < G; row += arrowSpacing) {
+        const py = row * CS + CS/2;
+        // right edge → points left (wraps to left)
+        ctx.beginPath(); ctx.moveTo(W-1,py-4); ctx.lineTo(W-7,py); ctx.lineTo(W-1,py+4); ctx.fill();
+        // left edge → points right
+        ctx.beginPath(); ctx.moveTo(1,py-4); ctx.lineTo(7,py); ctx.lineTo(1,py+4); ctx.fill();
+      }
+    }
+    if (vWrap) {
+      for (let col = arrowSpacing; col < G; col += arrowSpacing) {
+        const px = col * CS + CS/2;
+        ctx.beginPath(); ctx.moveTo(px-4,H-1); ctx.lineTo(px,H-7); ctx.lineTo(px+4,H-1); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(px-4,1); ctx.lineTo(px,7); ctx.lineTo(px+4,1); ctx.fill();
+      }
+    }
+  }
 }
 
 // ─── MOUSE ────────────────────────────────────────────────────────────────────
@@ -557,6 +630,36 @@ function updateStats() {
   document.getElementById('st-shares').innerHTML = shareHtml;
 }
 
+// ─── TOPOLOGY ─────────────────────────────────────────────────────────────────
+// Central neighbor resolver — topology-aware. All GOL logic routes through here.
+
+function getNeighbors(x, y) {
+  const result = [];
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue;
+      let nx = x + dx, ny = y + dy;
+      if (topology === 'toroidal') {
+        nx = (nx + G) % G;
+        ny = (ny + G) % G;
+      } else if (topology === 'cylinder') {
+        nx = (nx + G) % G;
+        if (ny < 0 || ny >= G) continue;
+      } else if (topology === 'mobius') {
+        if (nx < 0 || nx >= G) {
+          nx = (nx + G) % G;
+          ny = (G - 1) - ny; // vertical flip on horizontal wrap
+        }
+        if (ny < 0 || ny >= G) continue;
+      } else { // flat
+        if (nx < 0 || nx >= G || ny < 0 || ny >= G) continue;
+      }
+      result.push(idx(nx, ny));
+    }
+  }
+  return result;
+}
+
 // ─── SIMULATION ───────────────────────────────────────────────────────────────
 
 // Sampling: modular index parity — cells grouped in N-tuples, one per player.
@@ -597,16 +700,10 @@ function golStep(board) {
       const i = idx(x, y);
       if (isWall[i]) continue;
       const nc = new Array(numPlayers + 1).fill(0);
-      for (let dy = -1; dy <= 1; dy++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          if (!dx && !dy) continue;
-          const nx = x+dx, ny = y+dy;
-          if (!ib(nx,ny)) continue;
-          const ni = idx(nx,ny);
-          if (!isWall[ni] && board[ni] > 0) nc[board[ni]]++;
-        }
+      for (const ni of getNeighbors(x, y)) {
+        if (!isWall[ni] && board[ni] > 0) nc[board[ni]]++;
       }
-      const total = nc.reduce((a,c)=>a+c,0);
+      const total = nc.reduce((a, c) => a + c, 0);
       const cur = board[i];
       if (cur === 0) {
         if (bRule.has(total) && total > 0) {
@@ -736,13 +833,13 @@ function displayAnalysis(stats) {
 function setPlayers(n) {
   numPlayers = n;
   document.querySelectorAll('.player-btn').forEach((b,i) => b.classList.toggle('active', i+2===n));
-  // Influence map unchanged — derived biases auto-redistribute to N players
   document.getElementById('player-note').textContent =
     PERFECT_SYM.has(n)
       ? `${n}P: perfect ${360/n}° rotational symmetry.`
       : `${n}P: ~${(360/n).toFixed(0)}° rotation (±1 cell rounding). Analysis tool validates balance.`;
   document.getElementById('sym-note-header').textContent = symLabel(n);
   updateSimPaintButtons();
+  markRateStale();
   redraw(); updateStats();
 }
 
@@ -751,6 +848,56 @@ function updateSimPaintButtons() {
     const el = document.getElementById('scp'+p);
     if (el) el.style.display = p <= numPlayers ? '' : 'none';
   }
+}
+
+// ─── TOPOLOGY UI ──────────────────────────────────────────────────────────────
+
+const TOPO_NOTES = {
+  flat:
+    `Bounded. Corners have 3 neighbors, edges have 5 — natural fortress positions. ` +
+    `Gliders die at borders. Edge cells are cheaper to defend. ` +
+    `Rate analysis will show slightly lower birth/death than true equilibrium because border cells are birth-starved.`,
+  toroidal:
+    `Left↔Right and Top↔Bottom wrap. Every cell has exactly 8 neighbors — ` +
+    `birth/death rates are perfectly uniform across all positions. ` +
+    `Corner fortresses disappear. Gliders loop forever and can re-enter from behind. ` +
+    `Rate analysis equilibrium density is the most accurate here — no edge distortion. ` +
+    `Strategy: all starting positions truly equal; density map is the only asymmetry.`,
+  cylinder:
+    `Left↔Right wrap, top/bottom bounded. Horizontal flanking is infinite — ` +
+    `you can attack from behind by circling around. Top/bottom edges still create ` +
+    `fortress asymmetry (corner cells there have fewer neighbors). ` +
+    `Gliders exit right edge, re-enter left going the same direction. ` +
+    `Strategy: horizontal and vertical movement cost very differently — ` +
+    `horizontal expansion is "free" (no wall), vertical is gated by edges.`,
+  mobius:
+    `Left edge connects to right, but vertically flipped. A cell at (0, y) neighbors (G-1, G-1-y). ` +
+    `A glider exiting left re-enters right going the opposite vertical direction. ` +
+    `Clockwise spirals become counterclockwise after wrapping. ` +
+    `High mastery ceiling — knowing where your patterns land after a wrap is a learnable skill. ` +
+    `Strategy: spawn-mirror attacks (send a glider left; it returns from the right aimed at a ` +
+    `different row — hard for opponent to predict).`,
+};
+
+function markRateStale() {
+  const rb = document.getElementById('rate-btn');
+  if (rb && !rb.disabled) rb.textContent = 'Analyze Rates *';
+}
+
+function setTopology(t) {
+  topology = t;
+  document.querySelectorAll('.topo-btn').forEach(b =>
+    b.classList.toggle('active', b.textContent.trim().toLowerCase().startsWith(t.slice(0, 4))));
+  document.getElementById('topo-note').textContent = TOPO_NOTES[t];
+  const badge = document.getElementById('topo-badge');
+  if (badge) {
+    const labels = { flat:'', toroidal:'TORUS', cylinder:'CYLINDER', mobius:'MÖBIUS' };
+    badge.textContent = labels[t] || t.toUpperCase();
+    badge.style.display = t === 'flat' ? 'none' : '';
+  }
+  markRateStale();
+  if (curTab === 'sim') { simCells = sampleBoard(); simGen = 0;
+    document.getElementById('gen-num').textContent = '0'; clearWinBanner(); redraw(); }
 }
 
 // ─── RULES ────────────────────────────────────────────────────────────────────
@@ -776,6 +923,9 @@ function updateRuleDisp() {
   const b=[...bRule].sort((a,c)=>a-c).join('');
   const s=[...sRule].sort((a,c)=>a-c).join('');
   document.getElementById('rule-txt').textContent=`B${b}/S${s}`;
+  // Stale indicator on rate analysis button when rules change
+  const rb = document.getElementById('rate-btn');
+  if (rb && !rb.disabled) rb.textContent = 'Analyze Rates *';
 }
 
 function resetRules() {
@@ -1033,6 +1183,258 @@ function updatePreStepNote() {
   document.getElementById('ps-note').textContent = notes[Math.min(ps, 3)];
 }
 
+// ─── RATE ANALYSIS ────────────────────────────────────────────────────────────
+// Measures empirical birth rate, death rate, equilibrium density, and contested-birth
+// fairness from a perfectly flat equal-probability starting board.
+
+function arrAvg(a) { return a.reduce((s, v) => s + v, 0) / a.length; }
+function fmtPct(v, d = 0) { return (v * 100).toFixed(d) + '%'; }
+
+function sampleFlatBoard() {
+  // No bias — purely random at globalDensity, exact round-robin parity across numPlayers
+  const live = [];
+  for (let i = 0; i < G * G; i++) {
+    if (!isWall[i] && Math.random() < globalDensity) live.push(i);
+  }
+  // Fisher-Yates shuffle for spatial randomness
+  for (let i = live.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [live[i], live[j]] = [live[j], live[i]];
+  }
+  const board = new Array(G * G).fill(0);
+  live.forEach((ci, pos) => { board[ci] = (pos % numPlayers) + 1; });
+  return board;
+}
+
+function runRateAnalysis() {
+  const btn = document.getElementById('rate-btn');
+  btn.textContent = 'Running…'; btn.disabled = true;
+  setTimeout(() => {
+    const TRIALS = 10, N_GEN = 30;
+    const nonWallCount = isWall.filter(w => !w).length || 1;
+
+    const densArr     = new Array(N_GEN).fill(0);
+    const birthArr    = new Array(N_GEN).fill(0);
+    const deathArr    = new Array(N_GEN).fill(0);
+    const contestSum  = new Array(N_GEN).fill(0);
+    const contestDen  = new Array(N_GEN).fill(0);
+
+    for (let t = 0; t < TRIALS; t++) {
+      let board = sampleFlatBoard();
+      for (let g = 0; g < N_GEN; g++) {
+        let births = 0, deaths = 0, contested = 0;
+        const next = new Array(G * G).fill(0);
+        for (let y = 0; y < G; y++) {
+          for (let x = 0; x < G; x++) {
+            const i = idx(x, y);
+            if (isWall[i]) continue;
+            const nc = new Array(numPlayers + 1).fill(0);
+            for (const ni of getNeighbors(x, y)) {
+              if (!isWall[ni] && board[ni] > 0) nc[board[ni]]++;
+            }
+            const total = nc.reduce((a, c) => a + c, 0);
+            const cur = board[i];
+            if (cur === 0) {
+              if (bRule.has(total) && total > 0) {
+                let mx = 0, mx2 = 0, dom = 0;
+                for (let p = 1; p <= numPlayers; p++) {
+                  if (nc[p] > mx) { mx2 = mx; dom = p; mx = nc[p]; }
+                  else if (nc[p] > mx2) mx2 = nc[p];
+                }
+                next[i] = dom; births++;
+                if (mx - mx2 <= 1) contested++; // margin ≤1 = random-ish winner
+              }
+            } else {
+              if (sRule.has(total)) next[i] = cur; else deaths++;
+            }
+          }
+        }
+        const alive = next.filter(c => c > 0).length;
+        densArr[g]  += alive / nonWallCount;
+        birthArr[g] += births / nonWallCount;
+        deathArr[g] += deaths / nonWallCount;
+        if (births > 0) { contestSum[g] += contested / births; contestDen[g]++; }
+        board = next;
+      }
+    }
+    const contestArr = contestDen.map((d, g) => d > 0 ? contestSum[g] / d : 0);
+    for (let g = 0; g < N_GEN; g++) {
+      densArr[g]  /= TRIALS;
+      birthArr[g] /= TRIALS;
+      deathArr[g] /= TRIALS;
+    }
+
+    drawRateChart({ densArr, birthArr, deathArr, N_GEN });
+    displayRateStats({ densArr, birthArr, deathArr, contestArr, N_GEN });
+    document.getElementById('rate-box').style.display = 'block';
+    btn.textContent = 'Analyze Rates'; btn.disabled = false; // clears stale marker
+  }, 10);
+}
+
+function drawRateChart({ densArr, birthArr, deathArr, N_GEN }) {
+  const canvas = document.getElementById('rate-chart');
+  const c = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  c.clearRect(0, 0, W, H);
+  c.fillStyle = '#07070e'; c.fillRect(0, 0, W, H);
+
+  // Scale to max observed density (birth/death on same scale but ×3 for visibility)
+  const maxD = Math.max(...densArr, 0.01);
+  const BR_SCALE = 3; // multiply birth/death so they're readable alongside density
+  const maxVal = Math.max(maxD, Math.max(...birthArr) * BR_SCALE, Math.max(...deathArr) * BR_SCALE, 0.01);
+  const sy = v => H - 4 - (v / maxVal) * (H - 12);
+  const gx = g => (g / N_GEN) * W;
+
+  // Grid lines
+  c.strokeStyle = 'rgba(255,255,255,0.05)'; c.lineWidth = 1;
+  [0.25, 0.5, 0.75, 1.0].forEach(f => {
+    const gy = sy(maxVal * f);
+    c.beginPath(); c.moveTo(0, gy); c.lineTo(W, gy); c.stroke();
+  });
+
+  // Equilibrium dashed line (avg of last 10 gens)
+  const eqDens = arrAvg(densArr.slice(-10));
+  c.strokeStyle = 'rgba(255,210,60,0.4)'; c.setLineDash([3, 3]);
+  c.beginPath(); c.moveTo(0, sy(eqDens)); c.lineTo(W, sy(eqDens)); c.stroke();
+  c.setLineDash([]);
+
+  // Death rate (red, ×BR_SCALE)
+  c.strokeStyle = 'rgba(220,80,80,0.75)'; c.lineWidth = 1.5;
+  c.beginPath();
+  deathArr.forEach((v, g) => {
+    const px = gx(g + 0.5), py = sy(v * BR_SCALE);
+    g === 0 ? c.moveTo(px, py) : c.lineTo(px, py);
+  });
+  c.stroke();
+
+  // Birth rate (green, ×BR_SCALE)
+  c.strokeStyle = 'rgba(60,200,80,0.75)';
+  c.beginPath();
+  birthArr.forEach((v, g) => {
+    const px = gx(g + 0.5), py = sy(v * BR_SCALE);
+    g === 0 ? c.moveTo(px, py) : c.lineTo(px, py);
+  });
+  c.stroke();
+
+  // Density area fill
+  c.fillStyle = 'rgba(130,130,200,0.12)';
+  c.beginPath();
+  densArr.forEach((v, g) => {
+    const px = gx(g + 0.5), py = sy(v);
+    g === 0 ? c.moveTo(px, py) : c.lineTo(px, py);
+  });
+  c.lineTo(W, H); c.lineTo(0, H); c.closePath(); c.fill();
+
+  // Density line
+  c.strokeStyle = 'rgba(180,180,230,0.85)'; c.lineWidth = 1.5;
+  c.beginPath();
+  densArr.forEach((v, g) => {
+    const px = gx(g + 0.5), py = sy(v);
+    g === 0 ? c.moveTo(px, py) : c.lineTo(px, py);
+  });
+  c.stroke();
+
+  // Legend (bottom-left)
+  const legend = [
+    ['rgba(180,180,230,0.85)', 'density'],
+    ['rgba(60,200,80,0.75)',   `birth×${BR_SCALE}`],
+    ['rgba(220,80,80,0.75)',   `death×${BR_SCALE}`],
+  ];
+  c.font = '7px monospace';
+  legend.forEach(([col, lbl], i) => {
+    c.fillStyle = col;
+    c.fillRect(2 + i * 58, H - 9, 6, 6);
+    c.fillStyle = 'rgba(160,160,180,0.7)';
+    c.fillText(lbl, 10 + i * 58, H - 2);
+  });
+
+  // Equilibrium label
+  c.fillStyle = 'rgba(255,210,60,0.7)';
+  c.fillText('eq ' + fmtPct(eqDens), W - 34, sy(eqDens) - 2);
+}
+
+function displayRateStats({ densArr, birthArr, deathArr, contestArr, N_GEN }) {
+  const s = Math.floor(N_GEN * 0.55); // stable phase
+  const eqDens   = arrAvg(densArr.slice(s));
+  const stBirth  = arrAvg(birthArr.slice(s));
+  const stDeath  = arrAvg(deathArr.slice(s));
+  const stContest = arrAvg(contestArr.slice(s).filter(v => v > 0) || [0]);
+  const net = stBirth - stDeath;
+  const netCol = net > 0.003 ? '#55cc55' : net < -0.003 ? '#cc5555' : '#aaaaaa';
+
+  document.getElementById('rate-stats').innerHTML =
+    `Equilibrium: <strong style="color:#c8c8e0">${fmtPct(eqDens, 1)}</strong> alive &nbsp;` +
+    `<span style="color:#44cc55">Birth: ${fmtPct(stBirth, 1)}/gen</span> &nbsp;` +
+    `<span style="color:#cc5555">Death: ${fmtPct(stDeath, 1)}/gen</span> &nbsp;` +
+    `Net: <span style="color:${netCol}">${net >= 0 ? '+' : ''}${fmtPct(net, 1)}</span><br>` +
+    `Contested births: <strong style="color:#c8c8e0">${Math.round(stContest * 100)}%</strong>` +
+    ` <span style="color:var(--dim)">(margin ≤1 neighbor — near-random winner)</span>`;
+
+  document.getElementById('rate-advisory').innerHTML =
+    buildRateAdvisory({ eqDens, stBirth, stDeath, stContest, net });
+}
+
+function buildRateAdvisory({ eqDens, stBirth, stDeath, stContest, net }) {
+  const lines = [];
+
+  // Equilibrium health
+  if (eqDens < 0.04)
+    lines.push(`<span style="color:#cc5555">⚠ Board dies out (eq ${fmtPct(eqDens, 1)}). ` +
+      `Increase density or add B2 to rules.</span>`);
+  else if (eqDens > 0.88)
+    lines.push(`<span style="color:#cc5555">⚠ Board overfills (eq ${fmtPct(eqDens, 1)}). ` +
+      `Lower density or tighten survival rules.</span>`);
+  else
+    lines.push(`<span style="color:#55cc55">✓</span> Healthy equilibrium ` +
+      `(${fmtPct(eqDens, 1)}) — board sustains across multiple games.`);
+
+  // Contested-birth advisory per player count
+  // Acceptable contested% rises with player count (more players = inherently more competition)
+  const maxContest = [0, 0, 50, 62, 72, 80, 85][Math.min(numPlayers, 6)];
+  const cp = Math.round(stContest * 100);
+  if (cp > maxContest) {
+    const fixes = numPlayers <= 2
+      ? 'Try adding S234 (stickier cells reduce flip-coin births near borders).'
+      : numPlayers <= 4
+        ? 'Add B2 so 2-neighbor clusters birth cleanly. Or try Day&Night (B3678/S34678).'
+        : 'Use 2×2 Rule (B36/S245) or Seeds (B2/S) — both tested for 5-6P fairness.';
+    lines.push(`<span style="color:#cccc55">⚠ ${cp}% contested births for ${numPlayers}P</span>` +
+      ` (limit ~${maxContest}%). Too random — skill matters less than luck. ${fixes}`);
+  } else {
+    lines.push(`${cp}% contested births — good skill/luck balance for ${numPlayers}P ` +
+      `(limit ~${maxContest}%).`);
+  }
+
+  // Rule-count dominance note
+  const bArr = [...bRule].sort((a,b)=>a-b);
+  const sArr = [...sRule].sort((a,b)=>a-b);
+  if (bArr.length >= 4)
+    lines.push(`Wide birth rule (B${bArr.join('')}) — many neighbor counts trigger birth. ` +
+      `Fast expansion favors aggressive play; defensive fortresses are harder to build.`);
+  if (sArr.length <= 1)
+    lines.push(`Tight survival (S${sArr.join('')}) — most cells die quickly. ` +
+      `Placement precision matters more than pattern memory.`);
+  if (sArr.includes(0))
+    lines.push(`S0 active — isolated cells survive. ` +
+      `Players can scatter single cells as territory markers safely.`);
+
+  // Topology note
+  if (topology === 'toroidal')
+    lines.push(`Torus topology: equilibrium density above is exact — no edge distortion. ` +
+      `All positions perfectly equivalent; density map fully controls fairness.`);
+  else if (topology === 'cylinder')
+    lines.push(`Cylinder: rates slightly undercount birth near top/bottom edges. ` +
+      `Horizontal parity is perfect; vertical asymmetry may shift balance for top/bottom players.`);
+  else if (topology === 'mobius')
+    lines.push(`Möbius: wrap flip means patterns approaching left edge behave differently than ` +
+      `right edge after they cross. Rate analysis averages this — observe visually in sim.`);
+  else if (eqDens > 0.1)
+    lines.push(`Flat topology: edge/corner cells have fewer neighbors — expect slightly lower ` +
+      `birth rates there. Corner maps will show lower effective density than predicted.`);
+
+  return lines.join('<br>');
+}
+
 // ─── TOOL PALETTE ─────────────────────────────────────────────────────────────
 
 function buildPalette() {
@@ -1108,6 +1510,7 @@ function doExport() {
     initialState: { globalDensity, preSteps, players:numPlayers,
       sampling:'modular-parity + bias-weighted',
       symmetryApproach: symLabel(numPlayers) },
+    topology,
     rules: { birth:b, survive:s, notation:`B${b.join('')}/S${s.join('')}` },
     balance: { estimatedBalance: document.getElementById('st-bal').textContent,
       expectedAlive: document.getElementById('st-dens').textContent }
