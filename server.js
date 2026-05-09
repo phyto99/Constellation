@@ -2477,6 +2477,60 @@ class GoladRoom extends Room {
     }
 }
 
+// ── CentauriRoom ──────────────────────────────────────────────────────────────
+class CentauriRoom extends Room {
+    onCreate(options) {
+        console.log('CentauriRoom created:', options.name || options.roomId);
+        this.gameConfig = {
+            name:            options.name || 'Centauri',
+            thrustPower:     options.thrustPower    ?? 1000.0,
+            thrustDepletion: options.thrustDepletion ?? 10.0,
+            fuelEfficiency:  options.fuelEfficiency  ?? 0.5,
+            fuelRecovery:    options.fuelRecovery    ?? 2.0,
+            tickSpeed:       options.tickSpeed       ?? 1.0,
+            mapJson:         options.mapJson         ?? null,
+            teamColors: options.teamColors ?? [
+                { color: 0x00ffff, name: 'cyan'    },
+                { color: 0xff00ff, name: 'magenta' },
+                { color: 0x00ff00, name: 'lime'    },
+                { color: 0xffcc00, name: 'gold'    },
+            ],
+        };
+        this.setMetadata({ name: this.gameConfig.name, type: 'Centauri', state: 'waiting' });
+
+        this.presence.subscribe(`room_${this.roomId}`, (data) => {
+            if (data.type === 'update_settings') {
+                const s = data.settings;
+                if (s.thrustPower    !== undefined) this.gameConfig.thrustPower    = s.thrustPower;
+                if (s.thrustDepletion !== undefined) this.gameConfig.thrustDepletion = s.thrustDepletion;
+                if (s.fuelEfficiency  !== undefined) this.gameConfig.fuelEfficiency  = s.fuelEfficiency;
+                if (s.fuelRecovery    !== undefined) this.gameConfig.fuelRecovery    = s.fuelRecovery;
+                if (s.tickSpeed       !== undefined) this.gameConfig.tickSpeed       = s.tickSpeed;
+                if (s.mapJson         !== undefined) this.gameConfig.mapJson         = s.mapJson;
+                if (s.teamColors      !== undefined) this.gameConfig.teamColors      = s.teamColors;
+                this.broadcast('settings_update', { config: this.gameConfig });
+            }
+            if (data.type === 'start_game') {
+                this.setMetadata({ name: this.gameConfig.name, type: 'Centauri', state: 'playing' });
+                this.broadcast('game_start', { config: this.gameConfig });
+            }
+        });
+
+        this.onMessage('request_config', (client) => {
+            client.send('settings_update', { config: this.gameConfig });
+        });
+    }
+
+    onJoin(client) {
+        client.send('settings_update', { config: this.gameConfig });
+    }
+
+    onDispose() {
+        this.presence.unsubscribe(`room_${this.roomId}`);
+        console.log(`CentauriRoom ${this.roomId} disposed`);
+    }
+}
+
 class AdminRoom extends Room {
     onCreate(options) {
         console.log('AdminRoom created');
@@ -2635,11 +2689,12 @@ class AdminRoom extends Room {
 
     async updateRoomsList() {
         try {
-            const [constRooms, goladRooms] = await Promise.all([
+            const [constRooms, goladRooms, centauriRooms] = await Promise.all([
                 matchMaker.query({ name: 'constellation' }),
-                matchMaker.query({ name: 'golad' })
+                matchMaker.query({ name: 'golad' }),
+                matchMaker.query({ name: 'centauri' })
             ]);
-            const rooms = [...constRooms, ...goladRooms];
+            const rooms = [...constRooms, ...goladRooms, ...centauriRooms];
             const roomsData = rooms.map(room => {
                 const roomState = this.roomStates.get(room.roomId);
                 return {
@@ -2654,7 +2709,7 @@ class AdminRoom extends Room {
             });
 
             this.broadcast('rooms_update', roomsData);
-            console.log(`✓ Rooms list updated: ${rooms.length} rooms (${constRooms.length} constellation, ${goladRooms.length} golad)`);
+            console.log(`✓ Rooms list updated: ${rooms.length} rooms (${constRooms.length} constellation, ${goladRooms.length} golad, ${centauriRooms.length} centauri)`);
         } catch (error) {
             console.error('Error updating rooms list:', error);
         }
@@ -2707,6 +2762,17 @@ app.get('/other', (_req, res) => res.sendFile(path.join(__dirname, 'other.html')
 app.get('/admin', setCOEPHeaders, (_req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 app.get('/game/:roomId',  (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/golad/:roomId', (req, res) => res.sendFile(path.join(__dirname, 'golad.html')));
+app.get('/colyseus.js',   (req, res) => res.sendFile(path.join(__dirname, 'node_modules/colyseus.js/dist/colyseus.js')));
+function godotHeaders(_req, res, next) {
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+    next();
+}
+app.use('/centauri',      godotHeaders, express.static(path.join(__dirname, 'centauri-web')));
+app.get('/centauri/:roomId', godotHeaders, (_req, res) => res.sendFile(path.join(__dirname, 'centauri-web/index.html')));
+app.use('/centauri-web',      godotHeaders, express.static(path.join(__dirname, 'centauri-web')));
+app.use('/centauri-mapmaker', godotHeaders, express.static(path.join(__dirname, 'centauri-mapmaker')));
 
 // TTClub player tracking API — admin panel polls this to show who's in the room
 app.get('/ttclub-api/room/:code/players', (req, res) => {
@@ -2759,6 +2825,7 @@ const gameServer = new Server({ server, express: app });
 // Define rooms
 gameServer.define('constellation', ConstellationRoom);
 gameServer.define('golad', GoladRoom);
+gameServer.define('centauri', CentauriRoom);
 gameServer.define('admin', AdminRoom);
 
 // Start server

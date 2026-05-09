@@ -921,6 +921,7 @@
                     <option value="Geobridge">Geobridge</option>
                     <option value="No game focus">No game focus</option>
                     <option value="GOLAD">GOLAD</option>
+                    <option value="Centauri">Centauri</option>
                 </select>
                 <div class="create-row">
                     <input type="text" id="game-name" placeholder="Session name">
@@ -1152,6 +1153,53 @@
                         </div>
                         <div style="margin-top:4px;font-size:12px;color:#666;">
                             <span id="golad-settings-status">Settings saved automatically</span>
+                        </div>
+                    </div>
+
+                    <!-- Centauri Panel -->
+                    <div id="centauri-settings" class="settings-section" style="display:none;">
+                        <h3>Centauri Settings</h3>
+                        <div class="settings-grid">
+                            <div class="form-group">
+                                <label>Thrust Power <span class="sublabel">(0.1–5.0)</span></label>
+                                <input type="range" id="centauri-thrustPower" min="0.1" max="5.0" step="0.1" value="1.0" oninput="document.getElementById('centauri-thrustPowerVal').textContent=parseFloat(this.value).toFixed(1);sendSettingsUpdate()">
+                                <span id="centauri-thrustPowerVal" class="sublabel">1.0</span>
+                            </div>
+                            <div class="form-group">
+                                <label>Thrust Depletion Rate <span class="sublabel">(0.01–1.0)</span></label>
+                                <input type="range" id="centauri-thrustDepletion" min="0.01" max="1.0" step="0.01" value="0.1" oninput="document.getElementById('centauri-thrustDepletionVal').textContent=parseFloat(this.value).toFixed(2);sendSettingsUpdate()">
+                                <span id="centauri-thrustDepletionVal" class="sublabel">0.10</span>
+                            </div>
+                            <div class="form-group">
+                                <label>Food/Fuel Efficiency <span class="sublabel">(0.1–2.0)</span></label>
+                                <input type="range" id="centauri-fuelEfficiency" min="0.1" max="2.0" step="0.05" value="0.8" oninput="document.getElementById('centauri-fuelEfficiencyVal').textContent=parseFloat(this.value).toFixed(2);sendSettingsUpdate()">
+                                <span id="centauri-fuelEfficiencyVal" class="sublabel">0.80</span>
+                            </div>
+                            <div class="form-group">
+                                <label>Fuel Recovery <span class="sublabel">(-0.5–0.5, neg = bleed)</span></label>
+                                <input type="range" id="centauri-fuelRecovery" min="-0.5" max="0.5" step="0.01" value="0.05" oninput="document.getElementById('centauri-fuelRecoveryVal').textContent=parseFloat(this.value).toFixed(2);sendSettingsUpdate()">
+                                <span id="centauri-fuelRecoveryVal" class="sublabel">0.05</span>
+                            </div>
+                            <div class="form-group">
+                                <label>Tick Speed <span class="sublabel">(0.1–5.0)</span></label>
+                                <input type="range" id="centauri-tickSpeed" min="0.1" max="5.0" step="0.1" value="1.0" oninput="document.getElementById('centauri-tickSpeedVal').textContent=parseFloat(this.value).toFixed(1);sendSettingsUpdate()">
+                                <span id="centauri-tickSpeedVal" class="sublabel">1.0</span>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top:12px;">
+                            <label>Map JSON <span class="sublabel">(paste or export from MapMaker below)</span></label>
+                            <textarea id="centauri-mapJson" rows="5" style="width:100%;font-family:monospace;font-size:11px;resize:vertical;" placeholder='{"planets":[...]}' oninput="sendSettingsUpdate()"></textarea>
+                        </div>
+                        <div style="margin-top:8px;">
+                            <label style="font-size:12px;color:#666;">MapMaker <span class="sublabel">(click Export JSON — auto-fills above)</span></label>
+                            <iframe id="centauri-mapmaker-iframe"
+                                src="/centauri-mapmaker/"
+                                style="width:100%;height:480px;border:1px solid #ccc;border-radius:4px;margin-top:4px;display:block;"
+                                allow="clipboard-write">
+                            </iframe>
+                        </div>
+                        <div style="margin-top:4px;font-size:12px;color:#666;">
+                            <span id="centauri-settings-status">Settings saved automatically</span>
                         </div>
                     </div>
 
@@ -1463,6 +1511,7 @@
             const base = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`;
             const type = metadata?.type || '';
             if (type === 'GOLAD') return `${base}/golad/${roomId}`;
+            if (type === 'Centauri') return `${base}/centauri/${roomId}`;
             return `${base}/game/${roomId}`;
         }
 
@@ -1836,6 +1885,16 @@
                     }
                 }
 
+                // Centauri settings
+                if (currentRoomGameType === 'Centauri') {
+                    if (cfg.thrustPower    !== undefined) { document.getElementById('centauri-thrustPower').value    = cfg.thrustPower;    document.getElementById('centauri-thrustPowerVal').textContent    = parseFloat(cfg.thrustPower).toFixed(1); }
+                    if (cfg.thrustDepletion !== undefined) { document.getElementById('centauri-thrustDepletion').value = cfg.thrustDepletion; document.getElementById('centauri-thrustDepletionVal').textContent = parseFloat(cfg.thrustDepletion).toFixed(2); }
+                    if (cfg.fuelEfficiency  !== undefined) { document.getElementById('centauri-fuelEfficiency').value  = cfg.fuelEfficiency;  document.getElementById('centauri-fuelEfficiencyVal').textContent  = parseFloat(cfg.fuelEfficiency).toFixed(2); }
+                    if (cfg.fuelRecovery    !== undefined) { document.getElementById('centauri-fuelRecovery').value    = cfg.fuelRecovery;    document.getElementById('centauri-fuelRecoveryVal').textContent    = parseFloat(cfg.fuelRecovery).toFixed(2); }
+                    if (cfg.tickSpeed       !== undefined) { document.getElementById('centauri-tickSpeed').value       = cfg.tickSpeed;       document.getElementById('centauri-tickSpeedVal').textContent       = parseFloat(cfg.tickSpeed).toFixed(1); }
+                    if (cfg.mapJson) document.getElementById('centauri-mapJson').value = JSON.stringify(cfg.mapJson, null, 2);
+                }
+
                 // GOLAD settings
                 if (currentRoomGameType === 'GOLAD') {
                     initGoladColorPickers();
@@ -1952,6 +2011,7 @@
         const GAME_PANEL_MAP = {
             'Tabletop Club': 'ttclub-panel',
             'GOLAD':         'golad-settings',
+            'Centauri':      'centauri-settings',
         };
         const DEFAULT_PANEL = 'constellation-settings';
 
@@ -1971,6 +2031,26 @@
             if (currentRoomGameType === 'Tabletop Club') loadTTClubIframe();
             else stopTTClubPlayerPolling();
             if (currentRoomGameType === 'GOLAD') initGoladColorPickers();
+            if (currentRoomGameType === 'Centauri') initCentauriMapmakerListener();
+        }
+
+        // ── Centauri MapMaker iframe bridge ───────────────────────────────────────
+        let _centauriMapmakerListenerAttached = false;
+        function initCentauriMapmakerListener() {
+            if (_centauriMapmakerListenerAttached) return;
+            _centauriMapmakerListenerAttached = true;
+            window.addEventListener('message', (e) => {
+                if (e.data?.type !== 'mapExport') return;
+                const textarea = document.getElementById('centauri-mapJson');
+                if (!textarea) return;
+                try {
+                    const parsed = typeof e.data.json === 'string' ? JSON.parse(e.data.json) : e.data.json;
+                    textarea.value = JSON.stringify(parsed, null, 2);
+                } catch(_) {
+                    textarea.value = e.data.json;
+                }
+                sendSettingsUpdate();
+            });
         }
 
         function loadTTClubIframe() {
@@ -2188,17 +2268,27 @@
                     roomOptions.showPreview = document.getElementById('golad-showPreview').checked;
                 }
 
+                if (gameType === 'Centauri') {
+                    roomOptions.thrustPower    = parseFloat(document.getElementById('centauri-thrustPower').value)    || 1.0;
+                    roomOptions.thrustDepletion = parseFloat(document.getElementById('centauri-thrustDepletion').value) || 0.1;
+                    roomOptions.fuelEfficiency  = parseFloat(document.getElementById('centauri-fuelEfficiency').value)  || 0.8;
+                    roomOptions.fuelRecovery    = parseFloat(document.getElementById('centauri-fuelRecovery').value)    || 0.05;
+                    roomOptions.tickSpeed       = parseFloat(document.getElementById('centauri-tickSpeed').value)       || 1.0;
+                    const rawJson = document.getElementById('centauri-mapJson').value.trim();
+                    if (rawJson) { try { roomOptions.mapJson = JSON.parse(rawJson); } catch(e) {} }
+                }
+
                 // Use official Colyseus client.create() to create the room
-                // GOLAD uses its own room type; all others use constellation
-                const roomType = gameType === 'GOLAD' ? 'golad' : 'constellation';
+                const roomType = gameType === 'GOLAD' ? 'golad' : gameType === 'Centauri' ? 'centauri' : 'constellation';
                 const room = await client.create(roomType, roomOptions);
                 console.log('✓ Room created:', room.roomId);
 
                 // Clear the game name input
                 document.getElementById('game-name').value = '';
 
-                // Select the newly created room (this will reset to defaults since room data doesn't exist yet)
+                // Select the newly created room — force correct panel since metadata isn't in latestRoomsData yet
                 selectRoom(room.roomId);
+                updateGameTypeUI(gameType);
 
                 // Request updated rooms list to get the new room data
                 if (currentRoom) {
@@ -2421,6 +2511,34 @@
 
         function sendSettingsUpdateImmediate() {
             if (!currentRoom || !selectedRoomId) return;
+
+            // Centauri settings
+            if (currentRoomGameType === 'Centauri') {
+                const rawJson = document.getElementById('centauri-mapJson').value.trim();
+                let mapJson = null;
+                if (rawJson) { try { mapJson = JSON.parse(rawJson); } catch(e) {} }
+                const settings = {
+                    thrustPower:    parseFloat(document.getElementById('centauri-thrustPower').value)    || 1.0,
+                    thrustDepletion: parseFloat(document.getElementById('centauri-thrustDepletion').value) || 0.1,
+                    fuelEfficiency:  parseFloat(document.getElementById('centauri-fuelEfficiency').value)  || 0.8,
+                    fuelRecovery:    parseFloat(document.getElementById('centauri-fuelRecovery').value)    || 0.05,
+                    tickSpeed:       parseFloat(document.getElementById('centauri-tickSpeed').value)       || 1.0,
+                    teamColors: colorTeamColors.map(tc => ({
+                        color: (tc.rgb[0] << 16) | (tc.rgb[1] << 8) | tc.rgb[2],
+                        name: tc.name.toLowerCase(),
+                    })),
+                    mapJson,
+                };
+                const settingsJson = JSON.stringify(settings);
+                if (settingsJson === lastSentSettingsJson) return;
+                lastSentSettingsJson = settingsJson;
+                try {
+                    currentRoom.send('update_settings', { roomId: selectedRoomId, settings });
+                    document.getElementById('centauri-settings-status').textContent = 'Saved ✓';
+                    setTimeout(() => { document.getElementById('centauri-settings-status').textContent = 'Settings saved automatically'; }, 1500);
+                } catch (e) { console.error('Failed to send Centauri settings:', e); }
+                return;
+            }
 
             // GOLAD settings
             if (currentRoomGameType === 'GOLAD') {
