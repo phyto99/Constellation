@@ -11,6 +11,67 @@ const axios = require('axios');
 const { StarSchema, TeamSchema, GameStateSchema } = require('./game-schema');
 const WebSocket = require('ws');
 
+// ─── Centauri Godot relay ─────────────────────────────────────────────────────
+// Binary protocol: Server→Client [type(1), peer_id(LE32), ...payload]
+//   type 0 = data  (peer_id = source, payload = game bytes)
+//   type 1 = peer connected  (peer_id = new peer)
+//   type 2 = peer disconnected (peer_id = gone peer)
+//   type 3 = your ID  (peer_id = assigned id for this client)
+// Client→Server [dest_peer_id(LE32), ...payload]  dest 0 = broadcast
+const centauriGodotWss  = new WebSocket.Server({ noServer: true });
+const centauriGodotRooms = new Map(); // roomId → Map<peerId, ws>
+
+centauriGodotWss.on('connection', (ws, roomId) => {
+    if (!centauriGodotRooms.has(roomId)) centauriGodotRooms.set(roomId, new Map());
+    const room = centauriGodotRooms.get(roomId);
+
+    // First joiner is peer 1 (host), subsequent get 2, 3 …
+    let peerId = 1;
+    while (room.has(peerId)) peerId++;
+    room.set(peerId, ws);
+    ws._cPeerId  = peerId;
+    ws._cRoomId  = roomId;
+
+    const mkSys = (type, id) => { const b = Buffer.alloc(5); b.writeUInt8(type,0); b.writeInt32LE(id,1); return b; };
+    const sendData = (target, src, payload) => {
+        if (target.readyState !== WebSocket.OPEN) return;
+        const b = Buffer.alloc(5 + payload.length);
+        b.writeUInt8(0,0); b.writeInt32LE(src,1); payload.copy(b,5);
+        target.send(b);
+    };
+
+    // Tell new client its ID
+    ws.send(mkSys(3, peerId));
+    // Introduce new client to existing peers and vice-versa
+    for (const [eid, ews] of room) {
+        if (eid === peerId) continue;
+        ews.readyState === WebSocket.OPEN && ews.send(mkSys(1, peerId)); // existing hears new
+        ws.send(mkSys(1, eid));                                           // new hears existing
+    }
+    console.log(`CentauriRelay: peer ${peerId} joined room ${roomId}`);
+
+    ws.on('message', (data) => {
+        if (data.length < 4) return;
+        const buf  = Buffer.isBuffer(data) ? data : Buffer.from(data);
+        const dest = buf.readInt32LE(0);
+        const payload = buf.slice(4);
+        const src  = ws._cPeerId;
+        if (dest === 0) {
+            for (const [pid, pws] of room) { if (pid !== src) sendData(pws, src, payload); }
+        } else {
+            const t = room.get(dest); if (t) sendData(t, src, payload);
+        }
+    });
+
+    ws.on('close', () => {
+        room.delete(ws._cPeerId);
+        const disc = mkSys(2, ws._cPeerId);
+        for (const [, pws] of room) { pws.readyState === WebSocket.OPEN && pws.send(disc); }
+        if (room.size === 0) centauriGodotRooms.delete(roomId);
+        console.log(`CentauriRelay: peer ${ws._cPeerId} left room ${roomId}`);
+    });
+});
+
 // ─── TTClub WebRTC Signaling Server ───────────────────────────────────────────
 const ttclubWss = new WebSocket.Server({ noServer: true });
 const ttclubRooms = new Map(); // roomCode -> { clients: Map<id,ws>, hostId, sealed, players: Map<id,{color,name,joinedAt}> }
@@ -2481,13 +2542,16 @@ class GoladRoom extends Room {
 class CentauriRoom extends Room {
     onCreate(options) {
         console.log('CentauriRoom created:', options.name || options.roomId);
+        this.players   = [];   // { sessionId, peerId, teamId, name }
+        this.nextPeerId = 1;
         this.gameConfig = {
-            name:            options.name || 'Centauri',
-            thrustPower:     options.thrustPower    ?? 1000.0,
+            name:            options.name            || 'Centauri',
+            thrustPower:     options.thrustPower     ?? 1000.0,
             thrustDepletion: options.thrustDepletion ?? 10.0,
             fuelEfficiency:  options.fuelEfficiency  ?? 0.5,
             fuelRecovery:    options.fuelRecovery    ?? 2.0,
             tickSpeed:       options.tickSpeed       ?? 1.0,
+            sessionDuration: options.sessionDuration ?? 120.0,
             mapJson:         options.mapJson         ?? null,
             teamColors: options.teamColors ?? [
                 { color: 0x00ffff, name: 'cyan'    },
@@ -2501,28 +2565,107 @@ class CentauriRoom extends Room {
         this.presence.subscribe(`room_${this.roomId}`, (data) => {
             if (data.type === 'update_settings') {
                 const s = data.settings;
-                if (s.thrustPower    !== undefined) this.gameConfig.thrustPower    = s.thrustPower;
-                if (s.thrustDepletion !== undefined) this.gameConfig.thrustDepletion = s.thrustDepletion;
-                if (s.fuelEfficiency  !== undefined) this.gameConfig.fuelEfficiency  = s.fuelEfficiency;
-                if (s.fuelRecovery    !== undefined) this.gameConfig.fuelRecovery    = s.fuelRecovery;
-                if (s.tickSpeed       !== undefined) this.gameConfig.tickSpeed       = s.tickSpeed;
-                if (s.mapJson         !== undefined) this.gameConfig.mapJson         = s.mapJson;
-                if (s.teamColors      !== undefined) this.gameConfig.teamColors      = s.teamColors;
+                if (s.thrustPower      !== undefined) this.gameConfig.thrustPower      = s.thrustPower;
+                if (s.thrustDepletion  !== undefined) this.gameConfig.thrustDepletion  = s.thrustDepletion;
+                if (s.fuelEfficiency   !== undefined) this.gameConfig.fuelEfficiency   = s.fuelEfficiency;
+                if (s.fuelRecovery     !== undefined) this.gameConfig.fuelRecovery     = s.fuelRecovery;
+                if (s.tickSpeed        !== undefined) this.gameConfig.tickSpeed        = s.tickSpeed;
+                if (s.sessionDuration  !== undefined) this.gameConfig.sessionDuration  = s.sessionDuration;
+                if (s.mapJson          !== undefined) this.gameConfig.mapJson          = s.mapJson;
+                if (s.teamColors       !== undefined) this.gameConfig.teamColors       = s.teamColors;
                 this.broadcast('settings_update', { config: this.gameConfig });
             }
             if (data.type === 'start_game') {
                 this.setMetadata({ name: this.gameConfig.name, type: 'Centauri', state: 'playing' });
-                this.broadcast('game_start', { config: this.gameConfig });
+                this.broadcast('game_start', { config: this.gameConfig, startAt: Date.now() + 10000 });
+            }
+            if (data.type === 'assign_team') {
+                const p = this.players.find(x => x.sessionId === data.playerId);
+                if (p) {
+                    p.teamId = data.teamIndex;
+                    this.broadcast('player_team_changed', { peerId: p.peerId, teamId: p.teamId });
+                    this._publishAdminUpdate();
+                }
             }
         });
 
         this.onMessage('request_config', (client) => {
             client.send('settings_update', { config: this.gameConfig });
         });
+
+        this.onMessage('game_event', (client, data) => {
+            // Relay game events (food delivery, inventory changes) to all other clients.
+            // The sender already updated their own state locally.
+            this.broadcast('game_event', data, { except: client });
+        });
+
+        this.onMessage('change_name', (client, data) => {
+            const p = client.userData;
+            if (!p) return;
+            const clean = String(data.name || '').replace(/\s/g, '').slice(0, 14);
+            if (!clean) return;
+            p.name = clean;
+            this.broadcast('player_name_changed', { peerId: p.peerId, name: clean });
+            this._publishAdminUpdate();
+        });
     }
 
-    onJoin(client) {
+    onJoin(client, options) {
+        if (options?.isAdmin) {
+            client.send('settings_update', { config: this.gameConfig });
+            return;
+        }
+        const peerId = this.nextPeerId++;
+        const teamId = this.players.length % this.gameConfig.teamColors.length;
+        const player = {
+            sessionId: client.sessionId,
+            peerId,
+            teamId,
+            name: options?.name || `Player ${peerId}`,
+        };
+        client.userData = player;
+        this.players.push(player);
+
+        // Tell the joining client its peer ID and host status
+        client.send('host_assigned', { peerId, isHost: peerId === 1 });
+        // Send current config
         client.send('settings_update', { config: this.gameConfig });
+        // Tell everyone (including new client) about all players
+        this.broadcast('player_joined', {
+            peerId, teamId, name: player.name, sessionId: client.sessionId,
+        });
+        // Tell the new client about players who joined before them
+        for (const p of this.players) {
+            if (p.sessionId !== client.sessionId) {
+                client.send('player_joined', {
+                    peerId: p.peerId, teamId: p.teamId, name: p.name, sessionId: p.sessionId,
+                });
+            }
+        }
+        this._publishAdminUpdate();
+        console.log(`CentauriRoom ${this.roomId}: ${player.name} joined as peer ${peerId}`);
+    }
+
+    onLeave(client) {
+        const p = client.userData;
+        if (!p) return;
+        this.players = this.players.filter(x => x.sessionId !== client.sessionId);
+        this.broadcast('player_left', { peerId: p.peerId });
+        this._publishAdminUpdate();
+        console.log(`CentauriRoom ${this.roomId}: peer ${p.peerId} left`);
+    }
+
+    _publishAdminUpdate() {
+        this.presence.publish('admin_update', {
+            roomId:      this.roomId,
+            players:     this.players.map(p => ({
+                id: p.sessionId, sessionId: p.sessionId, name: p.name, team: p.teamId, peerId: p.peerId,
+            })),
+            state:       this.metadata?.state || 'waiting',
+            playerCount: this.clients.length,
+            metadata:    this.metadata || {},
+            config:      this.gameConfig,
+        });
     }
 
     onDispose() {
@@ -2760,9 +2903,25 @@ function setCOEPHeaders(_req, res, next) {
 app.get('/', setCOEPHeaders, (_req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 app.get('/other', (_req, res) => res.sendFile(path.join(__dirname, 'other.html')));
 app.get('/admin', setCOEPHeaders, (_req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
+// color.html is iframed inside admin.html which has COEP:require-corp —
+// the iframe document must also carry COEP or the browser blocks it as cross-origin
+app.get('/color.html', setCOEPHeaders, (_req, res) => res.sendFile(path.join(__dirname, 'color.html')));
 app.get('/game/:roomId',  (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/golad/:roomId', (req, res) => res.sendFile(path.join(__dirname, 'golad.html')));
-app.get('/colyseus.js',   (req, res) => res.sendFile(path.join(__dirname, 'node_modules/colyseus.js/dist/colyseus.js')));
+let _colyseusJsCache = null;
+app.get('/colyseus.js', async (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+    if (_colyseusJsCache) return res.send(_colyseusJsCache);
+    try {
+        const r = await axios.get('https://unpkg.com/colyseus.js@0.15.24/dist/colyseus.js');
+        _colyseusJsCache = r.data;
+        res.send(_colyseusJsCache);
+    } catch (e) {
+        console.error('Failed to fetch colyseus.js from CDN:', e.message);
+        res.status(503).send('// colyseus.js unavailable');
+    }
+});
 function godotHeaders(_req, res, next) {
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
     res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
@@ -2846,6 +3005,11 @@ gameServer.listen(port).then(() => {
         if (pathname === '/ttclub-lobby') {
             ttclubWss.handleUpgrade(request, socket, head, (ws) => {
                 ttclubWss.emit('connection', ws, request);
+            });
+        } else if (pathname.startsWith('/centauri-godot/')) {
+            const roomId = pathname.split('/')[2];
+            centauriGodotWss.handleUpgrade(request, socket, head, (ws) => {
+                centauriGodotWss.emit('connection', ws, roomId);
             });
         } else {
             for (const listener of colyseusUpgradeListeners) {

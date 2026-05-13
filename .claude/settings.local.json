@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ' *)",
+      "Bash(dir \"C:\\\\Users\\\\Phyto\\\\Documents\")",
+      "Bash(git -C \"c:\\\\Users\\\\Phyto\\\\Downloads\\\\Constellation project att 3 - Copy\" diff HEAD)",
+      "Bash(git -C \"c:\\\\Users\\\\Phyto\\\\Downloads\\\\Constellation project att 3 - Copy\" log --oneline -5)",
+      "Bash(git -C \"c:\\\\Users\\\\Phyto\\\\Downloads\\\\Constellation project att 3 - Copy\" add index.html admin.html)",
+      "Bash(git -C 'c:\\\\Users\\\\Phyto\\\\Downloads\\\\Constellation project att 3 - Copy' commit -m ' *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Phyto\\\\Documents\" -Directory)",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "PowerShell(head -30)",
+      "Bash(node -e \"const {generateId} = require\\('c:/Users/Phyto/Downloads/Constellation project att 3 - Copy/node_modules/@colyseus/core/build/cjs/utils/Utils.js'\\); for\\(let i=0;i<10;i++\\) console.log\\(generateId\\(\\)\\);\")",
+      "Bash(node -e \"const utils = require\\('c:/Users/Phyto/Downloads/Constellation project att 3 - Copy/node_modules/colyseus/lib/utils/Utils.js'\\); console.log\\(utils\\);\")",
+      "Bash(node -e \"const {generateId} = require\\('colyseus/lib/utils/Utils'\\); for\\(let i=0;i<15;i++\\) console.log\\(generateId\\(\\)\\);\")",
+      "Bash(node -e \"const c = require\\('colyseus'\\); console.log\\(Object.keys\\(c\\)\\);\")",
+      "Bash(dir /s /b \"c:\\\\Users\\\\Phyto\\\\Downloads\\\\Constellation project att 3 - Copy\\\\node_modules\\\\colyseus\\\\*.js\")",
+      "Bash(node -e ' *)"
+    ]
+  }
+}
