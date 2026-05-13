@@ -15,7 +15,12 @@
       "Bash(node -e \"const {generateId} = require\\('colyseus/lib/utils/Utils'\\); for\\(let i=0;i<15;i++\\) console.log\\(generateId\\(\\)\\);\")",
       "Bash(node -e \"const c = require\\('colyseus'\\); console.log\\(Object.keys\\(c\\)\\);\")",
       "Bash(dir /s /b \"c:\\\\Users\\\\Phyto\\\\Downloads\\\\Constellation project att 3 - Copy\\\\node_modules\\\\colyseus\\\\*.js\")",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(grep -iv \"console\\\\.\\\\|//\")",
+      "Bash(grep -o \"function [a-zA-Z_][a-zA-Z0-9_]*\" \"c:\\\\Users\\\\Phyto\\\\Downloads\\\\Constellation project att 3 - Copy\\\\oldadmin.html\" | sed 's/function //' | sort > /tmp/old_funcs.txt && grep -o \"function [a-zA-Z_][a-zA-Z0-9_]*\" \"c:\\\\Users\\\\Phyto\\\\Downloads\\\\Constellation project att 3 - Copy\\\\admin.html\" | sed 's/function //' | sort > /tmp/new_funcs.txt && comm -23 /tmp/old_funcs.txt /tmp/new_funcs.txt)"
+    ],
+    "additionalDirectories": [
+      "\\tmp"
     ]
   }
 }

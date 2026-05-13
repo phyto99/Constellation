@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -37,6 +38,29 @@
         .sidebar-bottom {
             border-top: 1px solid #ccc;
             padding: 5px 10px;
+        }
+
+        .nameplate-container {
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+        }
+
+        .nameplate-container label {
+            font-size: 11px;
+            color: #666;
+            margin-right: 6px;
+        }
+
+        .nameplate-container input {
+            padding: 4px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 3px;
+            font-size: 12px;
+            width: 150px;
         }
 
         .main-content {
@@ -122,6 +146,11 @@
             cursor: pointer;
         }
 
+        .create-section button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
         .scenario-header {
             background: #e5e7eb;
             padding: 15px;
@@ -186,9 +215,7 @@
 
         .ai-bot-item {
             flex: 1 1 auto;
-            /* Compress/expand but don't force new lines aggressively */
             min-width: 200px;
-            /* Minimum width before wrapping */
         }
 
         .notification-toast {
@@ -211,6 +238,14 @@
 
         .notification-toast.show {
             opacity: 1;
+        }
+
+        .notification-toast.error {
+            background-color: rgba(239, 68, 68, 0.8);
+        }
+
+        .notification-toast.warning {
+            background-color: rgba(245, 158, 11, 0.8);
         }
 
         .form-group {
@@ -241,6 +276,16 @@
         .form-group textarea {
             height: 60px;
             resize: vertical;
+        }
+
+        .form-group input.error {
+            border-color: #ef4444;
+        }
+
+        .form-group .error-message {
+            color: #ef4444;
+            font-size: 11px;
+            margin-top: 2px;
         }
 
         .team-section h3 {
@@ -384,22 +429,17 @@
             text-decoration: underline;
         }
 
-        /* AI Bot Styles */
         .ai-bot-item {
             background: #fff;
             border: 1px solid #d1d5db;
             border-radius: 4px;
             padding: 10px 12px;
-            /* more breathing room */
             margin-bottom: 10px;
             display: flex;
             align-items: center;
             gap: 10px;
-            /* larger gaps for readability */
             flex-wrap: wrap;
-            /* allow wrapping across the row */
             white-space: normal;
-            /* allow natural breaks */
         }
 
         .ai-bot-select,
@@ -412,7 +452,6 @@
             border-radius: 4px;
             font-size: 12px;
             flex: 1 1 180px;
-            /* grow and wrap nicely */
             min-width: 160px;
         }
 
@@ -467,6 +506,11 @@
             background: #2563eb;
         }
 
+        .add-bot-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
         .ai-bots-empty {
             color: #9ca3af;
             font-size: 12px;
@@ -475,7 +519,13 @@
             text-align: center;
         }
 
-        /* Color Management Styles */
+        .limit-warning {
+            color: #f59e0b;
+            font-size: 11px;
+            margin-top: 5px;
+            font-weight: bold;
+        }
+
         .color-section-title {
             color: #333;
             font-size: 18px;
@@ -752,10 +802,8 @@
             display: block;
         }
 
-        /* Expanded color optimizer pane — visibility:hidden keeps the iframe loaded */
         .color-optimizer-pane {
-            visibility: hidden;
-            pointer-events: none;
+            display: none;
             position: fixed;
             top: 50%;
             left: 50%;
@@ -771,8 +819,7 @@
         }
 
         .color-optimizer-pane.visible {
-            visibility: visible;
-            pointer-events: auto;
+            display: block;
         }
 
         .color-optimizer-pane iframe {
@@ -889,93 +936,13 @@
             align-items: center;
             justify-content: center;
         }
-        #start-warning-popup {
+
+        .game-item.not-mine {
+            opacity: 0.7;
+        }
+
+        .game-item.not-mine .btn-delete {
             display: none;
-            position: fixed;
-            top: 90px;
-            right: 16px;
-            z-index: 1000;
-        }
-        #start-warning-popup.visible {
-            display: block;
-        }
-        #start-warning-popup .swp-inner {
-            position: relative;
-            background: white;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            padding: 12px 14px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            width: 300px;
-        }
-        #start-warning-popup h3 {
-            margin: 0 0 8px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #b45309;
-        }
-        #start-warning-popup ul {
-            margin: 0 0 10px;
-            padding-left: 16px;
-            font-size: 12px;
-            line-height: 1.6;
-            color: #374151;
-        }
-        #start-warning-popup .swp-actions {
-            display: flex;
-            gap: 8px;
-            justify-content: flex-end;
-        }
-        #start-warning-popup .btn-ignore {
-            background: #dc2626;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            padding: 5px 12px;
-            font-size: 12px;
-            cursor: pointer;
-        }
-        #start-warning-popup .btn-ignore:disabled {
-            background: #9ca3af;
-            cursor: not-allowed;
-        }
-        #start-warning-popup .btn-cancel-warn {
-            background: #f3f4f6;
-            color: #374151;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            padding: 5px 12px;
-            font-size: 12px;
-            cursor: pointer;
-        }
-        .nameplate-container {
-            background: white;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            padding: 8px 12px;
-            margin-bottom: 8px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.08);
-        }
-        .nameplate-container label {
-            font-size: 11px;
-            color: #666;
-            margin-right: 6px;
-        }
-        .nameplate-container input {
-            padding: 4px 8px;
-            border: 1px solid #d1d5db;
-            border-radius: 3px;
-            font-size: 12px;
-            width: 150px;
-        }
-        .limit-warning {
-            color: #ef4444;
-            font-size: 11px;
-            margin-top: 5px;
-        }
-        input.error {
-            border-color: #ef4444 !important;
-            background: #fef2f2;
         }
     </style>
 </head>
@@ -1011,11 +978,8 @@
                 <h3>Create New Session</h3>
                 <select id="game-type">
                     <option value="Constellation">Constellation</option>
-                    <option value="Centauri" selected>Proxima</option>
-                    <option value="Geobridge" disabled style="color: #666;" title="Coming Soon!">Geobridge</option>
-                    <option value="GOLAD" disabled style="color: #666;" title="Coming Soon!">Game of Life</option>
-                    <option value="No game focus" disabled style="color: #666;" title="Coming Soon!">No game focus</option>
-                    <option value="Tabletop Club" hidden>Tabletop Club</option>
+                    <option value="Geobridge">Geobridge</option>
+                    <option value="No game focus">No game focus</option>
                 </select>
                 <div class="create-row">
                     <input type="text" id="game-name" placeholder="Session name" maxlength="50">
@@ -1036,9 +1000,16 @@
     </div>
     <div class="main-content" id="mainContent">
         <div id="no-game-selected" class="no-games">
-            <h1>Constellation Admin Panel</h1>
-            <h2>Select a Game</h2>
-            <p>No games created yet. Create a new game to get started.</p>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <h1>Constellation Admin Panel</h1>
+                    <h2>Select a Game</h2>
+                    <p>No games created yet. Create a new game to get started.</p>
+                </div>
+                <div id="deployment-timestamp" style="text-align: right; font-size: 14px; color: #666; padding: 10px;">
+                    Loading...
+                </div>
+            </div>
         </div>
 
         <!-- Security Activity Log - Fixed at bottom -->
@@ -1052,7 +1023,6 @@
 
         <div id="game-content" style="display: none;">
             <div style="padding: 20px;">
-                <!-- Game Action Buttons at the very top -->
                 <div class="game-actions"
                     style="margin-bottom: 15px; position: relative; display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; gap: 10px;">
@@ -1078,12 +1048,10 @@
                             Game</a>
                     </div>
 
-                    <!-- Pause Reason Popup -->
                     <div id="pause-popup"
                         style="display: none; position: absolute; top: 100%; right: 200px; margin-top: 8px; z-index: 1000;">
                         <div
                             style="position: relative; background: white; border: 1px solid #ccc; border-radius: 8px; padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); width: 280px;">
-                            <!-- Arrow pointing up -->
                             <div
                                 style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 8px solid #ccc;">
                             </div>
@@ -1093,20 +1061,6 @@
                             <input type="text" id="pause-reason-input" placeholder="Please state a valid reason"
                                 style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; box-sizing: border-box;"
                                 onkeydown="if(event.key === 'Enter') submitPause()">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Start-game warning popup -->
-                <div id="start-warning-popup">
-                    <div class="swp-inner">
-                        <h3>⚠ Before you start…</h3>
-                        <ul id="start-warning-list"></ul>
-                        <div class="swp-actions">
-                            <button class="btn-cancel-warn" onclick="document.getElementById('start-warning-popup').classList.remove('visible')">Cancel</button>
-                            <span id="start-anyway-wrap" style="display:inline-block;">
-                                <button class="btn-ignore" id="start-anyway-btn" onclick="doStartGame()">Start anyway</button>
-                            </span>
                         </div>
                     </div>
                 </div>
@@ -1121,7 +1075,7 @@
                     </div>
                 </div>
                 <div id="scenario-content" class="scenario-content">
-                    <div id="constellation-settings" class="settings-section">
+                    <div class="settings-section">
                         <h3>Game Settings</h3>
                         <div class="settings-grid">
                             <div class="form-group">
@@ -1164,7 +1118,7 @@
                             <div class="form-group">
                                 <label style="display: flex; align-items: center; justify-content: space-between;">
                                     <span>Score Multipliers <span class="sublabel" id="multiplier-order-label">(Count, Distance, HQ, Destruction)</span></span>
-                                    <button onclick="randomizeMultiplierOrder()"
+                                    <button onclick="randomizeMultiplierOrder()" 
                                         style="width: 16px; height: 16px; padding: 0; background: #6b7280; border: none; border-radius: 0; color: white; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"
                                         title="Randomize multiplier order">⤨</button>
                                 </label>
@@ -1187,19 +1141,11 @@
                                             team from the game client)</span></span>
                                 </label>
                             </div>
-                            <div class="form-group">
-                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                    <input type="checkbox" id="edit-ithkuilNumerals"
-                                        onchange="sendSettingsUpdate()" style="width: auto; margin: 0;">
-                                    <span>Ithkuil numerals? <span class="sublabel">(Display all leaderboard numbers in Ithkuil script)</span></span>
-                                </label>
-                            </div>
                         </div>
 
-                        <!-- AI Bots Section moved below standard settings -->
                         <div class="form-group full-width"
                             style="margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-                            <label>AI Bots <span class="sublabel">(Add AI players to the game)</span></label>
+                            <label>AI Bots <span class="sublabel">(Add AI players to the game - Max 10)</span></label>
                             <div id="admin-ai-bots">
                                 <div class="ai-bots-empty">No AI bots added yet</div>
                             </div>
@@ -1214,162 +1160,6 @@
                             <span id="settings-status">Settings are saved automatically</span>
                         </div>
                     </div>
-                    <!-- Game of Life Panel (shown only for GOLAD rooms) -->
-                    <div id="golad-settings" class="settings-section" style="display:none;">
-                        <h3>Game of Life Settings</h3>
-                        <div class="settings-grid">
-                            <div class="form-group">
-                                <label>Player 1 <span class="sublabel">(Red)</span></label>
-                                <select id="golad-p1-type" onchange="sendSettingsUpdate()">
-                                    <option value="human">Human</option>
-                                    <option value="dumb">Dumb AI</option>
-                                    <option value="okay">Okay AI</option>
-                                    <option value="smart">Smart AI</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Player 1 Color</label>
-                                <select id="golad-p1-color" onchange="sendSettingsUpdate()"></select>
-                            </div>
-                            <div class="form-group">
-                                <label>Player 2 <span class="sublabel">(Blue)</span></label>
-                                <select id="golad-p2-type" onchange="sendSettingsUpdate()">
-                                    <option value="human">Human</option>
-                                    <option value="dumb">Dumb AI</option>
-                                    <option value="okay">Okay AI</option>
-                                    <option value="smart">Smart AI</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Player 2 Color</label>
-                                <select id="golad-p2-color" onchange="sendSettingsUpdate()"></select>
-                            </div>
-                            <div class="form-group">
-                                <label>Board Size <span class="sublabel">(N×N, 8–30)</span></label>
-                                <input type="number" id="golad-boardSize" value="16" min="8" max="30" onchange="sendSettingsUpdate()">
-                            </div>
-                            <div class="form-group">
-                                <label>Cell Shape</label>
-                                <select id="golad-cellShape" onchange="sendSettingsUpdate()">
-                                    <option value="square">Square</option>
-                                    <option value="ellipse">Circle</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Birth Rules <span class="sublabel">(neighbor counts, e.g. "3")</span></label>
-                                <input type="text" id="golad-birth" value="3" placeholder="3" onchange="sendSettingsUpdate()">
-                            </div>
-                            <div class="form-group">
-                                <label>Survive Rules <span class="sublabel">(neighbor counts, e.g. "23")</span></label>
-                                <input type="text" id="golad-survive" value="23" placeholder="23" onchange="sendSettingsUpdate()">
-                            </div>
-                            <div class="form-group" style="flex-direction:row;align-items:center;gap:16px;flex-wrap:wrap;">
-                                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-                                    <input type="checkbox" id="golad-hints" checked onchange="sendSettingsUpdate()"> Hints
-                                </label>
-                                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-                                    <input type="checkbox" id="golad-animations" checked onchange="sendSettingsUpdate()"> Animations
-                                </label>
-                                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-                                    <input type="checkbox" id="golad-showCursor" checked onchange="sendSettingsUpdate()"> Show cursor
-                                </label>
-                                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;" title="Both off = replay animation after move">
-                                    <input type="checkbox" id="golad-showPreview" checked onchange="sendSettingsUpdate()"> Show previews
-                                </label>
-                            </div>
-                        </div>
-                        <div style="margin-top:4px;font-size:12px;color:#666;">
-                            <span id="golad-settings-status">Settings saved automatically</span>
-                        </div>
-                    </div>
-
-                    <!-- Proxima Panel -->
-                    <div id="centauri-settings" class="settings-section" style="display:none;">
-                        <h3>Centauri Settings</h3>
-                        <div class="settings-grid">
-                            <div class="form-group">
-                                <label>Thrust Power <span class="sublabel">(100–5000)</span></label>
-                                <input type="range" id="centauri-thrustPower" min="100" max="5000" step="50" value="1000" oninput="document.getElementById('centauri-thrustPowerVal').textContent=parseInt(this.value);sendSettingsUpdate()">
-                                <span id="centauri-thrustPowerVal" class="sublabel">1000</span>
-                            </div>
-                            <div class="form-group">
-                                <label>Thrust Depletion Rate <span class="sublabel">(1–50 /s)</span></label>
-                                <input type="range" id="centauri-thrustDepletion" min="1" max="50" step="1" value="10" oninput="document.getElementById('centauri-thrustDepletionVal').textContent=parseInt(this.value);sendSettingsUpdate()">
-                                <span id="centauri-thrustDepletionVal" class="sublabel">10</span>
-                            </div>
-                            <div class="form-group">
-                                <label>Food/Fuel Efficiency <span class="sublabel">(0.1–2.0)</span></label>
-                                <input type="range" id="centauri-fuelEfficiency" min="0.1" max="2.0" step="0.05" value="0.5" oninput="document.getElementById('centauri-fuelEfficiencyVal').textContent=parseFloat(this.value).toFixed(2);sendSettingsUpdate()">
-                                <span id="centauri-fuelEfficiencyVal" class="sublabel">0.50</span>
-                            </div>
-                            <div class="form-group">
-                                <label>Fuel Recovery <span class="sublabel">(0–10 /s, neg = bleed)</span></label>
-                                <input type="range" id="centauri-fuelRecovery" min="-5" max="10" step="0.1" value="2.0" oninput="document.getElementById('centauri-fuelRecoveryVal').textContent=parseFloat(this.value).toFixed(1);sendSettingsUpdate()">
-                                <span id="centauri-fuelRecoveryVal" class="sublabel">2.0</span>
-                            </div>
-                            <div class="form-group">
-                                <label>Tick Speed <span class="sublabel">(0.1–5.0)</span></label>
-                                <input type="range" id="centauri-tickSpeed" min="0.1" max="5.0" step="0.1" value="1.0" oninput="document.getElementById('centauri-tickSpeedVal').textContent=parseFloat(this.value).toFixed(1);sendSettingsUpdate()">
-                                <span id="centauri-tickSpeedVal" class="sublabel">1.0</span>
-                            </div>
-                            <div class="form-group">
-                                <label>Session Duration <span class="sublabel">(seconds)</span></label>
-                                <input type="number" id="centauri-sessionDuration" min="10" max="3600" step="10" value="120" style="width:90px;" oninput="sendSettingsUpdate()">
-                                <span class="sublabel">s</span>
-                            </div>
-                        </div>
-                        <div class="form-group" style="margin-top:12px;">
-                            <label>Map JSON <span class="sublabel">(paste or export from MapMaker below)</span></label>
-                            <textarea id="centauri-mapJson" rows="5" style="width:100%;font-family:monospace;font-size:11px;resize:vertical;" placeholder='{"planets":[...]}' oninput="sendSettingsUpdate()"></textarea>
-                        </div>
-                        <div style="margin-top:8px;">
-                            <label style="font-size:12px;color:#666;">MapMaker <span class="sublabel">(click Export JSON — auto-fills above)</span></label>
-                            <iframe id="centauri-mapmaker-iframe"
-                                src="/centauri-mapmaker/"
-                                style="width:100%;height:480px;border:1px solid #ccc;border-radius:4px;margin-top:4px;display:block;"
-                                allow="clipboard-write">
-                            </iframe>
-                        </div>
-                        <div style="margin-top:4px;font-size:12px;color:#666;">
-                            <span id="centauri-settings-status">Settings saved automatically</span>
-                        </div>
-                    </div>
-
-                    <!-- TTClub Panel (shown only for Tabletop Club rooms) -->
-                    <div id="ttclub-panel" class="settings-section" style="display:none;">
-                        <h3>Tabletop Club Session</h3>
-                        <div class="form-group">
-                            <label>Room Code <span class="sublabel">(Share this with players)</span></label>
-                            <div style="display:flex; gap:8px; align-items:center;">
-                                <input type="text" id="ttclub-room-code" readonly placeholder="Waiting for host to start..." style="font-size:22px; font-weight:bold; letter-spacing:6px; text-align:center; text-transform:uppercase; flex:1;">
-                                <button onclick="copyTTClubCode()" style="padding:8px 14px; background:#3b82f6; color:white; border:none; border-radius:4px; cursor:pointer;">Copy Code</button>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Player Join Link <span class="sublabel">(Open this URL to join the game)</span></label>
-                            <div style="display:flex; gap:8px; align-items:center;">
-                                <input type="text" id="ttclub-join-url" readonly placeholder="Room code needed first..." style="flex:1; font-size:12px;">
-                                <button onclick="copyTTClubJoinUrl()" style="padding:8px 14px; background:#3b82f6; color:white; border:none; border-radius:4px; cursor:pointer;">Copy Link</button>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Players In Room</label>
-                            <div id="ttclub-players" style="display:flex; flex-wrap:wrap; gap:8px; min-height:36px; padding:8px; background:#1e293b; border-radius:4px;">
-                                <span style="color:#64748b; font-size:12px; align-self:center;">Waiting for players...</span>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Game Preview</label>
-                            <div style="position:relative; width:100%; padding-bottom:56.25%; background:#000; border-radius:4px; overflow:hidden;">
-                                <iframe id="ttclub-iframe" src="" style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;" allow="autoplay; microphone; camera" allowfullscreen></iframe>
-                            </div>
-                            <div style="margin-top:6px; display:flex; gap:8px;">
-                                <button onclick="reloadTTClubIframe()" style="padding:6px 12px; background:#6b7280; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px;">Reload Game</button>
-                                <button onclick="openTTClubFullscreen()" style="padding:6px 12px; background:#6b7280; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px;">Open Full Screen</button>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="settings-section">
                         <h3>Team Management</h3>
                         <div class="form-group">
@@ -1426,7 +1216,6 @@
         </div>
     </div>
 
-    <!-- Expanded Color Optimizer Pane -->
     <div class="color-optimizer-pane" id="colorOptimizerPane">
         <div class="color-optimizer-pane-header">
             <span style="font-size: 12px; color: #333;">Detailed View</span>
@@ -1437,7 +1226,166 @@
 
     <script src="https://unpkg.com/colyseus.js@0.15.24/dist/colyseus.js"></script>
     <script>
-        // AI Bot Types Configuration (same as index.html)
+        // ============================================
+        // SECURITY CONFIGURATION
+        // ============================================
+        const SECURITY_CONFIG = {
+            MAX_GAMES_PER_USER: 4,
+            MAX_AI_BOTS: 10,
+            MAX_GAME_NAME_LENGTH: 50,
+            MAX_PAST_INSTANCES: 25, // Limit past games to prevent overwhelming server
+            MESSAGE_RATE_LIMIT: 10, // messages per second
+            MESSAGE_RATE_WINDOW: 1000 // milliseconds
+        };
+
+        // User identity management
+        let currentUserName = '';
+
+        function loadUserName() {
+            const saved = localStorage.getItem('constellation_user_name');
+            if (saved) {
+                currentUserName = saved;
+                document.getElementById('user-nameplate').value = saved;
+            }
+        }
+
+        function saveUserName() {
+            const input = document.getElementById('user-nameplate');
+            const name = input.value.trim();
+            
+            if (name.length > 30) {
+                showNotification('Name too long. Max 30 characters.', 'error');
+                input.value = name.substring(0, 30);
+                return;
+            }
+            
+            currentUserName = name;
+            if (name) {
+                localStorage.setItem('constellation_user_name', name);
+                // Also save to playerName for game client consistency
+                localStorage.setItem('playerName', name);
+            } else {
+                localStorage.removeItem('constellation_user_name');
+                localStorage.removeItem('playerName');
+            }
+        }
+
+        // Message rate limiting tracker
+        const messageRateLimiter = {
+            counts: new Map(),
+            isLimited(clientId) {
+                const now = Date.now();
+                const record = this.counts.get(clientId) || { count: 0, resetTime: now + SECURITY_CONFIG.MESSAGE_RATE_WINDOW };
+                
+                if (now > record.resetTime) {
+                    record.count = 0;
+                    record.resetTime = now + SECURITY_CONFIG.MESSAGE_RATE_WINDOW;
+                }
+                
+                record.count++;
+                this.counts.set(clientId, record);
+                
+                if (record.count > SECURITY_CONFIG.MESSAGE_RATE_LIMIT) {
+                    logSuspiciousActivity('RATE_LIMIT_EXCEEDED', { clientId, count: record.count });
+                    return true;
+                }
+                return false;
+            }
+        };
+
+        // Suspicious activity logger
+        function logSuspiciousActivity(type, data) {
+            const timestamp = new Date().toISOString();
+            console.warn(`[SECURITY] ${timestamp} - ${type}:`, data);
+            
+            // Track patterns
+            if (!window.securityLog) {
+                window.securityLog = [];
+            }
+            window.securityLog.push({ timestamp, type, data });
+            
+            // Keep only last 50 entries
+            if (window.securityLog.length > 50) {
+                window.securityLog.shift();
+            }
+            
+            // Update log display
+            renderSecurityLogs();
+            
+            // Show warning notification for severe issues
+            if (type === 'RATE_LIMIT_EXCEEDED' || type === 'INPUT_VALIDATION_FAILED') {
+                showNotification('Security warning: Suspicious activity detected', 'warning');
+            }
+        }
+
+        // Render security logs on home page
+        function renderSecurityLogs() {
+            const logContainer = document.getElementById('security-logs-list');
+            if (!logContainer) return;
+            
+            if (!window.securityLog || window.securityLog.length === 0) {
+                logContainer.innerHTML = '<div style="color: #666; font-style: italic; padding: 10px;">No logs yet</div>';
+                return;
+            }
+            
+            // Reverse to show newest first
+            const logs = [...window.securityLog].reverse();
+            
+            logContainer.innerHTML = logs.map(log => {
+                const time = new Date(log.timestamp).toLocaleTimeString();
+                const date = new Date(log.timestamp).toLocaleDateString();
+                const typeColor = log.type.includes('EXCEEDED') || log.type.includes('FAILED') ? '#ef4444' : 
+                                 log.type.includes('ERROR') ? '#f59e0b' : '#666';
+                
+                let dataStr = '';
+                if (log.data && Object.keys(log.data).length > 0) {
+                    dataStr = Object.entries(log.data)
+                        .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
+                        .join(', ');
+                }
+                
+                return `
+                    <div style="padding: 8px; border-bottom: 1px solid #e5e7eb; font-size: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                            <span style="color: ${typeColor}; font-weight: bold;">${log.type}</span>
+                            <span style="color: #999; font-size: 11px;">${date} ${time}</span>
+                        </div>
+                        ${dataStr ? `<div style="color: #666; font-size: 11px; margin-top: 2px;">${dataStr}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Input validation helper
+        function validateInput(value, min, max, fieldName) {
+            const num = parseInt(value);
+            if (isNaN(num)) {
+                logSuspiciousActivity('INPUT_VALIDATION_FAILED', { field: fieldName, value, reason: 'Not a number' });
+                return false;
+            }
+            if (num < min || num > max) {
+                logSuspiciousActivity('INPUT_VALIDATION_FAILED', { field: fieldName, value: num, min, max, reason: 'Out of range' });
+                return false;
+            }
+            return true;
+        }
+
+        // Validate and update numeric input
+        function validateAndUpdate(input, min, max) {
+            const fieldName = input.id || 'unknown';
+            if (!validateInput(input.value, min, max, fieldName)) {
+                input.classList.add('error');
+                showNotification(`Invalid value for ${fieldName}. Must be between ${min} and ${max}.`, 'error');
+                // Reset to previous valid value or default
+                input.value = Math.max(min, Math.min(max, parseInt(input.value) || min));
+                setTimeout(() => input.classList.remove('error'), 2000);
+            } else {
+                input.classList.remove('error');
+                sendSettingsUpdate();
+            }
+        }
+
+        // AI Bot Types Configuration
         const AI_BOT_TYPES = {
             HAL: {
                 name: 'HAL',
@@ -1477,30 +1425,34 @@
             },
             CUSTOM: {
                 name: 'Custom',
-                description: '(BETA)',
+                description: '',
                 icon: '✨',
                 strategy: 'custom'
             }
         };
 
-        // Team Configuration (same as index.html)
-        const TEAM_CONFIGS = [
-            { color: 0x00FFFF, name: 'cyan', displayName: 'Cyan' },
-            { color: 0xFF00FF, name: 'magenta', displayName: 'Magenta' },
-            { color: 0x00FF00, name: 'lime', displayName: 'Lime' },
-            { color: 0xFFD700, name: 'gold', displayName: 'Gold' },
-            { color: 0x0000FF, name: 'blue', displayName: 'Blue' },
-            { color: 0xFF0000, name: 'red', displayName: 'Red' },
-            { color: 0x006400, name: 'dark green', displayName: 'Dark Green' }
-        ];
-
-        // AI Bot Management
         let aiBotCounter = 0;
+
+        function updateAddBotButtonState() {
+            const container = document.getElementById('admin-ai-bots');
+            const botCount = container.querySelectorAll('.ai-bot-item').length;
+            const addBtn = document.getElementById('add-bot-btn');
+            const warning = document.getElementById('bot-limit-warning');
+            
+            if (botCount >= SECURITY_CONFIG.MAX_AI_BOTS) {
+                addBtn.disabled = true;
+                warning.style.display = 'block';
+            } else {
+                addBtn.disabled = false;
+                warning.style.display = 'none';
+            }
+        }
 
         function addAdminAIBot() {
             const container = document.getElementById('admin-ai-bots');
             const existingBots = container.querySelectorAll('.ai-bot-item').length;
-
+            
+            // Enforce AI bot limit
             if (existingBots >= SECURITY_CONFIG.MAX_AI_BOTS) {
                 showNotification(`Maximum ${SECURITY_CONFIG.MAX_AI_BOTS} AI bots allowed`, 'warning');
                 logSuspiciousActivity('MAX_BOTS_EXCEEDED', { count: existingBots });
@@ -1548,24 +1500,40 @@
                 <div class="ai-bot-cube" style="background: #00FFFF; opacity: 0.8;"></div>
                 <button class="remove-bot-btn" onclick="removeAdminAIBot('${botId}')">Remove</button>
                 <div class="custom-bot-config" style="display: none; margin-top: 10px; width: 100%;">
+                    <!-- Step 1: Input Form (shown initially) -->
                     <div class="custom-bot-input-step" style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 12px;">
                         <div style="font-weight: 600; color: #0369a1; margin-bottom: 12px; font-size: 14px;">Custom Bot Strategy Creator</div>
-                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #374151; font-weight: 600;">Bot Name:</label>
+                        
+                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #374151; font-weight: 600;">
+                            Bot Name:
+                        </label>
                         <input type="text" class="custom-bot-name" placeholder="e.g., Napoleon, Sherlock, Tesla" style="width: 100%; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; margin-bottom: 10px;" />
-                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #374151; font-weight: 600;">Strategy Description (Be as detailed as possible):</label>
-                        <textarea class="custom-bot-description" placeholder="Example: 'A cautious strategist that focuses on building strong HQ networks in the first 3 rounds. Avoids stealing unless behind by more than 20%. In late game (rounds 7+), becomes aggressive and targets enemy wormholes.'" style="width: 100%; height: 100px; font-family: inherit; font-size: 12px; padding: 8px; border: 1px solid #d1d5db; background: white; color: #111827; border-radius: 6px; resize: vertical; margin-bottom: 10px;"></textarea>
+                        
+                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #374151; font-weight: 600;">
+                            Strategy Description (Be as detailed as possible):
+                        </label>
+                        <textarea class="custom-bot-description" placeholder="Example: 'A cautious strategist that focuses on building strong HQ networks in the first 3 rounds. Avoids stealing unless behind by more than 20%. In late game (rounds 7+), becomes aggressive and targets enemy wormholes. Prioritizes connecting isolated stars over expanding. When winning, plays defensively and conserves steals.'" style="width: 100%; height: 100px; font-family: inherit; font-size: 12px; padding: 8px; border: 1px solid #d1d5db; background: white; color: #111827; border-radius: 6px; resize: vertical; margin-bottom: 10px;"></textarea>
+                        
                         <button type="button" onclick="generateBotPrompt('${botId}')" style="background: #4b5563; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;">
                             Generate AI Prompt
                         </button>
                     </div>
+                    
+                    <!-- Step 2: JSON Paste (shown after generating prompt) -->
                     <div class="custom-bot-json-step" style="display: none;">
                         <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 12px; margin-bottom: 10px;">
                             <div style="color: #16a34a; font-weight: 600; margin-bottom: 5px;">✅ Copied to clipboard!</div>
-                            <div style="font-size: 12px; color: #15803d;">Paste into ChatGPT or Claude, then paste the JSON generated below.</div>
+                            <div style="font-size: 12px; color: #15803d;">
+                                Paste into ChatGPT or Claude, then paste the JSON generated below.
+                            </div>
                         </div>
-                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #374151; font-weight: 600;">Paste AI-Generated JSON Here:</label>
+                        
+                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #374151; font-weight: 600;">
+                            Paste AI-Generated JSON Here:
+                        </label>
                         <textarea class="custom-bot-json" placeholder='Paste the JSON response from ChatGPT/Claude here...' style="width: 100%; height: 150px; font-family: 'Courier New', monospace; font-size: 11px; padding: 8px; border: 1px solid #d1d5db; background: #f9fafb; color: #111827; border-radius: 6px; resize: vertical;"></textarea>
                         <div class="custom-bot-error" style="color: #ef4444; font-size: 11px; margin-top: 5px; display: none;"></div>
+                        
                         <button type="button" onclick="resetBotCreator('${botId}')" style="background: #6b7280; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-top: 8px;">
                             ← Back to Edit Strategy
                         </button>
@@ -1579,6 +1547,236 @@
 
             clearTimeout(botSettingsUpdateTimeout);
             botSettingsUpdateTimeout = setTimeout(() => sendSettingsUpdate(), 500);
+        }
+
+        function handleAdminBotTypeChange(botId) {
+            const botDiv = document.getElementById(botId);
+            if (!botDiv) return;
+
+            const botSelect = botDiv.querySelector('.ai-bot-select');
+            const customConfig = botDiv.querySelector('.custom-bot-config');
+            const botType = botSelect.value;
+
+            // Show/hide custom config based on selection
+            if (botType === 'CUSTOM') {
+                customConfig.style.display = 'block';
+            } else {
+                customConfig.style.display = 'none';
+            }
+
+            updateAdminAIBotDisplay(botId);
+        }
+
+        function generateBotPrompt(botId) {
+            const botDiv = document.getElementById(botId);
+            if (!botDiv) return;
+
+            const nameInput = botDiv.querySelector('.custom-bot-name');
+            const descriptionInput = botDiv.querySelector('.custom-bot-description');
+            const teamSelect = botDiv.querySelector('.ai-team-select');
+            const aggressionSelect = botDiv.querySelector('.ai-aggression-select');
+            
+            const botName = nameInput.value.trim() || 'Custom Bot';
+            const botDescription = descriptionInput.value.trim();
+            const teamIndex = parseInt(teamSelect.value);
+            const aggression = parseInt(aggressionSelect.value);
+            const teamName = colorTeamColors[teamIndex] ? colorTeamColors[teamIndex].name : 'Unknown';
+
+            if (!botDescription) {
+                showNotification('⚠️ Please describe your bot strategy first!', 'warning');
+                return;
+            }
+
+            // Generate PERFECT, MODULAR AI prompt
+            const prompt = `# Star Conquest Custom Bot Generator
+
+You are an expert AI system that generates highly optimized, performant bot strategies for the Star Conquest multiplayer game. Generate a bot based on the user's detailed strategy description.
+
+---
+
+## USER'S BOT SPECIFICATION
+
+**Bot Name:** ${botName}
+**Team:** ${teamName}
+**Base Aggression Level:** ${aggression}/9
+
+**Strategy Description:**
+${botDescription}
+
+---
+
+## GAME MECHANICS REFERENCE
+
+### Core Actions (What bots can do):
+1. **hq** - Place headquarters on stars (limited to 2 per team, required early game)
+2. **steal** - Steal enemy-controlled stars (costs 1 steal token, limited resource ~50 total)
+3. **expand** - Capture neutral/unclaimed stars (main expansion method, unlimited)
+4. **connect** - Prioritize capturing stars that connect isolated friendly territories
+5. **wormhole** - Specifically target wormhole stars (special star type with strategic value)
+6. **disrupt** - Steal stars that break enemy networks (aggressive stealing strategy)
+
+### Game State Variables Available:
+\`\`\`javascript
+gameState = {
+    // Game info
+    gameProgress: 0.5,        // 0.0-1.0 (current round / total rounds)
+    currentRound: 5,          // Current round number
+    totalRounds: 10,          // Total rounds in game
+    roundProgress: 0.5,       // 0.0-1.0 (time elapsed in current round)
+    timeLeft: 15000,          // Milliseconds remaining in round
+    roundLength: 30000,       // Total round length in ms
+    
+    // Team status
+    myPosition: 2,            // Team ranking: 1=winning, 7=last place
+    team: {
+        s: 5000,              // Current score
+        st: 15,               // Steals remaining
+        movesLeft: 10         // Moves left this round
+    },
+    stealsLeft: 15,           // Steals remaining (same as team.st)
+    teamStars: [...],         // Array of stars controlled by this team
+    teamHQs: [...],           // Array of HQ stars controlled by this team
+    
+    // Opponent info
+    allScores: [              // All team scores sorted by rank
+        {score: 8000, index: 0},
+        {score: 5000, index: 1},  // This team
+        {score: 3000, index: 2}
+    ],
+    
+    // Game rules
+    game: {
+        HM: 2,                // Max HQs allowed per team
+        S: 50,                // Total steals in entire game
+        TR: 10,               // Total rounds
+        r: 5                  // Current round
+    },
+    
+    // Score multipliers (for understanding value)
+    multipliers: {
+        count: 500,           // Points per star connection
+        distance: 1,          // Points per distance unit
+        hq: 10,              // HQ bonus multiplier
+        destruction: 1        // Destruction bonus
+    }
+}
+\`\`\`
+
+### Bot Decision System:
+Your bot returns a **priority array** where each action has a **weight (0-200)**:
+- **0** = Never do this action
+- **50** = Low priority
+- **100** = Medium priority  
+- **150** = High priority
+- **200** = Maximum priority
+
+The bot will attempt actions in weighted-random order (higher weight = more likely).
+
+---
+
+## MODULAR STRATEGY COMPONENTS
+
+Your bot strategy should be built from these modular components:
+
+### 1. PHASE-BASED PRIORITIES
+Adjust weights based on game phase:
+- **Early Game** (gameProgress < 0.3): Focus on HQ placement and expansion
+- **Mid Game** (0.3 ≤ gameProgress < 0.7): Balanced approach, build networks
+- **Late Game** (gameProgress ≥ 0.7): Aggressive plays, use remaining steals
+
+### 2. POSITION-BASED ADAPTATION
+Adjust based on team ranking:
+- **Winning** (myPosition ≤ 2): Defensive, conserve steals, protect lead
+- **Middle** (3 ≤ myPosition ≤ 5): Balanced, opportunistic stealing
+- **Losing** (myPosition ≥ 6): Aggressive, desperate steals, high-risk plays
+
+### 3. RESOURCE MANAGEMENT
+Adjust based on remaining resources:
+- **Abundant Steals** (stealsLeft > 30): Liberal stealing
+- **Moderate Steals** (10 < stealsLeft ≤ 30): Selective stealing
+- **Scarce Steals** (stealsLeft ≤ 10): Extremely conservative, only high-value steals
+
+### 4. TIME PRESSURE
+Adjust based on round time:
+- **Early Round** (roundProgress < 0.3): Methodical planning
+- **Mid Round** (0.3 ≤ roundProgress < 0.7): Normal pace
+- **Late Round** (roundProgress ≥ 0.7): Urgent, use remaining moves
+
+### 5. SPECIAL FOCUS
+Optional strategic focuses:
+- **Wormhole Hunter**: Prioritize wormhole stars
+- **Network Builder**: Prioritize connecting isolated stars
+- **Disruptor**: Target enemy network hubs
+- **Expansionist**: Maximize territory quickly
+
+---
+
+## PERFORMANCE REQUIREMENTS
+
+⚠️ **CRITICAL**: Your function will run on maps with 1000+ stars and must be FAST:
+- Use ONLY the provided gameState variables (pre-calculated)
+- NO loops, NO array iterations, NO complex calculations
+- Simple arithmetic and conditionals only
+- Return immediately
+
+---
+
+## OUTPUT FORMAT
+
+Generate a JSON object with this EXACT structure (single line, no formatting):
+
+\`\`\`json
+{
+  "name": "${botName}",
+  "description": "Brief 1-sentence summary",
+  "icon": "🤖",
+  "strategy": "custom",
+  "aggression": ${aggression},
+  "customPriorities": "function(gameState) { const gp = gameState.gameProgress; const pos = gameState.myPosition; const st = gameState.stealsLeft; const rp = gameState.roundProgress; const early = gp < 0.3 ? 1.2 : 1; const mid = (gp >= 0.3 && gp < 0.7) ? 1.1 : 1; const late = gp >= 0.7 ? 1.3 : 1; const winning = pos <= 2 ? 0.8 : 1; const losing = pos >= 6 ? 1.5 : 1; const desperate = pos >= 6 && gp > 0.7 ? 2.0 : 1; const stealAbundant = st > 30 ? 1.2 : 1; const stealScarce = st <= 10 ? 0.5 : 1; return [ { action: 'hq', weight: gameState.teamHQs.length < gameState.game.HM ? 180 * early : 0 }, { action: 'steal', weight: this.totalStealsThisRound < this.calculateMaxSteals(gameState) && st > 0 ? 100 * losing * desperate * stealAbundant * stealScarce : 0 }, { action: 'expand', weight: 120 * early * (1 - rp * 0.3) }, { action: 'connect', weight: 90 * mid * winning }, { action: 'wormhole', weight: 70 }, { action: 'disrupt', weight: 80 * late * losing * desperate } ]; }"
+}
+\`\`\`
+
+---
+
+## YOUR TASK
+
+Based on the user's strategy description above, generate a bot that:
+
+1. **Interprets their strategy** - Understand what they want (defensive/aggressive, early/late game focus, etc.)
+2. **Sets appropriate base weights** - Each action gets a base weight (0-200) matching their strategy
+3. **Adds dynamic multipliers** - Adjust weights based on game state (phase, position, resources, time)
+4. **Remains performant** - Use ONLY simple arithmetic, no loops or complex logic
+5. **Returns valid JSON** - Single-line string, properly escaped
+
+**Generate the complete JSON configuration now.**`;
+
+            // Copy to clipboard and switch UI
+            navigator.clipboard.writeText(prompt).then(() => {
+                // Switch to JSON paste step
+                const inputStep = botDiv.querySelector('.custom-bot-input-step');
+                const jsonStep = botDiv.querySelector('.custom-bot-json-step');
+                inputStep.style.display = 'none';
+                jsonStep.style.display = 'block';
+            }).catch(err => {
+                showNotification('❌ Failed to copy to clipboard. Please try again.', 'error');
+            });
+        }
+
+        function resetBotCreator(botId) {
+            const botDiv = document.getElementById(botId);
+            if (!botDiv) return;
+
+            // Switch back to input step
+            const inputStep = botDiv.querySelector('.custom-bot-input-step');
+            const jsonStep = botDiv.querySelector('.custom-bot-json-step');
+            inputStep.style.display = 'block';
+            jsonStep.style.display = 'none';
+
+            // Clear JSON textarea and error
+            const jsonTextarea = botDiv.querySelector('.custom-bot-json');
+            const errorDiv = botDiv.querySelector('.custom-bot-error');
+            if (jsonTextarea) jsonTextarea.value = '';
+            if (errorDiv) errorDiv.style.display = 'none';
         }
 
         function removeAdminAIBot(botId) {
@@ -1617,7 +1815,6 @@
             const teamIndex = parseInt(teamSelect.value);
             const aggression = parseInt(aggressionSelect.value);
 
-            // Update cube appearance using dynamic team colors
             const teamColor = colorTeamColors[teamIndex] ? rgbToHexAdmin(colorTeamColors[teamIndex].rgb) : '#00FFFF';
             const opacity = 0.3 + ((aggression - 1) / 8 * 0.7);
 
@@ -1628,14 +1825,12 @@
             cube.title = `${AI_BOT_TYPES[botType].name} on ${teamName} team (Level ${aggression} aggression)`;
         }
 
-        // Helper function to convert RGB array to hex string
         function rgbToHexAdmin(rgb) {
             return `#${rgb.map(c => Math.round(c).toString(16).padStart(2, '0')).join('')}`;
         }
 
         function getAdminAIBots() {
             const container = document.getElementById('admin-ai-bots');
-            if (!container) return [];
             const botDivs = container.querySelectorAll('.ai-bot-item');
             const aiBots = [];
 
@@ -1650,294 +1845,59 @@
                 const teamIndex = parseInt(teamSelect.value);
                 const aggression = parseInt(aggressionSelect.value);
 
+                // Handle custom bot JSON
                 if (botType === 'CUSTOM' && customJsonTextarea) {
                     const jsonText = customJsonTextarea.value.trim();
                     if (jsonText) {
                         try {
                             const customConfig = JSON.parse(jsonText);
+                            
+                            // Validate required fields
                             if (!customConfig.name || !customConfig.customPriorities) {
                                 throw new Error('Custom bot must have "name" and "customPriorities" fields');
                             }
-                            aiBots.push({ type: botType, teamIndex, aggression: customConfig.aggression || aggression, customConfig });
+                            
+                            // Store custom config with bot data
+                            aiBots.push({
+                                type: botType,
+                                teamIndex: teamIndex,
+                                aggression: customConfig.aggression || aggression,
+                                customConfig: customConfig // Pass full custom config
+                            });
+                            
                             if (customError) customError.style.display = 'none';
                         } catch (e) {
                             console.error('Error parsing custom bot JSON:', e);
-                            if (customError) { customError.textContent = `Error: ${e.message}`; customError.style.display = 'block'; }
-                            aiBots.push({ type: botType, teamIndex, aggression });
+                            if (customError) {
+                                customError.textContent = `Error: ${e.message}`;
+                                customError.style.display = 'block';
+                            }
+                            // Fall back to default custom bot
+                            aiBots.push({
+                                type: botType,
+                                teamIndex: teamIndex,
+                                aggression: aggression
+                            });
                         }
                     } else {
-                        aiBots.push({ type: botType, teamIndex, aggression });
+                        // No JSON provided, use default custom bot
+                        aiBots.push({
+                            type: botType,
+                            teamIndex: teamIndex,
+                            aggression: aggression
+                        });
                     }
                 } else {
-                    aiBots.push({ type: botType, teamIndex, aggression });
+                    // Standard bot
+                    aiBots.push({
+                        type: botSelect.value,
+                        teamIndex: teamIndex,
+                        aggression: aggression
+                    });
                 }
             });
 
             return aiBots;
-        }
-
-        // Initialize AI bot display updates
-        document.addEventListener('change', function (e) {
-            if (e.target.classList.contains('ai-team-select') || e.target.classList.contains('ai-aggression-select')) {
-                const botDiv = e.target.closest('.ai-bot-item');
-                if (botDiv) {
-                    updateAdminAIBotDisplay(botDiv.id);
-                }
-            }
-        });
-
-        // ── Security / validation ─────────────────────────────────────────────────
-        const SECURITY_CONFIG = {
-            MAX_GAMES_PER_USER: 4,
-            MAX_AI_BOTS: 10,
-            MAX_GAME_NAME_LENGTH: 50,
-            MAX_PAST_INSTANCES: 25,
-            MESSAGE_RATE_LIMIT: 10,
-            MESSAGE_RATE_WINDOW: 1000
-        };
-
-        const messageRateLimiter = {
-            counts: new Map(),
-            isLimited(clientId) {
-                const now = Date.now();
-                const record = this.counts.get(clientId) || { count: 0, resetTime: now + SECURITY_CONFIG.MESSAGE_RATE_WINDOW };
-                if (now > record.resetTime) {
-                    record.count = 0;
-                    record.resetTime = now + SECURITY_CONFIG.MESSAGE_RATE_WINDOW;
-                }
-                record.count++;
-                this.counts.set(clientId, record);
-                if (record.count > SECURITY_CONFIG.MESSAGE_RATE_LIMIT) {
-                    logSuspiciousActivity('RATE_LIMIT_EXCEEDED', { clientId, count: record.count });
-                    return true;
-                }
-                return false;
-            }
-        };
-
-        let currentUserName = '';
-
-        function loadUserName() {
-            const saved = localStorage.getItem('constellation_user_name');
-            if (saved) {
-                currentUserName = saved;
-                const el = document.getElementById('user-nameplate');
-                if (el) el.value = saved;
-            }
-        }
-
-        function saveUserName() {
-            const input = document.getElementById('user-nameplate');
-            const name = input.value.trim();
-            if (name.length > 30) {
-                showNotification('Name too long. Max 30 characters.', 'error');
-                input.value = name.substring(0, 30);
-                return;
-            }
-            currentUserName = name;
-            if (name) {
-                localStorage.setItem('constellation_user_name', name);
-                localStorage.setItem('playerName', name);
-            } else {
-                localStorage.removeItem('constellation_user_name');
-                localStorage.removeItem('playerName');
-            }
-        }
-
-        function validateInput(value, min, max, fieldName) {
-            const num = parseInt(value);
-            if (isNaN(num)) {
-                logSuspiciousActivity('INPUT_VALIDATION_FAILED', { field: fieldName, value, reason: 'Not a number' });
-                return false;
-            }
-            if (num < min || num > max) {
-                logSuspiciousActivity('INPUT_VALIDATION_FAILED', { field: fieldName, value: num, min, max, reason: 'Out of range' });
-                return false;
-            }
-            return true;
-        }
-
-        function validateAndUpdate(input, min, max) {
-            const fieldName = input.id || 'unknown';
-            if (!validateInput(input.value, min, max, fieldName)) {
-                input.classList.add('error');
-                showNotification(`Invalid value for ${fieldName}. Must be between ${min} and ${max}.`, 'error');
-                input.value = Math.max(min, Math.min(max, parseInt(input.value) || min));
-                setTimeout(() => input.classList.remove('error'), 2000);
-            } else {
-                input.classList.remove('error');
-                sendSettingsUpdate();
-            }
-        }
-
-        // ── Multiplier randomizer ─────────────────────────────────────────────────
-        const _MULTIPLIER_FIELDS = [
-            { id: 'edit-countMultiplier',       label: 'Count'       },
-            { id: 'edit-distanceMultiplier',    label: 'Distance'    },
-            { id: 'edit-hqMultiplier',          label: 'HQ'          },
-            { id: 'edit-destructionMultiplier', label: 'Destruction' },
-        ];
-
-        function randomizeMultiplierOrder() {
-            const values = _MULTIPLIER_FIELDS.map(f => parseInt(document.getElementById(f.id).value) || 0);
-            // Fisher-Yates shuffle
-            for (let i = values.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [values[i], values[j]] = [values[j], values[i]];
-            }
-            const shuffledFields = [..._MULTIPLIER_FIELDS];
-            for (let i = shuffledFields.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [shuffledFields[i], shuffledFields[j]] = [shuffledFields[j], shuffledFields[i]];
-            }
-            shuffledFields.forEach((f, i) => { document.getElementById(f.id).value = values[i]; });
-            const label = document.getElementById('multiplier-order-label');
-            if (label) label.textContent = `(${shuffledFields.map(f => f.label).join(', ')})`;
-            sendSettingsUpdate();
-        }
-
-        // ── Bot helpers ───────────────────────────────────────────────────────────
-        function updateAddBotButtonState() {
-            const container = document.getElementById('admin-ai-bots');
-            const botCount = container.querySelectorAll('.ai-bot-item').length;
-            const addBtn = document.getElementById('add-bot-btn');
-            const warning = document.getElementById('bot-limit-warning');
-            if (botCount >= SECURITY_CONFIG.MAX_AI_BOTS) {
-                if (addBtn) addBtn.disabled = true;
-                if (warning) warning.style.display = 'block';
-            } else {
-                if (addBtn) addBtn.disabled = false;
-                if (warning) warning.style.display = 'none';
-            }
-        }
-
-        function handleAdminBotTypeChange(botId) {
-            const botDiv = document.getElementById(botId);
-            if (!botDiv) return;
-            const botSelect = botDiv.querySelector('.ai-bot-select');
-            const customConfig = botDiv.querySelector('.custom-bot-config');
-            if (botSelect.value === 'CUSTOM') {
-                customConfig.style.display = 'block';
-            } else {
-                customConfig.style.display = 'none';
-            }
-            updateAdminAIBotDisplay(botId);
-        }
-
-        function generateBotPrompt(botId) {
-            const botDiv = document.getElementById(botId);
-            if (!botDiv) return;
-            const nameInput = botDiv.querySelector('.custom-bot-name');
-            const descriptionInput = botDiv.querySelector('.custom-bot-description');
-            const teamSelect = botDiv.querySelector('.ai-team-select');
-            const aggressionSelect = botDiv.querySelector('.ai-aggression-select');
-            const botName = nameInput.value.trim() || 'Custom Bot';
-            const botDescription = descriptionInput.value.trim();
-            const teamIndex = parseInt(teamSelect.value);
-            const aggression = parseInt(aggressionSelect.value);
-            const teamName = colorTeamColors[teamIndex] ? colorTeamColors[teamIndex].name : 'Unknown';
-            if (!botDescription) {
-                showNotification('⚠️ Please describe your bot strategy first!', 'warning');
-                return;
-            }
-            const prompt = `# Star Conquest Custom Bot Generator
-
-You are an expert AI system that generates highly optimized, performant bot strategies for the Star Conquest multiplayer game. Generate a bot based on the user's detailed strategy description.
-
----
-
-## USER'S BOT SPECIFICATION
-
-**Bot Name:** ${botName}
-**Team:** ${teamName}
-**Base Aggression Level:** ${aggression}/9
-
-**Strategy Description:**
-${botDescription}
-
----
-
-## GAME MECHANICS REFERENCE
-
-### Core Actions (What bots can do):
-1. **hq** - Place headquarters on stars (limited to 2 per team, required early game)
-2. **steal** - Steal enemy-controlled stars (costs 1 steal token, limited resource ~50 total)
-3. **expand** - Capture neutral/unclaimed stars (main expansion method, unlimited)
-4. **connect** - Prioritize capturing stars that connect isolated friendly territories
-5. **wormhole** - Specifically target wormhole stars (special star type with strategic value)
-6. **disrupt** - Steal stars that break enemy networks (aggressive stealing strategy)
-
-### Game State Variables Available:
-\`\`\`javascript
-gameState = {
-    gameProgress: 0.5, currentRound: 5, totalRounds: 10, roundProgress: 0.5,
-    timeLeft: 15000, roundLength: 30000, myPosition: 2,
-    team: { s: 5000, st: 15, movesLeft: 10 }, stealsLeft: 15,
-    teamStars: [...], teamHQs: [...],
-    allScores: [{ score: 8000, index: 0 }, { score: 5000, index: 1 }],
-    game: { HM: 2, S: 50, TR: 10, r: 5 },
-    multipliers: { count: 500, distance: 1, hq: 10, destruction: 1 }
-}
-\`\`\`
-
-### Bot Decision System:
-Your bot returns a **priority array** where each action has a **weight (0-200)**:
-- 0 = Never do this action, 50 = Low, 100 = Medium, 150 = High, 200 = Maximum
-
----
-
-## MODULAR STRATEGY COMPONENTS
-
-### Phase-based: Early (gp<0.3), Mid (0.3-0.7), Late (gp≥0.7)
-### Position-based: Winning (pos≤2), Middle (3-5), Losing (pos≥6)
-### Resource: Abundant steals (>30), Moderate (10-30), Scarce (≤10)
-
----
-
-## PERFORMANCE REQUIREMENTS
-
-⚠️ **CRITICAL**: No loops, no array iterations, simple arithmetic and conditionals only.
-
----
-
-## OUTPUT FORMAT
-
-Generate a JSON object with this EXACT structure (single line, no formatting):
-
-\`\`\`json
-{
-  "name": "${botName}",
-  "description": "Brief 1-sentence summary",
-  "icon": "🤖",
-  "strategy": "custom",
-  "aggression": ${aggression},
-  "customPriorities": "function(gameState) { const gp = gameState.gameProgress; const pos = gameState.myPosition; const st = gameState.stealsLeft; const rp = gameState.roundProgress; const early = gp < 0.3 ? 1.2 : 1; const late = gp >= 0.7 ? 1.3 : 1; const losing = pos >= 6 ? 1.5 : 1; const stealScarce = st <= 10 ? 0.5 : 1; return [ { action: 'hq', weight: gameState.teamHQs.length < gameState.game.HM ? 180 * early : 0 }, { action: 'steal', weight: st > 0 ? 100 * losing * stealScarce : 0 }, { action: 'expand', weight: 120 * early }, { action: 'connect', weight: 90 }, { action: 'wormhole', weight: 70 }, { action: 'disrupt', weight: 80 * late * losing } ]; }"
-}
-\`\`\`
-
-Based on the strategy description above, generate the complete JSON configuration now.`;
-
-            navigator.clipboard.writeText(prompt).then(() => {
-                const inputStep = botDiv.querySelector('.custom-bot-input-step');
-                const jsonStep = botDiv.querySelector('.custom-bot-json-step');
-                inputStep.style.display = 'none';
-                jsonStep.style.display = 'block';
-            }).catch(() => {
-                showNotification('❌ Failed to copy to clipboard. Please try again.', 'error');
-            });
-        }
-
-        function resetBotCreator(botId) {
-            const botDiv = document.getElementById(botId);
-            if (!botDiv) return;
-            const inputStep = botDiv.querySelector('.custom-bot-input-step');
-            const jsonStep = botDiv.querySelector('.custom-bot-json-step');
-            inputStep.style.display = 'block';
-            jsonStep.style.display = 'none';
-            const jsonTextarea = botDiv.querySelector('.custom-bot-json');
-            const errorDiv = botDiv.querySelector('.custom-bot-error');
-            if (jsonTextarea) jsonTextarea.value = '';
-            if (errorDiv) errorDiv.style.display = 'none';
         }
 
         // Colyseus Connection
@@ -1945,21 +1905,10 @@ Based on the strategy description above, generate the complete JSON configuratio
         let currentRoom = null;
         let selectedRoomId = null;
         let clientSessionId = null;
-        let currentRoomGameType = 'Constellation';
-        let ttclubRoomCode = null;
-
-        function getJoinUrl(roomId, metadata) {
-            const base = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`;
-            const type = metadata?.type || '';
-            if (type === 'GOLAD') return `${base}/golad/${roomId}`;
-            if (type === 'Centauri') return `${base}/centauri/${roomId}`;
-            return `${base}/game/${roomId}`;
-        }
 
         function getServerUrl() {
-            // Use WebSocket protocol
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const host = window.location.host || 'localhost:2567';
+            const host = window.location.host || '18.216.16.63:2567';
             return `${protocol}//${host}`;
         }
 
@@ -1993,12 +1942,10 @@ Based on the strategy description above, generate the complete JSON configuratio
         }
 
         function updateRoomPlayers(data) {
-            // Render and manage connected players for the selected room
             if (!data || !selectedRoomId || data.roomId !== selectedRoomId) return;
 
             const players = Array.isArray(data.players) ? data.players : [];
 
-            // Sync to color manager - this now handles all player display
             if (typeof syncColyseusPlayersToColorManager === 'function') {
                 syncColyseusPlayersToColorManager(players);
             }
@@ -2007,28 +1954,25 @@ Based on the strategy description above, generate the complete JSON configuratio
         async function initializeColyseus() {
             try {
                 const serverUrl = getServerUrl();
-                console.log('Connecting to Colyseus server:', serverUrl);
+                console.log('[INIT] Connecting to Colyseus server:', serverUrl);
 
                 client = new Colyseus.Client(serverUrl);
 
-                // Join or create admin room
                 try {
                     currentRoom = await client.joinOrCreate('admin');
                     clientSessionId = currentRoom.sessionId;
-                    console.log('Connected to admin room:', currentRoom.roomId);
+                    console.log('[INIT] Connected to admin room:', currentRoom.roomId);
 
-                    // Setup admin room listeners
                     setupAdminRoomListeners();
-
                     updateConnectionStatus('Connected');
-                    console.log('Successfully connected to Colyseus server');
+                    console.log('[INIT] Successfully connected to Colyseus server');
                 } catch (error) {
-                    console.error('Failed to join admin room:', error);
+                    console.error('[ERROR] Failed to join admin room:', error);
+                    logSuspiciousActivity('CONNECTION_FAILED', { error: error.message });
                     throw error;
                 }
             } catch (error) {
-                console.error('Failed to connect to Colyseus server:', error);
-                logSuspiciousActivity('CONNECTION_FAILED', { error: error.message });
+                console.error('[ERROR] Failed to connect to Colyseus server:', error);
                 updateConnectionStatus('Disconnected');
                 document.getElementById('reconnect-btn').style.display = 'inline-block';
             }
@@ -2037,52 +1981,50 @@ Based on the strategy description above, generate the complete JSON configuratio
         function setupAdminRoomListeners() {
             if (!currentRoom) return;
 
-            // Listen for room updates
             currentRoom.onMessage('rooms_update', (rooms) => {
-                console.log('Rooms update received:', rooms);
+                console.log('[MESSAGE] Rooms update received:', rooms.length, 'rooms');
                 updateRoomsList(rooms);
+                updateCreateButtonState(rooms);
             });
 
             currentRoom.onMessage('room_created', (data) => {
-                console.log('Room created response:', data);
+                console.log('[MESSAGE] Room created response:', data);
                 if (data.success) {
-                    alert(`Game created! Room ID: ${data.roomId}`);
-                    // Request updated rooms list
+                    showNotification(`Game created! Room ID: ${data.roomId}`);
                     setTimeout(() => {
                         currentRoom.send('request_rooms_list');
                     }, 200);
                 } else {
-                    alert(`Failed to create game: ${data.error}`);
+                    showNotification(`Failed to create game: ${data.error}`, 'error');
                 }
             });
 
             currentRoom.onMessage('game_started', (data) => {
-                console.log('Game started:', data);
+                console.log('[MESSAGE] Game started:', data);
                 if (data.success) {
-                    alert(`Game ${data.roomId} started!`);
+                    showNotification(`Game ${data.roomId} started!`);
                 }
             });
 
             currentRoom.onMessage('room_deleted', (data) => {
-                console.log('Room deleted:', data);
+                console.log('[MESSAGE] Room deleted:', data);
                 if (data.success) {
-                    alert(`Game ${data.roomId} deleted!`);
+                    showNotification(`Game ${data.roomId} deleted!`);
                 }
             });
 
             currentRoom.onMessage('player_update', (data) => {
-                console.log('Player update:', data);
-                // Update UI for specific room
+                console.log('[MESSAGE] Player update:', data);
                 updateRoomPlayers(data);
             });
 
             currentRoom.onError((code, message) => {
-                console.error('Admin room error:', code, message);
+                console.error('[ERROR] Admin room error:', code, message);
                 logSuspiciousActivity('ROOM_ERROR', { code, message });
             });
 
             currentRoom.onLeave((code) => {
-                console.log('Left admin room:', code);
+                console.log('[INFO] Left admin room:', code);
                 currentRoom = null;
                 startReconnectTimer();
             });
@@ -2110,13 +2052,32 @@ Based on the strategy description above, generate the complete JSON configuratio
 
         let latestRoomsData = [];
 
+        function updateCreateButtonState(rooms) {
+            const createBtn = document.getElementById('create-btn');
+            const warning = document.getElementById('game-limit-warning');
+            
+            // Count user's active games (waiting or playing) that they created
+            const userGames = rooms.filter(r => 
+                (r.state === 'waiting' || r.state === 'playing') && 
+                r.metadata?.creatorName === currentUserName &&
+                currentUserName !== ''
+            );
+            
+            if (userGames.length >= SECURITY_CONFIG.MAX_GAMES_PER_USER) {
+                createBtn.disabled = true;
+                warning.style.display = 'block';
+            } else {
+                createBtn.disabled = false;
+                warning.style.display = 'none';
+            }
+        }
+
         function updateRoomsList(rooms) {
             latestRoomsData = rooms || [];
             const pendingGames = document.getElementById('pending-games');
             const activeGames = document.getElementById('active-games');
             const pastGames = document.getElementById('past-games');
 
-            // Clear existing content
             pendingGames.innerHTML = '';
             activeGames.innerHTML = '';
             pastGames.innerHTML = '';
@@ -2125,7 +2086,21 @@ Based on the strategy description above, generate the complete JSON configuratio
             let activeCount = 0;
             let pastCount = 0;
 
+            // Limit past instances to prevent overwhelming server
+            const pastRooms = rooms.filter(r => r.state === 'finished');
+            const limitedPastRooms = pastRooms.slice(0, SECURITY_CONFIG.MAX_PAST_INSTANCES);
+            
+            // Log if we're hitting the limit
+            if (pastRooms.length > SECURITY_CONFIG.MAX_PAST_INSTANCES) {
+                console.log(`[INFO] Limiting past games display: ${pastRooms.length} total, showing ${SECURITY_CONFIG.MAX_PAST_INSTANCES}`);
+            }
+
             rooms.forEach(room => {
+                // Skip past games beyond the limit
+                if (room.state === 'finished' && !limitedPastRooms.includes(room)) {
+                    return;
+                }
+
                 const roomEl = createRoomElement(room);
 
                 if (room.state === 'waiting') {
@@ -2140,12 +2115,10 @@ Based on the strategy description above, generate the complete JSON configuratio
                 }
             });
 
-            // Update counts
             document.getElementById('pending-count').textContent = pendingCount;
             document.getElementById('active-count').textContent = activeCount;
             document.getElementById('past-count').textContent = pastCount;
 
-            // Show empty messages if needed
             if (pendingCount === 0) {
                 pendingGames.innerHTML = '<p>No games pending start</p>';
             }
@@ -2160,12 +2133,22 @@ Based on the strategy description above, generate the complete JSON configuratio
         function createRoomElement(room) {
             const div = document.createElement('div');
             div.className = 'game-item';
+            
+            // Check if this room was created by the current user
+            const isMyRoom = room.metadata?.creatorName === currentUserName && currentUserName !== '';
+            if (!isMyRoom) {
+                div.classList.add('not-mine');
+            }
+            
             div.onclick = () => selectRoom(room.roomId);
 
             const name = room.metadata?.name || `Game ${room.roomId.substring(0, 6)}`;
             const playerCount = room.clients || 0;
 
-            const gameUrl = getJoinUrl(room.roomId, room.metadata);
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+            const port = window.location.port ? `:${window.location.port}` : '';
+            const gameUrl = `${protocol}//${hostname}${port}/game/${room.roomId}`;
 
             div.innerHTML = `
         <div style="flex: 1;">
@@ -2179,9 +2162,8 @@ Based on the strategy description above, generate the complete JSON configuratio
         }
 
         function resetRoomSettingsToDefaults() {
-            console.log('Resetting room settings to defaults');
+            console.log('[RESET] Resetting room settings to defaults');
 
-            // Reset form fields to default values
             document.getElementById('edit-rounds').value = 10;
             document.getElementById('edit-roundTime').value = 30;
             document.getElementById('edit-countdownTime').value = 5;
@@ -2189,28 +2171,24 @@ Based on the strategy description above, generate the complete JSON configuratio
             document.getElementById('edit-hqMax').value = 2;
             document.getElementById('edit-movesPerRound').value = 15;
 
-            // Reset multipliers to defaults
             document.getElementById('edit-countMultiplier').value = 500;
             document.getElementById('edit-distanceMultiplier').value = 1;
             document.getElementById('edit-hqMultiplier').value = 10;
             document.getElementById('edit-destructionMultiplier').value = 1;
 
-            // Clear map JSON
             document.getElementById('edit-mapJson').value = '';
 
-            // Reset AI bots to empty
             const container = document.getElementById('admin-ai-bots');
             if (container) {
                 container.innerHTML = '<div class="ai-bots-empty">No AI bots added yet</div>';
             }
+            updateAddBotButtonState();
 
-            // Reset button states to waiting/new game state
             document.getElementById('start-btn').style.display = 'inline-block';
             document.getElementById('pause-btn').style.display = 'none';
             document.getElementById('resume-btn').style.display = 'none';
             isPaused = false;
 
-            // Reset color management to setup mode (not game mode)
             colorGameMode = false;
             const startBtn = document.getElementById('colorStartGameBtn');
             const stopBtn = document.getElementById('colorStopGameBtn');
@@ -2219,7 +2197,6 @@ Based on the strategy description above, generate the complete JSON configuratio
                 stopBtn.style.display = 'none';
             }
 
-            // Clear players
             colorPlayers = [];
             renderColorPlayerPool();
             renderColorTeamAssignments();
@@ -2227,29 +2204,34 @@ Based on the strategy description above, generate the complete JSON configuratio
         }
 
         function selectRoom(roomId) {
-            console.log('Selected room:', roomId);
+            console.log('[SELECT] Selected room:', roomId);
             selectedRoomId = roomId;
 
-            // Populate settings if available
             const roomData = latestRoomsData.find(r => r.roomId === roomId);
 
-            // Detect game type and switch UI panels
-            const detectedType = roomData?.metadata?.type || 'Constellation';
-            updateGameTypeUI(detectedType);
+            // Check ownership for delete button
+            const isMyRoom = roomData?.metadata?.creatorName === currentUserName && currentUserName !== '';
+            const deleteBtn = document.querySelector('.btn-delete');
+            if (deleteBtn) {
+                if (isMyRoom) {
+                    deleteBtn.style.display = 'inline-block';
+                    deleteBtn.disabled = false;
+                } else {
+                    deleteBtn.style.display = 'none';
+                }
+            }
 
             if (!roomData) {
-                console.log('No room data found, resetting to defaults');
+                console.log('[SELECT] No room data found, resetting to defaults');
                 resetRoomSettingsToDefaults();
             } else {
-                // CRITICAL: Sync players from room data to color manager
                 if (roomData.players && Array.isArray(roomData.players)) {
-                    console.log('Syncing players from room data:', roomData.players);
+                    console.log('[SELECT] Syncing players from room data:', roomData.players);
                     if (typeof syncColyseusPlayersToColorManager === 'function') {
                         syncColyseusPlayersToColorManager(roomData.players);
                     }
                 } else {
-                    // Clear players if no players in room data
-                    console.log('No players in room data, clearing player list');
+                    console.log('[SELECT] No players in room data, clearing player list');
                     colorPlayers = [];
                     renderColorPlayerPool();
                     renderColorTeamAssignments();
@@ -2259,21 +2241,14 @@ Based on the strategy description above, generate the complete JSON configuratio
 
             if (roomData && roomData.config) {
                 const cfg = roomData.config;
-                // Regular settings
                 if (cfg.rounds) document.getElementById('edit-rounds').value = cfg.rounds;
                 if (cfg.roundLength) document.getElementById('edit-roundTime').value = cfg.roundLength;
                 if (cfg.countdownLength) document.getElementById('edit-countdownTime').value = cfg.countdownLength;
                 if (cfg.steals) document.getElementById('edit-stealLimit').value = cfg.steals;
                 if (cfg.headquarters) document.getElementById('edit-hqMax').value = cfg.headquarters;
-                // Game usually has 'movesPerRound' stored as 'steals' count or custom prop? 
-                // Server code doesn't explicitly save 'moves', assumes defaults. client 'S' is moves.
-                // We'll leave moves default for now if not in config.
 
-                // Player team selection setting
                 document.getElementById('edit-allowPlayerTeamSelection').checked = cfg.allowPlayerTeamSelection || false;
-                document.getElementById('edit-ithkuilNumerals').checked = cfg.ithkuilNumerals || false;
 
-                // Multipliers
                 if (cfg.multipliers) {
                     if (cfg.multipliers.count) document.getElementById('edit-countMultiplier').value = cfg.multipliers.count;
                     if (cfg.multipliers.distance) document.getElementById('edit-distanceMultiplier').value = cfg.multipliers.distance;
@@ -2281,39 +2256,32 @@ Based on the strategy description above, generate the complete JSON configuratio
                     if (cfg.multipliers.destruction) document.getElementById('edit-destructionMultiplier').value = cfg.multipliers.destruction;
                 }
 
-                // AI Bots logic
                 const container = document.getElementById('admin-ai-bots');
                 if (container) {
                     container.innerHTML = '<div class="ai-bots-empty">No AI bots added yet</div>';
                     if (Array.isArray(cfg.aiBots) && cfg.aiBots.length > 0) {
-                        // Clear empty message
                         const emptyMsg = container.querySelector('.ai-bots-empty');
                         if (emptyMsg) emptyMsg.remove();
 
-                        // We need to sync the UI counter or just append
                         cfg.aiBots.forEach(bot => {
-                            // Recreate bot UI
-                            const botId = `adminAiBot_${aiBotCounter++}`; // Use global counter
+                            const botId = `adminAiBot_${aiBotCounter++}`;
                             const botDiv = document.createElement('div');
                             botDiv.className = 'ai-bot-item';
                             botDiv.id = botId;
-
-                            // Determine next team/type for selection state
-                            // We need to reconstruct the select values
-                            // This is a bit verbose to inline, but manageable
 
                             const botTypesHtml = Object.keys(AI_BOT_TYPES).map(key =>
                                 `<option value="${key}" ${key === bot.type ? 'selected' : ''}>${AI_BOT_TYPES[key].name} - ${AI_BOT_TYPES[key].description}</option>`
                             ).join('');
 
-                            const teamsHtml = TEAM_CONFIGS.map((team, index) =>
-                                `<option value="${index}" ${index === bot.teamIndex ? 'selected' : ''} style="color: #${team.color.toString(16).padStart(6, '0')}">${team.displayName}</option>`
-                            ).join('');
+                            const teamsHtml = colorTeamColors.map((team, index) => {
+                                const hexColor = rgbToHexAdmin(team.rgb);
+                                const displayName = team.name.charAt(0).toUpperCase() + team.name.slice(1);
+                                return `<option value="${index}" ${index === bot.teamIndex ? 'selected' : ''} style="color: ${hexColor}">${displayName}</option>`;
+                            }).join('');
 
-                            // Aggression select
                             let aggHtml = '';
                             for (let i = 1; i <= 9; i++) {
-                                aggHtml += `<option value="${i}" ${i === bot.aggression ? 'selected' : ''}>Level ${i} - ${i === 9 ? 'Maximum Aggression' : i === 1 ? 'Very Passive' : ''}</option>`;
+                                aggHtml += `<option value="${i}" ${i === bot.aggression ? 'selected' : ''}>Level ${i}</option>`;
                             }
 
                             botDiv.innerHTML = `
@@ -2327,64 +2295,30 @@ Based on the strategy description above, generate the complete JSON configuratio
                             updateAdminAIBotDisplay(botId);
                         });
                     }
+                    updateAddBotButtonState();
                 }
 
-                // Centauri settings
-                if (currentRoomGameType === 'Centauri') {
-                    if (cfg.thrustPower      !== undefined) { document.getElementById('centauri-thrustPower').value       = cfg.thrustPower;      document.getElementById('centauri-thrustPowerVal').textContent    = parseInt(cfg.thrustPower); }
-                    if (cfg.thrustDepletion  !== undefined) { document.getElementById('centauri-thrustDepletion').value   = cfg.thrustDepletion;  document.getElementById('centauri-thrustDepletionVal').textContent = parseInt(cfg.thrustDepletion); }
-                    if (cfg.fuelEfficiency   !== undefined) { document.getElementById('centauri-fuelEfficiency').value    = cfg.fuelEfficiency;   document.getElementById('centauri-fuelEfficiencyVal').textContent  = parseFloat(cfg.fuelEfficiency).toFixed(2); }
-                    if (cfg.fuelRecovery     !== undefined) { document.getElementById('centauri-fuelRecovery').value      = cfg.fuelRecovery;     document.getElementById('centauri-fuelRecoveryVal').textContent    = parseFloat(cfg.fuelRecovery).toFixed(1); }
-                    if (cfg.tickSpeed        !== undefined) { document.getElementById('centauri-tickSpeed').value         = cfg.tickSpeed;        document.getElementById('centauri-tickSpeedVal').textContent       = parseFloat(cfg.tickSpeed).toFixed(1); }
-                    if (cfg.sessionDuration  !== undefined) { document.getElementById('centauri-sessionDuration').value  = cfg.sessionDuration; }
-                    if (cfg.mapJson) document.getElementById('centauri-mapJson').value = JSON.stringify(cfg.mapJson, null, 2);
-                    // Push corrected values immediately so all clients receive updated defaults
-                    lastSentSettingsJson = '';
-                    sendSettingsUpdateImmediate();
-                }
-
-                // GOLAD settings
-                if (currentRoomGameType === 'GOLAD') {
-                    initGoladColorPickers();
-                    if (cfg.boardSize  !== undefined) document.getElementById('golad-boardSize').value  = cfg.boardSize;
-                    if (cfg.birth)                    document.getElementById('golad-birth').value      = cfg.birth.join('');
-                    if (cfg.survive)                  document.getElementById('golad-survive').value    = cfg.survive.join('');
-                    if (cfg.p1Type)                   document.getElementById('golad-p1-type').value    = cfg.p1Type;
-                    if (cfg.p2Type)                   document.getElementById('golad-p2-type').value    = cfg.p2Type;
-                    if (cfg.cellShape)                document.getElementById('golad-cellShape').value  = cfg.cellShape;
-                    if (cfg.hints       !== undefined) document.getElementById('golad-hints').checked       = !!cfg.hints;
-                    if (cfg.animations  !== undefined) document.getElementById('golad-animations').checked  = !!cfg.animations;
-                    if (cfg.showCursor  !== undefined) document.getElementById('golad-showCursor').checked  = !!cfg.showCursor;
-                    if (cfg.showPreview !== undefined) document.getElementById('golad-showPreview').checked = !!cfg.showPreview;
-                    if (cfg.p1Color) {
-                        const i = GOLAD_PALETTE.findIndex(c => c.rgb[0]===cfg.p1Color[0]&&c.rgb[1]===cfg.p1Color[1]&&c.rgb[2]===cfg.p1Color[2]);
-                        if (i >= 0) document.getElementById('golad-p1-color').value = i;
-                    }
-                    if (cfg.p2Color) {
-                        const i = GOLAD_PALETTE.findIndex(c => c.rgb[0]===cfg.p2Color[0]&&c.rgb[1]===cfg.p2Color[1]&&c.rgb[2]===cfg.p2Color[2]);
-                        if (i >= 0) document.getElementById('golad-p2-color').value = i;
-                    }
-                }
-
-                // Map?
                 if (cfg.customMap) {
                     document.getElementById('edit-mapJson').value = JSON.stringify(cfg.customMap, null, 2);
                 }
             }
 
-            // Show game content panel
             document.getElementById('no-game-selected').style.display = 'none';
             document.getElementById('game-content').style.display = 'block';
 
-            // Update game link – fall back to currentRoomGameType when metadata isn't loaded yet
-            const gameUrl = getJoinUrl(roomId, roomData?.metadata || { type: currentRoomGameType });
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+            const port = window.location.port ? `:${window.location.port}` : '';
+            const gameUrl = `${protocol}//${hostname}${port}/game/${roomId}`;
+
+            console.log('[SELECT] Generated game URL:', gameUrl);
+
             const linkElement = document.getElementById('game-direct-link');
             linkElement.href = gameUrl;
             linkElement.textContent = 'Join Game';
 
             document.getElementById('scenario-name').textContent = `Game ${roomId.substring(0, 8)}`;
 
-            // Update button states based on room state
             const startBtn = document.getElementById('start-btn');
             const pauseBtn = document.getElementById('pause-btn');
             const resumeBtn = document.getElementById('resume-btn');
@@ -2401,7 +2335,6 @@ Based on the strategy description above, generate the complete JSON configuratio
                     isPaused = false;
                 }
 
-                // Set color management to game mode for playing rooms
                 colorGameMode = true;
                 const colorStartBtn = document.getElementById('colorStartGameBtn');
                 const colorStopBtn = document.getElementById('colorStopGameBtn');
@@ -2415,7 +2348,6 @@ Based on the strategy description above, generate the complete JSON configuratio
                 resumeBtn.style.display = 'none';
                 isPaused = false;
 
-                // Set color management to setup mode for waiting rooms
                 colorGameMode = false;
                 const colorStartBtn = document.getElementById('colorStartGameBtn');
                 const colorStopBtn = document.getElementById('colorStopGameBtn');
@@ -2426,284 +2358,22 @@ Based on the strategy description above, generate the complete JSON configuratio
             }
         }
 
-        // ── GOLAD palette (matches server/client) ──────────────────────────────────
-        const GOLAD_PALETTE = [
-            {name:'White',      rgb:[255,255,255]},{name:'Beige',     rgb:[248,218,184]},
-            {name:'Pink',       rgb:[255,105,180]},{name:'Red',       rgb:[200,  0, 40]},
-            {name:'Orange',     rgb:[255,100,  0]},{name:'Gold',      rgb:[210,180, 45]},
-            {name:'Yellow',     rgb:[255,220,  0]},{name:'Lime',      rgb:[160,220,  0]},
-            {name:'Green',      rgb:[  0,150, 40]},{name:'Emerald',   rgb:[  0,152,117]},
-            {name:'Light Blue', rgb:[  0,204,255]},{name:'Blue',      rgb:[  0, 80,200]},
-            {name:'Violet',     rgb:[160,  0,255]},{name:'Purple',    rgb:[150,  0,110]},
-            {name:'Fuchsia',    rgb:[220,  0, 90]},{name:'Burgundy',  rgb:[100,  0, 25]},
-            {name:'Brown',      rgb:[ 80, 30,  0]},
-        ];
-        function initGoladColorPickers() {
-            ['golad-p1-color','golad-p2-color'].forEach((id, i) => {
-                const sel = document.getElementById(id);
-                if (!sel || sel.options.length > 0) return;
-                GOLAD_PALETTE.forEach((c, idx) => {
-                    const opt = document.createElement('option');
-                    opt.value = idx;
-                    opt.textContent = c.name;
-                    opt.style.background = `rgb(${c.rgb.join(',')})`;
-                    opt.style.color = (c.rgb[0]+c.rgb[1]+c.rgb[2] > 400) ? '#000' : '#fff';
-                    sel.appendChild(opt);
-                });
-                sel.value = i === 0 ? 3 : 11; // Red / Blue defaults
-            });
-        }
-        document.addEventListener('DOMContentLoaded', initGoladColorPickers);
-
-        // Suspicious activity logger
-        function logSuspiciousActivity(type, data) {
-            const timestamp = new Date().toISOString();
-            console.warn(`[SECURITY] ${timestamp} - ${type}:`, data);
-            if (!window.securityLog) {
-                window.securityLog = [];
-            }
-            window.securityLog.push({ timestamp, type, data });
-            if (window.securityLog.length > 50) {
-                window.securityLog.shift();
-            }
-            renderSecurityLogs();
-            if (type === 'RATE_LIMIT_EXCEEDED' || type === 'INPUT_VALIDATION_FAILED') {
-                showNotification('Security warning: Suspicious activity detected', 'warning');
-            }
-        }
-
-        function renderSecurityLogs() {
-            const logContainer = document.getElementById('security-logs-list');
-            if (!logContainer) return;
-            if (!window.securityLog || window.securityLog.length === 0) {
-                logContainer.innerHTML = '<div style="color: #666; font-style: italic; padding: 10px;">No logs yet</div>';
-                return;
-            }
-            const logs = [...window.securityLog].reverse();
-            logContainer.innerHTML = logs.map(log => {
-                const time = new Date(log.timestamp).toLocaleTimeString();
-                const date = new Date(log.timestamp).toLocaleDateString();
-                const typeColor = log.type.includes('EXCEEDED') || log.type.includes('FAILED') ? '#ef4444' :
-                                 log.type.includes('ERROR') ? '#f59e0b' : '#666';
-                let dataStr = '';
-                if (log.data && Object.keys(log.data).length > 0) {
-                    dataStr = Object.entries(log.data)
-                        .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
-                        .join(', ');
-                }
-                return `
-                    <div style="padding: 8px; border-bottom: 1px solid #e5e7eb; font-size: 12px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
-                            <span style="color: ${typeColor}; font-weight: bold;">${log.type}</span>
-                            <span style="color: #999; font-size: 11px;">${date} ${time}</span>
-                        </div>
-                        ${dataStr ? `<div style="color: #666; font-size: 11px; margin-top: 2px;">${dataStr}</div>` : ''}
-                    </div>
-                `;
-            }).join('');
-        }
-
-        document.addEventListener('DOMContentLoaded', renderSecurityLogs);
-        document.addEventListener('DOMContentLoaded', loadUserName);
-
-        // ── Game type UI — driven by a panel map so adding a new game only needs one entry ──
-        const GAME_PANEL_MAP = {
-            'Tabletop Club': 'ttclub-panel',
-            'GOLAD':         'golad-settings',
-            'Centauri':      'centauri-settings',
-        };
-        const DEFAULT_PANEL = 'constellation-settings';
-
-        function updateGameTypeUI(gameType) {
-            currentRoomGameType = gameType || 'Constellation';
-
-            // Hide every known panel first — guarantees no stale panel is visible
-            document.getElementById(DEFAULT_PANEL).style.display = 'none';
-            Object.values(GAME_PANEL_MAP).forEach(id => {
-                document.getElementById(id).style.display = 'none';
-            });
-
-            // Show exactly the right one
-            const panelId = GAME_PANEL_MAP[currentRoomGameType] || DEFAULT_PANEL;
-            document.getElementById(panelId).style.display = '';
-
-            if (currentRoomGameType === 'Tabletop Club') loadTTClubIframe();
-            else stopTTClubPlayerPolling();
-            if (currentRoomGameType === 'GOLAD') initGoladColorPickers();
-            if (currentRoomGameType === 'Centauri') initCentauriMapmakerListener();
-        }
-
-        // ── Centauri MapMaker iframe bridge ───────────────────────────────────────
-        let _centauriMapmakerListenerAttached = false;
-        function initCentauriMapmakerListener() {
-            if (_centauriMapmakerListenerAttached) return;
-            _centauriMapmakerListenerAttached = true;
-            window.addEventListener('message', (e) => {
-                if (e.data?.type !== 'mapExport') return;
-                const textarea = document.getElementById('centauri-mapJson');
-                if (!textarea) return;
-                try {
-                    const parsed = typeof e.data.json === 'string' ? JSON.parse(e.data.json) : e.data.json;
-                    textarea.value = JSON.stringify(parsed, null, 2);
-                } catch(_) {
-                    textarea.value = e.data.json;
-                }
-                sendSettingsUpdate();
-            });
-        }
-
-        function loadTTClubIframe() {
-            const iframe = document.getElementById('ttclub-iframe');
-            const base = `${window.location.protocol}//${window.location.host}/ttclub2/seepcards.html`;
-            if (iframe.src !== base) iframe.src = base;
-        }
-
-        function reloadTTClubIframe() {
-            ttclubRoomCode = null;
-            document.getElementById('ttclub-room-code').value = '';
-            document.getElementById('ttclub-join-url').value = '';
-            stopTTClubPlayerPolling();
-            // Recreate the iframe element entirely so Godot WASM fully unloads
-            const container = document.querySelector('#ttclub-iframe').parentNode;
-            const oldIframe = document.getElementById('ttclub-iframe');
-            oldIframe.remove();
-            const newIframe = document.createElement('iframe');
-            newIframe.id = 'ttclub-iframe';
-            newIframe.src = '';
-            newIframe.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; border:none;';
-            newIframe.allow = 'autoplay; microphone; camera';
-            newIframe.allowFullscreen = true;
-            container.appendChild(newIframe);
-            setTimeout(() => { newIframe.src = `${window.location.protocol}//${window.location.host}/ttclub2/seepcards.html`; }, 600);
-        }
-
-        function openTTClubFullscreen() {
-            window.open(`${window.location.protocol}//${window.location.host}/ttclub2/seepcards.html`, '_blank');
-        }
-
-        let _ttclubPollInterval = null;
-
-        function onTTClubRoomCode(code) {
-            ttclubRoomCode = code.toUpperCase();
-            document.getElementById('ttclub-room-code').value = ttclubRoomCode;
-            const joinUrl = `${window.location.protocol}//${window.location.host}/ttclub2/seepcards.html?join=${ttclubRoomCode}`;
-            document.getElementById('ttclub-join-url').value = joinUrl;
-            // Also update the main Join Game link
-            const linkEl = document.getElementById('game-direct-link');
-            if (linkEl) { linkEl.href = joinUrl; linkEl.textContent = 'Join Game'; }
-            console.log('[TTClub] Room code received:', ttclubRoomCode);
-            startTTClubPlayerPolling(ttclubRoomCode);
-        }
-
-        function startTTClubPlayerPolling(code) {
-            if (_ttclubPollInterval) clearInterval(_ttclubPollInterval);
-            _ttclubPollInterval = setInterval(() => fetchTTClubPlayers(code), 2000);
-            fetchTTClubPlayers(code);
-        }
-
-        function stopTTClubPlayerPolling() {
-            if (_ttclubPollInterval) { clearInterval(_ttclubPollInterval); _ttclubPollInterval = null; }
-            document.getElementById('ttclub-players').innerHTML =
-                '<span style="color:#64748b; font-size:12px; align-self:center;">Waiting for players...</span>';
-        }
-
-        async function fetchTTClubPlayers(code) {
-            if (!code) return;
-            try {
-                const res = await fetch(`/ttclub-api/room/${code}/players`);
-                const data = await res.json();
-                renderTTClubPlayers(data.players || []);
-            } catch (_) {}
-        }
-
-        function renderTTClubPlayers(players) {
-            const el = document.getElementById('ttclub-players');
-            if (!players.length) {
-                el.innerHTML = '<span style="color:#64748b; font-size:12px; align-self:center;">Waiting for players...</span>';
-                return;
-            }
-            el.innerHTML = players.map(p => `
-                <div style="display:flex; align-items:center; gap:6px; background:#0f172a; border-radius:20px; padding:4px 12px 4px 6px;">
-                    <div style="width:22px; height:22px; border-radius:50%; background:${p.color}; flex-shrink:0;"></div>
-                    <span style="font-size:13px; color:#e2e8f0;">${p.name}${p.isHost ? ' <span style="font-size:10px;color:#94a3b8;">(host)</span>' : ''}</span>
-                </div>`).join('');
-            // Sync to color manager so TTClub players get team color assignments
-            if (typeof syncTTClubPlayersToColorManager === 'function') {
-                syncTTClubPlayersToColorManager(players);
-            }
-        }
-
-        function syncTTClubPlayersToColorManager(players) {
-            const newPlayers = [];
-            players.forEach(p => {
-                const playerId = `ttclub-${p.id}`;
-                const existing = colorPlayers.find(cp => cp.colyseusId === playerId);
-                if (existing) {
-                    existing.name = p.name || existing.name;
-                } else {
-                    const newPlayer = {
-                        id: `color-player-${Date.now()}-${colorPlayerIdCounter++}`,
-                        colyseusId: playerId,
-                        name: p.name || 'Player',
-                        visionType: 'normal',
-                        colorTeam: null,
-                        isBot: false
-                    };
-                    colorPlayers.push(newPlayer);
-                    newPlayers.push(newPlayer);
-                }
-            });
-            // Remove disconnected TTClub players
-            const activeIds = new Set(players.map(p => `ttclub-${p.id}`));
-            colorPlayers = colorPlayers.filter(p => !p.colyseusId || !p.colyseusId.startsWith('ttclub-') || activeIds.has(p.colyseusId));
-            // Auto-assign new players to smallest team
-            if (colorGameMode && newPlayers.length > 0 && colorTeamColors.length > 0) {
-                newPlayers.forEach(player => {
-                    const teamCounts = colorTeamColors.map((_, idx) =>
-                        colorPlayers.filter(p => p.colorTeam === idx && p.id !== player.id).length
-                    );
-                    const minCount = Math.min(...teamCounts);
-                    const targetTeam = teamCounts.findIndex(count => count === minCount);
-                    player.colorTeam = targetTeam;
-                    if (typeof syncColorTeamToGame === 'function') syncColorTeamToGame(player);
-                });
-            }
-            if (typeof renderColorPlayerPool === 'function') renderColorPlayerPool();
-            if (typeof renderColorTeamAssignments === 'function') renderColorTeamAssignments();
-            if (typeof updateColorStats === 'function') updateColorStats();
-            if (typeof syncPlayersToIframe === 'function') syncPlayersToIframe();
-        }
-
-        function copyTTClubCode() {
-            const code = document.getElementById('ttclub-room-code').value;
-            if (code) navigator.clipboard.writeText(code);
-        }
-
-        function copyTTClubJoinUrl() {
-            const url = document.getElementById('ttclub-join-url').value;
-            if (url) navigator.clipboard.writeText(url);
-        }
-
-        // Listen for postMessages from seepcards.html iframe
-        window.addEventListener('message', function(event) {
-            if (event.data && event.data.type === 'ttclub_room_code') {
-                onTTClubRoomCode(event.data.code);
-            }
-        });
-        // ────────────────────────────────────────────────────────────────────────
-
         function deselectRoom() {
             selectedRoomId = null;
             document.getElementById('no-game-selected').style.display = 'block';
             document.getElementById('game-content').style.display = 'none';
 
-            // Reset button states
             document.getElementById('start-btn').style.display = 'inline-block';
             document.getElementById('pause-btn').style.display = 'none';
             document.getElementById('resume-btn').style.display = 'none';
             isPaused = false;
 
-            // Reset color management to setup mode
+            // Hide delete button
+            const deleteBtn = document.querySelector('.btn-delete');
+            if (deleteBtn) {
+                deleteBtn.style.display = 'none';
+            }
+
             colorGameMode = false;
             const colorStartBtn = document.getElementById('colorStartGameBtn');
             const colorStopBtn = document.getElementById('colorStopGameBtn');
@@ -2712,7 +2382,6 @@ Based on the strategy description above, generate the complete JSON configuratio
                 colorStopBtn.style.display = 'none';
             }
 
-            // Clear player list when deselecting room
             colorPlayers = [];
             renderColorPlayerPool();
             renderColorTeamAssignments();
@@ -2721,22 +2390,65 @@ Based on the strategy description above, generate the complete JSON configuratio
 
         async function createGame() {
             if (!client || !currentRoom) {
-                alert('Not connected to server. Please wait or click Reconnect.');
+                showNotification('Not connected to server. Please wait or click Reconnect.', 'error');
                 return;
             }
+
+            // Check if user has set their name
+            if (!currentUserName) {
+                showNotification('Please set your name above before creating a game.', 'warning');
+                document.getElementById('user-nameplate').focus();
+                return;
+            }
+
+            // Check game limit
+            const userGames = latestRoomsData.filter(r => 
+                (r.state === 'waiting' || r.state === 'playing') && 
+                r.metadata?.creatorName === currentUserName
+            );
+            if (userGames.length >= SECURITY_CONFIG.MAX_GAMES_PER_USER) {
+                showNotification(`Maximum ${SECURITY_CONFIG.MAX_GAMES_PER_USER} games reached. Please close an existing game first.`, 'warning');
+                logSuspiciousActivity('GAME_LIMIT_EXCEEDED', { currentGames: userGames.length, user: currentUserName });
+                return;
+            }
+
+            // Rate limiting check
             if (messageRateLimiter.isLimited(clientSessionId)) {
                 showNotification('Too many requests. Please slow down.', 'warning');
                 return;
             }
 
-            const gameName = document.getElementById('game-name').value.trim() || 'Unnamed Game';
+            const gameNameInput = document.getElementById('game-name');
+            let gameName = gameNameInput.value.trim();
+            
+            // Validate game name
+            if (gameName.length > SECURITY_CONFIG.MAX_GAME_NAME_LENGTH) {
+                showNotification(`Game name too long. Max ${SECURITY_CONFIG.MAX_GAME_NAME_LENGTH} characters.`, 'error');
+                logSuspiciousActivity('INVALID_GAME_NAME', { length: gameName.length });
+                gameName = gameName.substring(0, SECURITY_CONFIG.MAX_GAME_NAME_LENGTH);
+                gameNameInput.value = gameName;
+                return;
+            }
+            
+            if (!gameName) {
+                gameName = 'Unnamed Game';
+            }
+
             const gameType = document.getElementById('game-type').value;
             const aiBots = getAdminAIBots();
 
-            console.log('Creating game with settings:', {
+            // Validate AI bots
+            if (aiBots.length > SECURITY_CONFIG.MAX_AI_BOTS) {
+                showNotification(`Too many AI bots. Max ${SECURITY_CONFIG.MAX_AI_BOTS} allowed.`, 'error');
+                logSuspiciousActivity('TOO_MANY_BOTS', { count: aiBots.length });
+                return;
+            }
+
+            console.log('[CREATE] Creating game with settings:', {
                 name: gameName,
                 gameType: gameType,
-                aiBots: aiBots
+                aiBots: aiBots,
+                creator: currentUserName
             });
 
             try {
@@ -2744,94 +2456,36 @@ Based on the strategy description above, generate the complete JSON configuratio
                     name: gameName,
                     gameType: gameType,
                     maxPlayers: 20,
-                    isAdmin: true
+                    creatorName: currentUserName // Attach creator name
                 };
 
                 if (aiBots.length > 0) {
                     roomOptions.aiBots = aiBots;
                 }
 
-                if (gameType === 'GOLAD') {
-                    initGoladColorPickers();
-                    const birthStr   = (document.getElementById('golad-birth').value   || '3').replace(/\D/g,'');
-                    const surviveStr = (document.getElementById('golad-survive').value || '23').replace(/\D/g,'');
-                    const p1Idx = parseInt(document.getElementById('golad-p1-color').value) || 3;
-                    const p2Idx = parseInt(document.getElementById('golad-p2-color').value) || 11;
-                    roomOptions.boardSize  = parseInt(document.getElementById('golad-boardSize').value) || 16;
-                    roomOptions.birth      = birthStr.split('').map(Number);
-                    roomOptions.survive    = surviveStr.split('').map(Number);
-                    roomOptions.p1Type     = document.getElementById('golad-p1-type').value;
-                    roomOptions.p2Type     = document.getElementById('golad-p2-type').value;
-                    roomOptions.p1Color    = GOLAD_PALETTE[p1Idx].rgb;
-                    roomOptions.p2Color    = GOLAD_PALETTE[p2Idx].rgb;
-                    roomOptions.cellShape   = document.getElementById('golad-cellShape').value;
-                    roomOptions.hints       = document.getElementById('golad-hints').checked;
-                    roomOptions.animations  = document.getElementById('golad-animations').checked;
-                    roomOptions.showCursor  = document.getElementById('golad-showCursor').checked;
-                    roomOptions.showPreview = document.getElementById('golad-showPreview').checked;
-                }
+                const room = await client.create('constellation', roomOptions);
+                console.log('[CREATE] ✓ Room created:', room.roomId);
 
-                if (gameType === 'Centauri') {
-                    roomOptions.thrustPower     = parseFloat(document.getElementById('centauri-thrustPower').value)     || 1000.0;
-                    roomOptions.thrustDepletion = parseFloat(document.getElementById('centauri-thrustDepletion').value) || 10.0;
-                    roomOptions.fuelEfficiency  = parseFloat(document.getElementById('centauri-fuelEfficiency').value)  || 0.5;
-                    roomOptions.fuelRecovery    = parseFloat(document.getElementById('centauri-fuelRecovery').value)    || 2.0;
-                    roomOptions.tickSpeed       = parseFloat(document.getElementById('centauri-tickSpeed').value)       || 1.0;
-                    roomOptions.sessionDuration = parseFloat(document.getElementById('centauri-sessionDuration').value) || 120.0;
-                    const rawJson = document.getElementById('centauri-mapJson').value.trim();
-                    if (rawJson) { try { roomOptions.mapJson = JSON.parse(rawJson); } catch(e) {} }
-                }
+                gameNameInput.value = '';
 
-                // Use official Colyseus client.create() to create the room
-                const roomType = gameType === 'GOLAD' ? 'golad' : gameType === 'Centauri' ? 'centauri' : 'constellation';
-                const room = await client.create(roomType, roomOptions);
-                console.log('✓ Room created:', room.roomId);
-
-                // Clear the game name input
-                document.getElementById('game-name').value = '';
-
-                // Select the newly created room — force correct panel since metadata isn't in latestRoomsData yet
                 selectRoom(room.roomId);
-                updateGameTypeUI(gameType);
 
-                // Request updated rooms list to get the new room data
                 if (currentRoom) {
                     setTimeout(() => {
                         currentRoom.send('request_rooms_list');
-                        // After rooms list is updated, re-select the room to get proper data
                         setTimeout(() => {
                             if (selectedRoomId === room.roomId) {
-                                console.log('Re-selecting room after rooms list update');
+                                console.log('[CREATE] Re-selecting room after rooms list update');
                                 selectRoom(room.roomId);
                             }
                         }, 300);
                     }, 200);
                 }
             } catch (error) {
-                console.error('Failed to create game:', error);
+                console.error('[ERROR] Failed to create game:', error);
+                showNotification(`Failed to create game: ${error.message}`, 'error');
                 logSuspiciousActivity('CREATE_GAME_FAILED', { error: error.message });
-                alert(`Failed to create game: ${error.message}`);
             }
-        }
-        function setupRoomListeners(room) {
-            room.onStateChange((state) => {
-                console.log('Room state changed:', state);
-                // Update UI based on state changes
-            });
-
-            room.onMessage('player_joined', (data) => {
-                console.log('Player joined:', data);
-                // Update player list
-            });
-
-            room.onError((code, message) => {
-                console.error('Room error:', code, message);
-            });
-
-            room.onLeave((code) => {
-                console.log('Left room:', code);
-                currentRoom = null;
-            });
         }
 
         function toggleScenario() {
@@ -2846,138 +2500,103 @@ Based on the strategy description above, generate the complete JSON configuratio
             }
         }
 
-        function updateTeamCount() {
-            // Placeholder for team count update logic
-            console.log('Team count updated');
-        }
-
-        function autoSetupTeams() {
-            // Placeholder for auto team setup
-            console.log('Auto setup teams');
-        }
-
-        // Assign a player's team via AdminRoom (no need to join the game room)
-        function assignPlayerTeam(playerId, teamIndex) {
-            if (!currentRoom || !selectedRoomId) {
-                alert('Connect to admin and select a game first');
-                return;
-            }
-            const payload = {
-                roomId: selectedRoomId,
-                playerId,
-                teamIndex: teamIndex === '' ? null : parseInt(teamIndex, 10)
-            };
-            try {
-                currentRoom.send('assign_team', payload);
-                console.log('✓ Sent assign_team', payload);
-            } catch (e) {
-                console.error('Failed to assign team:', e);
-                alert('Failed to assign team. See console for details.');
-            }
-        }
-
-        // Kick a player from the selected game via AdminRoom
-        function kickPlayer(playerId) {
-            if (!currentRoom || !selectedRoomId) {
-                alert('Connect to admin and select a game first');
-                return;
-            }
-            const payload = { roomId: selectedRoomId, playerId };
-            try {
-                currentRoom.send('kick_player', payload);
-                console.log('✓ Sent kick_player', payload);
-            } catch (e) {
-                console.error('Failed to kick player:', e);
-                alert('Failed to kick player. See console for details.');
-            }
-        }
-
-        function collectStartWarnings() {
-            const warnings = []; // { html, blockStart }
-            const isConstellation = currentRoomGameType === 'Constellation';
-            const isProxima = currentRoomGameType === 'Centauri';
-
-            if (isConstellation || isProxima) {
-                // Teams with no players
-                if (colorTeamColors.length > 0) {
-                    const emptyTeams = colorTeamColors
-                        .map((t, i) => {
-                            const rgb = t.rgb || [128,128,128];
-                            const hex = '#' + rgb.map(v => v.toString(16).padStart(2,'0')).join('');
-                            const label = t.name || t.displayName || `Team ${i+1}`;
-                            return { html: `<span style="color:${hex};font-weight:600">${label}</span>`, idx: i };
-                        })
-                        .filter(t => !colorPlayers.some(p => p.colorTeam === t.idx));
-                    if (emptyTeams.length > 0) {
-                        const names = emptyTeams.map(t => t.html).join(', ');
-                        warnings.push({
-                            html: `If you don't set players for all teams, there will be ghost teams for ${names} with no players<br>` +
-                                  `Recommended: adjust the "amount of teams" slider to the necessary amount, then auto-balance teams`,
-                            blockStart: false
-                        });
-                    }
-                }
-
-                // No map set
-                if (isConstellation) {
-                    const mapFile = document.getElementById('map-selector')?.value;
-                    const mapJson = document.getElementById('edit-mapJson')?.value?.trim();
-                    if (!mapFile && !mapJson) {
-                        warnings.push({ html: `Setting a map's necessary for this game`, blockStart: true });
-                    }
-                } else if (isProxima) {
-                    const mapJson = document.getElementById('centauri-mapJson')?.value?.trim();
-                    if (!mapJson) {
-                        warnings.push({
-                            html: `Setting a map's necessary for this game. ` +
-                                  `Click the randomize map button (Dice) — then export map ` +
-                                  `(Manual mapmaker coming soon!)`,
-                            blockStart: true
-                        });
-                    }
-                }
-            }
-
-            return warnings;
-        }
-
         async function startGame() {
             if (!selectedRoomId) {
-                alert('Select a game first');
+                showNotification('Select a game first', 'error');
                 return;
             }
+            
+            // Rate limiting check
             if (messageRateLimiter.isLimited(clientSessionId)) {
                 showNotification('Too many requests. Please slow down.', 'warning');
                 return;
             }
-
-            // For TTClub rooms just ensure the iframe is loaded — no Colyseus start needed
-            if (currentRoomGameType === 'Tabletop Club') {
-                loadTTClubIframe();
-                document.getElementById('start-btn').style.display = 'none';
-                return;
+            
+            // Validation checks
+            const warnings = [];
+            
+            // Check if map is set
+            const mapJsonValue = document.getElementById('edit-mapJson')?.value?.trim();
+            const selectedMapFilename = document.getElementById('map-selector')?.value;
+            if (!mapJsonValue && !selectedMapFilename) {
+                warnings.push('No map selected');
             }
-
-            const warnings = collectStartWarnings();
-            if (warnings.length > 0) {
-                const list = document.getElementById('start-warning-list');
-                list.innerHTML = warnings.map(w => `<li>${w.html}</li>`).join('');
-                const blocked = warnings.some(w => w.blockStart);
-                const btn = document.getElementById('start-anyway-btn');
-                btn.disabled = blocked;
-                document.getElementById('start-anyway-wrap').title = blocked ? 'Map not set' : '';
-                document.getElementById('start-warning-popup').classList.add('visible');
-                return;
+            
+            // Check for unassigned players (excluding host)
+            const roomData = latestRoomsData.find(r => r.roomId === selectedRoomId);
+            if (roomData && roomData.players) {
+                const unassignedNonHost = colorPlayers.filter(p => 
+                    p.colorTeam === null && 
+                    !p.isBot && 
+                    p.colyseusId !== roomData.hostId
+                );
+                
+                if (unassignedNonHost.length > 0) {
+                    warnings.push(`${unassignedNonHost.length} player(s) not assigned to a team`);
+                }
             }
-
-            await doStartGame();
-        }
-
-        async function doStartGame() {
-            document.getElementById('start-warning-popup').classList.remove('visible');
+            
+            // Show warning popup if there are issues
+            if (warnings.length > 0 && !window.startGameWarningShown) {
+                const warningMsg = warnings.join('\n• ');
+                const confirmed = confirm(`⚠️ Warning:\n• ${warningMsg}\n\nClick OK to start anyway, or Cancel to fix these issues.`);
+                if (!confirmed) {
+                    return;
+                }
+                window.startGameWarningShown = true;
+            }
+            
             try {
+                // Auto-assign unassigned players (excluding host) to teams when game starts
+                if (roomData && roomData.players) {
+                    const unassignedNonHost = colorPlayers.filter(p => 
+                        p.colorTeam === null && 
+                        !p.isBot && 
+                        p.colyseusId !== roomData.hostId
+                    );
+                    
+                    if (unassignedNonHost.length > 0) {
+                        // Find available teams (teams with space)
+                        const teamCounts = new Map();
+                        colorPlayers.forEach(p => {
+                            if (p.colorTeam !== null) {
+                                teamCounts.set(p.colorTeam, (teamCounts.get(p.colorTeam) || 0) + 1);
+                            }
+                        });
+                        
+                        // Assign to teams in round-robin fashion
+                        let teamIndex = 0;
+                        for (const player of unassignedNonHost) {
+                            // Find next available team
+                            while (teamCounts.get(teamIndex) >= 1) {
+                                teamIndex = (teamIndex + 1) % colorTeamColors.length;
+                            }
+                            
+                            // Assign player to team
+                            player.colorTeam = teamIndex;
+                            teamCounts.set(teamIndex, (teamCounts.get(teamIndex) || 0) + 1);
+                            
+                            // Send to server
+                            if (currentRoom && player.colyseusId) {
+                                currentRoom.send('assign_team', {
+                                    roomId: selectedRoomId,
+                                    playerId: player.colyseusId,
+                                    teamIndex: teamIndex
+                                });
+                                console.log(`[AUTO-ASSIGN] Player ${player.name} assigned to team ${teamIndex}`);
+                            }
+                            
+                            teamIndex = (teamIndex + 1) % colorTeamColors.length;
+                        }
+                        
+                        // Update UI
+                        renderColorPlayerPool();
+                        renderColorTeamAssignments();
+                    }
+                }
+                
                 currentRoom.send('start_game', { roomId: selectedRoomId });
-                console.log('✓ Game start command sent via AdminRoom');
+                console.log('[ACTION] ✓ Game start command sent via AdminRoom');
 
                 document.getElementById('start-btn').style.display = 'none';
                 document.getElementById('pause-btn').style.display = 'inline-block';
@@ -2985,10 +2604,12 @@ Based on the strategy description above, generate the complete JSON configuratio
                 if (!colorGameMode) {
                     document.getElementById('colorStartGameBtn').click();
                 }
+                
+                // Reset warning flag for next time
+                window.startGameWarningShown = false;
             } catch (error) {
-                console.error('Failed to start game:', error);
-                logSuspiciousActivity('START_GAME_FAILED', { error: error.message });
-                alert(`Failed to start game: ${error.message}`);
+                console.error('[ERROR] Failed to start game:', error);
+                showNotification(`Failed to start game: ${error.message}`, 'error');
             }
         }
 
@@ -3011,10 +2632,15 @@ Based on the strategy description above, generate the complete JSON configuratio
             hidePausePopup();
 
             if (!selectedRoomId || !currentRoom) return;
-            if (messageRateLimiter.isLimited(clientSessionId)) return;
+
+            // Rate limiting check
+            if (messageRateLimiter.isLimited(clientSessionId)) {
+                showNotification('Too many requests. Please slow down.', 'warning');
+                return;
+            }
 
             currentRoom.send('pause_game', { roomId: selectedRoomId, reason: reason });
-            console.log('✓ Game pause command sent via AdminRoom');
+            console.log('[ACTION] ✓ Game pause command sent via AdminRoom');
 
             isPaused = true;
             document.getElementById('pause-btn').style.display = 'none';
@@ -3023,17 +2649,21 @@ Based on the strategy description above, generate the complete JSON configuratio
 
         function resumeGame() {
             if (!selectedRoomId || !currentRoom) return;
-            if (messageRateLimiter.isLimited(clientSessionId)) return;
+
+            // Rate limiting check
+            if (messageRateLimiter.isLimited(clientSessionId)) {
+                showNotification('Too many requests. Please slow down.', 'warning');
+                return;
+            }
 
             currentRoom.send('resume_game', { roomId: selectedRoomId });
-            console.log('✓ Game resume command sent via AdminRoom');
+            console.log('[ACTION] ✓ Game resume command sent via AdminRoom');
 
             isPaused = false;
             document.getElementById('resume-btn').style.display = 'none';
             document.getElementById('pause-btn').style.display = 'inline-block';
         }
 
-        // Close pause popup when clicking outside
         document.addEventListener('click', function (e) {
             const popup = document.getElementById('pause-popup');
             const pauseBtn = document.getElementById('pause-btn');
@@ -3044,114 +2674,105 @@ Based on the strategy description above, generate the complete JSON configuratio
 
         async function deleteGame() {
             if (!selectedRoomId) {
-                alert('Select a game first');
+                showNotification('Select a game first', 'error');
                 return;
             }
+
+            // Check ownership
+            const roomData = latestRoomsData.find(r => r.roomId === selectedRoomId);
+            const isMyRoom = roomData?.metadata?.creatorName === currentUserName && currentUserName !== '';
+            
+            if (!isMyRoom) {
+                showNotification('You can only delete games you created', 'error');
+                logSuspiciousActivity('UNAUTHORIZED_DELETE_ATTEMPT', { 
+                    roomId: selectedRoomId, 
+                    user: currentUserName,
+                    creator: roomData?.metadata?.creatorName 
+                });
+                return;
+            }
+            
+            // Rate limiting check
             if (messageRateLimiter.isLimited(clientSessionId)) {
                 showNotification('Too many requests. Please slow down.', 'warning');
                 return;
             }
+            
             try {
                 if (confirm('Are you sure you want to delete this game?')) {
-                    // Send delete command via AdminRoom
                     currentRoom.send('delete_room', { roomId: selectedRoomId });
-                    console.log('✓ Room delete command sent via AdminRoom');
+                    console.log('[ACTION] ✓ Room delete command sent via AdminRoom');
 
-                    // Clear selection
                     document.getElementById('no-game-selected').style.display = 'block';
                     document.getElementById('game-content').style.display = 'none';
 
                     selectedRoomId = null;
                 }
             } catch (error) {
-                console.error('Failed to delete game:', error);
-                logSuspiciousActivity('DELETE_GAME_FAILED', { error: error.message });
-                alert(`Failed to delete game: ${error.message}`);
+                console.error('[ERROR] Failed to delete game:', error);
+                showNotification(`Failed to delete game: ${error.message}`, 'error');
             }
         }
 
-        // Debounce timer for settings updates
         let settingsUpdateTimeout = null;
+        let lastSentSettingsJson = '';
+        
+        // Track the current order of multipliers
+        let multiplierOrder = ['count', 'distance', 'hq', 'destruction'];
+        
+        function randomizeMultiplierOrder() {
+            // Get current values
+            const values = {
+                count: parseInt(document.getElementById('edit-countMultiplier').value) || 0,
+                distance: parseInt(document.getElementById('edit-distanceMultiplier').value) || 0,
+                hq: parseInt(document.getElementById('edit-hqMultiplier').value) || 0,
+                destruction: parseInt(document.getElementById('edit-destructionMultiplier').value) || 0
+            };
+            
+            // Shuffle the order array
+            const newOrder = [...multiplierOrder];
+            for (let i = newOrder.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newOrder[i], newOrder[j]] = [newOrder[j], newOrder[i]];
+            }
+            multiplierOrder = newOrder;
+            
+            // Update the input fields with values in new order
+            document.getElementById('edit-countMultiplier').value = values[newOrder[0]];
+            document.getElementById('edit-distanceMultiplier').value = values[newOrder[1]];
+            document.getElementById('edit-hqMultiplier').value = values[newOrder[2]];
+            document.getElementById('edit-destructionMultiplier').value = values[newOrder[3]];
+            
+            // Update the label to show new order
+            const orderNames = newOrder.map(key => {
+                return key.charAt(0).toUpperCase() + key.slice(1);
+            });
+            document.getElementById('multiplier-order-label').textContent = `(${orderNames.join(', ')})`;
+            
+            // Send the update with the order information
+            sendSettingsUpdateImmediate();
+            
+            showNotification('Multiplier order randomized!');
+        }
 
         function sendSettingsUpdate() {
             if (!currentRoom || !selectedRoomId) return;
 
-            // Debounce settings updates to prevent excessive server calls
             if (settingsUpdateTimeout) {
                 clearTimeout(settingsUpdateTimeout);
             }
 
             settingsUpdateTimeout = setTimeout(() => {
                 sendSettingsUpdateImmediate();
-            }, 300); // 300ms debounce
+            }, 300);
         }
-
-        // Track last sent settings to avoid duplicate notifications
-        let lastSentSettingsJson = '';
 
         function sendSettingsUpdateImmediate() {
             if (!currentRoom || !selectedRoomId) return;
-            if (messageRateLimiter.isLimited(clientSessionId)) return;
 
-            // Centauri settings
-            if (currentRoomGameType === 'Centauri') {
-                const rawJson = document.getElementById('centauri-mapJson').value.trim();
-                let mapJson = null;
-                if (rawJson) { try { mapJson = JSON.parse(rawJson); } catch(e) {} }
-                const settings = {
-                    thrustPower:     parseFloat(document.getElementById('centauri-thrustPower').value)     || 1.0,
-                    thrustDepletion: parseFloat(document.getElementById('centauri-thrustDepletion').value) || 0.1,
-                    fuelEfficiency:  parseFloat(document.getElementById('centauri-fuelEfficiency').value)  || 0.8,
-                    fuelRecovery:    parseFloat(document.getElementById('centauri-fuelRecovery').value)    || 0.05,
-                    tickSpeed:       parseFloat(document.getElementById('centauri-tickSpeed').value)       || 1.0,
-                    sessionDuration: parseFloat(document.getElementById('centauri-sessionDuration').value) || 120.0,
-                    teamColors: colorTeamColors.map(tc => ({
-                        color: (tc.rgb[0] << 16) | (tc.rgb[1] << 8) | tc.rgb[2],
-                        name: tc.name.toLowerCase(),
-                    })),
-                    mapJson,
-                };
-                const settingsJson = JSON.stringify(settings);
-                if (settingsJson === lastSentSettingsJson) return;
-                lastSentSettingsJson = settingsJson;
-                try {
-                    currentRoom.send('update_settings', { roomId: selectedRoomId, settings });
-                    showNotification('Centauri settings updated');
-                    document.getElementById('centauri-settings-status').textContent = 'Saved ✓';
-                    setTimeout(() => { document.getElementById('centauri-settings-status').textContent = 'Settings saved automatically'; }, 1500);
-                } catch (e) { console.error('Failed to send Centauri settings:', e); }
-                return;
-            }
-
-            // GOLAD settings
-            if (currentRoomGameType === 'GOLAD') {
-                const birthStr   = (document.getElementById('golad-birth').value   || '3').replace(/\D/g,'');
-                const surviveStr = (document.getElementById('golad-survive').value || '23').replace(/\D/g,'');
-                const birth   = birthStr   ? [...new Set(birthStr.split('').map(Number).sort((a,b)=>a-b))]   : [3];
-                const survive = surviveStr ? [...new Set(surviveStr.split('').map(Number).sort((a,b)=>a-b))] : [2,3];
-                const p1Idx = parseInt(document.getElementById('golad-p1-color').value) || 3;
-                const p2Idx = parseInt(document.getElementById('golad-p2-color').value) || 11;
-                const settings = {
-                    boardSize:  parseInt(document.getElementById('golad-boardSize').value) || 16,
-                    birth, survive,
-                    p1Type:     document.getElementById('golad-p1-type').value,
-                    p2Type:     document.getElementById('golad-p2-type').value,
-                    p1Color:    GOLAD_PALETTE[p1Idx].rgb,
-                    p2Color:    GOLAD_PALETTE[p2Idx].rgb,
-                    cellShape:   document.getElementById('golad-cellShape').value,
-                    hints:       document.getElementById('golad-hints').checked,
-                    animations:  document.getElementById('golad-animations').checked,
-                    showCursor:  document.getElementById('golad-showCursor').checked,
-                    showPreview: document.getElementById('golad-showPreview').checked,
-                };
-                const settingsJson = JSON.stringify(settings);
-                if (settingsJson === lastSentSettingsJson) return;
-                lastSentSettingsJson = settingsJson;
-                try {
-                    currentRoom.send('update_settings', { roomId: selectedRoomId, settings });
-                    document.getElementById('golad-settings-status').textContent = 'Saved ✓';
-                    setTimeout(() => { document.getElementById('golad-settings-status').textContent = 'Settings saved automatically'; }, 1500);
-                } catch (e) { console.error('Failed to send GOLAD settings:', e); }
+            // Rate limiting check
+            if (messageRateLimiter.isLimited(clientSessionId)) {
+                showNotification('Too many settings updates. Please slow down.', 'warning');
                 return;
             }
 
@@ -3159,14 +2780,12 @@ Based on the strategy description above, generate the complete JSON configuratio
                 count: parseInt(document.getElementById('edit-countMultiplier').value) || 0,
                 distance: parseInt(document.getElementById('edit-distanceMultiplier').value) || 0,
                 hq: parseInt(document.getElementById('edit-hqMultiplier').value) || 0,
-                destruction: parseInt(document.getElementById('edit-destructionMultiplier').value) || 0
+                destruction: parseInt(document.getElementById('edit-destructionMultiplier').value) || 0,
+                order: multiplierOrder // Include the order
             };
 
-            // Convert colorTeamColors (RGB arrays) to server format (hex numbers)
             const teamColors = colorTeamColors.map(tc => {
-                // Convert RGB array to hex number
                 const hexColor = (tc.rgb[0] << 16) | (tc.rgb[1] << 8) | tc.rgb[2];
-                // Capitalize first letter for displayName
                 const displayName = tc.name.charAt(0).toUpperCase() + tc.name.slice(1);
                 return {
                     color: hexColor,
@@ -3176,63 +2795,50 @@ Based on the strategy description above, generate the complete JSON configuratio
             });
 
             const settings = {
-                // movesPerRound is usually hardcoded in game or passed, checking server it's not in gameConfig top level but passed... 
-                // wait, ConstellationRoom gameConfig doesn't show movesPerRound explicitly in default but let's send it.
-                // Looking at server.js gameConfig: roundLength, rounds, countdownLength, steals, headquarters, multipliers
-                // 'moves' is often client side or part of validation. Admin UI has 'edit-movesPerRound'.
-                // I will include it.
                 moves: parseInt(document.getElementById('edit-movesPerRound').value) || 15,
                 rounds: parseInt(document.getElementById('edit-rounds').value) || 10,
                 roundLength: parseInt(document.getElementById('edit-roundTime').value) || 30,
                 countdownLength: parseInt(document.getElementById('edit-countdownTime').value) || 5,
                 steals: parseInt(document.getElementById('edit-stealLimit').value) || 15,
                 headquarters: parseInt(document.getElementById('edit-hqMax').value) || 2,
-                // NOTE: customMapFilename is added below only when a map is selected
                 multipliers: multipliers,
                 aiBots: getAdminAIBots(),
                 teamColors: teamColors,
-                allowPlayerTeamSelection: document.getElementById('edit-allowPlayerTeamSelection').checked,
-                ithkuilNumerals: document.getElementById('edit-ithkuilNumerals').checked
+                allowPlayerTeamSelection: document.getElementById('edit-allowPlayerTeamSelection').checked
             };
 
-            // Send map filename instead of full JSON to avoid Colyseus presence message size limits
             const selectedMapFilename = document.getElementById('map-selector').value;
             const mapJsonValue = document.getElementById('edit-mapJson').value.trim();
 
             if (selectedMapFilename) {
-                // Map selected from dropdown
                 settings.customMapFilename = selectedMapFilename;
-                console.log('📍 Sending map filename:', selectedMapFilename);
+                console.log('[SETTINGS] 📍 Sending map filename:', selectedMapFilename);
             } else if (mapJsonValue) {
-                // Manual JSON in textarea
                 try {
-                    // Validate JSON
                     JSON.parse(mapJsonValue);
                     settings.customMapFilename = '__manual_json__';
-                    settings.customMapJson = mapJsonValue; // Send raw JSON string for manual entry
-                    console.log('📍 Sending manual map JSON');
+                    settings.customMapJson = mapJsonValue;
+                    console.log('[SETTINGS] 📍 Sending manual map JSON');
                 } catch (e) {
-                    console.error('❌ Failed to parse map JSON:', e.message);
-                    // Don't send customMapFilename if JSON is invalid
+                    console.error('[ERROR] ❌ Failed to parse map JSON:', e.message);
+                    showNotification('Invalid map JSON format', 'error');
+                    return;
                 }
             }
-            // If neither dropdown nor textarea has a map, don't include customMapFilename
-            // This preserves the existing map on the server
 
-            // Only send if settings actually changed
             const settingsJson = JSON.stringify(settings);
             if (settingsJson === lastSentSettingsJson) {
-                return; // No change, skip update
+                return;
             }
             lastSentSettingsJson = settingsJson;
 
             try {
-                // Send update command via AdminRoom
                 currentRoom.send('update_settings', { roomId: selectedRoomId, settings: settings });
-                console.log('✓ Settings update sent', settings);
+                console.log('[SETTINGS] ✓ Settings update sent', settings);
                 showNotification('Game settings updated');
             } catch (e) {
-                console.error('Failed to send settings update:', e);
+                console.error('[ERROR] Failed to send settings update:', e);
+                showNotification('Failed to update settings', 'error');
             }
         }
 
@@ -3242,14 +2848,12 @@ Based on the strategy description above, generate the complete JSON configuratio
                 const maps = await response.json();
                 const selector = document.getElementById('map-selector');
 
-                // Keep the default option
                 selector.innerHTML = '<option value="">-- Load Map from File --</option>';
 
                 if (Array.isArray(maps)) {
                     maps.forEach(mapFile => {
                         const option = document.createElement('option');
                         option.value = mapFile;
-                        // Format nice name from filename
                         let name = mapFile.replace('.json', '');
                         name = name.replace(/Untitled Map\(\d+\)\s?-?/, '').trim();
                         if (!name) name = mapFile;
@@ -3259,7 +2863,7 @@ Based on the strategy description above, generate the complete JSON configuratio
                     });
                 }
             } catch (err) {
-                console.error('Failed to load map list:', err);
+                console.error('[ERROR] Failed to load map list:', err);
             }
         }
 
@@ -3267,46 +2871,48 @@ Based on the strategy description above, generate the complete JSON configuratio
             const filename = document.getElementById('map-selector').value;
 
             if (!filename) {
-                // Map was cleared - clear the textarea and send explicit clear command
                 document.getElementById('edit-mapJson').value = '';
 
-                // Send settings with explicit null to clear the map
                 if (currentRoom && selectedRoomId) {
                     const settings = {
-                        customMapFilename: null // Explicitly clear the map
+                        customMapFilename: null
                     };
                     currentRoom.send('update_settings', { roomId: selectedRoomId, settings: settings });
-                    console.log('📍 Map cleared - sent null customMapFilename');
+                    console.log('[MAP] 📍 Map cleared - sent null customMapFilename');
                     showNotification('Map cleared');
                 }
                 return;
             }
 
             try {
-                // Fetch map to display in textarea (for preview/editing)
                 const response = await fetch(`/api/maps/${encodeURIComponent(filename)}`);
                 const mapData = await response.json();
 
-                // Format nicely in the textarea for preview
                 const mapJsonString = JSON.stringify(mapData, null, 2);
                 document.getElementById('edit-mapJson').value = mapJsonString;
 
-                // Trigger update - this will send the filename, server will fetch the map
                 sendSettingsUpdate();
-                console.log(`Selected map: ${filename}`);
+                console.log(`[MAP] Selected map: ${filename}`);
             } catch (err) {
-                console.error('Failed to load map data:', err);
-                alert('Failed to load map data');
+                console.error('[ERROR] Failed to load map data:', err);
+                showNotification('Failed to load map data', 'error');
             }
         }
 
-        function showNotification(message) {
+        function showNotification(message, type = 'success') {
             let toast = document.getElementById('notification-toast');
             if (!toast) {
                 toast = document.createElement('div');
                 toast.id = 'notification-toast';
                 toast.className = 'notification-toast';
                 document.body.appendChild(toast);
+            }
+
+            toast.className = 'notification-toast';
+            if (type === 'error') {
+                toast.classList.add('error');
+            } else if (type === 'warning') {
+                toast.classList.add('warning');
             }
 
             toast.textContent = message;
@@ -3317,15 +2923,16 @@ Based on the strategy description above, generate the complete JSON configuratio
             }, 3000);
         }
 
-        // Initialize on load
         window.addEventListener('load', () => {
+            loadUserName();
             initializeColyseus();
             loadMapList();
             initColorManager();
+            renderSecurityLogs();
         });
 
         // ============================================
-        // COLOR MANAGER - Right Sidebar Integration
+        // COLOR MANAGER
         // ============================================
 
         let colorPlayers = [];
@@ -3336,7 +2943,6 @@ Based on the strategy description above, generate the complete JSON configuratio
         let colorIframeExpanded = false;
         let colorPlayerIdCounter = 0;
 
-        // Color blindness simulation matrices
         const COLOR_CB_MATRICES = {
             deuteranopia: [[0.625, 0.375, 0], [0.7, 0.3, 0], [0, 0.3, 0.7]],
             protanopia: [[0.567, 0.433, 0], [0.558, 0.442, 0], [0, 0.242, 0.758]],
@@ -3344,7 +2950,6 @@ Based on the strategy description above, generate the complete JSON configuratio
         };
 
         function initColorManager() {
-            // Initialize default team colors
             colorTeamColors = [
                 { name: 'cyan', rgb: [0, 255, 255] },
                 { name: 'magenta', rgb: [255, 0, 255] },
@@ -3354,7 +2959,6 @@ Based on the strategy description above, generate the complete JSON configuratio
                 { name: 'red', rgb: [255, 0, 0] }
             ];
 
-            // Setup vision toggle buttons (excluding info button)
             document.querySelectorAll('.vision-toggle:not(#colorInfoBtn)').forEach(btn => {
                 btn.addEventListener('click', () => {
                     document.querySelectorAll('.vision-toggle:not(#colorInfoBtn)').forEach(b => b.classList.remove('active'));
@@ -3365,7 +2969,6 @@ Based on the strategy description above, generate the complete JSON configuratio
                 });
             });
 
-            // Team count input and slider sync
             const teamCountInput = document.getElementById('colorTeamCount');
             const teamSizeSlider = document.getElementById('colorTeamSize');
 
@@ -3387,7 +2990,6 @@ Based on the strategy description above, generate the complete JSON configuratio
                 }
             });
 
-            // Game control buttons
             document.getElementById('colorStartGameBtn').addEventListener('click', () => {
                 colorGameMode = true;
                 const startBtn = document.getElementById('colorStartGameBtn');
@@ -3429,21 +3031,7 @@ Based on the strategy description above, generate the complete JSON configuratio
                 }
             });
 
-            // Listen for messages from color iframe (game-mode addTeamColor still uses postMessage)
             window.addEventListener('message', handleColorIframeMessage);
-
-            // Sync colors once iframe finishes loading (iframe always loads now — no display:none)
-            const colorIframe = document.getElementById('colorOptimizerFrameExpanded');
-            const syncFromIframe = () => {
-                console.log('[COLOR] iframe load fired, syncing');
-                requestColorsFromIframe(parseInt(document.getElementById('colorTeamSize').value));
-            };
-            console.log('[COLOR] iframe readyState:', colorIframe.contentDocument?.readyState, 'hasFn:', !!colorIframe.contentWindow?.generateColors);
-            if (colorIframe.contentDocument?.readyState === 'complete' && colorIframe.contentWindow?.generateColors) {
-                syncFromIframe();
-            } else {
-                colorIframe.addEventListener('load', syncFromIframe);
-            }
 
             renderColorTeamAssignments();
             updateColorStats();
@@ -3455,16 +3043,30 @@ Based on the strategy description above, generate the complete JSON configuratio
             const data = event.data;
             if (!data || !data.type) return;
 
-            if (data.type === 'colorAdded') {
-                // Game mode: one color added at a time via postMessage
-                applyColorsFromIframe([...colorTeamColors, data.color]);
-            } else if (data.type === 'ready') {
-                syncPlayersToIframe();
+            switch (data.type) {
+                case 'colorsUpdated':
+                    const newColorsJson = JSON.stringify(data.colors);
+                    if (newColorsJson !== lastSentColorsJson) {
+                        lastSentColorsJson = newColorsJson;
+                        colorTeamColors = data.colors;
+                        renderColorTeamAssignments();
+                        refreshAIBotTeamDropdowns();
+                        sendSettingsUpdate();
+                    }
+                    break;
+                case 'colorAdded':
+                    colorTeamColors.push(data.color);
+                    lastSentColorsJson = JSON.stringify(colorTeamColors);
+                    renderColorTeamAssignments();
+                    refreshAIBotTeamDropdowns();
+                    sendSettingsUpdate();
+                    break;
+                case 'ready':
+                    syncPlayersToIframe();
+                    break;
             }
-            // 'colorsUpdated' is handled via direct same-origin call in applyColorsFromIframe
         }
 
-        // Refresh AI bot team dropdowns when team colors change
         function refreshAIBotTeamDropdowns() {
             const container = document.getElementById('admin-ai-bots');
             const botDivs = container.querySelectorAll('.ai-bot-item');
@@ -3474,7 +3076,6 @@ Based on the strategy description above, generate the complete JSON configuratio
                 if (teamSelect) {
                     const currentValue = teamSelect.value;
 
-                    // Rebuild options with new colors including hex code in text
                     const teamOptionsHtml = colorTeamColors.map((team, index) => {
                         const hexColor = rgbToHexAdmin(team.rgb);
                         const displayName = team.name.charAt(0).toUpperCase() + team.name.slice(1);
@@ -3482,8 +3083,6 @@ Based on the strategy description above, generate the complete JSON configuratio
                     }).join('');
 
                     teamSelect.innerHTML = teamOptionsHtml;
-
-                    // Update the bot display
                     updateAdminAIBotDisplay(botDiv.id);
                 }
             });
@@ -3497,35 +3096,7 @@ Based on the strategy description above, generate the complete JSON configuratio
         }
 
         function requestColorsFromIframe(teamCount) {
-            const iframe = document.getElementById('colorOptimizerFrameExpanded');
-            const iw = iframe?.contentWindow;
-            console.log('[COLOR] requestColorsFromIframe', teamCount, {
-                iframeFound: !!iframe,
-                contentWindow: !!iw,
-                hasFn: !!iw?.generateColors,
-                iframeSrc: iframe?.src,
-                readyState: iframe?.contentDocument?.readyState,
-            });
-            if (!iw?.generateColors) return;
-            const slider = iw.document.getElementById('teamSize');
-            if (slider) slider.value = teamCount;
-            iw.generateColors();
-            console.log('[COLOR] colors after generateColors:', iw.colors?.length, iw.colors?.map(c=>c.name));
-            applyColorsFromIframe(iw.colors);
-        }
-
-        function applyColorsFromIframe(colors) {
-            console.log('[COLOR] applyColorsFromIframe called with', colors?.length, 'colors');
-            if (!colors?.length) return;
-            const newColors = colors.map(c => ({ name: c.name, rgb: [...c.rgb] }));
-            const newJson = JSON.stringify(newColors);
-            console.log('[COLOR] dedup check — same?', newJson === lastSentColorsJson);
-            if (newJson === lastSentColorsJson) return;
-            lastSentColorsJson = newJson;
-            colorTeamColors = newColors;
-            renderColorTeamAssignments();
-            refreshAIBotTeamDropdowns();
-            sendSettingsUpdate();
+            sendToColorIframe({ type: 'generateColors', count: teamCount });
         }
 
         function syncPlayersToIframe() {
@@ -3544,10 +3115,8 @@ Based on the strategy description above, generate the complete JSON configuratio
             colorIframeExpanded = !colorIframeExpanded;
 
             if (colorIframeExpanded) {
-                // Show expanded pane
                 pane.classList.add('visible');
 
-                // Scroll the expanded iframe to bottom
                 const expandedFrame = document.getElementById('colorOptimizerFrameExpanded');
                 if (expandedFrame && expandedFrame.contentWindow) {
                     setTimeout(() => {
@@ -3555,7 +3124,6 @@ Based on the strategy description above, generate the complete JSON configuratio
                     }, 100);
                 }
             } else {
-                // Hide expanded pane
                 pane.classList.remove('visible');
             }
         }
@@ -3563,9 +3131,9 @@ Based on the strategy description above, generate the complete JSON configuratio
         function colorAutoAssignPlayers() {
             if (colorPlayers.length === 0 || colorTeamColors.length === 0) return;
 
-            // Clear all assignments first, then redistribute all players
             colorPlayers.forEach((player, index) => {
                 player.colorTeam = index % colorTeamColors.length;
+                syncColorTeamToGame(player); // Actually sync to server
             });
 
             renderColorPlayerPool();
@@ -3575,7 +3143,10 @@ Based on the strategy description above, generate the complete JSON configuratio
         }
 
         function colorClearAssignments() {
-            colorPlayers.forEach(p => p.colorTeam = null);
+            colorPlayers.forEach(p => {
+                p.colorTeam = null;
+                syncColorTeamToGame(p); // Actually sync to server
+            });
             renderColorPlayerPool();
             renderColorTeamAssignments();
             updateColorStats();
@@ -3661,7 +3232,6 @@ Based on the strategy description above, generate the complete JSON configuratio
 
                     if (colorDraggedPlayer) {
                         colorDraggedPlayer.colorTeam = index;
-                        // Sync to game server
                         syncColorTeamToGame(colorDraggedPlayer);
                         renderColorPlayerPool();
                         renderColorTeamAssignments();
@@ -3684,7 +3254,6 @@ Based on the strategy description above, generate the complete JSON configuratio
                         <span class="player-chip-type ${player.isBot ? 'bot' : player.visionType}">${typeLabel}</span>
                     `;
                     
-                    // Add drag events for team players
                     el.addEventListener('dragstart', () => {
                         colorDraggedPlayer = player;
                         el.classList.add('dragging');
@@ -3697,7 +3266,6 @@ Based on the strategy description above, generate the complete JSON configuratio
                     
                     el.onclick = () => {
                         player.colorTeam = null;
-                        // Sync to game server (unassign)
                         syncColorTeamToGame(player);
                         renderColorPlayerPool();
                         renderColorTeamAssignments();
@@ -3709,7 +3277,6 @@ Based on the strategy description above, generate the complete JSON configuratio
             });
         }
 
-        // Sync color team assignment to game server
         function syncColorTeamToGame(player) {
             if (!currentRoom || !selectedRoomId || !player.colyseusId) return;
 
@@ -3721,22 +3288,16 @@ Based on the strategy description above, generate the complete JSON configuratio
 
             try {
                 currentRoom.send('assign_team', payload);
-                console.log('✓ Synced color team assignment:', payload);
+                console.log('[TEAM] ✓ Synced color team assignment:', payload);
                 
-                // If this is a bot, update its display in the AI bots section
                 if (player.isBot && player.colyseusId) {
-                    // Find the bot div by matching the colyseusId
                     const botContainer = document.getElementById('admin-ai-bots');
                     if (botContainer) {
                         const botDivs = botContainer.querySelectorAll('.ai-bot-item');
                         botDivs.forEach(botDiv => {
-                            const botSelect = botDiv.querySelector('.ai-bot-select');
                             const teamSelect = botDiv.querySelector('.ai-team-select');
                             
-                            // Check if this bot div corresponds to the moved bot
-                            // We need to match by some identifier - let's use the bot ID pattern
                             if (botDiv.id && botDiv.id.includes('bot_')) {
-                                // Update team selection if it doesn't match
                                 if (teamSelect && player.colorTeam !== null && player.colorTeam !== undefined) {
                                     teamSelect.value = player.colorTeam;
                                     updateAdminAIBotDisplay(botDiv.id);
@@ -3746,7 +3307,7 @@ Based on the strategy description above, generate the complete JSON configuratio
                     }
                 }
             } catch (e) {
-                console.error('Failed to sync color team:', e);
+                console.error('[ERROR] Failed to sync color team:', e);
             }
         }
 
@@ -3759,16 +3320,13 @@ Based on the strategy description above, generate the complete JSON configuratio
                 tritanopia: assignedPlayers.filter(p => p.visionType === 'tritanopia').length
             };
 
-            const totalAssigned = assignedPlayers.length;
             const totalPlayers = colorPlayers.length;
 
-            // Update vision toggle text
             document.getElementById('normalToggle').textContent = `N${counts.normal}`;
             document.getElementById('deutToggle').textContent = `D${counts.deuteranopia}`;
             document.getElementById('protToggle').textContent = `P${counts.protanopia}`;
             document.getElementById('tritToggle').textContent = `T${counts.tritanopia}`;
 
-            // Update total attendees count
             document.getElementById('totalAttendeesCount').textContent = totalPlayers;
         }
 
@@ -3782,39 +3340,25 @@ Based on the strategy description above, generate the complete JSON configuratio
             ];
         }
 
-        function rgbToHexAdmin(rgb) {
-            return '#' + rgb.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
-        }
-
-        // Sync connected players from Colyseus to color manager
         function syncColyseusPlayersToColorManager(players) {
-            if (!Array.isArray(players)) return;
-            const existingIds = new Set(colorPlayers.map(p => p.colyseusId));
             const newPlayers = [];
 
             players.forEach(p => {
-                const pid = p.id || p.sessionId || String(p.peerId || '');
-                if (!pid) return;
-                // Check if player already exists
-                const existingPlayer = colorPlayers.find(cp => cp.colyseusId === pid);
+                const existingPlayer = colorPlayers.find(cp => cp.colyseusId === p.id);
 
                 if (existingPlayer) {
-                    // Update existing player's team if it changed on server
                     if (p.team !== null && p.team !== undefined) {
                         existingPlayer.colorTeam = p.team;
                     }
-                    // Update name if changed
                     existingPlayer.name = p.name || existingPlayer.name;
-                    existingPlayer.isBot = p.isBot || pid.startsWith('bot_');
+                    existingPlayer.isBot = p.isBot || p.id.startsWith('bot_');
                 } else {
-                    // Create new player entry
-                    const isBot = p.isBot || pid.startsWith('bot_');
+                    const isBot = p.isBot || p.id.startsWith('bot_');
                     const newPlayer = {
                         id: `color-player-${Date.now()}-${colorPlayerIdCounter++}`,
-                        colyseusId: pid,
-                        name: p.name || `Player ${pid.substring(0, 6)}`,
+                        colyseusId: p.id,
+                        name: p.name || `Player ${p.id.substring(0, 6)}`,
                         visionType: p.visionType || 'normal',
-                        // Bots come with team pre-assigned from server
                         colorTeam: (p.team !== null && p.team !== undefined) ? p.team : null,
                         isBot: isBot
                     };
@@ -3823,14 +3367,18 @@ Based on the strategy description above, generate the complete JSON configuratio
                 }
             });
 
-            // Auto-assign new HUMAN players if game is started and teams are balanced
-            // (Bots already have teams assigned from config)
-            if (colorGameMode && newPlayers.length > 0 && colorTeamColors.length > 0) {
+            // Auto-assign new players to teams
+            // This happens when: 1) colorGameMode is active, OR 2) game is already playing
+            const roomData = latestRoomsData.find(r => r.roomId === selectedRoomId);
+            const isGamePlaying = roomData && roomData.state === 'playing';
+            
+            if ((colorGameMode || isGamePlaying) && newPlayers.length > 0 && colorTeamColors.length > 0) {
                 newPlayers.forEach(player => {
-                    // Skip bots - they already have team assignments
                     if (player.isBot) return;
+                    
+                    // Skip host if they're unassigned (they can stay unassigned)
+                    if (roomData && player.colyseusId === roomData.hostId) return;
 
-                    // Check if teams are balanced (all teams have same number of players)
                     const teamCounts = colorTeamColors.map((_, idx) =>
                         colorPlayers.filter(p => p.colorTeam === idx && p.id !== player.id).length
                     );
@@ -3838,9 +3386,7 @@ Based on the strategy description above, generate the complete JSON configuratio
                     const maxCount = Math.max(...teamCounts);
 
                     if (maxCount - minCount <= 1) {
-                        // Teams are balanced, add new team if needed
                         sendToColorIframe({ type: 'addTeamColor' });
-                        // Assign to the new team (will be last index)
                         setTimeout(() => {
                             player.colorTeam = colorTeamColors.length - 1;
                             syncColorTeamToGame(player);
@@ -3850,15 +3396,14 @@ Based on the strategy description above, generate the complete JSON configuratio
                             syncPlayersToIframe();
                         }, 100);
                     } else {
-                        // Assign to smallest team
                         const targetTeam = teamCounts.findIndex(count => count === minCount);
                         player.colorTeam = targetTeam;
                         syncColorTeamToGame(player);
+                        console.log(`[AUTO-ASSIGN] Late joiner ${player.name} assigned to team ${targetTeam}`);
                     }
                 });
             }
 
-            // Remove players that disconnected (but keep bots unless they're removed from config)
             const currentIds = new Set(players.map(p => p.id));
             colorPlayers = colorPlayers.filter(p => !p.colyseusId || currentIds.has(p.colyseusId));
 
