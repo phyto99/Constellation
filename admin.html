@@ -752,9 +752,10 @@
             display: block;
         }
 
-        /* Expanded color optimizer pane */
+        /* Expanded color optimizer pane — visibility:hidden keeps the iframe loaded */
         .color-optimizer-pane {
-            display: none;
+            visibility: hidden;
+            pointer-events: none;
             position: fixed;
             top: 50%;
             left: 50%;
@@ -770,7 +771,8 @@
         }
 
         .color-optimizer-pane.visible {
-            display: block;
+            visibility: visible;
+            pointer-events: auto;
         }
 
         .color-optimizer-pane iframe {
@@ -917,11 +919,11 @@
                 <h3>Create New Session</h3>
                 <select id="game-type">
                     <option value="Constellation">Constellation</option>
-                    <option value="Tabletop Club">Tabletop Club</option>
-                    <option value="Geobridge">Geobridge</option>
-                    <option value="No game focus">No game focus</option>
-                    <option value="GOLAD">GOLAD</option>
-                    <option value="Centauri">Centauri</option>
+                    <option value="Centauri" selected>Proxima Centauri</option>
+                    <option value="Geobridge" disabled style="color: #666;">Geobridge</option>
+                    <option value="GOLAD" disabled style="color: #666;">Game of Life</option>
+                    <option value="No game focus" disabled style="color: #666;">No game focus</option>
+                    <option value="Tabletop Club" hidden>Tabletop Club</option>
                 </select>
                 <div class="create-row">
                     <input type="text" id="game-name" placeholder="Session name">
@@ -1087,9 +1089,9 @@
                             <span id="settings-status">Settings are saved automatically</span>
                         </div>
                     </div>
-                    <!-- GOLAD Panel (shown only for GOLAD rooms) -->
+                    <!-- Game of Life Panel (shown only for GOLAD rooms) -->
                     <div id="golad-settings" class="settings-section" style="display:none;">
-                        <h3>GOLAD Settings</h3>
+                        <h3>Game of Life Settings</h3>
                         <div class="settings-grid">
                             <div class="form-group">
                                 <label>Player 1 <span class="sublabel">(Red)</span></label>
@@ -1156,34 +1158,39 @@
                         </div>
                     </div>
 
-                    <!-- Centauri Panel -->
+                    <!-- Proxima Centauri Panel -->
                     <div id="centauri-settings" class="settings-section" style="display:none;">
-                        <h3>Centauri Settings</h3>
+                        <h3>Proxima Centauri Settings</h3>
                         <div class="settings-grid">
                             <div class="form-group">
-                                <label>Thrust Power <span class="sublabel">(0.1–5.0)</span></label>
-                                <input type="range" id="centauri-thrustPower" min="0.1" max="5.0" step="0.1" value="1.0" oninput="document.getElementById('centauri-thrustPowerVal').textContent=parseFloat(this.value).toFixed(1);sendSettingsUpdate()">
-                                <span id="centauri-thrustPowerVal" class="sublabel">1.0</span>
+                                <label>Thrust Power <span class="sublabel">(100–5000)</span></label>
+                                <input type="range" id="centauri-thrustPower" min="100" max="5000" step="50" value="1000" oninput="document.getElementById('centauri-thrustPowerVal').textContent=parseInt(this.value);sendSettingsUpdate()">
+                                <span id="centauri-thrustPowerVal" class="sublabel">1000</span>
                             </div>
                             <div class="form-group">
-                                <label>Thrust Depletion Rate <span class="sublabel">(0.01–1.0)</span></label>
-                                <input type="range" id="centauri-thrustDepletion" min="0.01" max="1.0" step="0.01" value="0.1" oninput="document.getElementById('centauri-thrustDepletionVal').textContent=parseFloat(this.value).toFixed(2);sendSettingsUpdate()">
-                                <span id="centauri-thrustDepletionVal" class="sublabel">0.10</span>
+                                <label>Thrust Depletion Rate <span class="sublabel">(1–50 /s)</span></label>
+                                <input type="range" id="centauri-thrustDepletion" min="1" max="50" step="1" value="10" oninput="document.getElementById('centauri-thrustDepletionVal').textContent=parseInt(this.value);sendSettingsUpdate()">
+                                <span id="centauri-thrustDepletionVal" class="sublabel">10</span>
                             </div>
                             <div class="form-group">
                                 <label>Food/Fuel Efficiency <span class="sublabel">(0.1–2.0)</span></label>
-                                <input type="range" id="centauri-fuelEfficiency" min="0.1" max="2.0" step="0.05" value="0.8" oninput="document.getElementById('centauri-fuelEfficiencyVal').textContent=parseFloat(this.value).toFixed(2);sendSettingsUpdate()">
-                                <span id="centauri-fuelEfficiencyVal" class="sublabel">0.80</span>
+                                <input type="range" id="centauri-fuelEfficiency" min="0.1" max="2.0" step="0.05" value="0.5" oninput="document.getElementById('centauri-fuelEfficiencyVal').textContent=parseFloat(this.value).toFixed(2);sendSettingsUpdate()">
+                                <span id="centauri-fuelEfficiencyVal" class="sublabel">0.50</span>
                             </div>
                             <div class="form-group">
-                                <label>Fuel Recovery <span class="sublabel">(-0.5–0.5, neg = bleed)</span></label>
-                                <input type="range" id="centauri-fuelRecovery" min="-0.5" max="0.5" step="0.01" value="0.05" oninput="document.getElementById('centauri-fuelRecoveryVal').textContent=parseFloat(this.value).toFixed(2);sendSettingsUpdate()">
-                                <span id="centauri-fuelRecoveryVal" class="sublabel">0.05</span>
+                                <label>Fuel Recovery <span class="sublabel">(0–10 /s, neg = bleed)</span></label>
+                                <input type="range" id="centauri-fuelRecovery" min="-5" max="10" step="0.1" value="2.0" oninput="document.getElementById('centauri-fuelRecoveryVal').textContent=parseFloat(this.value).toFixed(1);sendSettingsUpdate()">
+                                <span id="centauri-fuelRecoveryVal" class="sublabel">2.0</span>
                             </div>
                             <div class="form-group">
                                 <label>Tick Speed <span class="sublabel">(0.1–5.0)</span></label>
                                 <input type="range" id="centauri-tickSpeed" min="0.1" max="5.0" step="0.1" value="1.0" oninput="document.getElementById('centauri-tickSpeedVal').textContent=parseFloat(this.value).toFixed(1);sendSettingsUpdate()">
                                 <span id="centauri-tickSpeedVal" class="sublabel">1.0</span>
+                            </div>
+                            <div class="form-group">
+                                <label>Session Duration <span class="sublabel">(seconds)</span></label>
+                                <input type="number" id="centauri-sessionDuration" min="10" max="3600" step="10" value="120" style="width:90px;" oninput="sendSettingsUpdate()">
+                                <span class="sublabel">s</span>
                             </div>
                         </div>
                         <div class="form-group" style="margin-top:12px;">
@@ -1887,12 +1894,16 @@
 
                 // Centauri settings
                 if (currentRoomGameType === 'Centauri') {
-                    if (cfg.thrustPower    !== undefined) { document.getElementById('centauri-thrustPower').value    = cfg.thrustPower;    document.getElementById('centauri-thrustPowerVal').textContent    = parseFloat(cfg.thrustPower).toFixed(1); }
-                    if (cfg.thrustDepletion !== undefined) { document.getElementById('centauri-thrustDepletion').value = cfg.thrustDepletion; document.getElementById('centauri-thrustDepletionVal').textContent = parseFloat(cfg.thrustDepletion).toFixed(2); }
-                    if (cfg.fuelEfficiency  !== undefined) { document.getElementById('centauri-fuelEfficiency').value  = cfg.fuelEfficiency;  document.getElementById('centauri-fuelEfficiencyVal').textContent  = parseFloat(cfg.fuelEfficiency).toFixed(2); }
-                    if (cfg.fuelRecovery    !== undefined) { document.getElementById('centauri-fuelRecovery').value    = cfg.fuelRecovery;    document.getElementById('centauri-fuelRecoveryVal').textContent    = parseFloat(cfg.fuelRecovery).toFixed(2); }
-                    if (cfg.tickSpeed       !== undefined) { document.getElementById('centauri-tickSpeed').value       = cfg.tickSpeed;       document.getElementById('centauri-tickSpeedVal').textContent       = parseFloat(cfg.tickSpeed).toFixed(1); }
+                    if (cfg.thrustPower      !== undefined) { document.getElementById('centauri-thrustPower').value       = cfg.thrustPower;      document.getElementById('centauri-thrustPowerVal').textContent    = parseInt(cfg.thrustPower); }
+                    if (cfg.thrustDepletion  !== undefined) { document.getElementById('centauri-thrustDepletion').value   = cfg.thrustDepletion;  document.getElementById('centauri-thrustDepletionVal').textContent = parseInt(cfg.thrustDepletion); }
+                    if (cfg.fuelEfficiency   !== undefined) { document.getElementById('centauri-fuelEfficiency').value    = cfg.fuelEfficiency;   document.getElementById('centauri-fuelEfficiencyVal').textContent  = parseFloat(cfg.fuelEfficiency).toFixed(2); }
+                    if (cfg.fuelRecovery     !== undefined) { document.getElementById('centauri-fuelRecovery').value      = cfg.fuelRecovery;     document.getElementById('centauri-fuelRecoveryVal').textContent    = parseFloat(cfg.fuelRecovery).toFixed(1); }
+                    if (cfg.tickSpeed        !== undefined) { document.getElementById('centauri-tickSpeed').value         = cfg.tickSpeed;        document.getElementById('centauri-tickSpeedVal').textContent       = parseFloat(cfg.tickSpeed).toFixed(1); }
+                    if (cfg.sessionDuration  !== undefined) { document.getElementById('centauri-sessionDuration').value  = cfg.sessionDuration; }
                     if (cfg.mapJson) document.getElementById('centauri-mapJson').value = JSON.stringify(cfg.mapJson, null, 2);
+                    // Push corrected values immediately so all clients receive updated defaults
+                    lastSentSettingsJson = '';
+                    sendSettingsUpdateImmediate();
                 }
 
                 // GOLAD settings
@@ -1928,8 +1939,8 @@
             document.getElementById('no-game-selected').style.display = 'none';
             document.getElementById('game-content').style.display = 'block';
 
-            // Update game link – uses metadata.type to route GOLAD → /golad/:id, others → /game/:id
-            const gameUrl = getJoinUrl(roomId, roomData?.metadata);
+            // Update game link – fall back to currentRoomGameType when metadata isn't loaded yet
+            const gameUrl = getJoinUrl(roomId, roomData?.metadata || { type: currentRoomGameType });
             const linkElement = document.getElementById('game-direct-link');
             linkElement.href = gameUrl;
             linkElement.textContent = 'Join Game';
@@ -2269,11 +2280,12 @@
                 }
 
                 if (gameType === 'Centauri') {
-                    roomOptions.thrustPower    = parseFloat(document.getElementById('centauri-thrustPower').value)    || 1.0;
-                    roomOptions.thrustDepletion = parseFloat(document.getElementById('centauri-thrustDepletion').value) || 0.1;
-                    roomOptions.fuelEfficiency  = parseFloat(document.getElementById('centauri-fuelEfficiency').value)  || 0.8;
-                    roomOptions.fuelRecovery    = parseFloat(document.getElementById('centauri-fuelRecovery').value)    || 0.05;
+                    roomOptions.thrustPower     = parseFloat(document.getElementById('centauri-thrustPower').value)     || 1000.0;
+                    roomOptions.thrustDepletion = parseFloat(document.getElementById('centauri-thrustDepletion').value) || 10.0;
+                    roomOptions.fuelEfficiency  = parseFloat(document.getElementById('centauri-fuelEfficiency').value)  || 0.5;
+                    roomOptions.fuelRecovery    = parseFloat(document.getElementById('centauri-fuelRecovery').value)    || 2.0;
                     roomOptions.tickSpeed       = parseFloat(document.getElementById('centauri-tickSpeed').value)       || 1.0;
+                    roomOptions.sessionDuration = parseFloat(document.getElementById('centauri-sessionDuration').value) || 120.0;
                     const rawJson = document.getElementById('centauri-mapJson').value.trim();
                     if (rawJson) { try { roomOptions.mapJson = JSON.parse(rawJson); } catch(e) {} }
                 }
@@ -2518,11 +2530,12 @@
                 let mapJson = null;
                 if (rawJson) { try { mapJson = JSON.parse(rawJson); } catch(e) {} }
                 const settings = {
-                    thrustPower:    parseFloat(document.getElementById('centauri-thrustPower').value)    || 1.0,
+                    thrustPower:     parseFloat(document.getElementById('centauri-thrustPower').value)     || 1.0,
                     thrustDepletion: parseFloat(document.getElementById('centauri-thrustDepletion').value) || 0.1,
                     fuelEfficiency:  parseFloat(document.getElementById('centauri-fuelEfficiency').value)  || 0.8,
                     fuelRecovery:    parseFloat(document.getElementById('centauri-fuelRecovery').value)    || 0.05,
                     tickSpeed:       parseFloat(document.getElementById('centauri-tickSpeed').value)       || 1.0,
+                    sessionDuration: parseFloat(document.getElementById('centauri-sessionDuration').value) || 120.0,
                     teamColors: colorTeamColors.map(tc => ({
                         color: (tc.rgb[0] << 16) | (tc.rgb[1] << 8) | tc.rgb[2],
                         name: tc.name.toLowerCase(),
@@ -2534,6 +2547,7 @@
                 lastSentSettingsJson = settingsJson;
                 try {
                     currentRoom.send('update_settings', { roomId: selectedRoomId, settings });
+                    showNotification('Centauri settings updated');
                     document.getElementById('centauri-settings-status').textContent = 'Saved ✓';
                     setTimeout(() => { document.getElementById('centauri-settings-status').textContent = 'Settings saved automatically'; }, 1500);
                 } catch (e) { console.error('Failed to send Centauri settings:', e); }
@@ -2846,48 +2860,39 @@
                 }
             });
 
-            // Listen for messages from color iframe
+            // Listen for messages from color iframe (game-mode addTeamColor still uses postMessage)
             window.addEventListener('message', handleColorIframeMessage);
+
+            // Sync colors once iframe finishes loading (iframe always loads now — no display:none)
+            const colorIframe = document.getElementById('colorOptimizerFrameExpanded');
+            const syncFromIframe = () => {
+                console.log('[COLOR] iframe load fired, syncing');
+                requestColorsFromIframe(parseInt(document.getElementById('colorTeamSize').value));
+            };
+            console.log('[COLOR] iframe readyState:', colorIframe.contentDocument?.readyState, 'hasFn:', !!colorIframe.contentWindow?.generateColors);
+            if (colorIframe.contentDocument?.readyState === 'complete' && colorIframe.contentWindow?.generateColors) {
+                syncFromIframe();
+            } else {
+                colorIframe.addEventListener('load', syncFromIframe);
+            }
 
             renderColorTeamAssignments();
             updateColorStats();
         }
 
-        // Track last sent colors to avoid duplicate updates
         let lastSentColorsJson = '';
 
         function handleColorIframeMessage(event) {
             const data = event.data;
             if (!data || !data.type) return;
 
-            switch (data.type) {
-                case 'colorsUpdated':
-                    // Only update if colors actually changed
-                    const newColorsJson = JSON.stringify(data.colors);
-                    if (newColorsJson !== lastSentColorsJson) {
-                        lastSentColorsJson = newColorsJson;
-                        colorTeamColors = data.colors;
-                        renderColorTeamAssignments();
-                        // Refresh AI bot team dropdowns with new colors
-                        refreshAIBotTeamDropdowns();
-                        // Sync updated colors to game clients
-                        sendSettingsUpdate();
-                    }
-                    break;
-                case 'colorAdded':
-                    colorTeamColors.push(data.color);
-                    lastSentColorsJson = JSON.stringify(colorTeamColors);
-                    renderColorTeamAssignments();
-                    // Refresh AI bot team dropdowns with new colors
-                    refreshAIBotTeamDropdowns();
-                    // Sync new color to game clients
-                    sendSettingsUpdate();
-                    break;
-                case 'ready':
-                    // Iframe is ready, send initial data
-                    syncPlayersToIframe();
-                    break;
+            if (data.type === 'colorAdded') {
+                // Game mode: one color added at a time via postMessage
+                applyColorsFromIframe([...colorTeamColors, data.color]);
+            } else if (data.type === 'ready') {
+                syncPlayersToIframe();
             }
+            // 'colorsUpdated' is handled via direct same-origin call in applyColorsFromIframe
         }
 
         // Refresh AI bot team dropdowns when team colors change
@@ -2923,7 +2928,35 @@
         }
 
         function requestColorsFromIframe(teamCount) {
-            sendToColorIframe({ type: 'generateColors', count: teamCount });
+            const iframe = document.getElementById('colorOptimizerFrameExpanded');
+            const iw = iframe?.contentWindow;
+            console.log('[COLOR] requestColorsFromIframe', teamCount, {
+                iframeFound: !!iframe,
+                contentWindow: !!iw,
+                hasFn: !!iw?.generateColors,
+                iframeSrc: iframe?.src,
+                readyState: iframe?.contentDocument?.readyState,
+            });
+            if (!iw?.generateColors) return;
+            const slider = iw.document.getElementById('teamSize');
+            if (slider) slider.value = teamCount;
+            iw.generateColors();
+            console.log('[COLOR] colors after generateColors:', iw.colors?.length, iw.colors?.map(c=>c.name));
+            applyColorsFromIframe(iw.colors);
+        }
+
+        function applyColorsFromIframe(colors) {
+            console.log('[COLOR] applyColorsFromIframe called with', colors?.length, 'colors');
+            if (!colors?.length) return;
+            const newColors = colors.map(c => ({ name: c.name, rgb: [...c.rgb] }));
+            const newJson = JSON.stringify(newColors);
+            console.log('[COLOR] dedup check — same?', newJson === lastSentColorsJson);
+            if (newJson === lastSentColorsJson) return;
+            lastSentColorsJson = newJson;
+            colorTeamColors = newColors;
+            renderColorTeamAssignments();
+            refreshAIBotTeamDropdowns();
+            sendSettingsUpdate();
         }
 
         function syncPlayersToIframe() {
@@ -3186,13 +3219,15 @@
 
         // Sync connected players from Colyseus to color manager
         function syncColyseusPlayersToColorManager(players) {
-            // Map Colyseus players to color players
+            if (!Array.isArray(players)) return;
             const existingIds = new Set(colorPlayers.map(p => p.colyseusId));
             const newPlayers = [];
 
             players.forEach(p => {
+                const pid = p.id || p.sessionId || String(p.peerId || '');
+                if (!pid) return;
                 // Check if player already exists
-                const existingPlayer = colorPlayers.find(cp => cp.colyseusId === p.id);
+                const existingPlayer = colorPlayers.find(cp => cp.colyseusId === pid);
 
                 if (existingPlayer) {
                     // Update existing player's team if it changed on server
@@ -3201,14 +3236,14 @@
                     }
                     // Update name if changed
                     existingPlayer.name = p.name || existingPlayer.name;
-                    existingPlayer.isBot = p.isBot || p.id.startsWith('bot_');
+                    existingPlayer.isBot = p.isBot || pid.startsWith('bot_');
                 } else {
                     // Create new player entry
-                    const isBot = p.isBot || p.id.startsWith('bot_');
+                    const isBot = p.isBot || pid.startsWith('bot_');
                     const newPlayer = {
                         id: `color-player-${Date.now()}-${colorPlayerIdCounter++}`,
-                        colyseusId: p.id,
-                        name: p.name || `Player ${p.id.substring(0, 6)}`,
+                        colyseusId: pid,
+                        name: p.name || `Player ${pid.substring(0, 6)}`,
                         visionType: p.visionType || 'normal',
                         // Bots come with team pre-assigned from server
                         colorTeam: (p.team !== null && p.team !== undefined) ? p.team : null,
