@@ -1327,8 +1327,12 @@
                             </div>
                             <div class="form-group">
                                 <label>Session Duration <span class="sublabel">(seconds)</span></label>
-                                <input type="number" id="centauri-sessionDuration" min="10" max="3600" step="10" value="120" style="width:90px;" oninput="sendSettingsUpdate()">
+                                <input type="number" id="centauri-sessionDuration" min="10" max="3600" step="10" value="300" style="width:90px;" oninput="sendSettingsUpdate()">
                                 <span class="sublabel">s</span>
+                            </div>
+                            <div class="form-group">
+                                <label>Team Moves <span class="sublabel">(total moves per team)</span></label>
+                                <input type="number" id="centauri-teamMoves" min="1" max="9999" step="10" value="300" style="width:90px;" oninput="sendSettingsUpdate()">
                             </div>
                         </div>
                         <div class="form-group" style="margin-top:12px;">
@@ -2355,6 +2359,7 @@ Based on the strategy description above, generate the complete JSON configuratio
                     if (cfg.fuelRecovery     !== undefined) { document.getElementById('centauri-fuelRecovery').value      = cfg.fuelRecovery;     document.getElementById('centauri-fuelRecoveryVal').textContent    = parseFloat(cfg.fuelRecovery).toFixed(1); }
                     if (cfg.tickSpeed        !== undefined) { document.getElementById('centauri-tickSpeed').value         = cfg.tickSpeed;        document.getElementById('centauri-tickSpeedVal').textContent       = parseFloat(cfg.tickSpeed).toFixed(1); }
                     if (cfg.sessionDuration  !== undefined) { document.getElementById('centauri-sessionDuration').value  = cfg.sessionDuration; }
+                    if (cfg.teamMoves        !== undefined) { document.getElementById('centauri-teamMoves').value         = cfg.teamMoves; }
                     if (cfg.mapJson) document.getElementById('centauri-mapJson').value = JSON.stringify(cfg.mapJson, null, 2);
                     // Push corrected values immediately so all clients receive updated defaults
                     lastSentSettingsJson = '';
@@ -2795,7 +2800,8 @@ Based on the strategy description above, generate the complete JSON configuratio
                     roomOptions.fuelEfficiency  = parseFloat(document.getElementById('centauri-fuelEfficiency').value)  || 0.5;
                     roomOptions.fuelRecovery    = parseFloat(document.getElementById('centauri-fuelRecovery').value)    || 2.0;
                     roomOptions.tickSpeed       = parseFloat(document.getElementById('centauri-tickSpeed').value)       || 1.0;
-                    roomOptions.sessionDuration = parseFloat(document.getElementById('centauri-sessionDuration').value) || 120.0;
+                    roomOptions.sessionDuration = parseFloat(document.getElementById('centauri-sessionDuration').value) || 300.0;
+                    roomOptions.teamMoves       = parseInt(document.getElementById('centauri-teamMoves').value)         || 300;
                     const rawJson = document.getElementById('centauri-mapJson').value.trim();
                     if (rawJson) { try { roomOptions.mapJson = JSON.parse(rawJson); } catch(e) {} }
                 }
@@ -3122,7 +3128,8 @@ Based on the strategy description above, generate the complete JSON configuratio
                     fuelEfficiency:  parseFloat(document.getElementById('centauri-fuelEfficiency').value)  || 0.8,
                     fuelRecovery:    parseFloat(document.getElementById('centauri-fuelRecovery').value)    || 0.05,
                     tickSpeed:       parseFloat(document.getElementById('centauri-tickSpeed').value)       || 1.0,
-                    sessionDuration: parseFloat(document.getElementById('centauri-sessionDuration').value) || 120.0,
+                    sessionDuration: parseFloat(document.getElementById('centauri-sessionDuration').value) || 300.0,
+                    teamMoves:       parseInt(document.getElementById('centauri-teamMoves').value)         || 300,
                     teamColors: colorTeamColors.map(tc => ({
                         color: (tc.rgb[0] << 16) | (tc.rgb[1] << 8) | tc.rgb[2],
                         name: tc.name.toLowerCase(),
