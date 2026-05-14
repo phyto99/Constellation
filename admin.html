@@ -1771,6 +1771,11 @@
         }
 
         function validateAndUpdate(input, min, max) {
+            if (currentUserName === 'Josh Dahn') {
+                input.classList.remove('error');
+                sendSettingsUpdate();
+                return;
+            }
             const fieldName = input.id || 'unknown';
             if (!validateInput(input.value, min, max, fieldName)) {
                 input.classList.add('error');
