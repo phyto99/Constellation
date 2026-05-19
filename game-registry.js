@@ -171,6 +171,7 @@ const GAME_REGISTRY = {
       { key: 'wMode',         type: 'select', label: 'W-Plane Mode',   sublabel: 'How the 4D slice advances each round',
         default: 'oscillate', options: [
           { value: 'oscillate',     label: 'Oscillate — bounces back and forth' },
+          { value: 'sequential',    label: 'Sequential — starts center, advances right (teams must be coprime with plane count)' },
           { value: 'random',        label: 'Random — seeded shuffle' },
           { value: 'player-choice', label: 'Player Choice — active player picks' },
           { value: 'vote',          label: 'Vote — all players vote secretly' },

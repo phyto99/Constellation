@@ -1414,12 +1414,14 @@
                         <div class="settings-grid">
                             <div class="form-group">
                                 <label>W-Plane Mode <span class="sublabel">(how the slice advances)</span></label>
-                                <select id="c4d-wMode" oninput="sendC4DSettingsUpdate()">
+                                <select id="c4d-wMode" oninput="sendC4DSettingsUpdate(); updateC4DSequentialHint()">
                                     <option value="oscillate">Oscillate — bounces back and forth</option>
+                                    <option value="sequential">Sequential — starts center, advances right</option>
                                     <option value="random">Random — seeded shuffle</option>
                                     <option value="player-choice">Player Choice — active player picks</option>
                                     <option value="vote">Vote — all players vote secretly</option>
                                 </select>
+                                <div id="c4d-sequential-hint" style="display:none;margin-top:6px;font-size:11px;padding:5px 8px;border-radius:4px;"></div>
                             </div>
                             <div class="form-group">
                                 <label>Ownership <span class="sublabel">(claiming rules)</span></label>
@@ -2891,6 +2893,29 @@ Based on the strategy description above, generate the complete JSON configuratio
         }
 
         // ── C4D ───────────────────────────────────────────────────────────────────
+        let c4dWPlaneCount = 0;
+
+        function _gcd(a, b) { return b === 0 ? a : _gcd(b, a % b); }
+
+        function updateC4DSequentialHint() {
+            const hint = document.getElementById('c4d-sequential-hint');
+            if (!hint) return;
+            const wMode = document.getElementById('c4d-wMode')?.value;
+            if (wMode !== 'sequential' || !c4dWPlaneCount) { hint.style.display = 'none'; return; }
+            const T = Math.max(2, colorTeamColors?.length || 2);
+            const N = c4dWPlaneCount;
+            const g = _gcd(T, N);
+            const valid = g === 1;
+            const validCounts = [2,3,4,5,6].filter(t => _gcd(t, N) === 1);
+            hint.style.display = '';
+            hint.style.background = valid ? 'rgba(22,163,74,0.12)' : 'rgba(220,38,38,0.12)';
+            hint.style.color      = valid ? '#16a34a' : '#dc2626';
+            hint.style.border     = `1px solid ${valid ? 'rgba(22,163,74,0.3)' : 'rgba(220,38,38,0.3)'}`;
+            hint.textContent = valid
+                ? `✓ ${T} teams × ${N} planes — every team reaches every plane`
+                : `✗ ${T} teams and ${N} planes share factor ${g}. Valid team counts for this map: ${validCounts.join(', ')}`;
+        }
+
         const C4D_SCORING_PRESETS = {
             exponential: [1, 3, 9, 27],
             flat:        [1, 1, 1, 1],
@@ -2898,7 +2923,7 @@ Based on the strategy description above, generate the complete JSON configuratio
         };
 
         // Thin wrapper kept so existing oninput="sendC4DSettingsUpdate()" HTML still works.
-        function sendC4DSettingsUpdate() { sendSettingsUpdateImmediate(); }
+        function sendC4DSettingsUpdate() { sendSettingsUpdateImmediate(); updateC4DSequentialHint(); }
 
         function loadC4DAdminViewer() {
             const iframe = document.getElementById('c4d-admin-viewer');
@@ -3089,6 +3114,11 @@ Based on the strategy description above, generate the complete JSON configuratio
                     labelEl.textContent = '✓ ' + name;
                 }
                 sendC4DSettingsUpdate();
+            }
+
+            if (event.data.type === 'c4d_wplane_count') {
+                c4dWPlaneCount = event.data.count || 0;
+                updateC4DSequentialHint();
             }
 
             if (event.data.type === 'c4d_game_ready') {
