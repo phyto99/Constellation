@@ -1013,6 +1013,7 @@
                     <option value="Constellation">Constellation</option>
                     <option value="Centauri" selected>Proxima</option>
                     <option value="Geobridge">Geobridge</option>
+                    <option value="C4D">C4D</option>
                     <option value="GOLAD" disabled style="color: #666;" title="Coming Soon!">Game of Life</option>
                     <option value="No game focus" disabled style="color: #666;" title="Coming Soon!">No game focus</option>
                     <option value="Tabletop Club" hidden>Tabletop Club</option>
@@ -1396,14 +1397,81 @@
                             </div>
                         </div>
                         <div class="form-group" style="margin-top:12px;">
-                            <label>Game Join Link <span class="sublabel">(share with players — opens Geobridge with these settings)</span></label>
+                            <label>Session Code <span class="sublabel">(all 3 players must use the same link)</span></label>
                             <div style="display:flex; gap:8px; align-items:center;">
-                                <input type="text" id="geo-join-url" readonly placeholder="Select a game to generate link..." style="flex:1; font-size:12px;">
-                                <button onclick="copyGeobridgeLink()" style="padding:8px 14px; background:#3b82f6; color:white; border:none; border-radius:4px; cursor:pointer;">Copy Link</button>
+                                <span id="geo-session-code" style="font-size:20px; font-weight:bold; letter-spacing:4px; color:#3b82f6;"></span>
+                                <button onclick="if(selectedRoomId) getRoomRuntime(selectedRoomId).sessionCode=null; sendGeobridgeSettingsUpdate();" style="padding:4px 10px; background:#444; color:#ccc; border:none; border-radius:4px; cursor:pointer; font-size:11px;">New Code</button>
                             </div>
                         </div>
                         <div style="margin-top:4px;font-size:12px;color:#666;">
                             <span id="geobridge-settings-status">Settings saved automatically</span>
+                        </div>
+                    </div>
+
+                    <!-- C4D Panel (shown only for C4D rooms) -->
+                    <div id="c4d-settings" class="settings-section" style="display:none;">
+                        <h3>C4D — 4D Polytope Game Settings</h3>
+                        <div class="settings-grid">
+                            <div class="form-group">
+                                <label>W-Plane Mode <span class="sublabel">(how the slice advances)</span></label>
+                                <select id="c4d-wMode" oninput="sendC4DSettingsUpdate()">
+                                    <option value="oscillate">Oscillate — bounces back and forth</option>
+                                    <option value="random">Random — seeded shuffle</option>
+                                    <option value="player-choice">Player Choice — active player picks</option>
+                                    <option value="vote">Vote — all players vote secretly</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Ownership <span class="sublabel">(claiming rules)</span></label>
+                                <select id="c4d-ownerMode" oninput="sendC4DSettingsUpdate()">
+                                    <option value="permanent">Permanent — first claim is final</option>
+                                    <option value="contestable">Contestable — enemy can reclaim</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Scoring Preset</label>
+                                <select id="c4d-scoring" oninput="sendC4DSettingsUpdate()">
+                                    <option value="exponential">Exponential — V·1 + E·3 + F·9 + C·27</option>
+                                    <option value="flat">Flat — V·1 + E·1 + F·1 + C·1</option>
+                                    <option value="cells">Cells Only — C·1</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Victory Condition</label>
+                                <select id="c4d-victory" oninput="sendC4DSettingsUpdate()">
+                                    <option value="last-plane">Last Plane — most score after all planes</option>
+                                    <option value="first-cell">First Cell — first complete 3D cell wins</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Claims per Turn <span class="sublabel">(edges/vertices per turn)</span></label>
+                                <select id="c4d-claimsPerTurn" oninput="sendC4DSettingsUpdate()">
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                    <input type="checkbox" id="c4d-fogOfWar" onchange="sendC4DSettingsUpdate()" style="width:auto;margin:0;">
+                                    <span>Fog of War <span class="sublabel">(hide reference structure)</span></span>
+                                </label>
+                            </div>
+                        </div>
+                        <!-- Polytope Viewer -->
+                        <div style="margin-top:12px;">
+                            <label style="font-size:12px;color:#999;display:block;margin-bottom:6px;">
+                                Polytope Map
+                                <span class="sublabel"> — select from library; all clients load automatically</span>
+                            </label>
+                            <div id="c4d-polytope-label" style="font-size:11px;color:#3b82f6;margin-bottom:6px;min-height:16px;font-weight:bold;"></div>
+                            <iframe id="c4d-admin-viewer"
+                                    style="width:100%;height:560px;border:1px solid #333;border-radius:6px;display:block;"
+                                    title="C4D Polytope Viewer">
+                            </iframe>
+                        </div>
+                        <div style="margin-top:4px;font-size:12px;color:#666;">
+                            <span id="c4d-settings-status">Settings saved automatically</span>
                         </div>
                     </div>
 
@@ -1508,6 +1576,7 @@
     </div>
 
     <script src="https://unpkg.com/colyseus.js@0.15.24/dist/colyseus.js"></script>
+    <script src="game-registry.js"></script>
     <script>
         // AI Bot Types Configuration (same as index.html)
         const AI_BOT_TYPES = {
@@ -2024,13 +2093,61 @@ Based on the strategy description above, generate the complete JSON configuratio
         let clientSessionId = null;
         let currentRoomGameType = 'Constellation';
         let ttclubRoomCode = null;
+        let selectedPolytopePath = null;
 
+        // ── Per-room transient state (session codes, generated tokens, etc.) ──
+        // Keyed by roomId so codes survive room switches without leaking across rooms.
+        const roomRuntimeState = new Map();
+        function getRoomRuntime(roomId) {
+            if (!roomRuntimeState.has(roomId)) roomRuntimeState.set(roomId, {});
+            return roomRuntimeState.get(roomId);
+        }
+        function getOrCreateSessionCode(roomId) {
+            const rt = getRoomRuntime(roomId);
+            if (!rt.sessionCode) {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                rt.sessionCode = Array.from({length: 6}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+            }
+            return rt.sessionCode;
+        }
+
+        // ── Generic join URL (uses registry joinPath + runtime state) ─────────
+        function getGameJoinUrl(roomId) {
+            const schema  = getGameSchema(currentRoomGameType);
+            const adapter = ADMIN_SETTINGS_ADAPTERS[currentRoomGameType];
+            const cfg     = adapter ? adapter.readSettings() : {};
+            const runtime = getRoomRuntime(roomId);
+            if (schema.teamSupport) {
+                cfg.teamColors = colorTeamColors.map(tc => ({
+                    color: (tc.rgb[0] << 16) | (tc.rgb[1] << 8) | tc.rgb[2],
+                    rgb: tc.rgb,
+                }));
+            }
+            return schema.joinPath(roomId, cfg, runtime);
+        }
+
+        function updateJoinButton() {
+            if (!selectedRoomId) return;
+            const url    = getGameJoinUrl(selectedRoomId);
+            const linkEl = document.getElementById('game-direct-link');
+            if (linkEl) { linkEl.href = url; linkEl.textContent = 'Join Game'; }
+            const runtime = getRoomRuntime(selectedRoomId);
+            const suffix  = runtime.sessionCode ? ` · ${runtime.sessionCode}` : '';
+            document.getElementById('scenario-name').textContent = `Game ${selectedRoomId.substring(0, 8)}${suffix}`;
+        }
+
+        // Legacy shim — still called from selectRoom() when metadata is available
+        // before ADMIN_SETTINGS_ADAPTERS are reachable (early in page load).
         function getJoinUrl(roomId, metadata) {
-            const base = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`;
             const type = metadata?.type || '';
-            if (type === 'GOLAD') return `${base}/golad/${roomId}`;
-            if (type === 'Centauri') return `${base}/centauri/${roomId}`;
-            return `${base}/game/${roomId}`;
+            if (!type || !ADMIN_SETTINGS_ADAPTERS) {
+                const base = `${location.protocol}//${location.host}`;
+                if (type === 'GOLAD')    return `${base}/golad/${roomId}`;
+                if (type === 'Centauri') return `${base}/centauri/${roomId}`;
+                if (type === 'C4D')      return `${base}/c4d/${roomId}`;
+                return `${base}/game/${roomId}`;
+            }
+            return getGameJoinUrl(roomId);
         }
 
         function getServerUrl() {
@@ -2454,13 +2571,9 @@ Based on the strategy description above, generate the complete JSON configuratio
             document.getElementById('no-game-selected').style.display = 'none';
             document.getElementById('game-content').style.display = 'block';
 
-            // Update game link – fall back to currentRoomGameType when metadata isn't loaded yet
-            const gameUrl = getJoinUrl(roomId, roomData?.metadata || { type: currentRoomGameType });
-            const linkElement = document.getElementById('game-direct-link');
-            linkElement.href = gameUrl;
-            linkElement.textContent = 'Join Game';
-
-            document.getElementById('scenario-name').textContent = `Game ${roomId.substring(0, 8)}`;
+            // Ensure Geobridge has a session code before we build the join URL
+            if (currentRoomGameType === 'Geobridge') getOrCreateSessionCode(roomId);
+            updateJoinButton();
 
             // Update button states based on room state
             const startBtn = document.getElementById('start-btn');
@@ -2584,12 +2697,146 @@ Based on the strategy description above, generate the complete JSON configuratio
         document.addEventListener('DOMContentLoaded', renderSecurityLogs);
         document.addEventListener('DOMContentLoaded', loadUserName);
 
+        // ── ADMIN_SETTINGS_ADAPTERS ───────────────────────────────────────────
+        // One entry per game type.  Each adapter has:
+        //   readSettings()  → plain settings object read from the current DOM panel
+        //   (restoreSettings(cfg) is handled per-panel in selectRoom for now)
+        //
+        // Adding a new game: add one entry below matching the game's label in GAME_REGISTRY.
+        const ADMIN_SETTINGS_ADAPTERS = {
+
+            Constellation: {
+                readSettings() {
+                    const multipliers = {
+                        count:       parseInt(document.getElementById('edit-countMultiplier').value)       || 0,
+                        distance:    parseInt(document.getElementById('edit-distanceMultiplier').value)    || 0,
+                        hq:          parseInt(document.getElementById('edit-hqMultiplier').value)          || 0,
+                        destruction: parseInt(document.getElementById('edit-destructionMultiplier').value) || 0,
+                    };
+                    const settings = {
+                        moves:           parseInt(document.getElementById('edit-movesPerRound').value)  || 15,
+                        rounds:          parseInt(document.getElementById('edit-rounds').value)          || 10,
+                        roundLength:     parseInt(document.getElementById('edit-roundTime').value)       || 30,
+                        countdownLength: parseInt(document.getElementById('edit-countdownTime').value)   || 5,
+                        steals:          parseInt(document.getElementById('edit-stealLimit').value)      || 15,
+                        headquarters:    parseInt(document.getElementById('edit-hqMax').value)           || 2,
+                        multipliers,
+                        aiBots: getAdminAIBots(),
+                        teamColors: colorTeamColors.map(tc => ({
+                            color:       (tc.rgb[0] << 16) | (tc.rgb[1] << 8) | tc.rgb[2],
+                            name:        tc.name.toLowerCase(),
+                            displayName: tc.name.charAt(0).toUpperCase() + tc.name.slice(1),
+                        })),
+                        allowPlayerTeamSelection: document.getElementById('edit-allowPlayerTeamSelection').checked,
+                        ithkuilNumerals:          document.getElementById('edit-ithkuilNumerals').checked,
+                    };
+                    const mapFile = document.getElementById('map-selector').value;
+                    const mapJson = document.getElementById('edit-mapJson').value.trim();
+                    if (mapFile) {
+                        settings.customMapFilename = mapFile;
+                    } else if (mapJson) {
+                        try { settings.customMap = JSON.parse(mapJson); } catch (_) {}
+                    }
+                    return settings;
+                },
+            },
+
+            GOLAD: {
+                readSettings() {
+                    const birthStr   = (document.getElementById('golad-birth').value   || '3').replace(/\D/g, '');
+                    const surviveStr = (document.getElementById('golad-survive').value || '23').replace(/\D/g, '');
+                    const p1Idx = parseInt(document.getElementById('golad-p1-color').value) || 3;
+                    const p2Idx = parseInt(document.getElementById('golad-p2-color').value) || 11;
+                    return {
+                        boardSize:   parseInt(document.getElementById('golad-boardSize').value) || 16,
+                        birth:   birthStr   ? [...new Set(birthStr.split('').map(Number).sort((a,b)=>a-b))]   : [3],
+                        survive: surviveStr ? [...new Set(surviveStr.split('').map(Number).sort((a,b)=>a-b))] : [2,3],
+                        p1Type:      document.getElementById('golad-p1-type').value,
+                        p2Type:      document.getElementById('golad-p2-type').value,
+                        p1Color:     GOLAD_PALETTE[p1Idx].rgb,
+                        p2Color:     GOLAD_PALETTE[p2Idx].rgb,
+                        cellShape:   document.getElementById('golad-cellShape').value,
+                        hints:       document.getElementById('golad-hints').checked,
+                        animations:  document.getElementById('golad-animations').checked,
+                        showCursor:  document.getElementById('golad-showCursor').checked,
+                        showPreview: document.getElementById('golad-showPreview').checked,
+                    };
+                },
+            },
+
+            Centauri: {
+                readSettings() {
+                    const rawJson = document.getElementById('centauri-mapJson').value.trim();
+                    let mapJson = null;
+                    if (rawJson) { try { mapJson = JSON.parse(rawJson); } catch (_) {} }
+                    return {
+                        thrustPower:     parseFloat(document.getElementById('centauri-thrustPower').value)     || 1000.0,
+                        thrustDepletion: parseFloat(document.getElementById('centauri-thrustDepletion').value) || 10.0,
+                        fuelEfficiency:  parseFloat(document.getElementById('centauri-fuelEfficiency').value)  || 0.5,
+                        fuelRecovery:    parseFloat(document.getElementById('centauri-fuelRecovery').value)    || 2.0,
+                        tickSpeed:       parseFloat(document.getElementById('centauri-tickSpeed').value)       || 1.0,
+                        sessionDuration: parseFloat(document.getElementById('centauri-sessionDuration').value) || 300.0,
+                        teamMoves:       parseInt(document.getElementById('centauri-teamMoves').value)         || 300,
+                        teamColors: colorTeamColors.map(tc => ({
+                            color: (tc.rgb[0] << 16) | (tc.rgb[1] << 8) | tc.rgb[2],
+                            name:  tc.name.toLowerCase(),
+                        })),
+                        mapJson,
+                    };
+                },
+            },
+
+            Geobridge: {
+                readSettings() {
+                    return {
+                        timerDuration:        parseInt(document.getElementById('geo-timerDuration').value)        || 10,
+                        biddingTimerDuration: parseInt(document.getElementById('geo-biddingTimerDuration').value) || 20,
+                        playTimerDuration:    parseInt(document.getElementById('geo-playTimerDuration').value)    || 20,
+                        cardsToPlay:          parseInt(document.getElementById('geo-cardsToPlay').value)          || 8,
+                        extraCards:           parseInt(document.getElementById('geo-extraCards').value)           || 2,
+                        numRounds:            parseInt(document.getElementById('geo-numRounds').value)            || 3,
+                        alliancePenaltyAmount:parseInt(document.getElementById('geo-alliancePenalty').value)      || 5,
+                        bidPenaltyAmount:     parseInt(document.getElementById('geo-bidPenalty').value)           || 20,
+                        eclipseEnabled:       document.getElementById('geo-eclipseEnabled').checked,
+                    };
+                },
+            },
+
+            C4D: {
+                readSettings() {
+                    const scoringKey = document.getElementById('c4d-scoring')?.value || 'exponential';
+                    const teamCount  = Math.max(2, colorTeamColors?.length || 2);
+                    const s = {
+                        teamCount,
+                        wMode:         document.getElementById('c4d-wMode')?.value      || 'oscillate',
+                        ownerMode:     document.getElementById('c4d-ownerMode')?.value  || 'permanent',
+                        scoring:       C4D_SCORING_PRESETS[scoringKey]                  || [1, 3, 9, 27],
+                        victory:       document.getElementById('c4d-victory')?.value    || 'last-plane',
+                        fogOfWar:      document.getElementById('c4d-fogOfWar')?.checked || false,
+                        claimsPerTurn: parseInt(document.getElementById('c4d-claimsPerTurn')?.value || '1'),
+                        teamColors: colorTeamColors.slice(0, teamCount).map(tc => ({
+                            color:       (tc.rgb[0] << 16) | (tc.rgb[1] << 8) | tc.rgb[2],
+                            name:        tc.name.toLowerCase(),
+                            displayName: tc.name.charAt(0).toUpperCase() + tc.name.slice(1),
+                        })),
+                    };
+                    if (selectedPolytopePath) s.polytopePath = selectedPolytopePath;
+                    return s;
+                },
+            },
+
+            'No game focus': { readSettings() { return {}; } },
+
+            'Tabletop Club': { readSettings() { return {}; } },
+        };
+
         // ── Game type UI — driven by a panel map so adding a new game only needs one entry ──
         const GAME_PANEL_MAP = {
             'Tabletop Club': 'ttclub-panel',
             'GOLAD':         'golad-settings',
             'Centauri':      'centauri-settings',
             'Geobridge':     'geobridge-settings',
+            'C4D':           'c4d-settings',
         };
         const DEFAULT_PANEL = 'constellation-settings';
 
@@ -2611,6 +2858,7 @@ Based on the strategy description above, generate the complete JSON configuratio
             if (currentRoomGameType === 'GOLAD') initGoladColorPickers();
             if (currentRoomGameType === 'Centauri') initCentauriMapmakerListener();
             if (currentRoomGameType === 'Geobridge') sendGeobridgeSettingsUpdate();
+            if (currentRoomGameType === 'C4D') { loadC4DAdminViewer(); sendC4DSettingsUpdate(); }
         }
 
         // ── Centauri MapMaker iframe bridge ───────────────────────────────────────
@@ -2633,43 +2881,59 @@ Based on the strategy description above, generate the complete JSON configuratio
         }
 
         // ── Geobridge ─────────────────────────────────────────────────────────────
-        function buildGeobridgeJoinUrl() {
-            const base = `${window.location.protocol}//${window.location.host}/geobridge`;
-            const params = new URLSearchParams();
-            const v = id => document.getElementById(id);
-            params.set('timerDuration',        v('geo-timerDuration').value);
-            params.set('biddingTimerDuration', v('geo-biddingTimerDuration').value);
-            params.set('playTimerDuration',    v('geo-playTimerDuration').value);
-            params.set('cardsToPlay',          v('geo-cardsToPlay').value);
-            params.set('extraCards',           v('geo-extraCards').value);
-            params.set('numRounds',            v('geo-numRounds').value);
-            params.set('eclipseEnabled',       v('geo-eclipseEnabled').checked ? 'true' : 'false');
-            params.set('alliancePenalty',      v('geo-alliancePenalty').value);
-            params.set('bidPenalty',           v('geo-bidPenalty').value);
-            // Team colors from color manager — first 3 colors, hex without #
-            if (colorTeamColors.length > 0) {
-                const hexColors = colorTeamColors.slice(0, 3).map(tc => rgbToHexAdmin(tc.rgb).replace('#', ''));
-                if (hexColors[0]) params.set('color1', hexColors[0]);
-                if (hexColors[1]) params.set('color2', hexColors[1]);
-                if (hexColors[2]) params.set('color3', hexColors[2]);
-            }
-            return `${base}?${params.toString()}`;
-        }
-
         function sendGeobridgeSettingsUpdate() {
-            const url = buildGeobridgeJoinUrl();
-            const urlInput = document.getElementById('geo-join-url');
-            if (urlInput) urlInput.value = url;
-            const status = document.getElementById('geobridge-settings-status');
-            if (status) { status.textContent = 'Link updated ✓'; setTimeout(() => { status.textContent = 'Settings saved automatically'; }, 1500); }
+            if (!selectedRoomId) return;
+            const code  = getOrCreateSessionCode(selectedRoomId);
+            const codeEl = document.getElementById('geo-session-code');
+            if (codeEl) codeEl.textContent = code;
+            updateJoinButton();          // updates game-direct-link + scenario-name
+            sendSettingsUpdateImmediate(); // syncs settings to server
         }
 
-        function copyGeobridgeLink() {
-            const url = buildGeobridgeJoinUrl();
-            navigator.clipboard.writeText(url).then(() => {
-                const status = document.getElementById('geobridge-settings-status');
-                if (status) { status.textContent = 'Link copied! ✓'; setTimeout(() => { status.textContent = 'Settings saved automatically'; }, 2000); }
-            });
+        // ── C4D ───────────────────────────────────────────────────────────────────
+        const C4D_SCORING_PRESETS = {
+            exponential: [1, 3, 9, 27],
+            flat:        [1, 1, 1, 1],
+            cells:       [0, 0, 0, 1],
+        };
+
+        // Thin wrapper kept so existing oninput="sendC4DSettingsUpdate()" HTML still works.
+        function sendC4DSettingsUpdate() { sendSettingsUpdateImmediate(); }
+
+        function loadC4DAdminViewer() {
+            const iframe = document.getElementById('c4d-admin-viewer');
+            if (!iframe || iframe.dataset.loaded) return;
+            const wsUrl  = getServerUrl();
+            const origin = wsUrl.replace(/^wss?/, match => match === 'wss' ? 'https' : 'http');
+            const src = `${origin}/c4d/`;
+            console.log('[C4D viewer] iframe src =', src);
+            iframe.src = src;
+            iframe.dataset.loaded = '1';
+            iframe.addEventListener('load', () => {
+                try { iframe.contentWindow.dispatchEvent(new Event('resize')); } catch(_) {}
+            }, { once: true });
+        }
+
+        function buildC4DRules() {
+            const s = ADMIN_SETTINGS_ADAPTERS['C4D'].readSettings();
+            return {
+                teamCount:     s.teamCount     || 2,
+                wMode:         s.wMode         || 'oscillate',
+                ownerMode:     s.ownerMode     || 'permanent',
+                scoring:       s.scoring       || [1, 3, 9, 27],
+                victory:       s.victory       || 'last-plane',
+                claimsPerTurn: s.claimsPerTurn || 1,
+                fogOfWar:      !!s.fogOfWar,
+                teamColors:    s.teamColors    || [],
+            };
+        }
+
+        function startC4DGame() {
+            const iframe = document.getElementById('c4d-admin-viewer');
+            if (!iframe || !iframe.contentWindow) return;
+            iframe.contentWindow.postMessage({ type: 'c4d_admin_start', rules: buildC4DRules() }, '*');
+            const btn = document.getElementById('start-btn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Starting…'; }
         }
 
         function loadTTClubIframe() {
@@ -2810,6 +3074,44 @@ Based on the strategy description above, generate the complete JSON configuratio
                 onTTClubRoomCode(event.data.code);
             }
         });
+
+        // Listen for messages from the C4D admin viewer iframe
+        window.addEventListener('message', function(event) {
+            if (!event.data) return;
+
+            if (event.data.type === 'c4d_polytope_selected') {
+                const path = event.data.path;
+                if (!path) return;
+                selectedPolytopePath = path;
+                const labelEl = document.getElementById('c4d-polytope-label');
+                if (labelEl) {
+                    const name = path.split('/').pop().replace('.off', '');
+                    labelEl.textContent = '✓ ' + name;
+                }
+                sendC4DSettingsUpdate();
+            }
+
+            if (event.data.type === 'c4d_game_ready') {
+                const { gs, polytopePath } = event.data;
+                if (!selectedRoomId || !currentRoom) return;
+                currentRoom.send('start_game', { roomId: selectedRoomId, gs, polytopePath });
+                const btn = document.getElementById('start-btn');
+                if (btn) { btn.disabled = false; btn.style.display = 'none'; }
+                document.getElementById('pause-btn').style.display = 'inline-block';
+            }
+
+            if (event.data.type === 'c4d_game_error') {
+                const btn = document.getElementById('start-btn');
+                if (btn) { btn.disabled = false; btn.textContent = 'Start Game'; }
+                alert('C4D: ' + (event.data.error || 'Failed to build game state'));
+            }
+
+            if (event.data.type === 'c4d_test_request') {
+                const iframe = document.getElementById('c4d-admin-viewer');
+                if (!iframe || !iframe.contentWindow) return;
+                iframe.contentWindow.postMessage({ type: 'c4d_admin_start', rules: buildC4DRules(), test: true }, '*');
+            }
+        });
         // ────────────────────────────────────────────────────────────────────────
 
         function deselectRoom() {
@@ -2860,53 +3162,25 @@ Based on the strategy description above, generate the complete JSON configuratio
             });
 
             try {
+                // GOLAD color pickers must be initialised before we read their values
+                if (gameType === 'GOLAD') initGoladColorPickers();
+
+                const schema   = getGameSchema(gameType);
+                const adapter  = ADMIN_SETTINGS_ADAPTERS[gameType];
+                const settings = adapter ? adapter.readSettings() : {};
+
                 const roomOptions = {
-                    name: gameName,
-                    gameType: gameType,
-                    maxPlayers: 20,
-                    isAdmin: true
+                    name:       gameName,
+                    gameType,
+                    maxPlayers: schema.maxPlayers || 20,
+                    isAdmin:    true,
+                    ...settings,
+                    ...(aiBots.length ? { aiBots } : {}),
                 };
 
-                if (aiBots.length > 0) {
-                    roomOptions.aiBots = aiBots;
-                }
-
-                if (gameType === 'GOLAD') {
-                    initGoladColorPickers();
-                    const birthStr   = (document.getElementById('golad-birth').value   || '3').replace(/\D/g,'');
-                    const surviveStr = (document.getElementById('golad-survive').value || '23').replace(/\D/g,'');
-                    const p1Idx = parseInt(document.getElementById('golad-p1-color').value) || 3;
-                    const p2Idx = parseInt(document.getElementById('golad-p2-color').value) || 11;
-                    roomOptions.boardSize  = parseInt(document.getElementById('golad-boardSize').value) || 16;
-                    roomOptions.birth      = birthStr.split('').map(Number);
-                    roomOptions.survive    = surviveStr.split('').map(Number);
-                    roomOptions.p1Type     = document.getElementById('golad-p1-type').value;
-                    roomOptions.p2Type     = document.getElementById('golad-p2-type').value;
-                    roomOptions.p1Color    = GOLAD_PALETTE[p1Idx].rgb;
-                    roomOptions.p2Color    = GOLAD_PALETTE[p2Idx].rgb;
-                    roomOptions.cellShape   = document.getElementById('golad-cellShape').value;
-                    roomOptions.hints       = document.getElementById('golad-hints').checked;
-                    roomOptions.animations  = document.getElementById('golad-animations').checked;
-                    roomOptions.showCursor  = document.getElementById('golad-showCursor').checked;
-                    roomOptions.showPreview = document.getElementById('golad-showPreview').checked;
-                }
-
-                if (gameType === 'Centauri') {
-                    roomOptions.thrustPower     = parseFloat(document.getElementById('centauri-thrustPower').value)     || 1000.0;
-                    roomOptions.thrustDepletion = parseFloat(document.getElementById('centauri-thrustDepletion').value) || 10.0;
-                    roomOptions.fuelEfficiency  = parseFloat(document.getElementById('centauri-fuelEfficiency').value)  || 0.5;
-                    roomOptions.fuelRecovery    = parseFloat(document.getElementById('centauri-fuelRecovery').value)    || 2.0;
-                    roomOptions.tickSpeed       = parseFloat(document.getElementById('centauri-tickSpeed').value)       || 1.0;
-                    roomOptions.sessionDuration = parseFloat(document.getElementById('centauri-sessionDuration').value) || 300.0;
-                    roomOptions.teamMoves       = parseInt(document.getElementById('centauri-teamMoves').value)         || 300;
-                    const rawJson = document.getElementById('centauri-mapJson').value.trim();
-                    if (rawJson) { try { roomOptions.mapJson = JSON.parse(rawJson); } catch(e) {} }
-                }
-
-                // Use official Colyseus client.create() to create the room
-                const roomType = gameType === 'GOLAD' ? 'golad' : gameType === 'Centauri' ? 'centauri' : 'constellation';
-                const room = await client.create(roomType, roomOptions);
+                const room = await client.create(schema.roomType, roomOptions);
                 console.log('✓ Room created:', room.roomId);
+                room.leave(); // admin doesn't need to stay joined as a client
 
                 // Clear the game name input
                 document.getElementById('game-name').value = '';
@@ -2919,11 +3193,14 @@ Based on the strategy description above, generate the complete JSON configuratio
                 if (currentRoom) {
                     setTimeout(() => {
                         currentRoom.send('request_rooms_list');
-                        // After rooms list is updated, re-select the room to get proper data
+                        // After rooms list is updated, re-select the room to get proper data.
+                        // Preserve gameType so the panel doesn't revert while metadata loads.
                         setTimeout(() => {
                             if (selectedRoomId === room.roomId) {
                                 console.log('Re-selecting room after rooms list update');
                                 selectRoom(room.roomId);
+                                // Re-apply the correct panel in case metadata wasn't loaded yet
+                                if (currentRoomGameType !== gameType) updateGameTypeUI(gameType);
                             }
                         }, 300);
                     }, 200);
@@ -3079,6 +3356,12 @@ Based on the strategy description above, generate the complete JSON configuratio
                 return;
             }
 
+            // For C4D rooms, trigger the iframe to build GS and post back c4d_game_ready
+            if (currentRoomGameType === 'C4D') {
+                startC4DGame();
+                return;
+            }
+
             const warnings = collectStartWarnings();
             if (warnings.length > 0) {
                 const list = document.getElementById('start-warning-list');
@@ -3210,149 +3493,36 @@ Based on the strategy description above, generate the complete JSON configuratio
         // Track last sent settings to avoid duplicate notifications
         let lastSentSettingsJson = '';
 
+        // Status element IDs per game (for save confirmation feedback)
+        const SETTINGS_STATUS_ELS = {
+            GOLAD:      'golad-settings-status',
+            Centauri:   'centauri-settings-status',
+            Geobridge:  'geobridge-settings-status',
+            C4D:        'c4d-settings-status',
+        };
+
         function sendSettingsUpdateImmediate() {
             if (!currentRoom || !selectedRoomId) return;
             if (messageRateLimiter.isLimited(clientSessionId)) return;
 
-            // Centauri settings
-            if (currentRoomGameType === 'Centauri') {
-                const rawJson = document.getElementById('centauri-mapJson').value.trim();
-                let mapJson = null;
-                if (rawJson) { try { mapJson = JSON.parse(rawJson); } catch(e) {} }
-                const settings = {
-                    thrustPower:     parseFloat(document.getElementById('centauri-thrustPower').value)     || 1.0,
-                    thrustDepletion: parseFloat(document.getElementById('centauri-thrustDepletion').value) || 0.1,
-                    fuelEfficiency:  parseFloat(document.getElementById('centauri-fuelEfficiency').value)  || 0.8,
-                    fuelRecovery:    parseFloat(document.getElementById('centauri-fuelRecovery').value)    || 0.05,
-                    tickSpeed:       parseFloat(document.getElementById('centauri-tickSpeed').value)       || 1.0,
-                    sessionDuration: parseFloat(document.getElementById('centauri-sessionDuration').value) || 300.0,
-                    teamMoves:       parseInt(document.getElementById('centauri-teamMoves').value)         || 300,
-                    teamColors: colorTeamColors.map(tc => ({
-                        color: (tc.rgb[0] << 16) | (tc.rgb[1] << 8) | tc.rgb[2],
-                        name: tc.name.toLowerCase(),
-                    })),
-                    mapJson,
-                };
-                const settingsJson = JSON.stringify(settings);
-                if (settingsJson === lastSentSettingsJson) return;
-                lastSentSettingsJson = settingsJson;
-                try {
-                    currentRoom.send('update_settings', { roomId: selectedRoomId, settings });
-                    showNotification('Centauri settings updated');
-                    document.getElementById('centauri-settings-status').textContent = 'Saved ✓';
-                    setTimeout(() => { document.getElementById('centauri-settings-status').textContent = 'Settings saved automatically'; }, 1500);
-                } catch (e) { console.error('Failed to send Centauri settings:', e); }
-                return;
-            }
+            const adapter = ADMIN_SETTINGS_ADAPTERS[currentRoomGameType];
+            if (!adapter) return;
 
-            // GOLAD settings
-            if (currentRoomGameType === 'GOLAD') {
-                const birthStr   = (document.getElementById('golad-birth').value   || '3').replace(/\D/g,'');
-                const surviveStr = (document.getElementById('golad-survive').value || '23').replace(/\D/g,'');
-                const birth   = birthStr   ? [...new Set(birthStr.split('').map(Number).sort((a,b)=>a-b))]   : [3];
-                const survive = surviveStr ? [...new Set(surviveStr.split('').map(Number).sort((a,b)=>a-b))] : [2,3];
-                const p1Idx = parseInt(document.getElementById('golad-p1-color').value) || 3;
-                const p2Idx = parseInt(document.getElementById('golad-p2-color').value) || 11;
-                const settings = {
-                    boardSize:  parseInt(document.getElementById('golad-boardSize').value) || 16,
-                    birth, survive,
-                    p1Type:     document.getElementById('golad-p1-type').value,
-                    p2Type:     document.getElementById('golad-p2-type').value,
-                    p1Color:    GOLAD_PALETTE[p1Idx].rgb,
-                    p2Color:    GOLAD_PALETTE[p2Idx].rgb,
-                    cellShape:   document.getElementById('golad-cellShape').value,
-                    hints:       document.getElementById('golad-hints').checked,
-                    animations:  document.getElementById('golad-animations').checked,
-                    showCursor:  document.getElementById('golad-showCursor').checked,
-                    showPreview: document.getElementById('golad-showPreview').checked,
-                };
-                const settingsJson = JSON.stringify(settings);
-                if (settingsJson === lastSentSettingsJson) return;
-                lastSentSettingsJson = settingsJson;
-                try {
-                    currentRoom.send('update_settings', { roomId: selectedRoomId, settings });
-                    document.getElementById('golad-settings-status').textContent = 'Saved ✓';
-                    setTimeout(() => { document.getElementById('golad-settings-status').textContent = 'Settings saved automatically'; }, 1500);
-                } catch (e) { console.error('Failed to send GOLAD settings:', e); }
-                return;
-            }
-
-            const multipliers = {
-                count: parseInt(document.getElementById('edit-countMultiplier').value) || 0,
-                distance: parseInt(document.getElementById('edit-distanceMultiplier').value) || 0,
-                hq: parseInt(document.getElementById('edit-hqMultiplier').value) || 0,
-                destruction: parseInt(document.getElementById('edit-destructionMultiplier').value) || 0
-            };
-
-            // Convert colorTeamColors (RGB arrays) to server format (hex numbers)
-            const teamColors = colorTeamColors.map(tc => {
-                // Convert RGB array to hex number
-                const hexColor = (tc.rgb[0] << 16) | (tc.rgb[1] << 8) | tc.rgb[2];
-                // Capitalize first letter for displayName
-                const displayName = tc.name.charAt(0).toUpperCase() + tc.name.slice(1);
-                return {
-                    color: hexColor,
-                    name: tc.name.toLowerCase(),
-                    displayName: displayName
-                };
-            });
-
-            const settings = {
-                // movesPerRound is usually hardcoded in game or passed, checking server it's not in gameConfig top level but passed... 
-                // wait, ConstellationRoom gameConfig doesn't show movesPerRound explicitly in default but let's send it.
-                // Looking at server.js gameConfig: roundLength, rounds, countdownLength, steals, headquarters, multipliers
-                // 'moves' is often client side or part of validation. Admin UI has 'edit-movesPerRound'.
-                // I will include it.
-                moves: parseInt(document.getElementById('edit-movesPerRound').value) || 15,
-                rounds: parseInt(document.getElementById('edit-rounds').value) || 10,
-                roundLength: parseInt(document.getElementById('edit-roundTime').value) || 30,
-                countdownLength: parseInt(document.getElementById('edit-countdownTime').value) || 5,
-                steals: parseInt(document.getElementById('edit-stealLimit').value) || 15,
-                headquarters: parseInt(document.getElementById('edit-hqMax').value) || 2,
-                // NOTE: customMapFilename is added below only when a map is selected
-                multipliers: multipliers,
-                aiBots: getAdminAIBots(),
-                teamColors: teamColors,
-                allowPlayerTeamSelection: document.getElementById('edit-allowPlayerTeamSelection').checked,
-                ithkuilNumerals: document.getElementById('edit-ithkuilNumerals').checked
-            };
-
-            // Send map filename instead of full JSON to avoid Colyseus presence message size limits
-            const selectedMapFilename = document.getElementById('map-selector').value;
-            const mapJsonValue = document.getElementById('edit-mapJson').value.trim();
-
-            if (selectedMapFilename) {
-                // Map selected from dropdown
-                settings.customMapFilename = selectedMapFilename;
-                console.log('📍 Sending map filename:', selectedMapFilename);
-            } else if (mapJsonValue) {
-                // Manual JSON in textarea
-                try {
-                    // Validate JSON
-                    JSON.parse(mapJsonValue);
-                    settings.customMapFilename = '__manual_json__';
-                    settings.customMapJson = mapJsonValue; // Send raw JSON string for manual entry
-                    console.log('📍 Sending manual map JSON');
-                } catch (e) {
-                    console.error('❌ Failed to parse map JSON:', e.message);
-                    // Don't send customMapFilename if JSON is invalid
-                }
-            }
-            // If neither dropdown nor textarea has a map, don't include customMapFilename
-            // This preserves the existing map on the server
-
-            // Only send if settings actually changed
+            const settings     = adapter.readSettings();
             const settingsJson = JSON.stringify(settings);
-            if (settingsJson === lastSentSettingsJson) {
-                return; // No change, skip update
-            }
+            if (settingsJson === lastSentSettingsJson) return;
             lastSentSettingsJson = settingsJson;
 
             try {
-                // Send update command via AdminRoom
-                currentRoom.send('update_settings', { roomId: selectedRoomId, settings: settings });
-                console.log('✓ Settings update sent', settings);
-                showNotification('Game settings updated');
+                currentRoom.send('update_settings', { roomId: selectedRoomId, settings });
+                if (currentRoomGameType === 'Centauri') showNotification('Centauri settings updated');
+
+                const statusId = SETTINGS_STATUS_ELS[currentRoomGameType];
+                const statusEl = statusId ? document.getElementById(statusId) : null;
+                if (statusEl) {
+                    statusEl.textContent = 'Saved ✓';
+                    setTimeout(() => { statusEl.textContent = 'Settings saved automatically'; }, 1500);
+                }
             } catch (e) {
                 console.error('Failed to send settings update:', e);
             }

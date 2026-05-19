@@ -1,3 +1,6 @@
 [submodule "geobridge"]
 	path = geobridge
 	url = https://github.com/phyto99/Geobridge.git
+[submodule "c4d"]
+	path = c4d
+	url = https://github.com/phyto99/C4D.git
