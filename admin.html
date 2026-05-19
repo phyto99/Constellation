@@ -1012,7 +1012,7 @@
                 <select id="game-type">
                     <option value="Constellation">Constellation</option>
                     <option value="Centauri" selected>Proxima</option>
-                    <option value="Geobridge" disabled style="color: #666;" title="Coming Soon!">Geobridge</option>
+                    <option value="Geobridge">Geobridge</option>
                     <option value="GOLAD" disabled style="color: #666;" title="Coming Soon!">Game of Life</option>
                     <option value="No game focus" disabled style="color: #666;" title="Coming Soon!">No game focus</option>
                     <option value="Tabletop Club" hidden>Tabletop Club</option>
@@ -1349,6 +1349,61 @@
                         </div>
                         <div style="margin-top:4px;font-size:12px;color:#666;">
                             <span id="centauri-settings-status">Settings saved automatically</span>
+                        </div>
+                    </div>
+
+                    <!-- Geobridge Panel -->
+                    <div id="geobridge-settings" class="settings-section" style="display:none;">
+                        <h3>Geobridge Settings</h3>
+                        <div class="settings-grid">
+                            <div class="form-group">
+                                <label>Country Selection Timer <span class="sublabel">(seconds)</span></label>
+                                <input type="number" id="geo-timerDuration" min="5" max="120" step="5" value="10" style="width:80px;" oninput="sendGeobridgeSettingsUpdate()">
+                            </div>
+                            <div class="form-group">
+                                <label>Bidding Timer <span class="sublabel">(seconds)</span></label>
+                                <input type="number" id="geo-biddingTimerDuration" min="5" max="120" step="5" value="20" style="width:80px;" oninput="sendGeobridgeSettingsUpdate()">
+                            </div>
+                            <div class="form-group">
+                                <label>Play Timer <span class="sublabel">(seconds)</span></label>
+                                <input type="number" id="geo-playTimerDuration" min="5" max="120" step="5" value="20" style="width:80px;" oninput="sendGeobridgeSettingsUpdate()">
+                            </div>
+                            <div class="form-group">
+                                <label>Cards to Play <span class="sublabel">(per player per round)</span></label>
+                                <input type="number" id="geo-cardsToPlay" min="1" max="20" step="1" value="8" style="width:80px;" oninput="sendGeobridgeSettingsUpdate()">
+                            </div>
+                            <div class="form-group">
+                                <label>Extra Cards <span class="sublabel">(bonus cards dealt)</span></label>
+                                <input type="number" id="geo-extraCards" min="0" max="10" step="1" value="2" style="width:80px;" oninput="sendGeobridgeSettingsUpdate()">
+                            </div>
+                            <div class="form-group">
+                                <label>Rounds <span class="sublabel">(number of rounds)</span></label>
+                                <input type="number" id="geo-numRounds" min="1" max="10" step="1" value="3" style="width:80px;" oninput="sendGeobridgeSettingsUpdate()">
+                            </div>
+                            <div class="form-group">
+                                <label>Alliance Penalty <span class="sublabel">(penalty points)</span></label>
+                                <input type="number" id="geo-alliancePenalty" min="0" max="50" step="1" value="5" style="width:80px;" oninput="sendGeobridgeSettingsUpdate()">
+                            </div>
+                            <div class="form-group">
+                                <label>Bid Penalty <span class="sublabel">(penalty points)</span></label>
+                                <input type="number" id="geo-bidPenalty" min="0" max="100" step="5" value="20" style="width:80px;" oninput="sendGeobridgeSettingsUpdate()">
+                            </div>
+                            <div class="form-group">
+                                <label>Eclipse Mode <span class="sublabel">(regional bonus rounds)</span></label>
+                                <label style="font-weight:normal;">
+                                    <input type="checkbox" id="geo-eclipseEnabled" checked onchange="sendGeobridgeSettingsUpdate()"> Enabled
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top:12px;">
+                            <label>Game Join Link <span class="sublabel">(share with players — opens Geobridge with these settings)</span></label>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <input type="text" id="geo-join-url" readonly placeholder="Select a game to generate link..." style="flex:1; font-size:12px;">
+                                <button onclick="copyGeobridgeLink()" style="padding:8px 14px; background:#3b82f6; color:white; border:none; border-radius:4px; cursor:pointer;">Copy Link</button>
+                            </div>
+                        </div>
+                        <div style="margin-top:4px;font-size:12px;color:#666;">
+                            <span id="geobridge-settings-status">Settings saved automatically</span>
                         </div>
                     </div>
 
@@ -2534,6 +2589,7 @@ Based on the strategy description above, generate the complete JSON configuratio
             'Tabletop Club': 'ttclub-panel',
             'GOLAD':         'golad-settings',
             'Centauri':      'centauri-settings',
+            'Geobridge':     'geobridge-settings',
         };
         const DEFAULT_PANEL = 'constellation-settings';
 
@@ -2554,6 +2610,7 @@ Based on the strategy description above, generate the complete JSON configuratio
             else stopTTClubPlayerPolling();
             if (currentRoomGameType === 'GOLAD') initGoladColorPickers();
             if (currentRoomGameType === 'Centauri') initCentauriMapmakerListener();
+            if (currentRoomGameType === 'Geobridge') sendGeobridgeSettingsUpdate();
         }
 
         // ── Centauri MapMaker iframe bridge ───────────────────────────────────────
@@ -2572,6 +2629,46 @@ Based on the strategy description above, generate the complete JSON configuratio
                     textarea.value = e.data.json;
                 }
                 sendSettingsUpdate();
+            });
+        }
+
+        // ── Geobridge ─────────────────────────────────────────────────────────────
+        function buildGeobridgeJoinUrl() {
+            const base = `${window.location.protocol}//${window.location.host}/geobridge`;
+            const params = new URLSearchParams();
+            const v = id => document.getElementById(id);
+            params.set('timerDuration',        v('geo-timerDuration').value);
+            params.set('biddingTimerDuration', v('geo-biddingTimerDuration').value);
+            params.set('playTimerDuration',    v('geo-playTimerDuration').value);
+            params.set('cardsToPlay',          v('geo-cardsToPlay').value);
+            params.set('extraCards',           v('geo-extraCards').value);
+            params.set('numRounds',            v('geo-numRounds').value);
+            params.set('eclipseEnabled',       v('geo-eclipseEnabled').checked ? 'true' : 'false');
+            params.set('alliancePenalty',      v('geo-alliancePenalty').value);
+            params.set('bidPenalty',           v('geo-bidPenalty').value);
+            // Team colors from color manager — first 3 colors, hex without #
+            if (colorTeamColors.length > 0) {
+                const hexColors = colorTeamColors.slice(0, 3).map(tc => rgbToHexAdmin(tc.rgb).replace('#', ''));
+                if (hexColors[0]) params.set('color1', hexColors[0]);
+                if (hexColors[1]) params.set('color2', hexColors[1]);
+                if (hexColors[2]) params.set('color3', hexColors[2]);
+            }
+            return `${base}?${params.toString()}`;
+        }
+
+        function sendGeobridgeSettingsUpdate() {
+            const url = buildGeobridgeJoinUrl();
+            const urlInput = document.getElementById('geo-join-url');
+            if (urlInput) urlInput.value = url;
+            const status = document.getElementById('geobridge-settings-status');
+            if (status) { status.textContent = 'Link updated ✓'; setTimeout(() => { status.textContent = 'Settings saved automatically'; }, 1500); }
+        }
+
+        function copyGeobridgeLink() {
+            const url = buildGeobridgeJoinUrl();
+            navigator.clipboard.writeText(url).then(() => {
+                const status = document.getElementById('geobridge-settings-status');
+                if (status) { status.textContent = 'Link copied! ✓'; setTimeout(() => { status.textContent = 'Settings saved automatically'; }, 2000); }
             });
         }
 

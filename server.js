@@ -2933,6 +2933,10 @@ app.get('/centauri/:roomId', godotHeaders, (_req, res) => res.sendFile(path.join
 app.use('/centauri-web',      godotHeaders, express.static(path.join(__dirname, 'centauri-web')));
 app.use('/centauri-mapmaker', godotHeaders, express.static(path.join(__dirname, 'centauri-mapmaker')));
 
+// Geobridge — static React build served at /geobridge/
+app.use('/geobridge', express.static(path.join(__dirname, 'geobridge/build')));
+app.get('/geobridge/*', (_req, res) => res.sendFile(path.join(__dirname, 'geobridge/build/index.html')));
+
 // TTClub player tracking API — admin panel polls this to show who's in the room
 app.get('/ttclub-api/room/:code/players', (req, res) => {
     const code = req.params.code.toUpperCase();
@@ -2981,11 +2985,26 @@ app.use(express.static(path.join(__dirname), { index: false }));
 const server = createServer(app);
 const gameServer = new Server({ server, express: app });
 
+// Geobridge room — lightweight settings store (no real-time gameplay, just join URL generation)
+class GeobridgeRoom extends Room {
+    onCreate(options) {
+        this.settings = options.settings || {};
+        this.onMessage('updateSettings', (client, data) => {
+            this.settings = { ...this.settings, ...data };
+            this.broadcast('settingsUpdated', this.settings);
+        });
+    }
+    onJoin(client, _options) {
+        client.send('currentSettings', this.settings);
+    }
+}
+
 // Define rooms
 gameServer.define('constellation', ConstellationRoom);
 gameServer.define('golad', GoladRoom);
 gameServer.define('centauri', CentauriRoom);
 gameServer.define('admin', AdminRoom);
+gameServer.define('geobridge', GeobridgeRoom);
 
 // Start server
 const port = process.env.PORT || 2567;

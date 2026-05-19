@@ -1,0 +1,3 @@
+[submodule "geobridge"]
+	path = geobridge
+	url = https://github.com/phyto99/Geobridge.git
