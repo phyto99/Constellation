@@ -2947,7 +2947,7 @@ app.get('/geobridge/*', (_req, res) => res.sendFile(path.join(__dirname, 'geobri
 
 // C4D — 4D polytope claiming game
 // setCOEPHeaders required: admin.html loads c4d in an iframe and admin has COEP:require-corp
-app.use('/c4d/lib', express.static(path.join(__dirname, '../C4D/lib')));
+app.use('/c4d/lib', express.static(path.join(__dirname, 'c4d-lib')));
 app.use('/c4d', setCOEPHeaders, express.static(path.join(__dirname, 'c4d')));
 app.get('/c4d', setCOEPHeaders, (_req, res) => res.sendFile(path.join(__dirname, 'c4d/index.html')));
 app.get('/c4d/:roomId', setCOEPHeaders, (_req, res) => res.sendFile(path.join(__dirname, 'c4d/index.html')));
