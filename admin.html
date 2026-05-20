@@ -1448,6 +1448,15 @@
                                     <span>Fog of War <span class="sublabel">(hide reference structure)</span></span>
                                 </label>
                             </div>
+                            <div class="form-group">
+                                <label>Rounds</label>
+                                <select id="c4d-rounds" oninput="sendC4DSettingsUpdate()">
+                                    <option value="3">3 rounds</option>
+                                    <option value="5" selected>5 rounds</option>
+                                    <option value="10">10 rounds</option>
+                                    <option value="0">Unlimited</option>
+                                </select>
+                            </div>
                         </div>
                         <!-- Polytope Viewer -->
                         <div style="margin-top:12px;">
@@ -2800,6 +2809,7 @@ Based on the strategy description above, generate the complete JSON configuratio
                         victory:       document.getElementById('c4d-victory')?.value    || 'last-plane',
                         fogOfWar:      document.getElementById('c4d-fogOfWar')?.checked || false,
                         claimsPerTurn: parseInt(document.getElementById('c4d-claimsPerTurn')?.value || '1'),
+                        rounds:        parseInt(document.getElementById('c4d-rounds')?.value ?? '5'),
                         teamColors: colorTeamColors.slice(0, teamCount).map(tc => ({
                             color:       (tc.rgb[0] << 16) | (tc.rgb[1] << 8) | tc.rgb[2],
                             name:        tc.name.toLowerCase(),
@@ -2933,6 +2943,7 @@ Based on the strategy description above, generate the complete JSON configuratio
                 victory:       s.victory       || 'last-plane',
                 claimsPerTurn: s.claimsPerTurn || 1,
                 fogOfWar:      !!s.fogOfWar,
+                rounds:        s.rounds !== undefined ? s.rounds : 5,
                 teamColors:    s.teamColors    || [],
             };
         }

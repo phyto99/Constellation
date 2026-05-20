@@ -3354,6 +3354,7 @@ class C4DRoom extends BaseGameRoom {
         if (s.victory       !== undefined) this.c4dConfig.victory       = s.victory;
         if (s.fogOfWar      !== undefined) this.c4dConfig.fogOfWar      = s.fogOfWar;
         if (s.claimsPerTurn !== undefined) this.c4dConfig.claimsPerTurn = s.claimsPerTurn;
+        if (s.rounds        !== undefined) this.c4dConfig.rounds        = s.rounds;
         if (s.teamColors    !== undefined) this.c4dConfig.teamColors    = s.teamColors;
         if (s.name          !== undefined) this.c4dConfig.name          = s.name;
         if (s.polytopePath  !== undefined && s.polytopePath !== this.c4dPolytopePath) {
@@ -3382,6 +3383,7 @@ class C4DRoom extends BaseGameRoom {
             victory:       options.victory       || 'last-plane',
             fogOfWar:      options.fogOfWar      || false,
             claimsPerTurn: options.claimsPerTurn || 1,
+            rounds:        options.rounds        !== undefined ? options.rounds : 5,
             teamColors:    options.teamColors    || [],
         };
 
