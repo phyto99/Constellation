@@ -510,3 +510,48 @@ Keep all `botContext` functions **pure** (no mutations, no side effects). The se
 | Join URL is wrong | `joinPath` not returning correct URL, or `roomType` in registry points to wrong route | Check registry entry |
 | `update_settings` not received by room | `super.onCreate(options)` was not called | Call it first in `onCreate` |
 | createGame() creates wrong room type | `roomType` in registry is wrong | Must match `gameServer.define()` name in `SERVER_GAME_TYPES` |
+
+---
+
+## Constellation — pending feature notes
+
+### Randomized wormhole / black hole `req` values
+
+Currently `req` (connections needed to activate) is always `min_value` for every wormhole and black hole, set in `loadMap()` (`index.html:5738`). The range `[min_value, max_value]` encoded in the map JSON is unused.
+
+**Goal:** Roll a random `req` per special star when a game starts, synced identically to all clients.
+
+**Server** — in `start_game` handler (`server.js`), before `broadcast('game_started', ...)`:
+
+```js
+const starRequirements = [];
+if (this.gameConfig.customMap && Array.isArray(this.gameConfig.customMap.stars)) {
+    this.gameConfig.customMap.stars.forEach((s, index) => {
+        const mapType = s[2]; // 3=Wormhole, 4=BlackHole
+        if (mapType === 3 || mapType === 4) {
+            const isBlackHole = mapType === 4;
+            const minVal = s[3] !== undefined ? s[3] : 2;
+            const maxVal = s[4] !== undefined ? s[4] : (isBlackHole ? 4 : 3);
+            const req = minVal === maxVal ? minVal : Math.floor(Math.random() * (maxVal - minVal + 1)) + minVal;
+            starRequirements.push({ index, req });
+        }
+    });
+}
+// spread into broadcast:
+...(starRequirements.length > 0 && { starRequirements })
+```
+
+**Client** — in `game_started` handler (`index.html`), after `precomputeStaticData()` and before `calcScores()`:
+
+```js
+if (data.starRequirements && Array.isArray(data.starRequirements)) {
+    data.starRequirements.forEach(({ index, req }) => {
+        if (index >= 0 && index < currentGame.st.length) {
+            currentGame.st[index].req = req;
+        }
+    });
+    if (data.starRequirements.length > 0) currentGame.needsStarRedraw = true;
+}
+```
+
+**Why desync-safe:** Randomization is computed once on the server and embedded in the same `broadcast()` call received atomically by all clients. No client-side randomization. Only applies to multiplayer custom maps.

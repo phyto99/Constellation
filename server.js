@@ -437,11 +437,6 @@ class ConstellationRoom extends Room {
                             // CRITICAL: Distribute moves when started via Admin presence (isGameStart = true)
                             this.distributeMoves(true);
 
-                            // TODO (future): randomize req values for wormholes (type 3) and black holes (type 4)
-                            // at start_game time, embed as starRequirements:[{index,req}] in game_started broadcast
-                            // so all clients receive identical rolled values atomically. Client applies after loadMap().
-                            // See: customMap.stars[i] = [x, y, type, minVal, maxVal]; req = random in [minVal, maxVal].
-
                             this.broadcast('game_started', {
                                 gameState: 'playing',
                                 config: this.gameConfig,

@@ -9205,8 +9205,6 @@
                             currentGame.calculateMapBounds();
                             currentGame.setupCam();
                             currentGame.precomputeStaticData();
-                            // TODO (future): apply data.starRequirements here after precomputeStaticData()
-                            // starRequirements = [{index, req}] — override st[index].req then needsStarRedraw = true
                             currentGame.calcScores();
                             currentGame.updateUI();
                             console.log('✅ Map applied from game_started config');
