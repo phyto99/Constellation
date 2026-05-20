@@ -3336,8 +3336,12 @@ class C4DRoom extends BaseGameRoom {
     // ── BaseGameRoom interface ────────────────────────────────────────────────
     getPlayers() {
         return this.clients.map(c => ({
-            id: c.sessionId, sessionId: c.sessionId,
-            name: `Player ${(this._playerIndexMap.get(c.sessionId) ?? 0) + 1}`,
+            id:        c.sessionId,
+            sessionId: c.sessionId,
+            name:      `Player ${(this._playerIndexMap.get(c.sessionId) ?? 0) + 1}`,
+            team:      this._playerTeamMap.has(c.sessionId)
+                           ? this._playerTeamMap.get(c.sessionId)
+                           : (this._playerIndexMap.get(c.sessionId) ?? 0) % (this.c4dConfig.teamCount || 2),
         }));
     }
     getConfig() { return this.c4dConfig; }
@@ -3385,17 +3389,25 @@ class C4DRoom extends BaseGameRoom {
         this.c4dPhase         = 'waiting';
         this.c4dPolytopePath  = null;
         this._playerIndexMap  = new Map(); // sessionId → join-order index
+        this._playerTeamMap   = new Map(); // sessionId → explicit teamIndex (admin-assigned)
         this._nextPlayerIndex = 0;
 
         this._refreshMeta();
 
-        // C4D-specific presence messages (start_game)
+        // C4D-specific presence messages (start_game, assign_team)
         if (this.presence) {
             this.presence.subscribe(`room_${this.roomId}`, (msg) => {
                 if (msg?.type === 'start_game' && this.c4dPhase === 'waiting') {
                     this.c4dPhase = 'playing';
                     state.gameState = 'playing';
-                    if (msg.gs)           this.c4dGS           = msg.gs;
+                    if (msg.gs) {
+                        // Cap teamCount to actual connected players to avoid ghost teams
+                        const actualPlayers = this.clients.length;
+                        const cap = Math.max(1, Math.min(msg.gs.rules?.teamCount || 2, actualPlayers));
+                        this.c4dGS = cap !== msg.gs.rules?.teamCount
+                            ? { ...msg.gs, rules: { ...msg.gs.rules, teamCount: cap } }
+                            : msg.gs;
+                    }
                     if (msg.polytopePath) this.c4dPolytopePath = msg.polytopePath;
                     this.broadcast('game_started', {
                         config:       this.c4dConfig,
@@ -3404,9 +3416,23 @@ class C4DRoom extends BaseGameRoom {
                     });
                     this._refreshMeta();
                     this._publishAdminUpdate();
+                } else if (msg?.type === 'assign_team') {
+                    // Admin re-assigned a player to a different team
+                    const target = this.clients.find(c => c.sessionId === msg.playerId);
+                    if (target && msg.teamIndex !== undefined) {
+                        this._playerTeamMap.set(msg.playerId, msg.teamIndex);
+                        target.send('team_update', { teamIndex: msg.teamIndex });
+                        this._publishAdminUpdate();
+                    }
                 }
             });
         }
+
+        this.onMessage('w_update', (client, data) => {
+            if (typeof data.w === 'number') {
+                this.broadcast('w_update', { w: data.w }, { except: client });
+            }
+        });
 
         this.onMessage('state_sync', (client, data) => {
             if (!data.gs) return;
@@ -3431,9 +3457,10 @@ class C4DRoom extends BaseGameRoom {
     onJoin(client, options) {
         const playerIndex = this._nextPlayerIndex++;
         this._playerIndexMap.set(client.sessionId, playerIndex);
+        const assignedTeam = this._playerTeamMap.get(client.sessionId);
         client.send('game_config', {
             config:      this.c4dConfig,
-            playerIndex,
+            playerIndex: assignedTeam !== undefined ? assignedTeam : playerIndex,
             sessionId:   client.sessionId,
         });
         if (this.c4dPolytopePath) client.send('polytope_select', { path: this.c4dPolytopePath });
