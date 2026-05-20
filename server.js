@@ -3410,9 +3410,14 @@ class C4DRoom extends BaseGameRoom {
 
         this.onMessage('state_sync', (client, data) => {
             if (!data.gs) return;
-            this.c4dGS = data.gs;
+            const rawGS = data.gs;
+            this.c4dGS = this._skipEmptyTeams(rawGS);
             if (data.phase) { this.c4dPhase = data.phase; state.gameState = data.phase; this._refreshMeta(); }
             this.broadcast('state_update', { gs: this.c4dGS, phase: this.c4dPhase }, { except: client });
+            // Notify sender too if a team was skipped so their local GS stays in sync
+            if (this.c4dGS !== rawGS) {
+                client.send('state_update', { gs: this.c4dGS, phase: this.c4dPhase });
+            }
         });
 
         this.onMessage('request_state', (client) => {
@@ -3438,9 +3443,43 @@ class C4DRoom extends BaseGameRoom {
     }
 
     onLeave(client, consented) {
+        const playerIndex = this._playerIndexMap.get(client.sessionId);
         this._playerIndexMap.delete(client.sessionId);
+
+        // If a game is running and the departed player's team is now the active team with no
+        // remaining players, skip to the next occupied team and broadcast the updated state.
+        if (this.c4dGS && this.c4dPhase === 'playing' && playerIndex !== undefined) {
+            const skipped = this._skipEmptyTeams(this.c4dGS);
+            if (skipped !== this.c4dGS) {
+                this.c4dGS = skipped;
+                this.broadcast('state_update', { gs: this.c4dGS, phase: this.c4dPhase });
+            }
+        }
+
         this._refreshMeta();
         super.onLeave(client, consented); // publishes admin_update
+    }
+
+    _teamPlayerCount(teamIdx) {
+        const teamCount = this.c4dGS?.rules?.teamCount || 2;
+        let n = 0;
+        for (const pi of this._playerIndexMap.values()) {
+            if (pi % teamCount === teamIdx) n++;
+        }
+        return n;
+    }
+
+    _skipEmptyTeams(gs) {
+        if (!gs || this.c4dPhase !== 'playing') return gs;
+        const teamCount = gs.rules?.teamCount || 2;
+        let active = gs.activeTeam;
+        for (let checked = 0; checked < teamCount; checked++) {
+            if (this._teamPlayerCount(active) > 0) break;
+            active = (active + 1) % teamCount;
+            if (checked === teamCount - 1) return gs; // all teams empty — don't modify
+        }
+        if (active === gs.activeTeam) return gs; // no skip needed
+        return { ...gs, activeTeam: active, claimsThisTurn: 0, phase: 'claim', turn: (gs.turn || 0) + 1 };
     }
 
     _refreshMeta() {
