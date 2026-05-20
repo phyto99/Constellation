@@ -1430,8 +1430,9 @@
                             <div class="form-group">
                                 <label>Victory Condition</label>
                                 <select id="c4d-victory" oninput="sendC4DSettingsUpdate()">
-                                    <option value="last-plane">Last Plane — most score after all planes</option>
-                                    <option value="first-cell">First Cell — first complete 3D cell wins</option>
+                                    <option value="rounds" selected>Rounds — most score after N rounds</option>
+                                    <option value="last-plane" style="color:#999">Last Plane — most score after all planes</option>
+                                    <option value="first-cell" style="color:#999">First Cell — first complete 3D cell wins</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -1451,9 +1452,9 @@
                             <div class="form-group">
                                 <label style="display:flex;align-items:center;justify-content:space-between;">
                                     <span>Rounds</span>
-                                    <span id="c4d-rounds-label" style="font-size:12px;font-weight:bold;color:#e0e0e0;font-family:monospace;">5</span>
+                                    <span id="c4d-rounds-label" style="font-size:12px;font-weight:bold;color:#666;font-family:monospace;">5</span>
                                 </label>
-                                <input type="range" id="c4d-rounds" min="3" max="50" value="5" step="1"
+                                <input type="range" id="c4d-rounds" min="1" max="50" value="5" step="1"
                                        oninput="onC4DRoundsSlider()"
                                        style="width:100%;margin:4px 0;">
                                 <div id="c4d-rounds-desc" style="font-size:11px;color:#666;margin-top:2px;min-height:14px;"></div>
@@ -2807,7 +2808,7 @@ Based on the strategy description above, generate the complete JSON configuratio
                         wMode:         document.getElementById('c4d-wMode')?.value      || 'oscillate',
                         ownerMode:     document.getElementById('c4d-ownerMode')?.value  || 'permanent',
                         scoring:       C4D_SCORING_PRESETS[scoringKey]                  || [1, 3, 9, 27],
-                        victory:       document.getElementById('c4d-victory')?.value    || 'last-plane',
+                        victory:       document.getElementById('c4d-victory')?.value    || 'rounds',
                         fogOfWar:      document.getElementById('c4d-fogOfWar')?.checked || false,
                         claimsPerTurn: parseInt(document.getElementById('c4d-claimsPerTurn')?.value || '1'),
                         rounds:        parseInt(document.getElementById('c4d-rounds')?.value ?? '5'),
@@ -2897,36 +2898,42 @@ Based on the strategy description above, generate the complete JSON configuratio
             const claims      = parseInt(document.getElementById('c4d-claimsPerTurn')?.value || '1');
             // Each claim grabs 2 vertices (edge endpoints); total turns before board is full
             const totalTurns  = Math.ceil(c4dPolyStats.vertCount / (2 * claims));
-            return Math.max(3, Math.ceil(totalTurns / teams));
+            return Math.max(1, Math.ceil(totalTurns / teams));
         }
 
         function updateC4DRoundsSlider() {
-            const slider  = document.getElementById('c4d-rounds');
-            const label   = document.getElementById('c4d-rounds-label');
-            const desc    = document.getElementById('c4d-rounds-desc');
+            const slider = document.getElementById('c4d-rounds');
+            const label  = document.getElementById('c4d-rounds-label');
+            const desc   = document.getElementById('c4d-rounds-desc');
             if (!slider) return;
-            const maxR    = calcC4DMaxRounds();
-            slider.max    = maxR;
-            // Clamp current value to new max
+            const maxR = calcC4DMaxRounds();
+            slider.max = maxR;
             if (parseInt(slider.value) > maxR) slider.value = maxR;
-            const v = parseInt(slider.value);
-            label.textContent = v === maxR
-                ? `${v} (board full)`
-                : String(v);
-            if (c4dPolyStats) {
-                const teams  = Math.max(1, colorTeamColors?.length || 2);
-                const claims = parseInt(document.getElementById('c4d-claimsPerTurn')?.value || '1');
-                desc.textContent = v === maxR
-                    ? `Max — ~${c4dPolyStats.vertCount} vertices, ${teams} teams × ${claims} claim/turn`
-                    : `${v} rounds · ${v * teams} total turns`;
+            const v     = parseInt(slider.value);
+            const teams = Math.max(1, colorTeamColors?.length || 2);
+            const wMode = document.getElementById('c4d-wMode')?.value || 'oscillate';
+            label.textContent = v === maxR ? `${v} (board full)` : String(v);
+
+            // Estimated time (same formula as in-game session estimate)
+            const secBase  = 10;
+            const secExtra = wMode === 'vote' ? 15 : wMode === 'player-choice' ? 10 : 0;
+            const secTurn  = secBase + secExtra;
+            if (v === 0) {
+                desc.innerHTML = 'Duration: <b>open-ended</b>';
             } else {
-                desc.textContent = v === parseInt(slider.max) ? 'Max rounds for selected map' : '';
+                const totalTurns = v * teams;
+                const totalSec   = totalTurns * secTurn;
+                const mins = Math.floor(totalSec / 60), secs = totalSec % 60;
+                const timeStr = totalSec < 60 ? `~${totalSec}s` : secs === 0 ? `~${mins} min` : `~${mins}m ${secs}s`;
+                const boardInfo = v === maxR && c4dPolyStats ? ` · board full (~${c4dPolyStats.vertCount}v)` : ` · ${totalTurns} turns`;
+                desc.innerHTML = `Est. <b style="color:#555">${timeStr}</b><span style="color:#777">${boardInfo}</span>`;
             }
         }
 
         function onC4DRoundsSlider() {
             updateC4DRoundsSlider();
-            sendC4DSettingsUpdate();
+            updateC4DSequentialHint();
+            sendSettingsUpdate(); // debounced — sliders must not call immediate
         }
 
         function _gcd(a, b) { return b === 0 ? a : _gcd(b, a % b); }
@@ -2980,7 +2987,7 @@ Based on the strategy description above, generate the complete JSON configuratio
                 wMode:         s.wMode         || 'oscillate',
                 ownerMode:     s.ownerMode     || 'permanent',
                 scoring:       s.scoring       || [1, 3, 9, 27],
-                victory:       s.victory       || 'last-plane',
+                victory:       s.victory       || 'rounds',
                 claimsPerTurn: s.claimsPerTurn || 1,
                 fogOfWar:      !!s.fogOfWar,
                 rounds:        s.rounds !== undefined ? s.rounds : 5,
