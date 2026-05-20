@@ -1449,13 +1449,14 @@
                                 </label>
                             </div>
                             <div class="form-group">
-                                <label>Rounds</label>
-                                <select id="c4d-rounds" oninput="sendC4DSettingsUpdate()">
-                                    <option value="3">3 rounds</option>
-                                    <option value="5" selected>5 rounds</option>
-                                    <option value="10">10 rounds</option>
-                                    <option value="0">Unlimited</option>
-                                </select>
+                                <label style="display:flex;align-items:center;justify-content:space-between;">
+                                    <span>Rounds</span>
+                                    <span id="c4d-rounds-label" style="font-size:12px;font-weight:bold;color:#e0e0e0;font-family:monospace;">5</span>
+                                </label>
+                                <input type="range" id="c4d-rounds" min="3" max="50" value="5" step="1"
+                                       oninput="onC4DRoundsSlider()"
+                                       style="width:100%;margin:4px 0;">
+                                <div id="c4d-rounds-desc" style="font-size:11px;color:#666;margin-top:2px;min-height:14px;"></div>
                             </div>
                         </div>
                         <!-- Polytope Viewer -->
@@ -2888,6 +2889,45 @@ Based on the strategy description above, generate the complete JSON configuratio
 
         // ── C4D ───────────────────────────────────────────────────────────────────
         let c4dWPlaneCount = 0;
+        let c4dPolyStats = null; // { vertCount, edgeCount, wPlanes }
+
+        function calcC4DMaxRounds() {
+            if (!c4dPolyStats || !c4dPolyStats.vertCount) return 50;
+            const teams       = Math.max(1, colorTeamColors?.length || 2);
+            const claims      = parseInt(document.getElementById('c4d-claimsPerTurn')?.value || '1');
+            // Each claim grabs 2 vertices (edge endpoints); total turns before board is full
+            const totalTurns  = Math.ceil(c4dPolyStats.vertCount / (2 * claims));
+            return Math.max(3, Math.ceil(totalTurns / teams));
+        }
+
+        function updateC4DRoundsSlider() {
+            const slider  = document.getElementById('c4d-rounds');
+            const label   = document.getElementById('c4d-rounds-label');
+            const desc    = document.getElementById('c4d-rounds-desc');
+            if (!slider) return;
+            const maxR    = calcC4DMaxRounds();
+            slider.max    = maxR;
+            // Clamp current value to new max
+            if (parseInt(slider.value) > maxR) slider.value = maxR;
+            const v = parseInt(slider.value);
+            label.textContent = v === maxR
+                ? `${v} (board full)`
+                : String(v);
+            if (c4dPolyStats) {
+                const teams  = Math.max(1, colorTeamColors?.length || 2);
+                const claims = parseInt(document.getElementById('c4d-claimsPerTurn')?.value || '1');
+                desc.textContent = v === maxR
+                    ? `Max — ~${c4dPolyStats.vertCount} vertices, ${teams} teams × ${claims} claim/turn`
+                    : `${v} rounds · ${v * teams} total turns`;
+            } else {
+                desc.textContent = v === parseInt(slider.max) ? 'Max rounds for selected map' : '';
+            }
+        }
+
+        function onC4DRoundsSlider() {
+            updateC4DRoundsSlider();
+            sendC4DSettingsUpdate();
+        }
 
         function _gcd(a, b) { return b === 0 ? a : _gcd(b, a % b); }
 
@@ -2917,7 +2957,7 @@ Based on the strategy description above, generate the complete JSON configuratio
         };
 
         // Thin wrapper kept so existing oninput="sendC4DSettingsUpdate()" HTML still works.
-        function sendC4DSettingsUpdate() { sendSettingsUpdateImmediate(); updateC4DSequentialHint(); }
+        function sendC4DSettingsUpdate() { sendSettingsUpdateImmediate(); updateC4DSequentialHint(); updateC4DRoundsSlider(); }
 
         function loadC4DAdminViewer() {
             const iframe = document.getElementById('c4d-admin-viewer');
@@ -3114,6 +3154,15 @@ Based on the strategy description above, generate the complete JSON configuratio
             if (event.data.type === 'c4d_wplane_count') {
                 c4dWPlaneCount = event.data.count || 0;
                 updateC4DSequentialHint();
+            }
+
+            if (event.data.type === 'c4d_poly_stats') {
+                c4dPolyStats = {
+                    vertCount: event.data.vertCount || 0,
+                    edgeCount: event.data.edgeCount || 0,
+                    wPlanes:   event.data.wPlanes   || 0,
+                };
+                updateC4DRoundsSlider();
             }
 
             if (event.data.type === 'c4d_game_ready') {
@@ -3844,6 +3893,7 @@ Based on the strategy description above, generate the complete JSON configuratio
             refreshAIBotTeamDropdowns();
             sendSettingsUpdate();
             updateC4DSequentialHint();
+            updateC4DRoundsSlider();
         }
 
         function syncPlayersToIframe() {
