@@ -2616,12 +2616,14 @@ class CentauriRoom extends Room {
             return;
         }
         const peerId = this.nextPeerId++;
-        const teamId = this.players.length % this.gameConfig.teamColors.length;
+        const isAdminCreator = !!(options?.adminCreator);
+        const teamId = isAdminCreator ? null : this.players.length % this.gameConfig.teamColors.length;
         const player = {
             sessionId: client.sessionId,
             peerId,
             teamId,
             name: options?.name || `Player ${peerId}`,
+            isAdminCreator,
         };
         client.userData = player;
         this.players.push(player);
@@ -2658,7 +2660,7 @@ class CentauriRoom extends Room {
     _publishAdminUpdate() {
         this.presence.publish('admin_update', {
             roomId:      this.roomId,
-            players:     this.players.map(p => ({
+            players:     this.players.filter(p => !p.isAdminCreator).map(p => ({
                 id: p.sessionId, sessionId: p.sessionId, name: p.name, team: p.teamId, peerId: p.peerId,
             })),
             state:       this.metadata?.state || 'waiting',
@@ -2718,7 +2720,11 @@ class AdminRoom extends Room {
                 if (!this.presence) {
                     throw new Error('Presence not available');
                 }
-                await this.presence.publish(`room_${data.roomId}`, { type: 'start_game' });
+                await this.presence.publish(`room_${data.roomId}`, {
+                    type:         'start_game',
+                    gs:           data.gs           || null,
+                    polytopePath: data.polytopePath || null,
+                });
                 client.send('game_started', { success: true, roomId: data.roomId });
             } catch (error) {
                 console.error('Error starting game:', error);
@@ -2832,12 +2838,10 @@ class AdminRoom extends Room {
 
     async updateRoomsList() {
         try {
-            const [constRooms, goladRooms, centauriRooms] = await Promise.all([
-                matchMaker.query({ name: 'constellation' }),
-                matchMaker.query({ name: 'golad' }),
-                matchMaker.query({ name: 'centauri' })
-            ]);
-            const rooms = [...constRooms, ...goladRooms, ...centauriRooms];
+            const results = await Promise.all(
+                Object.keys(SERVER_GAME_TYPES).map(name => matchMaker.query({ name }))
+            );
+            const rooms = results.flat();
             const roomsData = rooms.map(room => {
                 const roomState = this.roomStates.get(room.roomId);
                 return {
@@ -2852,7 +2856,7 @@ class AdminRoom extends Room {
             });
 
             this.broadcast('rooms_update', roomsData);
-            console.log(`✓ Rooms list updated: ${rooms.length} rooms (${constRooms.length} constellation, ${goladRooms.length} golad, ${centauriRooms.length} centauri)`);
+            console.log(`✓ Rooms list updated: ${rooms.length} rooms`);
         } catch (error) {
             console.error('Error updating rooms list:', error);
         }
@@ -2937,6 +2941,12 @@ app.use('/centauri-mapmaker', godotHeaders, express.static(path.join(__dirname, 
 app.use('/geobridge', express.static(path.join(__dirname, 'geobridge/build')));
 app.get('/geobridge/*', (_req, res) => res.sendFile(path.join(__dirname, 'geobridge/build/index.html')));
 
+// C4D — 4D polytope claiming game
+app.use('/c4d/lib', express.static(path.join(__dirname, '../C4D/lib')));
+app.use('/c4d', express.static(path.join(__dirname, 'c4d')));
+app.get('/c4d', (_req, res) => res.sendFile(path.join(__dirname, 'c4d/index.html')));
+app.get('/c4d/:roomId', (_req, res) => res.sendFile(path.join(__dirname, 'c4d/index.html')));
+
 // TTClub player tracking API — admin panel polls this to show who's in the room
 app.get('/ttclub-api/room/:code/players', (req, res) => {
     const code = req.params.code.toUpperCase();
@@ -2985,26 +2995,479 @@ app.use(express.static(path.join(__dirname), { index: false }));
 const server = createServer(app);
 const gameServer = new Server({ server, express: app });
 
-// Geobridge room — lightweight settings store (no real-time gameplay, just join URL generation)
-class GeobridgeRoom extends Room {
-    onCreate(options) {
-        this.settings = options.settings || {};
-        this.onMessage('updateSettings', (client, data) => {
-            this.settings = { ...this.settings, ...data };
-            this.broadcast('settingsUpdated', this.settings);
+// ── BaseGameRoom ──────────────────────────────────────────────────────────────
+// All game rooms extend this.  Subclass only needs to implement:
+//   getPlayers()    → [{id, sessionId, name, ...}]
+//   getConfig()     → current settings object
+//   getPhase()      → string phase name  ('waiting' | 'playing' | ...)
+//   applySettings(s) → mutate internal config from admin update_settings message
+//
+// Then call super.onCreate(options) and super.onJoin/onLeave.
+class BaseGameRoom extends Room {
+    // ── Subclass interface ────────────────────────────────────────────────────
+    getPlayers()      { return this.clients.map(c => ({ id: c.sessionId, sessionId: c.sessionId })); }
+    getConfig()       { return {}; }
+    getPhase()        { return this.state?.gameState || 'waiting'; }
+    applySettings(_s) {}
+
+    // ── Base lifecycle ────────────────────────────────────────────────────────
+    onCreate(_options) {
+        this._setupBasePresence();
+    }
+
+    onJoin(_client, _options) {
+        this._publishAdminUpdate();
+    }
+
+    onLeave(_client, _consented) {
+        this._publishAdminUpdate();
+    }
+
+    // ── Presence handlers shared by all rooms ─────────────────────────────────
+    // Handles: force_dispose, update_settings (delegates to applySettings)
+    // Subclass can call this.presence.subscribe() again for game-specific messages.
+    _setupBasePresence() {
+        if (!this.presence) return;
+        this.presence.subscribe(`room_${this.roomId}`, (msg) => {
+            if (!msg?.type) return;
+            if (msg.type === 'force_dispose') {
+                this.disconnect();
+            } else if (msg.type === 'update_settings' && msg.settings) {
+                this.applySettings(msg.settings);
+                this.broadcast('settings_update', { config: this.getConfig() });
+                this._publishAdminUpdate();
+            }
         });
     }
-    onJoin(client, _options) {
-        client.send('currentSettings', this.settings);
+
+    // ── Admin sync ────────────────────────────────────────────────────────────
+    _publishAdminUpdate() {
+        if (!this.presence) return;
+        this.presence.publish('admin_update', {
+            roomId:      this.roomId,
+            players:     this.getPlayers(),
+            state:       this.getPhase(),
+            playerCount: this.clients.length,
+            metadata:    this.metadata || {},
+            config:      this.getConfig(),
+        });
     }
 }
 
-// Define rooms
-gameServer.define('constellation', ConstellationRoom);
-gameServer.define('golad', GoladRoom);
-gameServer.define('centauri', CentauriRoom);
+// ── Geobridge room ────────────────────────────────────────────────────────────
+class GeobridgeRoom extends BaseGameRoom {
+    // ── BaseGameRoom interface ────────────────────────────────────────────────
+    getPlayers() {
+        return this.playerSlots
+            .map((sessionId, i) => sessionId ? {
+                id: sessionId, sessionId,
+                name: `Player ${i + 1}`,
+                connected: this.geoState?.players[i]?.connected ?? true,
+            } : null)
+            .filter(Boolean);
+    }
+    getConfig()  { return this.settings; }
+    getPhase()   { return this.geoState?.phase || 'lobby'; }
+    applySettings(s) { Object.assign(this.settings, s); }
+
+    onCreate(options) {
+        super.onCreate(options);
+        this.maxClients = options.maxPlayers || 3;
+        this.autoDispose = false;
+        this.settings = {
+            timerDuration: 10, biddingTimerDuration: 20, playTimerDuration: 20,
+            cardsToPlay: 8, extraCards: 2, numRounds: 3,
+            eclipseEnabled: true, alliancePenaltyAmount: 5, bidPenaltyAmount: 20,
+            ...(options.settings || {}),
+            // Accept flat options from admin panel (adapter sends top-level keys)
+            ...(options.timerDuration        !== undefined ? { timerDuration:        options.timerDuration }        : {}),
+            ...(options.biddingTimerDuration !== undefined ? { biddingTimerDuration: options.biddingTimerDuration } : {}),
+            ...(options.playTimerDuration    !== undefined ? { playTimerDuration:    options.playTimerDuration }    : {}),
+            ...(options.cardsToPlay          !== undefined ? { cardsToPlay:          options.cardsToPlay }          : {}),
+            ...(options.extraCards           !== undefined ? { extraCards:           options.extraCards }           : {}),
+            ...(options.numRounds            !== undefined ? { numRounds:            options.numRounds }            : {}),
+            ...(options.eclipseEnabled       !== undefined ? { eclipseEnabled:       options.eclipseEnabled }       : {}),
+            ...(options.alliancePenaltyAmount!== undefined ? { alliancePenaltyAmount:options.alliancePenaltyAmount}: {}),
+            ...(options.bidPenaltyAmount     !== undefined ? { bidPenaltyAmount:     options.bidPenaltyAmount }     : {}),
+        };
+        this.playerSlots = [null, null, null]; // slot index → sessionId
+        this._handResolved = false;
+        this.geoState = {
+            phase: 'lobby',
+            players: [null, null, null],
+            currentPlayer: 0,
+            playerCountries: { player1: [], player2: [], player3: [] },
+            claimedCountries: { player1: [], player2: [], player3: [] },
+            biddingCurrentBidderIdx: 0,
+            biddingHighBid: null,
+            biddingConsecPasses: 0,
+            biddingWinner: null,
+            biddingLog: [],
+            eclipseRegion: 'Europe',
+            playedCards: {},
+            playCurrentPlayer: 0,
+            playRoundWinner: null,
+            playRoundsCompleted: 0,
+            currentRound: 1,
+            handsWon: { player1: 0, player2: 0, player3: 0 },
+            alliancesSent: {},
+            alliancePenalties: { player1: 0, player2: 0, player3: 0 },
+            bidPenalties: { player1: 0, player2: 0, player3: 0 },
+        };
+        this.onMessage('selectCountry', this._onSelectCountry.bind(this));
+        this.onMessage('bid',           this._onBid.bind(this));
+        this.onMessage('pass',          this._onPass.bind(this));
+        this.onMessage('playCard',      this._onPlayCard.bind(this));
+        this.onMessage('resolveHand',   this._onResolveHand.bind(this));
+        this.onMessage('alliance',      this._onAlliance.bind(this));
+        this.setMetadata({ gameType: 'geobridge', sessionCode: options.sessionCode || null });
+    }
+
+    onJoin(client, options) {
+        const slot = this.playerSlots.findIndex(s => s === null);
+        if (slot === -1) { client.leave(); return; }
+        this.playerSlots[slot] = client.sessionId;
+        this.geoState.players[slot] = { sessionId: client.sessionId, connected: true };
+        console.log(`Geobridge: slot ${slot} joined (${client.sessionId})`);
+        client.send('joined', { playerIdx: slot, state: this.geoState, settings: this.settings });
+        this.broadcast('stateUpdate', { state: this.geoState, settings: this.settings }, { except: client });
+        if (this.playerSlots.every(s => s !== null)) {
+            this.geoState.phase = 'country_selection';
+            this._broadcast();
+        }
+        super.onJoin(client, options); // publishes admin_update
+    }
+
+    onLeave(client, consented) {
+        const slot = this.playerSlots.indexOf(client.sessionId);
+        if (slot >= 0 && this.geoState.players[slot]) this.geoState.players[slot].connected = false;
+        this._broadcast();
+        super.onLeave(client, consented); // publishes admin_update
+    }
+
+    _slot(client)    { return this.playerSlots.indexOf(client.sessionId); }
+    _broadcast()     { this.broadcast('stateUpdate', { state: this.geoState, settings: this.settings }); }
+    _key(i)          { return `player${i + 1}`; }
+
+    _onSelectCountry(client, { countryCode }) {
+        const idx = this._slot(client);
+        if (idx < 0 || this.geoState.phase !== 'country_selection') return;
+        if (idx !== this.geoState.currentPlayer) return;
+        const taken = new Set(Object.values(this.geoState.playerCountries).flat());
+        if (taken.has(countryCode)) return;
+        this.geoState.playerCountries[this._key(idx)].push(countryCode);
+        const needed = (this.settings.cardsToPlay || 8) + (this.settings.extraCards || 2);
+        const allDone = [0,1,2].every(i => this.geoState.playerCountries[this._key(i)].length >= needed);
+        if (allDone) {
+            this._startBidding();
+        } else {
+            this.geoState.currentPlayer = (idx + 1) % 3;
+        }
+        this._broadcast();
+    }
+
+    _startBidding() {
+        this.geoState.phase = 'bidding';
+        this.geoState.biddingCurrentBidderIdx = 0;
+        this.geoState.biddingHighBid = null;
+        this.geoState.biddingConsecPasses = 0;
+        this.geoState.biddingWinner = null;
+        this.geoState.biddingLog = [];
+        this.geoState.eclipseRegion = 'Europe';
+    }
+
+    _onBid(client, { amount, category, eclipseRegion }) {
+        const idx = this._slot(client);
+        if (idx < 0 || this.geoState.phase !== 'bidding') return;
+        if (idx !== this.geoState.biddingCurrentBidderIdx) return;
+        const min = this.geoState.biddingHighBid ? this.geoState.biddingHighBid.amount + 1 : 1;
+        const amt = Math.max(amount || 1, min);
+        const cat = category || 'gdp';
+        this.geoState.biddingHighBid = { teamIdx: idx, amount: amt, category: cat };
+        this.geoState.biddingConsecPasses = 0;
+        if (eclipseRegion) this.geoState.eclipseRegion = eclipseRegion;
+        this.geoState.biddingLog.push({ teamIdx: idx, type: 'bid', amount: amt, category: cat, eclipseRegion: this.geoState.eclipseRegion });
+        this.geoState.biddingCurrentBidderIdx = (idx + 1) % 3;
+        this._broadcast();
+    }
+
+    _onPass(client) {
+        const idx = this._slot(client);
+        if (idx < 0 || this.geoState.phase !== 'bidding') return;
+        if (idx !== this.geoState.biddingCurrentBidderIdx) return;
+        this.geoState.biddingConsecPasses++;
+        this.geoState.biddingLog.push({ teamIdx: idx, type: 'pass' });
+        const hasBid = this.geoState.biddingHighBid !== null;
+        const passes = this.geoState.biddingConsecPasses;
+        const ended = hasBid ? passes >= 2 : passes >= 3;
+        if (ended) {
+            if (!hasBid) {
+                this.geoState.biddingWinner = { teamIdx: -1, amount: 0, category: '' };
+                this.geoState.biddingLog.push({ teamIdx: -1, type: 'nowin' });
+            } else {
+                const w = this.geoState.biddingHighBid;
+                this.geoState.biddingWinner = { ...w };
+                this.geoState.biddingLog.push({ teamIdx: w.teamIdx, type: 'win', amount: w.amount, category: w.category });
+            }
+            this._broadcast();
+            setTimeout(() => { this._startPlay(); this._broadcast(); }, 3500);
+        } else {
+            this.geoState.biddingCurrentBidderIdx = (idx + 1) % 3;
+            this._broadcast();
+        }
+    }
+
+    _startPlay() {
+        const w = this.geoState.biddingWinner;
+        this.geoState.phase = 'play';
+        this.geoState.playCurrentPlayer = (w && w.teamIdx >= 0) ? w.teamIdx : 0;
+        this.geoState.playedCards = {};
+        this.geoState.playRoundWinner = null;
+        this.geoState.playRoundsCompleted = 0;
+        this.geoState.handsWon = { player1: 0, player2: 0, player3: 0 };
+        this._handResolved = false;
+    }
+
+    _onPlayCard(client, { countryCode }) {
+        const idx = this._slot(client);
+        if (idx < 0 || this.geoState.phase !== 'play') return;
+        if (idx !== this.geoState.playCurrentPlayer) return;
+        const key = this._key(idx);
+        if (!this.geoState.playerCountries[key].includes(countryCode)) return;
+        if (this.geoState.playedCards[idx] !== undefined) return;
+        this.geoState.playerCountries[key] = this.geoState.playerCountries[key].filter(c => c !== countryCode);
+        this.geoState.claimedCountries[key].push(countryCode);
+        this.geoState.playedCards[idx] = countryCode;
+        const allIn = [0,1,2].every(i => this.geoState.playedCards[i] !== undefined);
+        if (allIn) {
+            this.geoState.phase = 'resolving';
+            this._handResolved = false;
+        } else {
+            this.geoState.playCurrentPlayer = (idx + 1) % 3;
+        }
+        this._broadcast();
+    }
+
+    _onResolveHand(client, { winnerIdx }) {
+        if (this.geoState.phase !== 'resolving' || this._handResolved) return;
+        this._handResolved = true;
+        this.geoState.playRoundWinner = winnerIdx;
+        const key = this._key(winnerIdx);
+        if (key in this.geoState.handsWon) this.geoState.handsWon[key]++;
+        this.geoState.playRoundsCompleted++;
+        this._broadcast();
+        // Advance after clients show the 5-second winner overlay
+        setTimeout(() => { this._advanceHand(); }, 5500);
+    }
+
+    _advanceHand() {
+        const done = this.geoState.playRoundsCompleted >= (this.settings.cardsToPlay || 8);
+        if (done) {
+            const w = this.geoState.biddingWinner;
+            if (w && w.teamIdx >= 0) {
+                const wk = this._key(w.teamIdx);
+                if ((this.geoState.handsWon[wk] || 0) < w.amount) {
+                    this.geoState.bidPenalties[wk] = (this.geoState.bidPenalties[wk] || 0) + (this.settings.bidPenaltyAmount || 20);
+                }
+            }
+            if (this.geoState.currentRound < (this.settings.numRounds || 3)) {
+                this.geoState.currentRound++;
+                this._resetRound();
+            } else {
+                this.geoState.phase = 'game_over';
+            }
+        } else {
+            this._handResolved = false;
+            this.geoState.phase = 'play';
+            this.geoState.playedCards = {};
+            this.geoState.playRoundWinner = null;
+            const w = this.geoState.biddingWinner;
+            this.geoState.playCurrentPlayer = (w && w.teamIdx >= 0) ? w.teamIdx : 0;
+        }
+        this._broadcast();
+    }
+
+    _resetRound() {
+        this.geoState.phase = 'country_selection';
+        this.geoState.currentPlayer = 0;
+        this.geoState.playerCountries = { player1: [], player2: [], player3: [] };
+        this.geoState.biddingHighBid = null;
+        this.geoState.biddingWinner = null;
+        this.geoState.biddingLog = [];
+        this.geoState.handsWon = { player1: 0, player2: 0, player3: 0 };
+        this.geoState.playedCards = {};
+        this.geoState.playRoundWinner = null;
+        this.geoState.playRoundsCompleted = 0;
+        this._handResolved = false;
+    }
+
+    _onAlliance(client, { action, targetIdx }) {
+        const idx = this._slot(client);
+        if (idx < 0) return;
+        const k = `${idx}-${targetIdx}`, rk = `${targetIdx}-${idx}`;
+        if (action === 'send') {
+            this.geoState.alliancesSent[k] = true;
+        } else if (action === 'rescind') {
+            delete this.geoState.alliancesSent[k];
+        } else if (action === 'accept') {
+            this.geoState.alliancesSent[k] = true;
+            this.geoState.alliancesSent[rk] = true;
+            const pen = this.settings.alliancePenaltyAmount || 5;
+            this.geoState.alliancePenalties[this._key(idx)]       = (this.geoState.alliancePenalties[this._key(idx)]       || 0) + pen;
+            this.geoState.alliancePenalties[this._key(targetIdx)] = (this.geoState.alliancePenalties[this._key(targetIdx)] || 0) + pen;
+        } else if (action === 'break') {
+            delete this.geoState.alliancesSent[k];
+            delete this.geoState.alliancesSent[rk];
+            const pen = 10;
+            this.geoState.alliancePenalties[this._key(idx)]       = (this.geoState.alliancePenalties[this._key(idx)]       || 0) + pen;
+            this.geoState.alliancePenalties[this._key(targetIdx)] = (this.geoState.alliancePenalties[this._key(targetIdx)] || 0) + pen;
+        }
+        this._broadcast();
+    }
+}
+
+// ─── C4D Room ─────────────────────────────────────────────────────────────────
+class C4DRoom extends BaseGameRoom {
+    // ── BaseGameRoom interface ────────────────────────────────────────────────
+    getPlayers() {
+        return this.clients.map(c => ({
+            id: c.sessionId, sessionId: c.sessionId,
+            name: `Player ${(this._playerIndexMap.get(c.sessionId) ?? 0) + 1}`,
+        }));
+    }
+    getConfig() { return this.c4dConfig; }
+    getPhase()  { return this.c4dPhase; }
+    applySettings(s) {
+        if (s.teamCount     !== undefined) this.c4dConfig.teamCount     = s.teamCount;
+        if (s.wMode         !== undefined) this.c4dConfig.wMode         = s.wMode;
+        if (s.ownerMode     !== undefined) this.c4dConfig.ownerMode     = s.ownerMode;
+        if (s.scoring       !== undefined) this.c4dConfig.scoring       = s.scoring;
+        if (s.victory       !== undefined) this.c4dConfig.victory       = s.victory;
+        if (s.fogOfWar      !== undefined) this.c4dConfig.fogOfWar      = s.fogOfWar;
+        if (s.claimsPerTurn !== undefined) this.c4dConfig.claimsPerTurn = s.claimsPerTurn;
+        if (s.teamColors    !== undefined) this.c4dConfig.teamColors    = s.teamColors;
+        if (s.name          !== undefined) this.c4dConfig.name          = s.name;
+        if (s.polytopePath  !== undefined && s.polytopePath !== this.c4dPolytopePath) {
+            this.c4dPolytopePath = s.polytopePath;
+            this.broadcast('polytope_select', { path: s.polytopePath });
+        }
+        this._refreshMeta();
+    }
+
+    onCreate(options) {
+        super.onCreate(options); // registers force_dispose + update_settings handlers
+        this.autoDispose = false;
+        this.maxClients  = options.maxPlayers || 20;
+
+        const state = new RoomState();
+        state.gameState = 'waiting';
+        this.setState(state);
+
+        this.c4dConfig = {
+            name:          options.name || options.roomName || `C4D ${this.roomId.substring(0, 6)}`,
+            gameType:      'C4D',
+            teamCount:     options.teamCount     || 2,
+            wMode:         options.wMode         || 'oscillate',
+            ownerMode:     options.ownerMode     || 'permanent',
+            scoring:       options.scoring       || [1, 3, 9, 27],
+            victory:       options.victory       || 'last-plane',
+            fogOfWar:      options.fogOfWar      || false,
+            claimsPerTurn: options.claimsPerTurn || 1,
+            teamColors:    options.teamColors    || [],
+        };
+
+        this.c4dGS            = null;
+        this.c4dPhase         = 'waiting';
+        this.c4dPolytopePath  = null;
+        this._playerIndexMap  = new Map(); // sessionId → join-order index
+        this._nextPlayerIndex = 0;
+
+        this._refreshMeta();
+
+        // C4D-specific presence messages (start_game)
+        if (this.presence) {
+            this.presence.subscribe(`room_${this.roomId}`, (msg) => {
+                if (msg?.type === 'start_game' && this.c4dPhase === 'waiting') {
+                    this.c4dPhase = 'playing';
+                    state.gameState = 'playing';
+                    if (msg.gs)           this.c4dGS           = msg.gs;
+                    if (msg.polytopePath) this.c4dPolytopePath = msg.polytopePath;
+                    this.broadcast('game_started', {
+                        config:       this.c4dConfig,
+                        gs:           this.c4dGS,
+                        polytopePath: this.c4dPolytopePath,
+                    });
+                    this._refreshMeta();
+                    this._publishAdminUpdate();
+                }
+            });
+        }
+
+        this.onMessage('state_sync', (client, data) => {
+            if (!data.gs) return;
+            this.c4dGS = data.gs;
+            if (data.phase) { this.c4dPhase = data.phase; state.gameState = data.phase; this._refreshMeta(); }
+            this.broadcast('state_update', { gs: this.c4dGS, phase: this.c4dPhase }, { except: client });
+        });
+
+        this.onMessage('request_state', (client) => {
+            const playerIndex = this._playerIndexMap.get(client.sessionId) ?? 0;
+            client.send('game_config', { config: this.c4dConfig, playerIndex, sessionId: client.sessionId });
+            if (this.c4dPolytopePath) client.send('polytope_select', { path: this.c4dPolytopePath });
+            if (this.c4dGS) client.send('state_update', { gs: this.c4dGS, phase: this.c4dPhase });
+        });
+    }
+
+    onJoin(client, options) {
+        const playerIndex = this._nextPlayerIndex++;
+        this._playerIndexMap.set(client.sessionId, playerIndex);
+        client.send('game_config', {
+            config:      this.c4dConfig,
+            playerIndex,
+            sessionId:   client.sessionId,
+        });
+        if (this.c4dPolytopePath) client.send('polytope_select', { path: this.c4dPolytopePath });
+        if (this.c4dGS) client.send('state_update', { gs: this.c4dGS, phase: this.c4dPhase });
+        this._refreshMeta();
+        super.onJoin(client, options); // publishes admin_update
+    }
+
+    onLeave(client, consented) {
+        this._playerIndexMap.delete(client.sessionId);
+        this._refreshMeta();
+        super.onLeave(client, consented); // publishes admin_update
+    }
+
+    _refreshMeta() {
+        this.setMetadata({
+            name:       this.c4dConfig.name,
+            type:       'C4D',
+            gameState:  this.c4dPhase,
+            createdAt:  this.metadata?.createdAt || new Date().toISOString(),
+            maxPlayers: this.maxClients,
+            clients:    this.clients.length,
+        });
+    }
+}
+
+// ── Room registry ─────────────────────────────────────────────────────────────
+// To add a new game: create a Room class above, then add one entry here.
+// filterBy restricts matchmaking to clients with matching metadata keys.
+const SERVER_GAME_TYPES = {
+    constellation: { Room: ConstellationRoom },
+    golad:         { Room: GoladRoom },
+    centauri:      { Room: CentauriRoom },
+    geobridge:     { Room: GeobridgeRoom, filterBy: ['sessionCode'] },
+    c4d:           { Room: C4DRoom },
+};
+
+// AdminRoom is infrastructure, not a player-facing game — define it separately.
 gameServer.define('admin', AdminRoom);
-gameServer.define('geobridge', GeobridgeRoom);
+
+for (const [name, { Room, filterBy }] of Object.entries(SERVER_GAME_TYPES)) {
+    const def = gameServer.define(name, Room);
+    if (filterBy) def.filterBy(filterBy);
+}
 
 // Start server
 const port = process.env.PORT || 2567;

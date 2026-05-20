@@ -2138,18 +2138,13 @@ Based on the strategy description above, generate the complete JSON configuratio
             document.getElementById('scenario-name').textContent = `Game ${selectedRoomId.substring(0, 8)}${suffix}`;
         }
 
-        // Legacy shim — still called from selectRoom() when metadata is available
-        // before ADMIN_SETTINGS_ADAPTERS are reachable (early in page load).
+        // Returns the join URL for a room given its metadata, without relying on
+        // currentRoomGameType so it works correctly when rendering the room list.
         function getJoinUrl(roomId, metadata) {
             const type = metadata?.type || '';
-            if (!type || !ADMIN_SETTINGS_ADAPTERS) {
-                const base = `${location.protocol}//${location.host}`;
-                if (type === 'GOLAD')    return `${base}/golad/${roomId}`;
-                if (type === 'Centauri') return `${base}/centauri/${roomId}`;
-                if (type === 'C4D')      return `${base}/c4d/${roomId}`;
-                return `${base}/game/${roomId}`;
-            }
-            return getGameJoinUrl(roomId);
+            const schema = type && GAME_REGISTRY[type];
+            if (schema) return schema.joinPath(roomId, {}, getRoomRuntime(roomId));
+            return `${location.protocol}//${location.host}/game/${roomId}`;
         }
 
         function getServerUrl() {
@@ -2430,7 +2425,7 @@ Based on the strategy description above, generate the complete JSON configuratio
             const roomData = latestRoomsData.find(r => r.roomId === roomId);
 
             // Detect game type and switch UI panels
-            const detectedType = roomData?.metadata?.type || 'Constellation';
+            const detectedType = roomData?.metadata?.type || getRoomRuntime(roomId).gameType || 'Constellation';
             updateGameTypeUI(detectedType);
 
             if (!roomData) {
@@ -3199,25 +3194,28 @@ Based on the strategy description above, generate the complete JSON configuratio
                 const adapter  = ADMIN_SETTINGS_ADAPTERS[gameType];
                 const settings = adapter ? adapter.readSettings() : {};
 
+                const isCentauri = gameType === 'Centauri';
+
                 const roomOptions = {
                     name:       gameName,
                     gameType,
                     maxPlayers: schema.maxPlayers || 20,
-                    isAdmin:    true,
+                    ...(!isCentauri && { isAdmin: true }),
+                    ...(isCentauri  && { adminCreator: true }),
                     ...settings,
                     ...(aiBots.length ? { aiBots } : {}),
                 };
 
                 const room = await client.create(schema.roomType, roomOptions);
                 console.log('✓ Room created:', room.roomId);
-                room.leave(); // admin doesn't need to stay joined as a client
+                if (!isCentauri) room.leave(); // admin doesn't need to stay joined as a client
 
                 // Clear the game name input
                 document.getElementById('game-name').value = '';
 
-                // Select the newly created room — force correct panel since metadata isn't in latestRoomsData yet
+                // Store game type so selectRoom can detect it before latestRoomsData is populated
+                getRoomRuntime(room.roomId).gameType = gameType;
                 selectRoom(room.roomId);
-                updateGameTypeUI(gameType);
 
                 // Request updated rooms list to get the new room data
                 if (currentRoom) {
