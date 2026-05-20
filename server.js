@@ -3397,16 +3397,19 @@ class C4DRoom extends BaseGameRoom {
         // C4D-specific presence messages (start_game, assign_team)
         if (this.presence) {
             this.presence.subscribe(`room_${this.roomId}`, (msg) => {
-                if (msg?.type === 'start_game' && this.c4dPhase === 'waiting') {
+                if (msg?.type === 'start_game' && this.c4dPhase !== 'playing') {
                     this.c4dPhase = 'playing';
                     state.gameState = 'playing';
                     if (msg.gs) {
                         // Cap teamCount to actual connected players to avoid ghost teams
                         const actualPlayers = this.clients.length;
                         const cap = Math.max(1, Math.min(msg.gs.rules?.teamCount || 2, actualPlayers));
-                        this.c4dGS = cap !== msg.gs.rules?.teamCount
-                            ? { ...msg.gs, rules: { ...msg.gs.rules, teamCount: cap } }
-                            : msg.gs;
+                        if (cap !== (msg.gs.rules?.teamCount || 2)) {
+                            this.c4dGS = { ...msg.gs, rules: { ...msg.gs.rules, teamCount: cap } };
+                            this.c4dConfig = { ...this.c4dConfig, teamCount: cap };
+                        } else {
+                            this.c4dGS = msg.gs;
+                        }
                     }
                     if (msg.polytopePath) this.c4dPolytopePath = msg.polytopePath;
                     this.broadcast('game_started', {
