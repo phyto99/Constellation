@@ -437,11 +437,26 @@ class ConstellationRoom extends Room {
                             // CRITICAL: Distribute moves when started via Admin presence (isGameStart = true)
                             this.distributeMoves(true);
 
-                            this.broadcast('game_started', { 
-                                gameState: 'playing', 
-                                config: this.gameConfig, 
-                                currentRound: 1, 
-                                botPlayers: this.getBotPlayerIds()
+                            const starRequirements = [];
+                            if (this.gameConfig.customMap && Array.isArray(this.gameConfig.customMap.stars)) {
+                                this.gameConfig.customMap.stars.forEach((s, index) => {
+                                    const mapType = s[2];
+                                    if (mapType === 3 || mapType === 4) {
+                                        const isBlackHole = mapType === 4;
+                                        const minVal = s[3] !== undefined ? s[3] : 2;
+                                        const maxVal = s[4] !== undefined ? s[4] : (isBlackHole ? 4 : 3);
+                                        const req = minVal === maxVal ? minVal : Math.floor(Math.random() * (maxVal - minVal + 1)) + minVal;
+                                        starRequirements.push({ index, req });
+                                    }
+                                });
+                            }
+
+                            this.broadcast('game_started', {
+                                gameState: 'playing',
+                                config: this.gameConfig,
+                                currentRound: 1,
+                                botPlayers: this.getBotPlayerIds(),
+                                ...(starRequirements.length > 0 && { starRequirements })
                             });
 
                             // Start the Game Loop
