@@ -2946,10 +2946,11 @@ app.use('/geobridge', express.static(path.join(__dirname, 'geobridge/build')));
 app.get('/geobridge/*', (_req, res) => res.sendFile(path.join(__dirname, 'geobridge/build/index.html')));
 
 // C4D — 4D polytope claiming game
+// setCOEPHeaders required: admin.html loads c4d in an iframe and admin has COEP:require-corp
 app.use('/c4d/lib', express.static(path.join(__dirname, '../C4D/lib')));
-app.use('/c4d', express.static(path.join(__dirname, 'c4d')));
-app.get('/c4d', (_req, res) => res.sendFile(path.join(__dirname, 'c4d/index.html')));
-app.get('/c4d/:roomId', (_req, res) => res.sendFile(path.join(__dirname, 'c4d/index.html')));
+app.use('/c4d', setCOEPHeaders, express.static(path.join(__dirname, 'c4d')));
+app.get('/c4d', setCOEPHeaders, (_req, res) => res.sendFile(path.join(__dirname, 'c4d/index.html')));
+app.get('/c4d/:roomId', setCOEPHeaders, (_req, res) => res.sendFile(path.join(__dirname, 'c4d/index.html')));
 
 // TTClub player tracking API — admin panel polls this to show who's in the room
 app.get('/ttclub-api/room/:code/players', (req, res) => {
