@@ -2542,6 +2542,7 @@ class GoladRoom extends Room {
 class CentauriRoom extends Room {
     onCreate(options) {
         console.log('CentauriRoom created:', options.name || options.roomId);
+        this.autoDispose = false;
         this.players   = [];   // { sessionId, peerId, teamId, name }
         this.nextPeerId = 1;
         this.gameConfig = {
@@ -2613,17 +2614,16 @@ class CentauriRoom extends Room {
     onJoin(client, options) {
         if (options?.isAdmin) {
             client.send('settings_update', { config: this.gameConfig });
+            this._publishAdminUpdate();
             return;
         }
         const peerId = this.nextPeerId++;
-        const isAdminCreator = !!(options?.adminCreator);
-        const teamId = isAdminCreator ? null : this.players.length % this.gameConfig.teamColors.length;
+        const teamId = this.players.length % this.gameConfig.teamColors.length;
         const player = {
             sessionId: client.sessionId,
             peerId,
             teamId,
             name: options?.name || `Player ${peerId}`,
-            isAdminCreator,
         };
         client.userData = player;
         this.players.push(player);
@@ -2660,7 +2660,7 @@ class CentauriRoom extends Room {
     _publishAdminUpdate() {
         this.presence.publish('admin_update', {
             roomId:      this.roomId,
-            players:     this.players.filter(p => !p.isAdminCreator).map(p => ({
+            players:     this.players.map(p => ({
                 id: p.sessionId, sessionId: p.sessionId, name: p.name, team: p.teamId, peerId: p.peerId,
             })),
             state:       this.metadata?.state || 'waiting',

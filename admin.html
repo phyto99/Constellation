@@ -3194,21 +3194,18 @@ Based on the strategy description above, generate the complete JSON configuratio
                 const adapter  = ADMIN_SETTINGS_ADAPTERS[gameType];
                 const settings = adapter ? adapter.readSettings() : {};
 
-                const isCentauri = gameType === 'Centauri';
-
                 const roomOptions = {
                     name:       gameName,
                     gameType,
                     maxPlayers: schema.maxPlayers || 20,
-                    ...(!isCentauri && { isAdmin: true }),
-                    ...(isCentauri  && { adminCreator: true }),
+                    isAdmin:    true,
                     ...settings,
                     ...(aiBots.length ? { aiBots } : {}),
                 };
 
                 const room = await client.create(schema.roomType, roomOptions);
                 console.log('✓ Room created:', room.roomId);
-                if (!isCentauri) room.leave(); // admin doesn't need to stay joined as a client
+                room.leave(); // admin doesn't need to stay joined as a client
 
                 // Clear the game name input
                 document.getElementById('game-name').value = '';
