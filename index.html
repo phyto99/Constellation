@@ -9205,15 +9205,8 @@
                             currentGame.calculateMapBounds();
                             currentGame.setupCam();
                             currentGame.precomputeStaticData();
-                            // Apply server-randomized req values for wormholes/black holes
-                            if (data.starRequirements && Array.isArray(data.starRequirements)) {
-                                data.starRequirements.forEach(({ index, req }) => {
-                                    if (index >= 0 && index < currentGame.st.length) {
-                                        currentGame.st[index].req = req;
-                                    }
-                                });
-                                if (data.starRequirements.length > 0) currentGame.needsStarRedraw = true;
-                            }
+                            // TODO (future): apply data.starRequirements here after precomputeStaticData()
+                            // starRequirements = [{index, req}] — override st[index].req then needsStarRedraw = true
                             currentGame.calcScores();
                             currentGame.updateUI();
                             console.log('✅ Map applied from game_started config');
