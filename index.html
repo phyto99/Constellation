@@ -6580,46 +6580,32 @@
                 // Recalculate only changed teams
                 this.changedTeams.forEach(teamId => {
                     if (teamId >= 0 && teamId < this.tms.length) {
-                        this.scoreCache[teamId] = this.calculateTeamScore(teamId);
-                        this.tms[teamId].s = this.scoreCache[teamId];
-                    }
-                });
+                        const result = this.calculateTeamScore(teamId);
+                        this.scoreCache[teamId] = result.score;
+                        this.tms[teamId].s = result.score;
+                        if (teamId < this.teamScoreData.length) {
+                            const data = this.teamScoreData[teamId];
+                            data.distance = result.score;
+                            data.count = result.count;
 
-                // Update team score data for changed teams - use cached scores to avoid line iteration
-                this.changedTeams.forEach(teamId => {
-                    if (teamId >= 0 && teamId < this.teamScoreData.length) {
-                        const data = this.teamScoreData[teamId];
-
-                        // Use cached score instead of recalculating from lines
-                        data.distance = this.scoreCache[teamId];
-
-                        // Calculate destruction score
-                        let destructionScore = 0;
-                        for (const star of this.st) {
-                            if (star.destroyedBy === teamId) {
-                                destructionScore += star.destroyedScore;
+                            let destructionScore = 0;
+                            for (const star of this.st) {
+                                if (star.destroyedBy === teamId) destructionScore += star.destroyedScore;
                             }
-                        }
-                        for (const line of this.ln) {
-                            if (line.destroyedBy === teamId) {
-                                destructionScore += line.destroyedScore;
+                            for (const line of this.ln) {
+                                if (line.destroyedBy === teamId) destructionScore += line.destroyedScore;
                             }
+                            data.destruction = destructionScore;
+
+                            const hqConnectionScore = this.getHQConnectionScore(teamId);
+                            data.hqDistance = hqConnectionScore;
+                            data.finalScore = Math.round(data.count * MULTIPLIERS.count + data.distance * MULTIPLIERS.distance + data.hqDistance * MULTIPLIERS.hq + data.destruction * MULTIPLIERS.destruction);
+                            data.count = Math.round(data.count);
+                            data.distance = Math.round(data.distance);
+                            data.hqDistance = Math.round(data.hqDistance);
+                            data.destruction = Math.round(data.destruction);
+                            data.steals = this.tms[teamId].st;
                         }
-                        data.destruction = destructionScore;
-
-                        // Estimate count based on distance (rough approximation for UI)
-                        data.count = Math.round(data.distance / (this.G * 10)); // Rough estimate
-
-                        const hqConnectionScore = this.getHQConnectionScore(teamId);
-                        data.hqDistance = hqConnectionScore;
-                        data.finalScore = Math.round(data.count * MULTIPLIERS.count + data.distance * MULTIPLIERS.distance + data.hqDistance * MULTIPLIERS.hq + data.destruction * MULTIPLIERS.destruction);
-                        data.count = Math.round(data.count);
-                        data.distance = Math.round(data.distance);
-                        data.hqDistance = Math.round(data.hqDistance);
-                        data.destruction = Math.round(data.destruction);
-                        
-                        // Sync steals from team object to ensure consistency
-                        data.steals = this.tms[teamId].st;
                     }
                 });
 
@@ -6627,33 +6613,28 @@
             }
 
             calculateTeamScore(teamId) {
-                let score = 0;
-                // Use for loop for better performance
+                let score = 0, count = 0;
                 for (let i = 0; i < this.lineData.length; i++) {
                     const l = this.lineData[i];
                     const a = this.st[l.f], b = this.st[l.t];
                     if (this.connected(a, b)) {
                         const team = a.ty === T.B ? b.tm : a.tm;
                         if (team === teamId) {
-                            const dist = Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2) * this.G;
-                            score += dist;
+                            score += Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2) * this.G;
+                            count++;
                         }
                     }
                 }
 
                 // Add destruction scores
                 for (const star of this.st) {
-                    if (star.destroyedBy === teamId) {
-                        score += star.destroyedScore;
-                    }
+                    if (star.destroyedBy === teamId) score += star.destroyedScore;
                 }
                 for (const line of this.ln) {
-                    if (line.destroyedBy === teamId) {
-                        score += line.destroyedScore;
-                    }
+                    if (line.destroyedBy === teamId) score += line.destroyedScore;
                 }
 
-                return score;
+                return { score, count };
             }
 
             // Ultra-fast incremental score update - only recalculate affected lines
