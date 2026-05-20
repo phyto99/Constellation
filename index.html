@@ -8930,11 +8930,14 @@
                     if (delta.stars && delta.stars.length > 0) {
                         const hasHQ = delta.stars.some(s => s.hq);
                         const hasTeamChange = delta.stars.some(s => s.tm !== undefined);
-                        
+
                         if (hasHQ || hasTeamChange) {
                             currentGame.deferredNetworkAnalysis = true;
                             currentGame.deferredScoreUpdate = true;
                         }
+                        // HQ placements on wormhole/cluster stars leave stale draw calls in the
+                        // partial-redraw Graphics buffer. Force a full redraw to clear them.
+                        if (hasHQ) currentGame.needsStarRedraw = true;
                     }
                     
                     // Special checks
@@ -9587,18 +9590,32 @@
 
             handleGameEnd(data) {
                 if (currentGame) {
+                    // Apply authoritative final star state from server to correct any missed state_changed messages.
+                    if (data.stars && currentGame.st) {
+                        data.stars.forEach((s, i) => {
+                            if (i < currentGame.st.length) Object.assign(currentGame.st[i], s);
+                        });
+                    }
+
                     // Set game over state
                     currentGame.go = true;
-                    
+
                     // If it's a wormhole victory, set the winner
                     if (data.reason === 'wormhole' && typeof data.winner === 'number') {
                         currentGame.wormholeWinner = data.winner;
                     }
-                    
-                    // Force UI update to show game over state
+
+                    // Force full star redraw so the reconciled state is visible immediately.
+                    currentGame.needsStarRedraw = true;
+                    currentGame.needsStaticLineRedraw = true;
+
+                    // updateUI() skips round text in multiplayer, so set it directly here.
+                    const roundEl = document.getElementById('round');
+                    if (roundEl) roundEl.textContent = 'Game Over';
+
                     currentGame.needsFullUIUpdate = true;
                     currentGame.updateUI();
-                    
+
                     console.log(`🎉 Game ended - Winner: Team ${data.winner}, Reason: ${data.reason}`);
                 }
             }

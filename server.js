@@ -829,7 +829,8 @@ class ConstellationRoom extends Room {
                         this.broadcast('game_ended', {
                             finalRound: this.state.game.round,
                             winningTeam: winningTeam,
-                            scores: scores
+                            scores: scores,
+                            stars: this.state.game.stars.map(s => ({ tm: s.tm, hq: s.hq, pr: s.pr, destroyed: s.destroyed }))
                         });
                         clearInterval(this.gameLoopInterval);
                         return;
@@ -987,10 +988,11 @@ class ConstellationRoom extends Room {
                         state: 'ended'
                     });
                     
-                    this.broadcast('game_ended', { 
-                        winner: teamIndex, 
+                    this.broadcast('game_ended', {
+                        winner: teamIndex,
                         reason: 'wormhole',
-                        message: `Team ${teamIndex} wins by connecting wormholes!`
+                        message: `Team ${teamIndex} wins by connecting wormholes!`,
+                        stars: this.state.game.stars.map(s => ({ tm: s.tm, hq: s.hq, pr: s.pr, destroyed: s.destroyed }))
                     });
                 } else {
                     // Only check blackhole if wormhole didn't trigger
@@ -1097,10 +1099,11 @@ class ConstellationRoom extends Room {
                         state: 'ended'
                     });
                     
-                    this.broadcast('game_ended', { 
-                        winner: teamIndex, 
+                    this.broadcast('game_ended', {
+                        winner: teamIndex,
                         reason: 'wormhole',
-                        message: `Team ${teamIndex} wins by connecting wormholes!`
+                        message: `Team ${teamIndex} wins by connecting wormholes!`,
+                        stars: this.state.game.stars.map(s => ({ tm: s.tm, hq: s.hq, pr: s.pr, destroyed: s.destroyed }))
                     });
                 } else {
                     // Only check blackhole if wormhole didn't trigger
@@ -1187,10 +1190,11 @@ class ConstellationRoom extends Room {
                         state: 'ended'
                     });
                     
-                    this.broadcast('game_ended', { 
-                        winner: teamIndex, 
+                    this.broadcast('game_ended', {
+                        winner: teamIndex,
                         reason: 'wormhole',
-                        message: `Team ${teamIndex} wins by connecting wormholes!`
+                        message: `Team ${teamIndex} wins by connecting wormholes!`,
+                        stars: this.state.game.stars.map(s => ({ tm: s.tm, hq: s.hq, pr: s.pr, destroyed: s.destroyed }))
                     });
                 } else {
                     // Only check blackhole if wormhole didn't trigger
