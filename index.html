@@ -5963,8 +5963,12 @@
                 this.d.a = this.d.m = false;
             }
             onWheel(e) {
-                e.preventDefault(); const f = e.deltaY > 0 ? 0.9 : 1.1, nz = Math.max(0.2, Math.min(3, this.cam.z * f));
-                if (nz === this.cam.z) return; const mx = e.clientX, my = e.clientY, wx = (mx - this.cam.x) / this.cam.z, wy = (my - this.cam.y) / this.cam.z;
+                e.preventDefault();
+                const px = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
+                const f = Math.pow(0.999, px);
+                const nz = Math.max(0.2, Math.min(3, this.cam.z * f));
+                if (nz === this.cam.z) return;
+                const mx = e.clientX, my = e.clientY, wx = (mx - this.cam.x) / this.cam.z, wy = (my - this.cam.y) / this.cam.z;
                 this.cam.z = nz; this.cam.x = mx - wx * nz; this.cam.y = my - wy * nz; this.updateCam();
             }
             zoomIn() {
