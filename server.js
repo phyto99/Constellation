@@ -2557,6 +2557,7 @@ class CentauriRoom extends Room {
             fuelRecovery:    options.fuelRecovery    ?? 2.0,
             tickSpeed:       options.tickSpeed       ?? 1.0,
             sessionDuration: options.sessionDuration ?? 120.0,
+            teamMoves:       options.teamMoves       ?? 300,
             mapJson:         options.mapJson         ?? null,
             teamColors: options.teamColors ?? [
                 { color: 0x00ffff, name: 'cyan'    },
@@ -2576,6 +2577,7 @@ class CentauriRoom extends Room {
                 if (s.fuelRecovery     !== undefined) this.gameConfig.fuelRecovery     = s.fuelRecovery;
                 if (s.tickSpeed        !== undefined) this.gameConfig.tickSpeed        = s.tickSpeed;
                 if (s.sessionDuration  !== undefined) this.gameConfig.sessionDuration  = s.sessionDuration;
+                if (s.teamMoves        !== undefined) this.gameConfig.teamMoves        = s.teamMoves;
                 if (s.mapJson          !== undefined) this.gameConfig.mapJson          = s.mapJson;
                 if (s.teamColors       !== undefined) this.gameConfig.teamColors       = s.teamColors;
                 this.broadcast('settings_update', { config: this.gameConfig });
