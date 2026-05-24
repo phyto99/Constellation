@@ -2581,6 +2581,7 @@ class CentauriRoom extends Room {
                 if (s.mapJson          !== undefined) this.gameConfig.mapJson          = s.mapJson;
                 if (s.teamColors       !== undefined) this.gameConfig.teamColors       = s.teamColors;
                 this.broadcast('settings_update', { config: this.gameConfig });
+                this._publishAdminUpdate();
             }
             if (data.type === 'start_game') {
                 this.setMetadata({ name: this.gameConfig.name, type: 'Centauri', state: 'playing' });
