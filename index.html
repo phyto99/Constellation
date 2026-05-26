@@ -5793,6 +5793,13 @@
                     initialZoom: 1
                 };
 
+                // Tracks whether the last input event was a touch (updated per-interaction).
+                // Initial guess: coarse pointer = touch device, fine pointer = mouse.
+                // Overridden by actual event type so hybrid devices (Surface, etc.) are handled correctly.
+                const mql = window.matchMedia('(pointer: coarse)');
+                const hasFine = window.matchMedia('(pointer: fine)').matches;
+                this._lastWasTouch = mql.matches && !hasFine;
+
                 // Add global mouse up listener to catch mouse up events outside the canvas
                 document.addEventListener('mouseup', (e) => {
                     if (this.d.a) {
@@ -5812,6 +5819,7 @@
 
             onTouchStart(e) {
                 e.preventDefault();
+                this._lastWasTouch = true;
                 const touches = Array.from(e.touches);
                 this.touchState.touches = touches;
 
@@ -5918,6 +5926,8 @@
 
             onDown(e) {
                 if (e.button && e.button !== 0 && e.button !== 2) return;
+                // Mouse events always override to non-touch mode (handles hybrid devices)
+                if (e.type === 'mousedown') this._lastWasTouch = false;
                 const x = e.clientX || e.pageX, y = e.clientY || e.pageY;
                 this.d = { a: true, sx: x, sy: y, cx: this.cam.x, cy: this.cam.y, m: false, b: e.button };
             }
@@ -5958,7 +5968,7 @@
                             });
                         }
                     }
-                    else if (!this.p && !this.go) { const s = this.findStar({ x: wx, y: wy }); if (s !== -1) this.clickStar(s); }
+                    else if (!this.p && !this.go) { const s = this._lastWasTouch ? this.findStarTouch({ x: wx, y: wy }) : this.findStar({ x: wx, y: wy }); if (s !== -1) this.clickStar(s); }
                 }
                 this.d.a = this.d.m = false;
             }
@@ -6139,12 +6149,39 @@
                             for (const i of candidates) {
                                 const s = this.st[i];
                                 const deltaX = pos.x - s.x * this.G, deltaY = pos.y - s.y * this.G;
-                                if (deltaX * deltaX + deltaY * deltaY <= this.starClickRadius[i]) return i;
+                                if (deltaX * deltaX + deltaY * deltaY < this.starClickRadius[i]) return i;
                             }
                         }
                     }
                 }
                 return -1;
+            }
+
+            // Touch-optimised star finder: expands hit area to screen-space radius,
+            // then returns the nearest star within that radius (not just first found).
+            // 44px screen radius matches Apple/Material minimum touch target guidance.
+            findStarTouch(pos) {
+                const screenRadius = 44;
+                const worldRadius = screenRadius / this.cam.z;
+                const worldRadiusSq = worldRadius * worldRadius;
+                const gx = Math.floor(pos.x / this.gridSize);
+                const gy = Math.floor(pos.y / this.gridSize);
+                const cells = Math.ceil(worldRadius / this.gridSize) + 1;
+                let best = -1, bestDistSq = worldRadiusSq;
+                for (let dx = -cells; dx <= cells; dx++) {
+                    for (let dy = -cells; dy <= cells; dy++) {
+                        const candidates = this.spatialGrid.get(`${gx + dx},${gy + dy}`);
+                        if (candidates) {
+                            for (const i of candidates) {
+                                const s = this.st[i];
+                                const deltaX = pos.x - s.x * this.G, deltaY = pos.y - s.y * this.G;
+                                const distSq = deltaX * deltaX + deltaY * deltaY;
+                                if (distSq < bestDistSq) { bestDistSq = distSq; best = i; }
+                            }
+                        }
+                    }
+                }
+                return best;
             }
 
             clickStar(i) {
