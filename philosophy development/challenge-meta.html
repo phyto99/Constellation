@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Challenge Meta-System — Constellation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.4}
+nav{position:sticky;top:0;z-index:100;background:#fff;border-bottom:2px solid #000;display:flex;align-items:stretch;padding:0 12px;gap:0;overflow-x:auto}
+.logo{font-size:10px;letter-spacing:2px;font-weight:700;padding:10px 14px 10px 0;border-right:1px solid #ccc;margin-right:4px;white-space:nowrap;align-self:center;text-transform:uppercase}
+.tab{padding:10px 12px;cursor:pointer;font-size:10px;letter-spacing:1px;color:#666;border-bottom:3px solid transparent;transition:all .1s;white-space:nowrap;font-weight:400;text-transform:uppercase}
+.tab:hover{color:#000}.tab.active{color:#000;border-bottom-color:#000;font-weight:700}
+.panel{display:none;padding:18px 20px}.panel.active{display:block}
+h2{font-size:10px;letter-spacing:2px;font-weight:700;text-transform:uppercase;border-bottom:1px solid #000;padding-bottom:5px;margin-bottom:12px}
+h3{font-size:11px;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px}
+h4{font-size:10px;font-weight:700;color:#333;margin-bottom:4px;letter-spacing:1px;text-transform:uppercase}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.card{border:1px solid #ccc;padding:12px;background:#fafafa}
+.card-dk{border:1px solid #000;padding:12px;background:#000;color:#fff}
+.sep{border:none;border-top:1px solid #ddd;margin:10px 0}
+table.t{width:100%;border-collapse:collapse;font-size:11px}
+table.t th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 7px;border-bottom:2px solid #000;text-align:left;background:#f0f0f0}
+table.t td{padding:4px 7px;border-bottom:1px solid #e8e8e8;vertical-align:top}
+table.t tr:hover td{background:#f5f5f5}
+.inset{background:#f0f0f0;border-left:3px solid #000;padding:8px 10px;font-size:11px;line-height:1.7;margin:8px 0}
+.warn{background:#f8f8f8;border:1px dashed #000;padding:8px 10px;font-size:10px;line-height:1.7;margin:8px 0}
+.badge{display:inline-block;padding:1px 7px;font-size:9px;letter-spacing:1px;text-transform:uppercase;border:1px solid #000;font-weight:700}
+.badge-inv{background:#000;color:#fff}
+.badge-sm{padding:0 4px;font-size:8px}
+button.btn{background:#fff;border:1px solid #000;color:#000;padding:4px 10px;cursor:pointer;font-size:10px;font-family:Arial,sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+button.btn:hover{background:#000;color:#fff}
+button.btn.active{background:#000;color:#fff}
+input[type=range]{accent-color:#000}
+.srow{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.srow label{width:110px;font-size:10px;color:#555;flex-shrink:0}
+.sval{width:48px;text-align:right;font-size:10px;font-weight:700}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.bar-lbl{width:80px;font-size:10px;color:#555;flex-shrink:0}
+.bar-track{flex:1;height:14px;background:#eee;border:1px solid #ccc;position:relative;overflow:hidden}
+.bar-fill{height:100%;background:#000;position:absolute;transition:width .3s}
+.bar-val{width:40px;text-align:right;font-size:10px}
+/* TEMPLATE BROWSER */
+.mode-btn{padding:6px 12px;border:1px solid #ccc;cursor:pointer;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:#fff;font-family:Arial,sans-serif}
+.mode-btn:hover{border-color:#000}.mode-btn.sel{background:#000;color:#fff;border-color:#000}
+.tmpl-card{border:1px solid #ddd;padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:border-color .1s}
+.tmpl-card:hover{border-color:#888}.tmpl-card.sel{border-color:#000;border-width:2px;background:#fafafa}
+.tmpl-detail{display:none;padding:12px;border:2px solid #000;background:#f8f8f8;margin-top:10px}
+.tmpl-detail.show{display:block}
+/* GENERATOR */
+#gen-terminal{background:#000;color:#0f0;font-family:'Courier New',monospace;font-size:11px;padding:16px;min-height:280px;border:2px solid #000;position:relative;overflow:hidden}
+#gen-terminal .line{margin-bottom:3px;opacity:0;transition:opacity .1s}
+#gen-terminal .line.show{opacity:1}
+#gen-codename{font-size:28px;font-weight:700;letter-spacing:6px;color:#fff;margin:14px 0 4px;text-align:center;display:none}
+#gen-codename.show{display:block}
+#gen-output{display:none;margin-top:14px}
+#gen-output.show{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+/* SPECTRUM */
+.spectrum-track{position:relative;height:48px;background:linear-gradient(90deg,#000 0%,#555 30%,#aaa 60%,#ddd 80%,#f0f0f0 100%);margin:10px 0;border:1px solid #000}
+.spectrum-handle{position:absolute;top:-4px;width:6px;height:56px;background:#fff;border:2px solid #000;cursor:pointer;transform:translateX(-3px);transition:left .2s}
+.spectrum-zones{display:flex;font-size:9px;letter-spacing:1px;text-transform:uppercase}
+.spectrum-zone{flex:1;text-align:center;padding:4px 2px;border-right:1px solid #ddd;font-weight:700}
+.spectrum-zone:last-child{border-right:none}
+.outcome-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #eee;font-size:11px}
+.outcome-icon{width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;border:1px solid #000;flex-shrink:0}
+/* INVARIANTS */
+.inv-card{border:1px solid #000;padding:10px 14px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start}
+.inv-num{font-size:28px;font-weight:700;opacity:.15;flex-shrink:0;line-height:1}
+/* INTERFACE */
+.code-block{background:#f0f0f0;border:1px solid #ccc;padding:12px;font-family:'Courier New',monospace;font-size:10px;line-height:1.7;overflow-x:auto;white-space:pre}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:#fff}::-webkit-scrollbar-thumb{background:#ccc}
+@media(max-width:760px){.grid2,.grid3{grid-template-columns:1fr}}
+.asterisk{font-size:9px;color:#888;line-height:1.6;margin-top:6px}
+</style>
+</head>
+<body>
+<nav>
+  <span class="logo">Challenge Meta-System</span>
+  <div class="tab active" onclick="showTab('compiler',this)">Compiler</div>
+  <div class="tab" onclick="showTab('templates',this)">Templates</div>
+  <div class="tab" onclick="showTab('generator',this)">Generator</div>
+  <div class="tab" onclick="showTab('spectrum',this)">Spectrum</div>
+  <div class="tab" onclick="showTab('interface',this)">Interface</div>
+</nav>
+
+<!-- COMPILER -->
+<div id="panel-compiler" class="panel active">
+  <h2>The Challenge Compiler</h2>
+  <div class="warn" style="margin-bottom:14px">
+    <strong>Core distinction:</strong> A challenge is not a configuration. A configuration is the <em>output</em> of a challenge definition.
+    The entropy engine selects a cognitive mode. The challenge meta-system selects a specific constraint within that mode,
+    then resolves it to parameters, then generates a narrative. These are separate responsibilities.
+  </div>
+
+  <div style="overflow-x:auto;margin-bottom:16px">
+    <svg id="compilerSvg" width="960" height="100" style="display:block;margin:0 auto"></svg>
+  </div>
+
+  <h3>Three Invariants</h3>
+  <div style="margin-bottom:16px">
+    <div class="inv-card">
+      <div class="inv-num">①</div>
+      <div>
+        <h4>Cognitive Isolation</h4>
+        <div style="font-size:11px;line-height:1.8">Each challenge targets exactly one cognitive variable. A challenge that simultaneously rewards territory AND HQ networks creates confounded signal — you cannot tell what the player learned. Each template has a single <code>mode</code> field. No exceptions.</div>
+      </div>
+    </div>
+    <div class="inv-card">
+      <div class="inv-num">②</div>
+      <div>
+        <h4>Difficulty–Challenge Independence</h4>
+        <div style="font-size:11px;line-height:1.8">Difficulty scales without changing the cognitive target. A SPATIAL challenge with 8 moves is harder than one with 20 moves — but it is still SPATIAL. Scaling the move count is a <em>free axis</em>. Scaling the distance multiplier changes the cognitive target — it is a <em>locked axis</em>. The resolver is only allowed to touch free axes.</div>
+      </div>
+    </div>
+    <div class="inv-card">
+      <div class="inv-num">③</div>
+      <div>
+        <h4>Signal Purity</h4>
+        <div style="font-size:11px;line-height:1.8">The challenge must generate interpretable behavioral data. If two different strategies produce identical behavioral signals, the challenge is underspecified. Every template explicitly declares which signals it generates and why those signals are valid under that template's constraints.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h4>Compiler Layers</h4>
+      <table class="t">
+        <tr><th>#</th><th>Layer</th><th>Input</th><th>Output</th><th>Single Responsibility</th></tr>
+        <tr><td>1</td><td>Intent</td><td>entropy engine mode + player profile</td><td>target cognitive variable</td><td>What are we training?</td></tr>
+        <tr><td>2</td><td>Template Selector</td><td>intent + player session history</td><td>ranked template list</td><td>Which challenge structure fits?</td></tr>
+        <tr><td>3</td><td>Difficulty Calibrator</td><td>player Elo + recent outcomes</td><td>difficulty target 0.0–1.0 per free axis</td><td>How hard should it be?</td></tr>
+        <tr><td>4</td><td>Parameter Resolver</td><td>template + difficulty target</td><td>concrete config delta</td><td>What are the actual numbers?</td></tr>
+        <tr><td>5</td><td>Constraint Validator</td><td>full config</td><td>validated config or error</td><td>Is this legal and coherent?</td></tr>
+        <tr><td>6</td><td>Narrative Generator</td><td>template + config + player history</td><td>codename + loading sequence + player description</td><td>What do students experience?</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h4>Composition Rules</h4>
+      <table class="t">
+        <tr><th>Combination</th><th>Result</th><th>Condition</th></tr>
+        <tr><td>Same-mode templates</td><td><span class="badge badge-inv">COMPOSABLE</span></td><td>Verify locked_axes don't conflict</td></tr>
+        <tr><td>Different-mode templates</td><td><span class="badge">ALLOWED WITH WARNING</span></td><td>Modes must be orthogonal. SPT+QTY: ok. FRT+DST: conflicted.</td></tr>
+        <tr><td>Any template + INV overlay</td><td><span class="badge badge-inv">ALWAYS COMPOSABLE</span></td><td>Adds epistemic layer. Never changes success criterion.</td></tr>
+        <tr><td>Any template + ITHKUIL</td><td><span class="badge badge-inv">ALWAYS COMPOSABLE</span></td><td>Display only. Score rank unaffected.</td></tr>
+        <tr><td>WRM + any other mode</td><td><span class="badge">INCOHERENT</span></td><td>Instant win overrides all scoring. WRM must be the only mode.</td></tr>
+        <tr><td>DST + FRT</td><td><span class="badge">CONFLICTED</span></td><td>FRT template penalizes destruction (locked axis). Cannot stack.</td></tr>
+        <tr><td>INV MIRROR + any template</td><td><span class="badge badge-inv">COMPOSABLE</span></td><td>Mirror inverts the underlying template's multipliers.</td></tr>
+      </table>
+      <div class="asterisk">* INVERSION is not a template layer — it is an overlay that modifies the multiplier structure of any template. The cognitive target of the underlying template is preserved; the epistemic challenge is added on top.</div>
+    </div>
+  </div>
+</div>
+
+<!-- TEMPLATES -->
+<div id="panel-templates" class="panel">
+  <h2>Template Library — Constellation</h2>
+  <div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap" id="mode-btns"></div>
+  <div class="grid2">
+    <div>
+      <div id="tmpl-list"></div>
+    </div>
+    <div id="tmpl-detail-area">
+      <div class="card" style="color:#888;font-size:11px;text-align:center;padding:40px">Select a template from the left</div>
+    </div>
+  </div>
+</div>
+
+<!-- GENERATOR -->
+<div id="panel-generator" class="panel">
+  <h2>Session Generator</h2>
+  <div class="grid2" style="margin-bottom:14px">
+    <div class="card">
+      <h4>Player Context (simulated)</h4>
+      <div class="srow">
+        <label>Sessions played</label>
+        <input type="range" min="0" max="50" value="12" oninput="genUpdateContext()">
+        <div class="sval" id="ctx-sessions">12</div>
+      </div>
+      <div class="srow">
+        <label>Last session rank</label>
+        <input type="range" min="1" max="100" value="60" oninput="genUpdateContext()">
+        <div class="sval" id="ctx-rank">60%</div>
+      </div>
+      <div class="srow">
+        <label>Win margin</label>
+        <input type="range" min="0" max="100" value="8" oninput="genUpdateContext()">
+        <div class="sval" id="ctx-margin">8%</div>
+      </div>
+      <div class="srow">
+        <label>Global Elo</label>
+        <input type="range" min="0" max="999" value="420" oninput="genUpdateContext()">
+        <div class="sval" id="ctx-elo">420</div>
+      </div>
+      <div class="srow">
+        <label>Same-mode streak</label>
+        <input type="range" min="0" max="5" value="1" step="1" oninput="genUpdateContext()">
+        <div class="sval" id="ctx-streak">1</div>
+      </div>
+      <div id="ctx-summary" style="font-size:10px;color:#555;margin-top:8px;border-top:1px solid #eee;padding-top:8px"></div>
+    </div>
+    <div class="card">
+      <h4>Override (optional)</h4>
+      <div style="margin-bottom:8px;font-size:10px;color:#555">Leave on AUTO to let the system decide</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px" id="mode-override-btns"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px" id="tmpl-override-btns"></div>
+      <div class="srow">
+        <label>Difficulty override</label>
+        <input type="range" min="0" max="100" value="50" id="diff-override">
+        <div class="sval">AUTO</div>
+      </div>
+      <div style="margin-top:12px">
+        <button class="btn active" onclick="runGenerator()" style="width:100%;padding:10px;font-size:12px">GENERATE SESSION</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="gen-terminal">
+    <div style="opacity:.4;font-size:10px">// CHALLENGE COMPILER v2 — awaiting input</div>
+  </div>
+  <div id="gen-codename">—</div>
+  <div style="text-align:center;font-size:10px;color:#888;margin-bottom:12px" id="gen-sub"></div>
+
+  <div id="gen-output">
+    <div class="card" id="gen-config-panel">
+      <h4>Configuration</h4>
+      <div id="gen-config"></div>
+    </div>
+    <div class="card" id="gen-signal-panel">
+      <h4>Success Criterion</h4>
+      <div id="gen-success" style="font-size:11px;line-height:1.8;margin-bottom:10px"></div>
+      <h4>Signals to Capture</h4>
+      <div id="gen-signals"></div>
+      <hr class="sep">
+      <h4>Player-Facing Description</h4>
+      <div id="gen-narrative" class="inset"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SPECTRUM -->
+<div id="panel-spectrum" class="panel">
+  <h2>Similarity Spectrum</h2>
+  <div class="warn" style="margin-bottom:14px">
+    Pure entropy (maximally different every session) is pedagogically wrong. A player who barely lost needs a <em>similar</em>
+    session to course-correct, not a completely different one. The spectrum determines how much the next session resembles the last.
+    Mode coverage guarantee still holds over the 6-session window — but the system can repeat modes when the player is unresolved.
+  </div>
+
+  <div class="grid2">
+    <div>
+      <div class="card" style="margin-bottom:12px">
+        <h4>Spectrum Zones</h4>
+        <div class="spectrum-zones" style="margin-bottom:6px">
+          <div class="spectrum-zone" style="background:#000;color:#fff">REMATCH</div>
+          <div class="spectrum-zone" style="background:#333;color:#fff">ECHO</div>
+          <div class="spectrum-zone" style="background:#888;color:#fff">PARALLEL</div>
+          <div class="spectrum-zone" style="background:#ccc">SHIFTING</div>
+          <div class="spectrum-zone" style="background:#eee">RADICAL</div>
+        </div>
+        <table class="t" style="margin-bottom:10px">
+          <tr><th>Zone</th><th>What changes</th><th>Mode</th><th>Template</th><th>Difficulty</th></tr>
+          <tr><td><strong>REMATCH</strong></td><td>Map seed only</td><td>Same</td><td>Same</td><td>−5%</td></tr>
+          <tr><td><strong>ECHO</strong></td><td>Map + minor params</td><td>Same</td><td>Same</td><td>±10%</td></tr>
+          <tr><td><strong>PARALLEL</strong></td><td>Template within mode</td><td>Same</td><td>Different</td><td>Recalibrated</td></tr>
+          <tr><td><strong>SHIFTING</strong></td><td>Mode + difficulty</td><td>Adjacent</td><td>New</td><td>Recalibrated</td></tr>
+          <tr><td><strong>RADICAL</strong></td><td>Everything</td><td>Entropy-selected</td><td>New</td><td>Recalibrated</td></tr>
+        </table>
+        <h4>Mode Adjacency Map</h4>
+        <div style="font-size:10px;line-height:1.9">
+          QTY ↔ SPT (both: expand, move, claim)<br>
+          SPT ↔ FRT (both: geography, network)<br>
+          FRT ↔ DST (both: opponent-aware, reactive)<br>
+          DST ↔ INV (both: disruption, unconventional)<br>
+          INV ↔ WRM (both: non-obvious objective)<br>
+          WRM ↔ SPT (both: spatial reasoning, path-finding)
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>Outcome → Spectrum Decision</h4>
+        <div class="outcome-row">
+          <div class="outcome-icon" style="background:#000;color:#fff">▲▲</div>
+          <div>
+            <div style="font-weight:700;font-size:11px">Landslide Win (&gt;40% margin)</div>
+            <div style="font-size:10px;color:#555">Too easy. System shifts RADICAL. Different mode, higher difficulty. "The system has recalibrated."</div>
+          </div>
+        </div>
+        <div class="outcome-row">
+          <div class="outcome-icon" style="background:#333;color:#fff">▲</div>
+          <div>
+            <div style="font-weight:700;font-size:11px">Decisive Win (15–40% margin)</div>
+            <div style="font-size:10px;color:#555">Comfortable. System shifts SHIFTING. Adjacent mode, slight difficulty increase.</div>
+          </div>
+        </div>
+        <div class="outcome-row">
+          <div class="outcome-icon" style="background:#888;color:#fff">≈</div>
+          <div>
+            <div style="font-weight:700;font-size:11px">Close Win (&lt;15% margin)</div>
+            <div style="font-size:10px;color:#555">Optimal. System stays PARALLEL or ECHO. Same mode, same difficulty ±5%.</div>
+          </div>
+        </div>
+        <div class="outcome-row">
+          <div class="outcome-icon">▽</div>
+          <div>
+            <div style="font-weight:700;font-size:11px">Close Loss (&lt;15% margin)</div>
+            <div style="font-size:10px;color:#555">Unresolved. System selects ECHO or PARALLEL. Same mode, difficulty −10%. "The system has noted an unresolved challenge."</div>
+          </div>
+        </div>
+        <div class="outcome-row">
+          <div class="outcome-icon" style="background:#f0f0f0">▽▽</div>
+          <div>
+            <div style="font-weight:700;font-size:11px">Decisive Loss (&gt;15% margin)</div>
+            <div style="font-size:10px;color:#555">Too hard. System selects REMATCH or ECHO. Difficulty −15–20%. Explicit acknowledgment in loading text.</div>
+          </div>
+        </div>
+        <div class="outcome-row" style="border:none">
+          <div class="outcome-icon" style="border-style:dashed">∞</div>
+          <div>
+            <div style="font-weight:700;font-size:11px">Same-mode streak ≥ 3</div>
+            <div style="font-size:10px;color:#555">Override: force SHIFTING or RADICAL regardless of outcome. Prevents staleness.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" style="margin-bottom:12px">
+        <h4>Live Spectrum Simulator</h4>
+        <div style="font-size:10px;color:#555;margin-bottom:8px">Drag slider to see how last session outcome changes the next session selection</div>
+        <div class="srow">
+          <label>Last rank pct</label>
+          <input type="range" min="0" max="100" value="55" id="spec-rank" oninput="updateSpectrum()">
+          <div class="sval" id="spec-rank-v">55%</div>
+        </div>
+        <div class="srow">
+          <label>Win margin</label>
+          <input type="range" min="0" max="60" value="8" id="spec-margin" oninput="updateSpectrum()">
+          <div class="sval" id="spec-margin-v">8%</div>
+        </div>
+        <div class="srow">
+          <label>Streak</label>
+          <input type="range" min="0" max="5" value="1" step="1" id="spec-streak" oninput="updateSpectrum()">
+          <div class="sval" id="spec-streak-v">1</div>
+        </div>
+        <div id="spec-result" style="margin-top:12px;border:2px solid #000;padding:12px"></div>
+      </div>
+      <div class="card">
+        <h4>The "Barely Winning" Principle</h4>
+        <div style="font-size:11px;line-height:1.9;margin-bottom:8px">
+          The most informative session outcome is a close win — rank 50–75th percentile.
+          This confirms: (1) challenge was appropriately calibrated, (2) player was genuinely engaged,
+          (3) the session was competitive enough to generate clean signal.
+        </div>
+        <div style="position:relative;height:36px;border:1px solid #000;margin:10px 0;overflow:hidden">
+          <div style="position:absolute;top:0;left:0;width:25%;height:100%;background:#eee;border-right:1px dashed #000"></div>
+          <div style="position:absolute;top:0;left:25%;width:50%;height:100%;background:#000"></div>
+          <div style="position:absolute;top:0;left:75%;width:25%;height:100%;background:#eee;border-left:1px dashed #000"></div>
+          <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:space-between;padding:0 8px">
+            <span style="font-size:9px;color:#888">too hard</span>
+            <span style="font-size:9px;color:#fff;font-weight:700;letter-spacing:2px">FLOW ZONE — maximum signal</span>
+            <span style="font-size:9px;color:#888">too easy</span>
+          </div>
+        </div>
+        <div style="font-size:10px;color:#555;line-height:1.8">
+          Landslide wins → system escalates challenge (RADICAL)<br>
+          Consistent losses → system de-escalates (REMATCH)<br>
+          Close games → system stays course or adjusts slightly (ECHO/PARALLEL)<br>
+          <br>
+          The spectrum prevents the entropy engine from being either too random (pure chaos, no learning)
+          or too consistent (same challenge every time, boredom). It operates on top of the 6-session
+          Latin hypercube guarantee — <strong>spectrum position is the short-term signal; mode coverage is the long-term guarantee.</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:14px">
+    <h3>Loading Text Philosophy — Making the System Feel Alive</h3>
+    <div class="grid2">
+      <div>
+        <div class="warn" style="margin-bottom:10px">
+          <strong>Never say:</strong> "Generating maximally entropic session..." — this is generic and breaks immersion.<br>
+          <strong>Always say:</strong> something specific, observational, and slightly ominous. The system should feel like it has been watching.
+        </div>
+        <table class="t">
+          <tr><th>Situation</th><th>Loading Text Style</th><th>Example</th></tr>
+          <tr><td>Close loss, same mode repeat</td><td>Acknowledgment + resolve</td><td>"The system detected an unresolved challenge. Returning to FORTRESS mode. Difficulty adjusted."</td></tr>
+          <tr><td>Landslide win</td><td>Clinical observation</td><td>"Session 4: decisive margin. Recalibrating. The system has selected a harder target."</td></tr>
+          <tr><td>First INVERSION session</td><td>Ominous hint</td><td>"The reward structure has been altered. The system will not tell you how."</td></tr>
+          <tr><td>Strategy detected repeating</td><td>Specific behavioral observation</td><td>"Your HQ placement has followed the same pattern for 3 sessions. The system has noted this."</td></tr>
+          <tr><td>Mode change after streak</td><td>Acknowledgment of pattern break</td><td>"You have not encountered a WORMHOLE session in 6 rounds. This changes now."</td></tr>
+          <tr><td>New record in mode Elo</td><td>Recognition</td><td>"SPATIAL Elo: new low recorded. The system is adapting the challenge upward."</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4>Loading Sequence Structure</h4>
+        <div class="code-block" style="font-size:10px">STEP 1: Context scan (500ms)
+"ANALYZING SESSION ${N} DATA..."
+"Scanning ${X} behavioral vectors..."
+
+STEP 2: Specific observation (600ms)
+[something specific to player history]
+e.g. "HQ network collapsed in round 3."
+e.g. "Steal rate 40% below session average."
+e.g. "No wormhole engagement in 4 sessions."
+
+STEP 3: Decision (400ms)
+"Mode selected: [MODE]"
+"Template: [TEMPLATE_NAME]"
+"Difficulty: [calibrated descriptor]"
+
+STEP 4: Overlay roll (optional, 300ms)
+"Applying INVERSION overlay..." (if rolled)
+"ITHKUIL numerals active." (if rolled)
+
+STEP 5: Codename reveal (dramatic pause, 800ms)
+[blank line]
+[SESSION N: CODENAME]
+
+STEP 6: Final line (200ms)
+[hint or ominous one-liner]</div>
+        <div class="asterisk" style="margin-top:6px">* The codename is the anchor. Players remember "the CHAIN REACTION session" — not the config. Session names create episodic memory of the learning journey. Each mode has its own name vocabulary so codenames signal mode without being explicit.</div>
+        <h4 style="margin-top:10px">Codename Vocabulary by Mode</h4>
+        <table class="t">
+          <tr><th>Mode</th><th>Codenames</th></tr>
+          <tr><td>QUANTITY</td><td>THE FLOOD · WAVE FRONT · MANIFEST DENSITY · THE SWARM · OVERFLOW · LANDGRAB</td></tr>
+          <tr><td>SPATIAL</td><td>THE EXPANSE · LONG REACH · FAR HORIZON · THE CARTOGRAPHER · BLIND REACH · DEEP SPACE</td></tr>
+          <tr><td>FORTRESS</td><td>IRON CURTAIN · SIEGE LINES · THE CITADEL · DEEP ROOTS · BASTILLE · THE HOLD</td></tr>
+          <tr><td>DESTRUCTION</td><td>CHAIN REACTION · SCORCHED EARTH · THE BREAKING · GHOST CIRCUIT · SHATTER · ERASURE</td></tr>
+          <tr><td>WORMHOLE</td><td>THE GATEWAY · EVENT HORIZON · FOLD SPACE · THE BRIDGE · TRANSIT · SINGULARITY</td></tr>
+          <tr><td>INVERSION</td><td>MIRROR LOGIC · NULL SPACE · THE FLIP · OPPOSITE DAY · DARK MATTER · REVERSAL</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INTERFACE -->
+<div id="panel-interface" class="panel">
+  <h2>Game Plugin Interface — Extrapolation to Future Games</h2>
+  <div class="warn" style="margin-bottom:14px">
+    The meta-system core is game-agnostic. A future game plugs in by implementing this interface.
+    The core never touches game-specific parameters. Game knowledge lives entirely in the plugin.
+    <strong>Adding a new game = one plugin file. Zero changes to the meta-system core.</strong>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <div class="code-block">interface GamePlugin {
+  // Identity
+  id:       string          // "constellation", "centauri", etc.
+  name:     string          // display name
+  version:  string
+
+  // What can be configured
+  configSchema: ParameterSpec[]
+  // ParameterSpec { name, type, min, max, default, description }
+
+  // Independent difficulty dimensions
+  axes: DifficultyAxis[]
+  // DifficultyAxis {
+  //   name: string
+  //   parameters: string[]  // which configSchema params control this
+  //   min: any              // easiest setting
+  //   max: any              // hardest setting
+  //   modes: CognitiveMode[] // which modes this axis challenges
+  // }
+
+  // Which axes challenge which cognitive modes
+  modeMap: Map&lt;CognitiveMode, AxisWeights&gt;
+
+  // Atomic challenge templates
+  templates: ChallengeTemplate[]
+  // ChallengeTemplate {
+  //   id:            string
+  //   mode:          CognitiveMode  // exactly one
+  //   name:          string
+  //   constraints:   ParameterOverride[]  // cognitive constraint
+  //   free_axes:     string[]             // difficulty levers
+  //   locked_axes:   string[]             // must not change
+  //   success:       SuccessCriterion
+  //   signals:       SignalSpec[]
+  //   composable_with:   TemplateID[]
+  //   incompatible_with: TemplateID[]
+  //   difficulty_at: (d: float) => ParameterOverride[]
+  //   narrative:     string
+  // }
+
+  // Observable behavioral data
+  signals: SignalSpec[]
+  signalValidity: Map&lt;Signal, CognitiveMode[]&gt;
+
+  // Runtime hooks
+  validate(config): ValidationResult
+  describe(template, config, player): string  // player-facing
+  outcome(sessionData): OutcomeRecord
+  // OutcomeRecord { rank, percentile, signals, mode, template }
+}</div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:12px">
+        <h4>The Plugin Test</h4>
+        <div class="inset" style="margin-bottom:10px">
+          A well-formed game plugin must satisfy: <strong>Can you specify ≥ 3 non-overlapping difficulty axes that each independently scale difficulty without changing the cognitive target?</strong>
+          If yes: valid plugin. If difficulty and cognitive target are entangled in the game's design, the game needs redesign before it can plug in cleanly.
+        </div>
+        <table class="t">
+          <tr><th>Game</th><th>Axis 1</th><th>Axis 2</th><th>Axis 3</th><th>Valid?</th></tr>
+          <tr><td>Constellation</td><td>moves/round</td><td>roundLength</td><td>bot aggression</td><td><span class="badge badge-inv">YES</span></td></tr>
+          <tr><td>Centauri</td><td>teamMoves pool</td><td>sessionDuration</td><td>tickSpeed</td><td><span class="badge badge-inv">YES</span></td></tr>
+          <tr><td>GOLAD</td><td>board size</td><td>rule variant</td><td>time limit</td><td><span class="badge">TBD</span></td></tr>
+          <tr><td>[future game]</td><td>resource quota</td><td>time pressure</td><td>opponent strength</td><td><span class="badge">IF axes independent</span></td></tr>
+        </table>
+      </div>
+      <div class="card" style="margin-bottom:12px">
+        <h4>Constellation Plugin — Difficulty Axes</h4>
+        <table class="t">
+          <tr><th>Axis</th><th>Parameter(s)</th><th>Easy → Hard</th><th>Modes</th></tr>
+          <tr><td>Resource scarcity</td><td>moves</td><td>20 → 6 /round</td><td>ALL</td></tr>
+          <tr><td>Time pressure</td><td>roundLength</td><td>60s → 12s</td><td>ALL</td></tr>
+          <tr><td>Competitive pressure</td><td>bot type + aggression</td><td>LORENZ 0.1 → CAESAR 1.0</td><td>ALL</td></tr>
+          <tr><td>Spatial complexity</td><td>map size + star density</td><td>small dense → large sparse</td><td>SPT, FRT, WRM</td></tr>
+          <tr><td>Rule complexity</td><td>star type mix</td><td>all Normal → mixed BH/WH/Cluster</td><td>DST, WRM</td></tr>
+          <tr><td>Constraint tightness</td><td>req stars, HQ count</td><td>req=2 → req=8</td><td>FRT, WRM</td></tr>
+          <tr><td>Epistemic opacity</td><td>shuffle distance, ithkuil</td><td>no shuffle → full + ithkuil</td><td>INV</td></tr>
+          <tr><td>Scarcity asymmetry</td><td>player vs bot move ratio</td><td>symmetric → bot advantage</td><td>ALL</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h4>MetaSystem Core (game-agnostic)</h4>
+        <div class="code-block" style="font-size:10px">class MetaSystem {
+  games: Map&lt;string, GamePlugin&gt;
+
+  // Register a new game — no core changes needed
+  register(plugin: GamePlugin): void
+
+  // Main entrypoint
+  generate(
+    intent:     CognitiveMode,
+    player:     PlayerProfile,
+    game:       GamePlugin,
+    similarity: SpectrumZone  // from Reactor
+  ): SessionSpec
+  // SessionSpec {
+  //   config: GameConfig
+  //   codename: string
+  //   loadingSequence: string[]
+  //   narrative: string
+  //   successCriterion: string
+  //   signals: SignalSpec[]
+  // }
+
+  // Internal pipeline
+  private selectTemplate(intent, game, player): Template
+  private calibrateDifficulty(template, player): float
+  private resolveParameters(template, difficulty): Config
+  private validateConfig(config, game): ValidationResult
+  private generateNarrative(template, config, player): Narrative
+  private pickCodename(mode): string
+  private buildLoadingSequence(template, player): string[]
+}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────
+const MODE_IDS=['qty','spt','frt','dst','wrm','inv'];
+const MODE_NAMES={qty:'QUANTITY',spt:'SPATIAL',frt:'FORTRESS',dst:'DESTRUCTION',wrm:'WORMHOLE',inv:'INVERSION'};
+const MODE_ICONS={qty:'⬡',spt:'◎',frt:'⬢',dst:'✕',wrm:'⊕',inv:'⊘'};
+
+const CODENAMES={
+  qty:['THE FLOOD','WAVE FRONT','MANIFEST DENSITY','THE SWARM','OVERFLOW','LANDGRAB','SATURATION','THE TIDE'],
+  spt:['THE EXPANSE','LONG REACH','FAR HORIZON','THE CARTOGRAPHER','BLIND REACH','DEEP SPACE','FURTHEST POINT','EDGE CASE'],
+  frt:['IRON CURTAIN','SIEGE LINES','THE CITADEL','DEEP ROOTS','BASTILLE','THE HOLD','STONEWORK','ENTRENCHED'],
+  dst:['CHAIN REACTION','SCORCHED EARTH','THE BREAKING','GHOST CIRCUIT','SHATTER','ERASURE','NULL FIELD','AFTERBURN'],
+  wrm:['THE GATEWAY','EVENT HORIZON','FOLD SPACE','THE BRIDGE','TRANSIT','SINGULARITY','THE NEEDLE','CROSSING'],
+  inv:['MIRROR LOGIC','NULL SPACE','THE FLIP','OPPOSITE DAY','DARK MATTER','REVERSAL','ANTI-PATTERN','WRONG ANSWER'],
+};
+
+const TEMPLATES=[
+  // QUANTITY
+  {id:'flood',mode:'qty',name:'FLOOD',
+   constraint:'count×500 · steals=0 · pure expansion',
+   free_axes:['moves (6→20/round)','bot aggression'],
+   locked_axes:['count multiplier','steal mechanics'],
+   success:'Most stars claimed at session end',
+   signals:['star_count_rate','territory_spread','move_efficiency'],
+   narrative:'Expand as far as possible. Every star counts. No stealing — only growth.',
+   hint:'Cover the unclaimed center early. Edges last.',
+   config:d=>({countMultiplier:500,distanceMultiplier:1,hqMultiplier:1,destructionMultiplier:1,steals:0,moves:Math.round(20-d*14),rounds:10,roundLength:30,botType:d<0.4?'HAL':'CAESAR',botAggression:(d*.8).toFixed(1)}),
+  },
+  {id:'speed_flood',mode:'qty',name:'SPEED FLOOD',
+   constraint:'count×500 · rounds=5 · compressed time',
+   free_axes:['roundLength (12s→45s)','moves per round'],
+   locked_axes:['round count (=5)','count multiplier'],
+   success:'Most stars in 5 rounds',
+   signals:['star_count_rate','early_vs_late','move_efficiency'],
+   narrative:'Five rounds. Front-load or pace yourself. The system is measuring your curve.',
+   hint:'The first two rounds determine the game.',
+   config:d=>({countMultiplier:500,distanceMultiplier:1,hqMultiplier:1,destructionMultiplier:1,steals:5,moves:Math.round(18-d*10),rounds:5,roundLength:Math.round(45-d*33),botType:'HAL',botAggression:(d*.7).toFixed(1)}),
+  },
+  {id:'miser',mode:'qty',name:'MISER',
+   constraint:'count×500 · moves=8/round (fixed) · efficiency required',
+   free_axes:['bot type','bot aggression'],
+   locked_axes:['move count (=8)','count multiplier'],
+   success:'Most stars with constrained moves',
+   signals:['claim_selectivity','move_efficiency'],
+   narrative:'Eight moves per round. No more. Choose each one.',
+   hint:'Cluster adjacent claims. Reaching for one star may cost you three.',
+   config:d=>({countMultiplier:500,distanceMultiplier:1,hqMultiplier:1,destructionMultiplier:1,steals:5,moves:8,rounds:10,roundLength:30,botType:d<0.5?'CAESAR':'LORENZ',botAggression:(0.3+d*.7).toFixed(1)}),
+  },
+  // SPATIAL
+  {id:'reach',mode:'spt',name:'REACH',
+   constraint:'distance×500 · count×1 · headquarters=0',
+   free_axes:['moves (6→20/round)','map size'],
+   locked_axes:['distance multiplier','HQ mechanic'],
+   success:'Highest cumulative Euclidean distance from origin',
+   signals:['avg_claim_distance','path_efficiency','furthest_star'],
+   narrative:'Abandon the center. One distant star beats ten nearby ones.',
+   hint:'Commit to a direction in round 1. Splitting paths halves your score.',
+   config:d=>({countMultiplier:1,distanceMultiplier:500,hqMultiplier:1,destructionMultiplier:1,steals:5,moves:Math.round(20-d*14),rounds:10,roundLength:32,headquarters:0,botType:'LORENZ',botAggression:(d*.6).toFixed(1)}),
+  },
+  {id:'blind_reach',mode:'spt',name:'BLIND REACH',
+   constraint:'distance×500 · map partially hidden · reveals on proximity',
+   free_axes:['reveal radius (300px→80px)','moves per round'],
+   locked_axes:['distance multiplier','hidden map mechanic'],
+   success:'Highest distance with incomplete information',
+   signals:['search_efficiency','avg_claim_distance','direction_commitment'],
+   narrative:'The map reveals itself as you move. What is out there?',
+   hint:'Commit to a direction early. Hedging costs exploration range.',
+   config:d=>({countMultiplier:1,distanceMultiplier:500,hqMultiplier:1,destructionMultiplier:1,steals:3,moves:Math.round(18-d*10),rounds:10,roundLength:35,revealRadius:Math.round(300-d*220),botType:'LORENZ',botAggression:(d*.5).toFixed(1)}),
+  },
+  {id:'architect',mode:'spt',name:'ARCHITECT',
+   constraint:'distance×200 · geometric pattern target shown',
+   free_axes:['pattern complexity (4→12 stars)','moves per round'],
+   locked_axes:['pattern shape','distance multiplier'],
+   success:'Closest geometric match to target pattern',
+   signals:['move_distribution','pattern_accuracy','path_efficiency'],
+   narrative:'The target shape is displayed. Recreate it in the stars.',
+   hint:'Start at the centroid of the pattern, not the edge.',
+   config:d=>({countMultiplier:1,distanceMultiplier:200,hqMultiplier:1,destructionMultiplier:1,steals:0,moves:Math.round(18-d*8),rounds:8,roundLength:35,patternSize:Math.round(4+d*8),botType:'LORENZ',botAggression:'0.2'}),
+  },
+  // FORTRESS
+  {id:'network',mode:'frt',name:'NETWORK',
+   constraint:'hq×500 · HQs=4 · destruction×-200 (penalty)',
+   free_axes:['map connectivity','bot aggression (ATHENA)'],
+   locked_axes:['hq multiplier','destruction penalty','HQ count (=4)'],
+   success:'Highest Dijkstra HQ network distance sum',
+   signals:['hq_connection_speed','network_distance','hq_count'],
+   narrative:'Connect your four headquarters. Destroying costs you. Build — do not break.',
+   hint:'Place HQs far apart before connecting them. Short networks lose.',
+   config:d=>({countMultiplier:50,distanceMultiplier:1,hqMultiplier:500,destructionMultiplier:-200,steals:10,moves:15,rounds:10,roundLength:30,headquarters:4,botType:'ATHENA',botAggression:(0.2+d*.8).toFixed(1)}),
+  },
+  {id:'siege',mode:'frt',name:'SIEGE',
+   constraint:'hq×500 · sustained ATHENA bot pressure',
+   free_axes:['bot aggression (0.2→1.0)','bot count (1→3)'],
+   locked_axes:['hq multiplier'],
+   success:'Maintain highest HQ network distance under attack',
+   signals:['network_distance_delta','hq_count','steal_resistance'],
+   narrative:'They will come for your network. Hold it.',
+   hint:'Cluster stars protect HQ zones. Claim them before connecting.',
+   config:d=>({countMultiplier:50,distanceMultiplier:1,hqMultiplier:500,destructionMultiplier:1,steals:15,moves:15,rounds:10,roundLength:30,headquarters:3,botType:'ATHENA',botAggression:(0.2+d*.8).toFixed(1),botCount:Math.ceil(d*3)}),
+  },
+  {id:'patience',mode:'frt',name:'PATIENCE',
+   constraint:'hq×500 · moves=10/round (fixed)',
+   free_axes:['round count (7→15)','map size'],
+   locked_axes:['move count (=10)','hq multiplier'],
+   success:'HQ network distance at final round',
+   signals:['move_distribution','hq_connection_speed','move_entropy'],
+   narrative:'Ten moves per round. The network must grow slowly and deliberately.',
+   hint:'Every move must serve the chain. No waste.',
+   config:d=>({countMultiplier:50,distanceMultiplier:1,hqMultiplier:500,destructionMultiplier:1,steals:5,moves:10,rounds:Math.round(7+d*8),roundLength:35,headquarters:3,botType:'CAESAR',botAggression:(d*.6).toFixed(1)}),
+  },
+  // DESTRUCTION
+  {id:'chain',mode:'dst',name:'CHAIN REACTION',
+   constraint:'destruction×500 · count×-100 · high blackhole star density',
+   free_axes:['blackhole spacing (far→close)','bot aggression'],
+   locked_axes:['destruction multiplier','count penalty','blackhole mechanic'],
+   success:'Most lines destroyed via blackhole chains',
+   signals:['blackhole_activations','opponent_disruption','chain_length'],
+   narrative:'Owning stars costs you. Destroying them pays. Chain the blackholes.',
+   hint:'You need exactly two per chain. Position them across high-traffic paths.',
+   config:d=>({countMultiplier:-100,distanceMultiplier:1,hqMultiplier:1,destructionMultiplier:500,steals:15,moves:15,rounds:10,roundLength:30,blackholeDensity:(0.3+d*.4).toFixed(2),botType:'CAESAR',botAggression:(d*.8).toFixed(1)}),
+  },
+  {id:'hunter',mode:'dst',name:'HUNTER',
+   constraint:'steals=50 · destruction×200 · count×1',
+   free_axes:['bot type (LORENZ→CAESAR)','bot aggression'],
+   locked_axes:['steal count (=50)','destruction multiplier'],
+   success:'Most opponent stars stolen across all rounds',
+   signals:['steal_rate','steal_target_value','steal_efficiency'],
+   narrative:'Find their highest-value stars. Take them.',
+   hint:'Target stars near opponent HQs — they are worth more to them.',
+   config:d=>({countMultiplier:1,distanceMultiplier:1,hqMultiplier:1,destructionMultiplier:200,steals:50,moves:15,rounds:10,roundLength:30,botType:d>0.5?'CAESAR':'LORENZ',botAggression:(d*.9).toFixed(1)}),
+  },
+  {id:'scorched',mode:'dst',name:'SCORCHED EARTH',
+   constraint:'destruction×500 · map density variable',
+   free_axes:['map density','bot count'],
+   locked_axes:['destruction multiplier'],
+   success:'Denial score: opponent HQ network distance at end',
+   signals:['opponent_disruption','blackhole_activations','denial_rate'],
+   narrative:'Leave nothing useful behind. The map should be emptier when you finish.',
+   hint:'Prioritize high-connection-count stars. Their removal cascades.',
+   config:d=>({countMultiplier:1,distanceMultiplier:1,hqMultiplier:1,destructionMultiplier:500,steals:20,moves:15,rounds:10,roundLength:30,mapDensity:(0.3+d*.4).toFixed(2),botCount:Math.ceil(d*2)}),
+  },
+  // WORMHOLE
+  {id:'gate',mode:'wrm',name:'THE GATEWAY',
+   constraint:'2 wormhole pairs · req=3–8 · all multipliers=1',
+   free_axes:['req star count (3→8)','wormhole pair distance'],
+   locked_axes:['win condition','multiplier values'],
+   success:'First wormhole pair activated (INSTANT WIN)',
+   signals:['wormhole_proximity','activation_speed','req_stars_secured'],
+   narrative:'Score nothing. Do one thing: open the gate. All else is noise.',
+   hint:'Secure the surrounding req stars before reaching for the wormhole.',
+   config:d=>({countMultiplier:1,distanceMultiplier:1,hqMultiplier:1,destructionMultiplier:1,steals:10,moves:10,rounds:12,roundLength:30,wormholeReq:Math.round(3+d*5),botType:'EINSTEIN',botAggression:'0.9'}),
+  },
+  {id:'decoy',mode:'wrm',name:'DECOY',
+   constraint:'3 wormhole pairs · only 1 active · 2 are traps',
+   free_axes:['decoy count (1→3)','visual similarity of decoys'],
+   locked_axes:['active pair count (=1)','win condition'],
+   success:'Activate the single active wormhole pair',
+   signals:['pattern_discrimination','wormhole_proximity','false_start_rate'],
+   narrative:'Three gates. One is real. Two are traps. The system will not tell you which.',
+   hint:'Only the true pair has all req stars claimable.',
+   config:d=>({countMultiplier:1,distanceMultiplier:1,hqMultiplier:1,destructionMultiplier:1,steals:10,moves:12,rounds:12,roundLength:30,wormholePairs:3,activeWormholes:1,botType:'EINSTEIN',botAggression:(0.5+d*.4).toFixed(1)}),
+  },
+  // INVERSION
+  {id:'hidden',mode:'inv',name:'HIDDEN OBJECTIVE',
+   constraint:'Fisher-Yates shuffle · no hints · MULTIPLIER_ORDER shuffled',
+   free_axes:['shuffle distance from prior session','ithkuil overlay (P=0.10)'],
+   locked_axes:['shuffle mechanism','server truth'],
+   success:'Score rank (deduction required — server ranks are authoritative)',
+   signals:['strategy_shift_speed','heuristic_abandonment','round3_correction'],
+   narrative:'The reward structure has been altered. The system will not tell you how.',
+   hint:'Watch the score after round 1. Let it tell you what changed.',
+   config:d=>({countMultiplier:'[shuffled]',distanceMultiplier:'[shuffled]',hqMultiplier:'[shuffled]',destructionMultiplier:'[shuffled]',steals:15,moves:15,rounds:10,roundLength:30,shuffled:true,ithkuil:d>0.7}),
+  },
+  {id:'mirror',mode:'inv',name:'MIRROR',
+   constraint:'Exact inverse of most recent session multipliers',
+   free_axes:['inversion magnitude (×1→×5)'],
+   locked_axes:['inversion structure','reference session'],
+   success:'Score rank (reversal learning required)',
+   signals:['reversal_learning_speed','strategy_shift_speed','session_delta'],
+   narrative:'Last session rewarded one thing. This session punishes it exactly.',
+   hint:'The inverse of your winning strategy from last session is now correct.',
+   config:d=>({countMultiplier:'−prev×'+(1+Math.round(d*4)),distanceMultiplier:'−prev',hqMultiplier:'−prev',destructionMultiplier:'−prev',steals:15,moves:15,rounds:10,roundLength:30}),
+  },
+  {id:'negative_space',mode:'inv',name:'NEGATIVE SPACE',
+   constraint:'All multipliers negative · steals=0',
+   free_axes:['magnitude (-10→-1000 per unit)'],
+   locked_axes:['all signs negative'],
+   success:'Highest (least negative) score — restraint is the strategy',
+   signals:['negative_avoidance','move_pool_rate','inaction_score'],
+   narrative:'Everything you do costs you points. The correct strategy is restraint.',
+   hint:'Claim nothing. Move only when it denies the opponent more than it costs you.',
+   config:d=>({countMultiplier:-1*Math.round(50+d*950),distanceMultiplier:-1,hqMultiplier:-10,destructionMultiplier:-1,steals:0,moves:15,rounds:10,roundLength:30}),
+  },
+];
+
+// ── TABS ─────────────────────────────────────────────────────────
+function showTab(name,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  el.classList.add('active');
+}
+
+// ── COMPILER SVG ─────────────────────────────────────────────────
+function drawCompiler(){
+  const svg=document.getElementById('compilerSvg');
+  const steps=[
+    {l:'INTENT',sub:'mode + player'},
+    {l:'TEMPLATE',sub:'constraint selector'},
+    {l:'DIFFICULTY',sub:'calibrator'},
+    {l:'RESOLVER',sub:'parameters'},
+    {l:'VALIDATOR',sub:'constraint check'},
+    {l:'NARRATIVE',sub:'codename + text'},
+  ];
+  const W=150,H=60,gap=12,startX=8;
+  let h='';
+  steps.forEach((s,i)=>{
+    const x=startX+i*(W+gap);
+    const mid=x+W/2;
+    if(i<steps.length-1){
+      const nx=x+W;
+      h+=`<line x1="${nx}" y1="30" x2="${nx+gap-2}" y2="30" stroke="#000" stroke-width="1"/>`;
+      h+=`<polygon points="${nx+gap-2},26 ${nx+gap+4},30 ${nx+gap-2},34" fill="#000"/>`;
+    }
+    h+=`<rect x="${x}" y="4" width="${W}" height="${H}" fill="${i===5?'#000':'#fff'}" stroke="#000" stroke-width="${i===0||i===5?'2':'1'}"/>`;
+    h+=`<text x="${mid}" y="26" text-anchor="middle" fill="${i===5?'#fff':'#000'}" font-size="10" font-family="Arial" font-weight="700" letter-spacing="1">${s.l}</text>`;
+    h+=`<text x="${mid}" y="44" text-anchor="middle" fill="${i===5?'#aaa':'#888'}" font-size="9" font-family="Arial">${s.sub}</text>`;
+  });
+  svg.innerHTML=h;
+}
+
+// ── TEMPLATE BROWSER ─────────────────────────────────────────────
+let selectedMode='qty';
+let selectedTmpl=null;
+
+function initTemplates(){
+  const btnArea=document.getElementById('mode-btns');
+  btnArea.innerHTML=MODE_IDS.map(m=>`
+    <button class="mode-btn ${m===selectedMode?'sel':''}" onclick="selectMode('${m}',this)">${MODE_ICONS[m]} ${MODE_NAMES[m]}</button>`).join('');
+  renderTmplList();
+}
+
+function selectMode(m,el){
+  selectedMode=m;selectedTmpl=null;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');
+  renderTmplList();
+  document.getElementById('tmpl-detail-area').innerHTML='<div class="card" style="color:#888;font-size:11px;text-align:center;padding:40px">Select a template</div>';
+}
+
+function renderTmplList(){
+  const list=document.getElementById('tmpl-list');
+  const filtered=TEMPLATES.filter(t=>t.mode===selectedMode);
+  list.innerHTML=filtered.map(t=>`
+    <div class="tmpl-card ${selectedTmpl===t.id?'sel':''}" onclick="selectTmpl('${t.id}')">
+      <div style="font-weight:700;font-size:11px;letter-spacing:1px">${t.name}</div>
+      <div style="font-size:10px;color:#555;margin-top:2px">${t.constraint}</div>
+    </div>`).join('');
+}
+
+function selectTmpl(id){
+  selectedTmpl=id;
+  renderTmplList();
+  const t=TEMPLATES.find(x=>x.id===id);if(!t)return;
+  const cfg=t.config(0.5);
+  const detail=document.getElementById('tmpl-detail-area');
+  detail.innerHTML=`
+    <div class="tmpl-detail show">
+      <div class="card-dk" style="margin-bottom:10px">
+        <div style="font-size:9px;letter-spacing:2px;opacity:.6;margin-bottom:4px">${MODE_NAMES[t.mode]}</div>
+        <div style="font-size:18px;font-weight:700;letter-spacing:2px;margin-bottom:6px">${t.name}</div>
+        <div style="font-size:10px;opacity:.7;font-style:italic">"${t.narrative}"</div>
+      </div>
+      <div style="font-size:10px;color:#555;margin-bottom:2px"><strong>Cognitive constraint:</strong></div>
+      <div style="font-size:11px;margin-bottom:10px">${t.constraint}</div>
+      <table class="t" style="margin-bottom:10px">
+        <tr><th>Free axes (difficulty levers)</th><th>Locked axes (must not change)</th></tr>
+        <tr><td style="font-size:10px">${t.free_axes.join('<br>')}</td><td style="font-size:10px;color:#888">${t.locked_axes.join('<br>')}</td></tr>
+      </table>
+      <div style="font-weight:700;font-size:10px;margin-bottom:3px">SUCCESS CRITERION</div>
+      <div class="inset" style="margin-bottom:10px">${t.success}</div>
+      <div style="font-weight:700;font-size:10px;margin-bottom:3px">SIGNALS</div>
+      <div style="margin-bottom:10px">${t.signals.map(s=>`<span class="badge badge-sm" style="margin:2px">${s}</span>`).join(' ')}</div>
+      <div style="font-weight:700;font-size:10px;margin-bottom:3px">CONFIG AT DIFFICULTY 0.5</div>
+      <table class="t" style="margin-bottom:8px">
+        ${Object.entries(cfg).map(([k,v])=>`<tr><td style="font-family:'Courier New',monospace;font-size:10px">${k}</td><td style="font-family:'Courier New',monospace;font-size:10px;font-weight:700">${v}</td></tr>`).join('')}
+      </table>
+      <div style="font-size:10px;color:#555"><strong>Hint to player:</strong> ${t.hint}</div>
+    </div>`;
+}
+
+// ── GENERATOR ────────────────────────────────────────────────────
+let overrideMode=null;
+let overrideTmpl=null;
+
+function initGenerator(){
+  const mb=document.getElementById('mode-override-btns');
+  mb.innerHTML=`<button class="btn active" onclick="setModeOverride(null,this)">AUTO MODE</button>`+
+    MODE_IDS.map(m=>`<button class="btn" onclick="setModeOverride('${m}',this)">${MODE_ICONS[m]} ${m.toUpperCase()}</button>`).join('');
+  genUpdateContext();
+}
+
+function setModeOverride(m,el){
+  overrideMode=m;
+  document.querySelectorAll('#mode-override-btns .btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  updateTmplOverrideBtns();
+}
+
+function updateTmplOverrideBtns(){
+  const pool=overrideMode?TEMPLATES.filter(t=>t.mode===overrideMode):TEMPLATES;
+  const el=document.getElementById('tmpl-override-btns');
+  el.innerHTML=`<button class="btn active" onclick="setTmplOverride(null,this)">AUTO TEMPLATE</button>`+
+    pool.map(t=>`<button class="btn" onclick="setTmplOverride('${t.id}',this)">${t.name}</button>`).join('');
+  overrideTmpl=null;
+}
+
+function setTmplOverride(id,el){
+  overrideTmpl=id;
+  document.querySelectorAll('#tmpl-override-btns .btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function genUpdateContext(){
+  const s=+document.getElementById('ctx-sessions')?.value||12;
+  const r=+document.getElementById('ctx-rank')?.value||60;
+  const m=+document.getElementById('ctx-margin')?.value||8;
+  const e=+document.getElementById('ctx-elo')?.value||420;
+  const st=+document.getElementById('ctx-streak')?.value||1;
+  if(document.getElementById('ctx-sessions')) document.getElementById('ctx-sessions').nextElementSibling.textContent=s;
+  if(document.getElementById('ctx-rank')) document.getElementById('ctx-rank').nextElementSibling.textContent=r+'%';
+  if(document.getElementById('ctx-margin')) document.getElementById('ctx-margin').nextElementSibling.textContent=m+'%';
+  if(document.getElementById('ctx-elo')) document.getElementById('ctx-elo').nextElementSibling.textContent=e;
+  if(document.getElementById('ctx-streak')) document.getElementById('ctx-streak').nextElementSibling.textContent=st;
+  const sum=document.getElementById('ctx-summary');
+  if(!sum)return;
+  let obs=[];
+  if(r<40) obs.push('Below flow zone last session — system will reduce difficulty');
+  if(r>80) obs.push('Above flow zone — system will increase challenge');
+  if(r>=40&&r<=80) obs.push('In flow zone last session — optimal signal captured');
+  if(st>=3) obs.push('Same-mode streak: '+st+' — mode change likely forced');
+  if(m<10&&r>=40&&r<=65) obs.push('Close loss — ECHO or PARALLEL likely');
+  if(m>35) obs.push('Large margin — SHIFTING or RADICAL likely');
+  sum.innerHTML=obs.map(o=>`<div>→ ${o}</div>`).join('');
+}
+
+function runGenerator(){
+  const sessions=+document.getElementById('ctx-sessions').value||12;
+  const rank=+document.getElementById('ctx-rank').value||60;
+  const margin=+document.getElementById('ctx-margin').value||8;
+  const elo=+document.getElementById('ctx-elo').value||420;
+  const streak=+document.getElementById('ctx-streak').value||1;
+
+  // Select mode
+  let mode=overrideMode;
+  if(!mode){
+    if(streak>=3){
+      const avoided=MODE_IDS[Math.floor(Math.random()*MODE_IDS.length)];
+      mode=avoided;
+    } else {
+      mode=MODE_IDS[Math.floor(Math.random()*MODE_IDS.length)];
+    }
+  }
+
+  // Select template
+  const pool=TEMPLATES.filter(t=>t.mode===mode);
+  let tmpl=overrideTmpl?TEMPLATES.find(t=>t.id===overrideTmpl):pool[Math.floor(Math.random()*pool.length)];
+  if(!tmpl)tmpl=pool[0];
+
+  // Calibrate difficulty
+  let diff=elo/999;
+  if(rank<35) diff=Math.max(0,diff-0.15);
+  if(rank>75) diff=Math.min(1,diff+0.15);
+  diff=Math.round(diff*100)/100;
+
+  // Spectrum zone
+  let zone,zoneLabel;
+  if(streak>=3){zone='SHIFTING/RADICAL';zoneLabel='same-mode streak override'}
+  else if(rank>=40&&rank<=80&&margin<15){zone='ECHO / PARALLEL';zoneLabel='close game — similar session'}
+  else if(rank<35){zone='REMATCH / ECHO';zoneLabel='below flow zone — difficulty reduced'}
+  else if(rank>80&&margin>30){zone='RADICAL';zoneLabel='decisive win — full mode change'}
+  else{zone='PARALLEL / SHIFTING';zoneLabel='moderate outcome'}
+
+  // Codename
+  const codename=CODENAMES[mode][Math.floor(Math.random()*CODENAMES[mode].length)];
+  const sessionNum=sessions+1;
+
+  // Build loading sequence
+  const obs=buildObservation(rank,margin,streak,elo,mode,tmpl);
+  const lines=buildLoadingLines(sessionNum,mode,tmpl,obs,diff,zone,codename);
+
+  // Run animation
+  animateTerminal(lines,codename,mode,tmpl,diff,zone);
+}
+
+function buildObservation(rank,margin,streak,elo,mode,tmpl){
+  const obs=[];
+  if(rank<35)obs.push(`Rank percentile: ${rank}%. Challenge exceeded capacity.`);
+  else if(rank>80)obs.push(`Rank percentile: ${rank}%. Session difficulty insufficient.`);
+  else obs.push(`Last session rank: ${rank}th percentile.`);
+  if(margin<8&&rank>=35&&rank<=65)obs.push(`Win margin: ${margin}%. Close game. Unresolved challenge detected.`);
+  if(margin>35)obs.push(`Win margin: ${margin}%. Dominant outcome. Recalibrating upward.`);
+  if(streak>=2)obs.push(`Same-mode streak: ${streak} consecutive. Pattern detected.`);
+  if(elo<300)obs.push(`Elo: ${String(elo).padStart(3,'0')}. Beginner range. Protective calibration active.`);
+  if(elo<150)obs.push('Behavioral pattern: early-game expansion, late-game collapse. Logged.');
+  return obs[Math.floor(Math.random()*obs.length)]||'Session data analyzed.';
+}
+
+function buildLoadingLines(n,mode,tmpl,obs,diff,zone,codename){
+  const diffDesc=diff<0.3?'reduced':diff<0.6?'moderate':diff<0.8?'elevated':'maximum';
+  const modeLabel=MODE_NAMES[mode];
+  const lines=[
+    {t:0,   text:`// SESSION ${n} — CHALLENGE COMPILER v2`},
+    {t:500, text:`Scanning behavioral history...`},
+    {t:1000,text:obs},
+    {t:1700,text:`Spectrum zone: ${zone} — ${zone.includes('RADICAL')||zone.includes('SHIFT')?'preparing mode change':'maintaining trajectory'}`},
+    {t:2400,text:`Mode selected: ${modeLabel}`},
+    {t:2900,text:`Template: ${tmpl.name}`},
+    {t:3300,text:`Difficulty calibrated: ${diffDesc} (${(diff*100).toFixed(0)}%)`},
+    ...(Math.random()<0.1?[{t:3700,text:'Applying INVERSION overlay...'}]:[]),
+    ...(Math.random()<0.1?[{t:3800,text:'ITHKUIL numerals: ACTIVE'}]:[]),
+    {t:4100,text:`Constraint: ${tmpl.constraint}`},
+    {t:4500,text:`Success criterion: ${tmpl.success}`},
+    {t:4900,text:`Signals: ${tmpl.signals.join(' · ')}`},
+    {t:5300,text:''},
+    {t:5500,text:`SESSION ${n}: ${codename}`},
+    {t:6100,text:`> ${tmpl.hint}`},
+  ];
+  return lines;
+}
+
+let animTimer=[];
+function animateTerminal(lines,codename,mode,tmpl,diff,zone){
+  animTimer.forEach(clearTimeout);animTimer=[];
+  const term=document.getElementById('gen-terminal');
+  const cn=document.getElementById('gen-codename');
+  const sub=document.getElementById('gen-sub');
+  const out=document.getElementById('gen-output');
+  term.innerHTML='';cn.classList.remove('show');cn.textContent='—';sub.textContent='';out.classList.remove('show');
+
+  lines.forEach((l,i)=>{
+    const id=setTimeout(()=>{
+      if(l.text===''){term.innerHTML+='<div class="line show">&nbsp;</div>';return;}
+      const isCN=l.text.startsWith('SESSION ')&&l.text.includes(': ');
+      const div=document.createElement('div');
+      div.className='line show';
+      div.style.color=isCN?'#fff':i<3?'#0a0':'#0f0';
+      div.style.fontWeight=isCN?'700':'400';
+      div.style.fontSize=isCN?'13px':'11px';
+      div.textContent=(i===0?'':i<4?'  ':'    ')+l.text;
+      term.appendChild(div);
+      term.scrollTop=term.scrollHeight;
+    },l.t);
+    animTimer.push(id);
+  });
+
+  const cnTime=lines.find(l=>l.text&&l.text.startsWith('SESSION ')&&l.text.includes(': '))?.t||5500;
+  const id2=setTimeout(()=>{
+    cn.textContent=codename;cn.classList.add('show');
+    sub.textContent=`SESSION · ${MODE_NAMES[mode]} · ${tmpl.name}`;
+  },cnTime+200);
+  animTimer.push(id2);
+
+  const id3=setTimeout(()=>{
+    showGenOutput(tmpl,diff,mode,zone);
+  },cnTime+800);
+  animTimer.push(id3);
+}
+
+function showGenOutput(tmpl,diff,mode,zone){
+  const out=document.getElementById('gen-output');
+  out.classList.add('show');
+  const cfg=tmpl.config(diff);
+  document.getElementById('gen-config').innerHTML=
+    `<table class="t">${Object.entries(cfg).map(([k,v])=>`<tr><td style="font-family:'Courier New',monospace;font-size:10px">${k}</td><td style="font-family:'Courier New',monospace;font-size:10px;font-weight:700">${v}</td></tr>`).join('')}</table>
+     <div class="asterisk" style="margin-top:6px">Spectrum: ${zone} · Difficulty: ${(diff*100).toFixed(0)}%</div>`;
+  document.getElementById('gen-success').textContent=tmpl.success;
+  document.getElementById('gen-signals').innerHTML=tmpl.signals.map(s=>`<span class="badge badge-sm" style="margin:2px">${s}</span>`).join(' ');
+  document.getElementById('gen-narrative').textContent=tmpl.narrative;
+}
+
+// ── SPECTRUM ─────────────────────────────────────────────────────
+function updateSpectrum(){
+  const rank=+document.getElementById('spec-rank').value;
+  const margin=+document.getElementById('spec-margin').value;
+  const streak=+document.getElementById('spec-streak').value;
+  document.getElementById('spec-rank-v').textContent=rank+'%';
+  document.getElementById('spec-margin-v').textContent=margin+'%';
+  document.getElementById('spec-streak-v').textContent=streak;
+
+  let zone,what,why,diff;
+  if(streak>=3){
+    zone='SHIFTING / RADICAL';
+    what='Mode change forced. Template from adjacent or different mode.';
+    why='Same-mode streak: '+streak+'. Staleness guard triggered.';
+    diff='Recalibrated from baseline';
+  } else if(rank>80&&margin>30){
+    zone='RADICAL';
+    what='Different mode, new template, recalibrated difficulty upward.';
+    why='Decisive win at '+rank+'th percentile with '+margin+'% margin. Too easy.';
+    diff='Increased by 15–25%';
+  } else if(rank>75){
+    zone='SHIFTING';
+    what='Adjacent mode, similar difficulty.';
+    why='Comfortable win. Slight challenge increase.';
+    diff='Increased by 5–10%';
+  } else if(rank>=40&&rank<=80&&margin>=15){
+    zone='PARALLEL';
+    what='Same mode, different template. Difficulty adjusted slightly.';
+    why='Moderate outcome. Mode is productive, template variety adds freshness.';
+    diff='Adjusted ±5%';
+  } else if(rank>=40&&rank<=80&&margin<15){
+    zone='ECHO';
+    what='Same mode, same template variant. New map seed.';
+    why='Close game at '+rank+'th pct, '+margin+'% margin. Unresolved — try again.';
+    diff='Reduced by 5%';
+  } else if(rank<40&&margin>15){
+    zone='ECHO / REMATCH';
+    what='Same mode, same or easier template. Difficulty reduced.';
+    why='Below flow zone. Player was overmatched. Course correction.';
+    diff='Reduced by 15–20%';
+  } else {
+    zone='REMATCH';
+    what='Near-identical session. Same mode, same template, new map. Explicit acknowledgment.';
+    why='Close loss ('+rank+'th pct, '+margin+'% margin). Player was close — let them try again.';
+    diff='Reduced by 10%';
+  }
+
+  document.getElementById('spec-result').innerHTML=`
+    <div style="font-size:9px;letter-spacing:2px;color:#888;margin-bottom:4px">SELECTED ZONE</div>
+    <div style="font-size:18px;font-weight:700;letter-spacing:2px;margin-bottom:6px">${zone}</div>
+    <div style="font-size:11px;margin-bottom:4px"><strong>What changes:</strong> ${what}</div>
+    <div style="font-size:11px;margin-bottom:4px"><strong>Why:</strong> ${why}</div>
+    <div style="font-size:11px"><strong>Difficulty:</strong> ${diff}</div>`;
+}
+
+// ── INIT ─────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',()=>{
+  drawCompiler();
+  initTemplates();
+  initGenerator();
+  updateSpectrum();
+});
+</script>
+</body>
+</html>
