@@ -3,6 +3,9 @@
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+		<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+		<meta http-equiv="Pragma" content="no-cache">
+		<meta http-equiv="Expires" content="0">
 		<title>Centauri</title>
 		<style>
 html, body, #canvas {
@@ -171,7 +174,7 @@ const engine = new Engine(GODOT_CONFIG);
 			}).then(() => {
 				window.location.reload();
 			});
-		} else if (missing.some(function(f) { return f.startsWith('WebGL2'); })) {
+		} else if (missing.join(' ').toLowerCase().indexOf('webgl2') !== -1) {
 			statusOverlay.style.visibility = 'visible';
 			statusNotice.style.display = 'block';
 			statusNotice.innerHTML = [
