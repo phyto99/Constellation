@@ -178,16 +178,15 @@ const engine = new Engine(GODOT_CONFIG);
 			statusOverlay.style.visibility = 'visible';
 			statusNotice.style.display = 'block';
 			statusNotice.innerHTML = [
-				'<strong>WebGL2 is not available in your browser.</strong>',
+				'<strong>WebGL2 is blocked in your browser.</strong>',
 				'',
-				'This has been a known issue since May 2026, likely caused by a browser or GPU driver update.',
+				'Privacy-focused browsers (Zen, Comet, Vivaldi, Brave, LibreWolf, etc.) disable WebGL by default to prevent fingerprinting. You need to re-enable it.',
 				'',
-				'To fix this:',
-				'&bull; <b>Chrome / Edge:</b> go to <code>chrome://settings/system</code> (or <code>edge://settings/system</code>) and enable <em>Use graphics acceleration when available</em>, then restart.',
-				'&bull; <b>Firefox:</b> go to <code>about:config</code>, search <code>webgl.disabled</code>, set it to <code>false</code>.',
-				'&bull; <b>All browsers:</b> make sure your GPU drivers are up to date.',
+				'<b>Zen / Firefox / Firefox-based:</b> type <code>about:config</code> in the address bar &rarr; search <code>webgl.disabled</code> &rarr; set it to <code>false</code>.',
+				'<b>Brave:</b> go to <code>brave://settings/shields</code> &rarr; turn off <em>Fingerprinting blocking</em> for this site, or use a standard Chrome/Edge instead.',
+				'<b>Chrome / Edge:</b> go to <code>chrome://settings/system</code> &rarr; enable <em>Use graphics acceleration when available</em> &rarr; restart.',
 				'',
-				'If hardware acceleration is already enabled and this error persists, your GPU may not support WebGL2.',
+				'Or just open the game in <b>Chrome, Edge, or Safari</b> — WebGL2 is on by default there.',
 			].join('<br>');
 			initializing = false;
 		} else {
