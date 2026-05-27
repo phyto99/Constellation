@@ -95,13 +95,37 @@ body {
 			<div id="status-notice"></div>
 		</div>
 
+		<script>
+var _WEBGL2_OK = (function () {
+	var friendly = [
+		'<strong>WebGL2 is blocked in your browser.</strong>',
+		'',
+		'Privacy-focused browsers (Zen, Comet, Vivaldi, Brave, LibreWolf, etc.) disable WebGL by default to prevent fingerprinting. You need to re-enable it.',
+		'',
+		'<b>Zen / Firefox / Firefox-based:</b> type <code>about:config</code> in the address bar &rarr; search <code>webgl.disabled</code> &rarr; set it to <code>false</code>.',
+		'<b>Brave:</b> go to <code>brave://settings/shields</code> &rarr; turn off <em>Fingerprinting blocking</em> for this site, or use Chrome/Edge instead.',
+		'<b>Chrome / Edge:</b> go to <code>chrome://settings/system</code> &rarr; enable <em>Use graphics acceleration when available</em> &rarr; restart.',
+		'',
+		'Or just open the game in <b>Chrome, Edge, or Safari</b> &mdash; WebGL2 is on by default there.',
+	].join('<br>');
+	try {
+		if (document.createElement('canvas').getContext('webgl2')) { return true; }
+	} catch (e) {}
+	var overlay = document.getElementById('status');
+	var notice = document.getElementById('status-notice');
+	overlay.style.visibility = 'visible';
+	notice.style.display = 'block';
+	notice.innerHTML = friendly;
+	return false;
+}());
+</script>
 		<script src="index.js"></script>
 		<script>
 const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":17933264,"index.wasm":43016933},"focusCanvas":true,"gdextensionLibs":[]};
 const GODOT_THREADS_ENABLED = false;
-const engine = new Engine(GODOT_CONFIG);
+const engine = _WEBGL2_OK ? new Engine(GODOT_CONFIG) : null;
 
-(function () {
+if (_WEBGL2_OK) (function () {
 	const statusOverlay = document.getElementById('status');
 	const statusProgress = document.getElementById('status-progress');
 	const statusNotice = document.getElementById('status-notice');
@@ -192,7 +216,7 @@ const engine = new Engine(GODOT_CONFIG);
 			setStatusMode('hidden');
 		}, displayFailureNotice);
 	}
-}());
+}()); // end _WEBGL2_OK guard
 		</script>
 	</body>
 </html>
