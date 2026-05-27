@@ -97,7 +97,7 @@ body {
 
 		<script src="index.js"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":17930832,"index.wasm":43016933},"focusCanvas":true,"gdextensionLibs":[]};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":17936176,"index.wasm":43016933},"focusCanvas":true,"gdextensionLibs":[]};
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
 
@@ -171,23 +171,8 @@ const engine = new Engine(GODOT_CONFIG);
 			}).then(() => {
 				window.location.reload();
 			});
-		} else if (missing.includes('WebGL2')) {
-			statusOverlay.style.visibility = 'visible';
-			statusNotice.style.display = 'block';
-			statusNotice.innerHTML = [
-				'<strong>WebGL2 is not available in your browser.</strong>',
-				'',
-				'This has been a known issue since May 2026, likely caused by a browser or GPU driver update.',
-				'',
-				'To fix this:',
-				'&bull; <b>Chrome / Edge:</b> go to <code>chrome://settings/system</code> (or <code>edge://settings/system</code>) and enable <em>Use graphics acceleration when available</em>, then restart.',
-				'&bull; <b>Firefox:</b> go to <code>about:config</code>, search <code>webgl.disabled</code>, set it to <code>false</code>.',
-				'&bull; <b>All browsers:</b> make sure your GPU drivers are up to date.',
-				'',
-				'If hardware acceleration is already enabled and this error persists, your GPU may not support WebGL2.',
-			].join('<br>');
-			initializing = false;
 		} else {
+			// Display the message as usual
 			const missingMsg = 'Error\nThe following features required to run Godot projects on the Web are missing:\n';
 			displayFailureNotice(missingMsg + missing.join('\n'));
 		}
@@ -211,3 +196,4 @@ const engine = new Engine(GODOT_CONFIG);
 		</script>
 	</body>
 </html>
+
