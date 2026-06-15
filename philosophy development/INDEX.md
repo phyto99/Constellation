@@ -49,6 +49,15 @@ Purpose: Reference index for all philosophy/architecture documents. Do not modif
 
 ---
 
+## Era 4 — Configuration Architecture & Implementation Bridge
+*Bridges philosophy to concrete implementation. The session compiler as complete settings optimizer.*
+
+| File | What it is | Accuracy now | Future gaps |
+|------|-----------|-------------|------------|
+| `configuration-architecture.html` | The complete configuration architecture: every Constellation setting as a cognitive lever (multipliers, moves, roundLength, rounds, steals, headquarters, map, bots, overlay, allowPlayerTeamSelection) with compiler strategy per parameter. Complete compiler decision sequence (mode → template → difficulty calibration → mode-specific settings → overlay). Zero-data start. Budget levels (ZERO → EMERGING → DEVELOPED → MATURE → EXPERT). Signal additions required in server.js with exact file locations. Full Observation schema with config_hash as join key. Terminal output examples at each budget level. Build order from Phase −1 through Phase 3. | **Current — implementation-ready** | Randomized wormhole req (from TODO.md) not yet accounted for as a mode-specific difficulty lever |
+
+---
+
 ## Open Questions Summary
 *From system-map.html — to be resolved in order of priority.*
 

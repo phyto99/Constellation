@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Configuration Architecture — The Complete Settings Optimizer</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.5}
+nav{position:sticky;top:0;z-index:100;background:#fff;border-bottom:2px solid #000;display:flex;align-items:stretch;padding:0 14px;overflow-x:auto;gap:0}
+.logo{font-size:9px;letter-spacing:2px;font-weight:700;padding:10px 14px 10px 0;border-right:1px solid #ccc;margin-right:4px;white-space:nowrap;align-self:center;text-transform:uppercase;color:#555}
+.tab{padding:10px 13px;cursor:pointer;font-size:9px;letter-spacing:1px;color:#888;border-bottom:3px solid transparent;transition:all .1s;white-space:nowrap;font-weight:700;text-transform:uppercase}
+.tab:hover{color:#000}.tab.active{color:#000;border-bottom-color:#000}
+.panel{display:none;padding:20px}.panel.active{display:block}
+h2{font-size:9px;letter-spacing:2px;font-weight:700;text-transform:uppercase;border-bottom:1px solid #000;padding-bottom:5px;margin-bottom:14px;color:#333}
+h3{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+h4{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;color:#444}
+p{font-size:11px;line-height:1.8;color:#222;margin-bottom:8px}
+ul,ol{margin-left:16px;margin-bottom:10px}
+li{font-size:11px;line-height:1.8;color:#222;margin-bottom:2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+.card{border:1px solid #ccc;padding:12px;background:#fafafa}
+.card-dk{border:2px solid #000;padding:14px;background:#000;color:#fff;margin-bottom:14px}
+table.t{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:14px}
+table.t th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 8px;border-bottom:2px solid #000;text-align:left;background:#f0f0f0}
+table.t td{padding:5px 8px;border-bottom:1px solid #eee;vertical-align:top;font-size:10px}
+table.t tr:hover td{background:#f5f5f5}
+.inset{background:#f0f0f0;border-left:3px solid #000;padding:8px 10px;font-size:11px;line-height:1.7;margin:8px 0}
+.warn{background:#f8f8f8;border:1px dashed #000;padding:8px 10px;font-size:10px;line-height:1.7;margin:8px 0}
+.formula{font-family:'Courier New',monospace;font-size:10px;line-height:1.9;background:#f0f0f0;border:1px solid #ccc;padding:10px 12px;white-space:pre-wrap;margin:8px 0}
+code{font-family:'Courier New',monospace;font-size:10px;background:#f0f0f0;padding:1px 4px}
+.st{display:inline-block;padding:1px 7px;font-size:8px;letter-spacing:1px;text-transform:uppercase;font-weight:700;border:1px solid}
+.st-primary{border-color:#000;color:#000;background:#f0f0f0}
+.st-difficulty{border-color:#1d4ed8;color:#1d4ed8}
+.st-mode{border-color:#d97706;color:#d97706;background:#fef3c7}
+.st-context{border-color:#7c3aed;color:#7c3aed}
+.st-aesthetic{border-color:#ccc;color:#999}
+.st-add{border-color:#15803d;color:#15803d}
+/* mode colors */
+.m-qty{color:#d97706;font-weight:700}.m-spt{color:#2563eb;font-weight:700}.m-frt{color:#059669;font-weight:700}
+.m-dst{color:#dc2626;font-weight:700}.m-wrm{color:#7c3aed;font-weight:700}.m-inv{color:#0891b2;font-weight:700}
+/* terminal */
+.term{background:#000;color:#0f0;font-family:'Courier New',monospace;font-size:11px;padding:14px 16px;line-height:1.7;white-space:pre-wrap;margin:8px 0;border:2px solid #000}
+.term .dim{color:#0a0}.term .hi{color:#fff;font-weight:700}.term .zone{color:#aaa;letter-spacing:2px}
+/* diff badges */
+.diff{display:inline-block;width:16px;height:16px;border-radius:50%;font-size:8px;font-weight:700;text-align:center;line-height:16px;margin-right:4px;vertical-align:middle}
+.d1{background:#f0f0f0;color:#555}.d2{background:#ddd;color:#333}.d3{background:#bbb;color:#111}.d4{background:#888;color:#fff}.d5{background:#000;color:#fff}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:#fff}::-webkit-scrollbar-thumb{background:#ccc}
+@media(max-width:760px){.grid2,.grid3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav>
+  <span class="logo">Config Architecture</span>
+  <div class="tab active" onclick="showTab('loop',this)">The Full Loop</div>
+  <div class="tab" onclick="showTab('space',this)">Configuration Space</div>
+  <div class="tab" onclick="showTab('compiler',this)">The Compiler</div>
+  <div class="tab" onclick="showTab('signals',this)">Signal Additions</div>
+  <div class="tab" onclick="showTab('terminal',this)">Terminal</div>
+  <div class="tab" onclick="showTab('build',this)">Build Order</div>
+</nav>
+
+<!-- ═══════════════════════════════════ THE FULL LOOP -->
+<div id="panel-loop" class="panel active">
+<h2>The Full Loop — Configuration Is Observation, Observation Drives Configuration</h2>
+
+<div class="card-dk">
+  <div style="font-size:9px;letter-spacing:2px;color:#888;margin-bottom:8px">THE CORE REFRAME</div>
+  <div style="font-size:12px;line-height:1.9;color:#fff">
+    The admin panel does not configure sessions. <em style="color:#aaa">The compiler configures sessions.</em> Every parameter — multipliers, moves, round length, steals, map, bot composition — is a cognitive lever. The compiler sets all of them. The teacher observes the compiler's reasoning and may override. The game runs. Observations flow back. The compiler improves. This is the loop, forever.
+  </div>
+</div>
+
+<canvas id="loop-canvas" width="100%" height="280" style="display:block;width:100%;border:1px solid #ccc;margin-bottom:14px;cursor:pointer"></canvas>
+<div id="loop-tooltip" style="min-height:44px;padding:6px 10px;border:1px solid #ddd;background:#f8f8f8;font-size:10px;line-height:1.7">Hover a component for detail.</div>
+
+<div class="grid2" style="margin-top:14px">
+  <div>
+    <h3>What this changes from the current state</h3>
+    <table class="t">
+      <tr><th>Currently</th><th>In the full loop</th></tr>
+      <tr><td>Teacher manually sets multipliers, map, bots, moves in admin panel</td><td>Compiler outputs a complete configuration vector; admin panel displays it, teacher may override</td></tr>
+      <tr><td>Game runs, students play, session ends</td><td>Same — no change to the game experience</td></tr>
+      <tr><td>No recording</td><td>Server writes Observation records to Ledger at round boundaries and game end</td></tr>
+      <tr><td>No terminal</td><td>Server generates terminal text from compiler; delivers via <code>session_terminal</code> Colyseus message at game end</td></tr>
+      <tr><td>Next session configured manually</td><td>Compiler reads updated State, outputs next configuration</td></tr>
+    </table>
+  </div>
+  <div>
+    <h3>The three modes of teacher involvement</h3>
+    <div class="card" style="margin-bottom:8px">
+      <h4 style="color:#000">Full Auto</h4>
+      <div style="font-size:10px;color:#333;line-height:1.7">Compiler generates the complete configuration. Teacher views it in the Observatory alongside the reasoning. May accept without change. <em>Target state — teachers who trust the system get here.</em></div>
+    </div>
+    <div class="card" style="margin-bottom:8px">
+      <h4 style="color:#555">Teacher Override</h4>
+      <div style="font-size:10px;color:#333;line-height:1.7">Compiler generates the configuration. Teacher modifies specific parameters before the session runs. Override is recorded as an Observation in the TEACHER channel with the original config preserved. The system learns teacher preferences over time.</div>
+    </div>
+    <div class="card">
+      <h4 style="color:#999">Teacher Configured</h4>
+      <div style="font-size:10px;color:#333;line-height:1.7">Teacher sets everything manually. Compiler does not suggest. System records the configuration as-is with a <code>source: TEACHER</code> flag. Observations still flow to the Ledger. Used for special sessions outside the system's normal scope.</div>
+    </div>
+  </div>
+</div>
+
+<div class="warn">
+  <strong>The config_hash is the join key.</strong> Every Observation record stores the exact configuration that was active when it was recorded — as a hash of the complete settings object. When a parameter changes (difficulty coefficient corrected, new map added), the Ledger retains the original hash. Regression over outcomes can therefore control for configuration differences. Without the hash, parameter experiments are uninterpretable.
+</div>
+</div>
+
+<!-- ═══════════════════════════════════ CONFIGURATION SPACE -->
+<div id="panel-space" class="panel">
+<h2>Configuration Space — Every Parameter, Its Cognitive Role, How the Compiler Uses It</h2>
+
+<p>The session configuration is a vector of 12 independently settable parameters. The compiler treats them as a joint optimization problem: it does not pick a "mode" and then set parameters — it selects the configuration vector that maximizes expected information gain for this student right now. Modes are emergent descriptions of the resulting configuration, not inputs to it.</p>
+
+<table class="t">
+  <tr>
+    <th>Parameter</th><th>Type</th><th>Role</th><th>Range</th><th>Cognitive effect</th><th>Compiler strategy</th>
+  </tr>
+  <tr>
+    <td><code>multipliers.count</code></td>
+    <td><span class="st st-mode">MODE</span></td>
+    <td>Weight on number of connected star-star edges</td>
+    <td>1–1000</td>
+    <td>High → rapid breadth decisions under move pressure. <span class="m-qty">QUANTITY</span> cognitive target: volume optimization.</td>
+    <td>Set 400–600 for QTY sessions. Set ≤10 when other multipliers dominate.</td>
+  </tr>
+  <tr>
+    <td><code>multipliers.distance</code></td>
+    <td><span class="st st-mode">MODE</span></td>
+    <td>Weight on Euclidean length of connected edges</td>
+    <td>1–1000</td>
+    <td>High → reward long-range connections; penalize clustering near center. <span class="m-spt">SPATIAL</span> target: Euclidean optimization, path geometry under constraint.</td>
+    <td>Set 400–600 for SPT. Interact with map: open maps with spread stars amplify spatial signal.</td>
+  </tr>
+  <tr>
+    <td><code>multipliers.hq</code></td>
+    <td><span class="st st-mode">MODE</span></td>
+    <td>Weight on HQ-to-HQ shortest-path distance (graph traversal)</td>
+    <td>1–1000</td>
+    <td>High → reward building HQ network; entire game is about connectivity planning across multiple HQs. <span class="m-frt">FORTRESS</span> target: multi-step graph construction, network topology under adversarial pressure.</td>
+    <td>Set 400–600 for FRT. Pair with <code>destruction: -200</code> to penalize destruction (pure construction challenge). Set <code>headquarters: 3–4</code> for harder graph problems.</td>
+  </tr>
+  <tr>
+    <td><code>multipliers.destruction</code></td>
+    <td><span class="st st-mode">MODE</span></td>
+    <td>Weight on stars/lines destroyed (via black holes or steals)</td>
+    <td>-500–1000</td>
+    <td>High positive → reward denial; game becomes about breaking opponent network, not building own. <span class="m-dst">DESTRUCTION</span> target: inhibitory control, opponent modeling, strategic denial vs self-building. Negative → FORTRESS overlay: penalize destruction to force pure construction.</td>
+    <td>Set 400–600 for DST. Set -100 to -300 for FRT to force inhibitory control in reverse. <em>Negative values are one of the richest unexplored territories.</em></td>
+  </tr>
+  <tr>
+    <td><code>moves</code></td>
+    <td><span class="st st-difficulty">DIFFICULTY</span></td>
+    <td>Moves allocated per player per round</td>
+    <td>1–99</td>
+    <td>Fewer moves → each decision carries more weight; scarcity forces deliberate prioritization. More moves → volume decisions; exploration over commitment. Interacts with round length: fewer moves + shorter round = extreme time pressure; more moves + longer round = deliberate strategic depth.</td>
+    <td>Default 15. Reduce to 8–10 for advanced students in constraint modes. Increase to 20+ for volume-pressure QTY sessions. This is the primary difficulty dial — adjust per student Elo.</td>
+  </tr>
+  <tr>
+    <td><code>roundLength</code></td>
+    <td><span class="st st-difficulty">DIFFICULTY</span></td>
+    <td>Seconds per round</td>
+    <td>10–300</td>
+    <td>Shorter → pure time pressure, reactive play, fast decision cycles. Longer → deliberation space, planning, strategy formation. Critically: the cognitive load of <em>thinking vs executing</em> is controlled here.</td>
+    <td>Default 30. For QTY (volume under pressure): 20–25s. For SPT (deliberate geometry): 40–60s. For WORMHOLE (search under noise): 35–45s. Do not reduce below 15s with younger students.</td>
+  </tr>
+  <tr>
+    <td><code>rounds</code></td>
+    <td><span class="st st-difficulty">DIFFICULTY</span></td>
+    <td>Number of rounds in the session</td>
+    <td>1–99</td>
+    <td>More rounds → late-game dynamics emerge; students must manage resource depletion, adapt strategies across phases; forgetting within session becomes a signal. Fewer rounds → high-stakes, no second chance; binary commitment. Affects within-session adaptation signal quality.</td>
+    <td>Default 10. For within-session adaptation signal: ≥8 rounds required. For WORMHOLE (binary win): 5–8 rounds is sufficient. Do not reduce below 6 for any session where per-round behavioral analysis is needed.</td>
+  </tr>
+  <tr>
+    <td><code>steals</code></td>
+    <td><span class="st st-mode">MODE</span></td>
+    <td>Steals allowed per team per game</td>
+    <td>0–99</td>
+    <td>High → adversarial intensity; opponent modeling becomes critical; DST signal amplified. Zero → purely constructive; no adversarial element; pure network building signal. Low (3–5) → steals as a strategic resource, not a tactic.</td>
+    <td>For FRT: set 0–5 (pure construction). For DST: set 20–50 (denial is the game). For QTY: standard 15–20. For WORMHOLE: 5–10 (steals can disrupt path; limited adversarial).</td>
+  </tr>
+  <tr>
+    <td><code>headquarters</code></td>
+    <td><span class="st st-mode">MODE</span></td>
+    <td>Number of HQ placements per team</td>
+    <td>0–20</td>
+    <td>More HQ → graph problem has more anchor nodes; the connectivity challenge is richer and harder. HQ placement timing becomes a critical early-game decision. Zero HQ → removes FORTRESS mechanism entirely; used in pure QTY or DST sessions.</td>
+    <td>For FRT: set 2–4; higher at advanced levels. For QTY/DST: set 1–2 (minimal). For WORMHOLE: set 1 (HQ is irrelevant to wormhole win condition).</td>
+  </tr>
+  <tr>
+    <td><code>customMap</code></td>
+    <td><span class="st st-context">CONTEXT</span></td>
+    <td>The spatial graph the game is played on</td>
+    <td>Any map in library</td>
+    <td>Maps are not cosmetic. Star density controls QTY difficulty (denser = more volume decisions). Star spread controls SPT difficulty (wider spread = longer optimal paths). Wormhole placement controls WORMHOLE difficulty. HQ geometry controls FRT difficulty. Cluster density controls DST opportunity (clusters are protected; more clusters = fewer DST targets).</td>
+    <td>Map selection is part of difficulty calibration, not an aesthetic choice. Compiler picks map by: mode + student Elo + target difficulty zone. Eventually: procedural map generation seeded by student profile.</td>
+  </tr>
+  <tr>
+    <td><code>aiBots</code></td>
+    <td><span class="st st-context">CONTEXT</span></td>
+    <td>AI bot archetypes and team assignments</td>
+    <td>HAL / CAESAR / ATHENA / ROBIN HOOD / EINSTEIN / LORENZ / CUSTOM</td>
+    <td>Bots are cognitive mirrors, not just opponents. EINSTEIN (wormhole-focused) tests whether student notices and adapts to a single-minded opponent — pure opponent modeling. LORENZ (chaotic) tests whether student maintains strategy under noise. ATHENA (aggressive) forces DST defensive response. HAL (defensive) gives consistent, legible challenge. Bot choice is a cognitive test selection, not a difficulty setting.</td>
+    <td>Select bot by mode + specific cognitive test. For WORMHOLE: include EINSTEIN to test opponent detection. For QTY: include ATHENA for adversarial pressure. For FRT: include HAL for consistent, predictable opposition (so student can focus on own network). For INV: include LORENZ to compound uncertainty.</td>
+  </tr>
+  <tr>
+    <td><code>allowPlayerTeamSelection</code></td>
+    <td><span class="st st-context">CONTEXT</span></td>
+    <td>Whether students can choose their own team</td>
+    <td>boolean</td>
+    <td>Affects social dynamics, not cognitive load directly. When false (compiler-assigned teams): removes self-selection bias, ensures team balance, gives teacher/system control over opponent quality. When true: agency increases engagement but may reduce signal purity (students choose to avoid strong opponents).</td>
+    <td>Default false. Enable only when engagement is the binding constraint, not signal purity. Record the setting — social self-selection is a future TEACHER channel signal.</td>
+  </tr>
+</table>
+
+<div class="grid2">
+  <div>
+    <h3>Mode Configurations — The Canonical Multiplier Vectors</h3>
+    <table class="t">
+      <tr><th>Mode</th><th>count</th><th>dist</th><th>hq</th><th>dest</th><th>steals</th><th>HQ</th><th>bot suggestion</th></tr>
+      <tr><td><span class="m-qty">QUANTITY</span></td><td>500</td><td>1</td><td>5</td><td>1</td><td>15</td><td>1</td><td>ATHENA</td></tr>
+      <tr><td><span class="m-spt">SPATIAL</span></td><td>1</td><td>500</td><td>5</td><td>1</td><td>10</td><td>1</td><td>CAESAR</td></tr>
+      <tr><td><span class="m-frt">FORTRESS</span></td><td>10</td><td>10</td><td>500</td><td>-200</td><td>3</td><td>3</td><td>HAL</td></tr>
+      <tr><td><span class="m-dst">DESTRUCTION</span></td><td>10</td><td>1</td><td>5</td><td>500</td><td>40</td><td>2</td><td>ROBIN HOOD</td></tr>
+      <tr><td><span class="m-wrm">WORMHOLE</span></td><td>1</td><td>1</td><td>1</td><td>1</td><td>8</td><td>1</td><td>EINSTEIN</td></tr>
+      <tr><td><span class="m-inv">INVERSION</span></td><td colspan="4" style="color:#888;font-style:italic">overlay — applied on top of any mode config, reverses dominant signal</td><td>—</td><td>—</td><td>LORENZ</td></tr>
+    </table>
+    <div style="font-size:9px;color:#888;margin-top:4px">Canonical vectors are starting points. Difficulty is tuned via <code>moves</code>, <code>roundLength</code>, <code>rounds</code>, and map selection — not by adjusting multiplier ratios, which change the mode.</div>
+  </div>
+  <div>
+    <h3>INVERSION — the most important and least understood overlay</h3>
+    <div class="inset" style="margin-bottom:8px">
+      <strong>INVERSION is not a mode with its own multiplier config.</strong> It is an overlay applied to any base mode that reverses the dominant scoring signal. Applied to QUANTITY: <code>count: -300, distance: 1</code> — claiming stars is now penalized. Applied to SPATIAL: <code>distance: -300, count: 1</code> — long connections are penalized. The cognitive target is always the same: detect that the previous strategy is wrong and form a new one as fast as possible. The mode determines what the student must invert.
+    </div>
+    <table class="t">
+      <tr><th>Applied to</th><th>What reverses</th><th>Cognitive test</th></tr>
+      <tr><td><span class="m-qty">QTY</span></td><td>Claiming stars is penalized; restraint scores</td><td>Volume inhibition — stop an overlearned response</td></tr>
+      <tr><td><span class="m-spt">SPT</span></td><td>Long connections penalized; proximity scores</td><td>Spatial heuristic reversal — unlearn Euclidean intuition</td></tr>
+      <tr><td><span class="m-frt">FRT</span></td><td>HQ connections penalized; isolation scores</td><td>Network destruction — invert the graph construction instinct</td></tr>
+      <tr><td><span class="m-dst">DST</span></td><td>Destruction penalized; building scores</td><td>Inhibit adversarial drive — the rarest reversal</td></tr>
+    </table>
+    <div class="warn" style="margin-top:8px">
+      <strong>Announced vs silent INVERSION are two different cognitive tests.</strong> Announced: adapt to known change (easier). Silent: detect that something is wrong from score feedback alone, then adapt (the clean reversal learning signal). Silent INVERSION requires editing the game — the terminal message must not reveal the overlay. This is a server-side configuration flag: <code>overlay: 'inversion', announced: false</code>. Currently unimplemented.
+    </div>
+  </div>
+</div>
+
+<h3 style="margin-top:6px">The Configuration Vector — What the Compiler Actually Outputs</h3>
+<div class="formula">// Complete configuration object output by compiler for one session
+// Every field is set deliberately. None are left at default.
+{
+  // ── Mode (primary cognitive target) ──────────────────────────────
+  multipliers: {
+    count:       1,      // [ASSERTED] 1 when not QTY target
+    distance:    500,    // [ASSERTED] 500 for SPT — full spatial signal
+    hq:          5,      // [ASSERTED] minimal; not FORTRESS session
+    destruction: 1,      // [ASSERTED] minimal; not DST session
+    order: ['distance','count','hq','destruction']  // label display order
+  },
+
+  // ── Difficulty levers (calibrated to student ZPD) ────────────────
+  moves:       12,       // [LEARNED from Elo] reduced from 15; student SPT Elo=720
+  roundLength: 45,       // [ASSERTED] SPT → deliberation space; 45s
+  rounds:      10,       // [ASSERTED] sufficient for within-session signal
+
+  // ── Mode-specific settings ────────────────────────────────────────
+  steals:      8,        // [ASSERTED] SPT → low adversarial; spatial focus
+  headquarters: 1,       // [ASSERTED] SPT → minimal graph complexity
+
+  // ── Context (map + opponent) ──────────────────────────────────────
+  customMapFilename: 'PROVIDENCE.json',  // wide spread, few clusters; amplifies spatial signal
+  aiBots: [{ type: 'CAESAR', teamIndex: 1, aggression: 0.6 }],
+
+  // ── Overlay ───────────────────────────────────────────────────────
+  overlay:    null,      // no INVERSION this session (cooldown: 1 session remaining)
+  announced:  false,     // would be false when overlay applied to advanced student
+
+  // ── Metadata ──────────────────────────────────────────────────────
+  source:      'compiler',        // 'compiler' | 'teacher_override' | 'teacher'
+  student_id:  'student_abc',
+  session_n:   14,
+  mode_label:  'SPATIAL',
+  template:    'DIVERGENCE',      // template within SPATIAL (wide-spread optimization)
+  zone_prior:  'SHIFTING',        // student's current spectrum zone
+  config_hash: 'sha256:...',      // join key for all observations this session
+  params_version: 'v0.1.0'        // which parameter set was active
+}</div>
+</div>
+
+<!-- ═══════════════════════════════════ THE COMPILER -->
+<div id="panel-compiler" class="panel">
+<h2>The Compiler — From Student State to Complete Configuration</h2>
+
+<p>The compiler is a pure function: <code>compile(StudentState, Ledger, Params) → SessionConfig</code>. It runs before every session. It has no side effects. Its output is the complete configuration vector. Its internal reasoning is what the Observatory's compiler preview shows the teacher.</p>
+
+<div class="grid2">
+  <div>
+    <h3>Student State — Inputs to the Compiler</h3>
+    <div class="formula">StudentState = {
+  // ── Elo per mode (proxy for game performance) ──────────
+  game_elo: {
+    QTY: 650,   SPT: 720,   FRT: 480,
+    DST: 590,   WRM: 410,   INV: 380
+  },
+
+  // ── Transfer Elo (BT cognitive scores, mapped per mode) ─
+  // Available from session 1 if BT administered before game
+  transfer_elo: {
+    QTY: 580,   // BT: processing speed → QTY
+    SPT: 710,   // BT: spatial rotation → SPT
+    FRT: 450,   // BT: executive function → FRT
+    DST: 540,   // BT: inhibitory control → DST
+    WRM: 380,   // BT: pattern recognition → WRM
+    INV: 330    // BT: cognitive flexibility → INV
+  },
+
+  // ── Elo velocity per mode (rate of change) ──────────────
+  // elo_velocity[mode] = Δgame_elo over last 3 mode-sessions
+  elo_velocity: {
+    QTY: +12,   SPT: +31,   FRT: -8,
+    DST: +5,    WRM: +18,   INV: +2
+  },
+
+  // ── Recency per mode ────────────────────────────────────
+  sessions_since: {
+    QTY: 2,   SPT: 0,   FRT: 5,
+    DST: 3,   WRM: 1,   INV: 7
+  },
+
+  // ── Template history per mode (last 3 sessions) ─────────
+  recent_templates: {
+    QTY: ['FLOOD','MISER'],
+    SPT: ['PROXIMITY'],
+    FRT: [],
+    DST: ['SWEEP'],
+    WRM: ['GATEWAY','DECOY'],
+    INV: ['QTY_INV']
+  },
+
+  // ── Session metadata ─────────────────────────────────────
+  total_sessions:     14,
+  session_budget:     'mature',   // 0-5|emerging|developed|mature|expert
+  singularity_stage:  2,          // 1=Consumer → 6=Teacher
+  age_tier:          'teen',      // 'young'|'teen'|'gifted'
+  overlay_cooldown:   1,          // sessions before INVERSION eligible again
+  last_overlay:      'QTY_INV',
+
+  // ── Gap signal (requires BT) ─────────────────────────────
+  gap: {
+    QTY: +70,   // game_elo >> transfer_elo → game knowledge without cognitive transfer
+    SPT: +10,   // aligned — transfer occurring
+    FRT: +30,
+    DST: +50,
+    WRM: +30,
+    INV: +50
+  }
+}</div>
+  </div>
+  <div>
+    <h3>Compiler Decision Sequence</h3>
+    <div class="card" style="margin-bottom:8px">
+      <h4>Step 1 — Mode Selection</h4>
+      <div style="font-size:10px;line-height:1.7;color:#333">
+        Compute priority score per mode:<br>
+        <code>priority(m) = elo_weight(m) × recency_weight(m) × velocity_weight(m) × gap_weight(m)</code><br><br>
+        <code>elo_weight(m)</code> — sub-linear inverse of game_elo (lower Elo → higher weight). Exponent 0.7 [ASSERTED].<br>
+        <code>recency_weight(m)</code> — sessions_since as priority boost. Overdue mode (sessions_since ≥ 6) gets maximum weight regardless of Elo.<br>
+        <code>velocity_weight(m)</code> — rapidly improving mode gets slight deprioritization (momentum carries it); plateau or declining mode elevated.<br>
+        <code>gap_weight(m)</code> — wide gap (game_elo &gt;&gt; transfer_elo) elevates mode priority: student optimizing for game, not developing cognitively. System responds by assigning that mode's hardest template.<br><br>
+        <strong>Latin hypercube override:</strong> if any mode has sessions_since = 6 (one full window without appearance), it becomes forced regardless of priority score. Coverage guarantee is non-negotiable.
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:8px">
+      <h4>Step 2 — Template Selection</h4>
+      <div style="font-size:10px;line-height:1.7;color:#333">
+        Given mode, filter templates by: not in recent_templates[mode]. Rank remaining by difficulty proximity to ZPD target.<br>
+        <code>zpd_target(m) = game_elo[m] × difficulty_coeff × forgetting_decay(sessions_since[m])</code><br>
+        <code>difficulty_coeff = 0.85</code> [ASSERTED]<br>
+        <code>forgetting_decay(τ) = exp(−τ / 14)</code> [ASSERTED — expected to refute toward τ½ = 30–60d]<br><br>
+        Select template whose difficulty rating is closest to zpd_target. Break ties toward higher difficulty if velocity is positive.
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:8px">
+      <h4>Step 3 — Difficulty Calibration</h4>
+      <div style="font-size:10px;line-height:1.7;color:#333">
+        Set difficulty levers to hit zpd_target:<br>
+        <code>moves = base_moves × (1 − difficulty_delta)</code> — fewer moves = harder<br>
+        <code>roundLength = mode_base_time × time_pressure_factor</code><br>
+        <code>rounds = 10</code> (standard; reduce only for WORMHOLE or single-session constraint)<br>
+        Map selection: from the map library, select map whose structural properties amplify the mode signal at this difficulty level. High-spread maps for SPT, dense maps for QTY, complex HQ geometry for FRT.
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:8px">
+      <h4>Step 4 — Mode-Specific Settings</h4>
+      <div style="font-size:10px;line-height:1.7;color:#333">
+        Set steals, headquarters, bot archetype per canonical mode config. Apply difficulty scaling: advanced FRT student gets 4 HQ instead of 3. Advanced WORMHOLE student gets EINSTEIN + ROBIN HOOD simultaneously.
+      </div>
+    </div>
+    <div class="card">
+      <h4>Step 5 — Overlay Decision</h4>
+      <div style="font-size:10px;line-height:1.7;color:#333">
+        If <code>overlay_cooldown = 0</code> AND <code>total_sessions ≥ 6</code> AND <code>age_tier ≠ 'young'</code>:<br>
+        Roll P(overlay) = 0.25 [ASSERTED]. If triggered: apply INVERSION to selected mode.<br>
+        If <code>singularity_stage ≥ 3</code> OR <code>gifted_detected</code>: apply silent INVERSION (<code>announced: false</code>). Otherwise: announced.<br>
+        If <code>gap[mode] > 100</code>: elevate P(overlay) to 0.45 for this mode — wide gap indicates game optimization without cognitive transfer; INVERSION disrupts memorized strategies.
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3>Zero-Data Start — What the Compiler Outputs on Session 1</h3>
+<div class="warn" style="margin-bottom:10px">
+  The compiler must produce a valid, meaningful configuration when the student state is entirely empty. Every field is at baseline; no Elo, no velocity, no recency, no templates. The zero-data start is not a failure mode — it is a designed state. The system does not say "I don't know yet." It says "I am watching."
+</div>
+<div class="formula">// Session 1 compiler output — no prior data
+{
+  // Mode: QTY is the recommended first session for all audiences.
+  // Reason: binary clarity (claim stars = score), fast feedback loop,
+  // immediately legible scoring. Produces the highest-quality initial Elo estimate.
+  // For younger students: WRM first (binary win condition is maximally motivating).
+  multipliers: { count: 500, distance: 1, hq: 5, destruction: 1 },
+
+  // Difficulty: start at 50th percentile expectation — neither too hard nor too easy.
+  // No prior Elo → no ZPD target → use cohort baseline.
+  moves:       15,          // default
+  roundLength: 30,          // default
+  rounds:      8,           // slightly shorter first session — reduce abandonment risk
+
+  steals:      15,
+  headquarters: 2,
+
+  // Map: use the simplest, most legible map in the library.
+  // No wormholes, no clusters, no black holes. Pure star-claiming.
+  customMapFilename: 'simple_open.json',  // or best available low-complexity map
+
+  // Bot: one HAL (defensive, predictable). Never LORENZ on session 1.
+  // Chaos without baseline competence is not informative — it is alienating.
+  aiBots: [{ type: 'HAL', teamIndex: 1, aggression: 0.5 }],
+
+  overlay: null,    // never on session 1
+  source: 'compiler',
+  session_n: 1,
+  mode_label: 'QUANTITY',
+  template:   'BASELINE',
+  zone_prior:  null,
+  config_hash: 'sha256:...'
+}</div>
+
+<h3 style="margin-top:14px">Budget Levels — How the Compiler Grows With Data</h3>
+<table class="t">
+  <tr><th>Budget</th><th>Sessions</th><th>Compiler confidence</th><th>What becomes available</th></tr>
+  <tr>
+    <td><span class="diff d1">0</span> ZERO</td>
+    <td>0</td>
+    <td>No data. Cohort priors only.</td>
+    <td>Session 1 baseline config. No Elo, no template history, no ZPD. Default difficulty.</td>
+  </tr>
+  <tr>
+    <td><span class="diff d2">1</span> EMERGING</td>
+    <td>1–5</td>
+    <td>Initial Elo estimates per mode. High variance.</td>
+    <td>ZPD targeting begins. Mode rotation enforced (Latin hypercube). Template history tracked. Velocity zero (insufficient history). No overlay.</td>
+  </tr>
+  <tr>
+    <td><span class="diff d3">2</span> DEVELOPED</td>
+    <td>6–19</td>
+    <td>Elo stable enough for velocity computation. Overlay eligible.</td>
+    <td>INVERSION overlay available (announced). Velocity-based priority adjustments active. Template repetition avoidance. Forgetting decay applied. Gap signal active if BT available.</td>
+  </tr>
+  <tr>
+    <td><span class="diff d4">3</span> MATURE</td>
+    <td>20–49</td>
+    <td>Mode covariance beginning to be measurable. Within-session signal reliable.</td>
+    <td>Silent INVERSION for eligible students. Within-session adaptation signal used in difficulty calibration. Map selection begins to differentiate by student profile. Teacher may see reliable trajectory in Observatory.</td>
+  </tr>
+  <tr>
+    <td><span class="diff d5">4</span> EXPERT</td>
+    <td>50+</td>
+    <td>Full profile. Plateau detection reliable. Alpha track candidates visible.</td>
+    <td>Design challenge track (Stage 5). Asymmetric session configurations. Profile-driven map selection. INVERSION used freely, not probabilistically. BT gap signal drives session selection above raw Elo.</td>
+  </tr>
+</table>
+</div>
+
+<!-- ═══════════════════════════════════ SIGNAL ADDITIONS -->
+<div id="panel-signals" class="panel">
+<h2>Signal Additions — What Needs to Change in the Game</h2>
+
+<div class="inset" style="margin-bottom:14px">
+  The Constellation game already emits sufficient data to start the Ledger. What follows are the additions that take the system from "minimal viable recording" to "full behavioral signal capture." Each addition is classified by urgency and implementation cost. Phase −1 can begin without all of these; they are added iteratively.
+</div>
+
+<table class="t">
+  <tr><th>Signal</th><th>Where captured</th><th>File to edit</th><th>What it tells the compiler</th><th>Priority</th></tr>
+
+  <tr>
+    <td><strong>Round-end score snapshot</strong><br><code>scores_by_round[r]</code></td>
+    <td>Server — at each round transition in the game loop</td>
+    <td><code>server.js</code> — game loop, round transition handler (~line 840)</td>
+    <td>Score trajectory across rounds. Is student front-loading (fast start, stall), back-loading (slow build, surge), or flat? Trajectory is a behavioral signal independent of final outcome. Reveals within-session adaptation and fatigue.</td>
+    <td><span class="st st-add">PHASE −1</span></td>
+  </tr>
+  <tr>
+    <td><strong>Move timestamps</strong><br><code>move_log[{round, t, star, isHQ, isSteal, player}]</code></td>
+    <td>Server — in <code>claim_star</code> and <code>steal_star</code> handlers</td>
+    <td><code>server.js</code> ~line 908 — add <code>Date.now()</code> to the claim/steal log array on the room object</td>
+    <td>Inter-move latency. Clustering of moves in time (burst player vs distributed). Early-round vs late-round move density. Pre-decision pause before HQ placement. Within-round adaptation timing.</td>
+    <td><span class="st st-add">PHASE −1</span></td>
+  </tr>
+  <tr>
+    <td><strong>HQ placement round</strong><br><code>hq_placement_round[team]</code></td>
+    <td>Server — when <code>isHQ: true</code> in claim handler, record <code>this.state.game.round</code></td>
+    <td><code>server.js</code> claim_star handler</td>
+    <td>Early HQ placement = commitment and planning. Late HQ = reactive. HQ timing relative to opponents is an opponent-modeling signal. Critical for FORTRESS mode analysis.</td>
+    <td><span class="st st-add">PHASE −1</span></td>
+  </tr>
+  <tr>
+    <td><strong>Session start / end timestamps</strong><br><code>started_at, ended_at</code></td>
+    <td>Server — game_started and game_ended broadcasts</td>
+    <td><code>server.js</code> — add <code>Date.now()</code> to both broadcasts</td>
+    <td>Session duration. Time-of-day (fatigue factor). Days since last session per mode (forgetting decay measurement). Required for accurate <code>sessions_since</code> tracking.</td>
+    <td><span class="st st-add">PHASE −1</span></td>
+  </tr>
+  <tr>
+    <td><strong>Wormhole proximity per round</strong><br><code>wormhole_progress[round]</code></td>
+    <td>Server — in WORMHOLE mode, at each round boundary, compute: what fraction of the required wormhole path is currently claimed by each team?</td>
+    <td><code>server.js</code> — add wormhole path completeness check at round end when map has wormholes</td>
+    <td>In WORMHOLE mode: is student making consistent progress toward the win condition, or ignoring wormholes entirely? Commitment to wormhole path vs distraction is the primary behavioral signal. Identifies students who understand the win condition vs those optimizing for score.</td>
+    <td><span class="st st-difficulty">PHASE 0</span></td>
+  </tr>
+  <tr>
+    <td><strong>Black hole chain detection</strong><br><code>blackhole_chains[team]</code></td>
+    <td>Server — when a black hole destroys a path, record the chain length and which team triggered it</td>
+    <td><code>server.js</code> — black hole destruction handler, add chain length to move log</td>
+    <td>Black hole chains require simultaneous DST + SPT reasoning (SYNTHESIS insight #2). A student consistently triggering multi-star chains is producing a composite DST+SPT signal. Currently filed as pure DST — this loses information. Record with <code>tags: [dst, spt, composite]</code>.</td>
+    <td><span class="st st-difficulty">PHASE 0</span></td>
+  </tr>
+  <tr>
+    <td><strong>Pre-move latency</strong><br><code>pre_move_latency[move_n]</code></td>
+    <td>Client — timestamp on mouse click, compare to timestamp of previous click</td>
+    <td><code>index.html</code> — star click handler; requires client-side timestamp logging and transmission via <code>game_action</code> message</td>
+    <td>Pause before a move that precedes a strategy shift (SYNTHESIS insight #7). Long pauses may indicate deliberation at decision branch points. Requires within-session analysis; not a round-level signal. Lower priority but high signal quality when available.</td>
+    <td><span class="st st-context">PHASE 1</span></td>
+  </tr>
+  <tr>
+    <td><strong>Silent INVERSION mode flag</strong><br><code>overlay_announced: boolean</code></td>
+    <td>Server — game configuration</td>
+    <td><code>server.js</code> — add <code>overlay_announced</code> to <code>gameConfig</code>; in <code>game_started</code> broadcast, suppress INVERSION announcement if <code>overlay_announced: false</code>; add corresponding purity flag to Observations</td>
+    <td>The single most important Q2 fix. Without this: every INV Observation carries <code>purity: [announced_overlay]</code> contamination. With silent INVERSION available: clean reversal learning signal. Requires a small edit to both server.js (config flag) and game client (don't show "reward structure altered" message when not announced).</td>
+    <td><span class="st st-difficulty">PHASE 0</span></td>
+  </tr>
+  <tr>
+    <td><strong>Terminal delivery</strong><br><code>session_terminal</code> message</td>
+    <td>Server — after game_ended, compiler generates terminal text, sends to each player via their session</td>
+    <td><code>server.js</code> — in game end handler, call <code>compiler.generateTerminal(studentState, sessionResult)</code>; broadcast or unicast <code>session_terminal</code> message; <code>index.html</code> — add handler for <code>session_terminal</code> to display the terminal UI</td>
+    <td>This is the student experience layer. Without terminal delivery, students see a game end screen. With it: they see a personalized, enigmatic summary that begins the second game (reverse-engineering what the system is tracking). Required for community formation and Alpha track.</td>
+    <td><span class="st st-difficulty">PHASE 1</span></td>
+  </tr>
+  <tr>
+    <td><strong>BT session link</strong><br><code>bt_session_id</code></td>
+    <td>Server — when BT session is completed before a game session, store BT session ID in student state; include in game Observation context</td>
+    <td>BT system integration — BT writes <code>transfer_elo[6]</code> per student; game server reads it at session compile time</td>
+    <td>The gap signal: <code>game_elo[m] − transfer_elo[m]</code>. This is the most diagnostic metric in the full system. Requires BT and game to share a student identity key. BT already exists — integration is a data pipeline, not new development.</td>
+    <td><span class="st st-context">PHASE 2</span></td>
+  </tr>
+</table>
+
+<h3>The Observation Record — What Gets Written Per Session</h3>
+<div class="formula">// Written to ledger at game end. One record per student per session.
+// Additional records written per-round and per special event.
+Observation = {
+  id:        uuid(),
+  t:         Date.now(),          // absolute timestamp — never relative
+
+  subject: {
+    student_id:  'student_abc',
+    cohort:      'cohort_2026_A',
+    team:        1,
+  },
+
+  context: {
+    game:            'constellation',
+    session_id:      roomId,
+    session_n:       14,               // this student's 14th session total
+    mode:            'SPATIAL',
+    template:        'DIVERGENCE',
+    overlay:         null,
+    overlay_announced: null,
+    config_hash:     'sha256:...',     // exact configuration used
+    params_version:  'v0.1.0',        // which parameter set was live
+    map_id:          'PROVIDENCE.json',
+    bot_composition: [{ type: 'CAESAR', team: 1 }],
+    compiler_source: 'compiler',       // 'compiler'|'teacher_override'|'teacher'
+  },
+
+  channel: 'GAME',
+
+  // ── Signals ────────────────────────────────────────────────────
+  signal: [
+    { name: 'final_rank',       value: 1,        unit: 'rank_1indexed' },
+    { name: 'score_count',      value: 47,       unit: 'raw' },
+    { name: 'score_distance',   value: 1840,     unit: 'raw' },
+    { name: 'score_hq',         value: 12,       unit: 'raw' },
+    { name: 'score_destruction',value: 0,        unit: 'raw' },
+    { name: 'steals_used',      value: 3,        unit: 'count' },
+    { name: 'win_margin',       value: 0.18,     unit: 'normalized' },
+    { name: 'hq_placement_round',value: 2,       unit: 'round_number' },
+    { name: 'scores_by_round',  value: [120,280,440,600,770,920,1070,1240,1420,1840], unit: 'array' },
+    { name: 'score_trajectory', value: 'linear_front', unit: 'enum' },  // derived
+    { name: 'move_log',         value: [...],    unit: 'array_of_events' },
+    // Phase 0 additions:
+    { name: 'wormhole_progress',value: null,     unit: 'array' },  // null — not WRM session
+  ],
+
+  tags: ['spt', 'developed_budget', 'teen', 'compiler_assigned'],
+
+  quality: {
+    noise:         'low',
+    coverage:      'full',
+    purity_flags:  []              // would contain 'announced_overlay' if INV was announced
+  }
+}</div>
+
+<div class="warn" style="margin-top:10px">
+  <strong>Round-level records are separate.</strong> The session-level record above captures final outcomes and aggregate signals. For within-session analysis, a separate <code>Observation</code> is written per round boundary: it contains the score snapshot at that round and the moves made in that round. These are joined to the session record via <code>session_id</code>. The session record does not embed round data — that would make it non-atomic and harder to query.
+</div>
+</div>
+
+<!-- ═══════════════════════════════════ TERMINAL -->
+<div id="panel-terminal" class="panel">
+<h2>Terminal — The Student Experience Layer</h2>
+
+<p>The terminal is the second game. The first game is Constellation. The second game is: what is the system tracking, and why? The terminal's job is to generate observations that are true, specific, and just opaque enough that the student cannot immediately decode them — but not so opaque that they give up. The community that forms around reverse-engineering the terminal's language is the long-term product of the system.</p>
+
+<div class="grid2">
+  <div>
+    <h3>How the Terminal Is Generated</h3>
+    <div class="card" style="margin-bottom:8px">
+      <h4>Layer 1 — Session Result</h4>
+      <div style="font-size:10px;line-height:1.7;color:#333">Rank, score components, win/loss, rounds played. Always present. No interpretation — raw facts. "Session 14. Rank: 1. Distance score dominated." These are not framed as good or bad. They are reported as data.</div>
+    </div>
+    <div class="card" style="margin-bottom:8px">
+      <h4>Layer 2 — Behavioral Observation</h4>
+      <div style="font-size:10px;line-height:1.7;color:#333">Derived from signals in the Observation record. Specific, behavioral, and not evaluative. "HQ placed in round 2. Consistent with the last three sessions in this mode. The system has logged the pattern." These are the core of what students theorize about.</div>
+    </div>
+    <div class="card" style="margin-bottom:8px">
+      <h4>Layer 3 — System Inference (admin only)</h4>
+      <div style="font-size:10px;line-height:1.7;color:#333">What the system is actually concluding. Never shown to students. Shown to teachers in Observatory compiler preview. "SPT Elo velocity +31 over 3 sessions — trajectory above cohort. No plateau detected. Recommend advancing to DIVERGENCE template next session."</div>
+    </div>
+    <div class="card">
+      <h4>Layer 4 — Zone and Codename</h4>
+      <div style="font-size:10px;line-height:1.7;color:#333">Zone name computed from similarity spectrum position (how similar was this session to the student's typical sessions?). Codename assigned as persistent session identifier. Students learn to associate codenames with session types through experience — not through explanation.</div>
+    </div>
+  </div>
+  <div>
+    <h3>Similarity Spectrum — The Zone System</h3>
+    <table class="t">
+      <tr><th>Zone</th><th>What it means</th><th>When assigned</th></tr>
+      <tr>
+        <td style="background:#111;color:#eee;font-weight:700;letter-spacing:2px;font-size:9px">ECHO</td>
+        <td>Session nearly identical to prior sessions — same mode, same strategy, similar outcome</td>
+        <td>Low novelty, low surprise. Student is consolidating. High ECHO frequency → plateau risk.</td>
+      </tr>
+      <tr>
+        <td style="font-weight:700;letter-spacing:2px;font-size:9px">PARALLEL</td>
+        <td>Same mode, different template or difficulty — structurally familiar but novel challenge</td>
+        <td>Standard progression. ZPD properly calibrated.</td>
+      </tr>
+      <tr>
+        <td style="color:#555;font-weight:700;letter-spacing:2px;font-size:9px">SHIFTING</td>
+        <td>Mode changed, or significant difficulty jump within mode</td>
+        <td>Active development zone. Compiler moved to new territory.</td>
+      </tr>
+      <tr>
+        <td style="background:#000;color:#fff;font-weight:700;letter-spacing:2px;font-size:9px">RADICAL</td>
+        <td>Maximum novelty — mode change, template change, AND outcome differs from expectation</td>
+        <td>INVERSION sessions, first sessions in a new mode, or strong surprise outcomes. Richest information gain.</td>
+      </tr>
+      <tr>
+        <td style="color:#aaa;font-weight:700;letter-spacing:2px;font-size:9px">REMATCH</td>
+        <td>Repeat of prior configuration — explicitly configured by compiler</td>
+        <td>When a prior session produced ambiguous signal and the compiler needs to retry identical conditions for cleaner data.</td>
+      </tr>
+    </table>
+    <div class="warn" style="margin-top:8px">
+      <strong>Do not show students what zones mean.</strong> The vocabulary is emergent. Students who compare terminal outputs across sessions — "I got RADICAL again, what is this?" — are already playing the second game. The community that forms around this is more valuable than any explanation the system could give.
+    </div>
+  </div>
+</div>
+
+<h3>Terminal Output Examples — By Session Budget</h3>
+
+<div class="grid2">
+  <div>
+    <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:4px;font-weight:700">Session 1 — Zero Data</div>
+    <div class="term">// CONSTELLATION
+<span class="dim">Session 001</span>
+
+<span class="hi">INITIALIZING.</span>
+
+No prior record exists for this player.
+The system is starting from zero.
+
+Configuration: <span class="dim">standard</span>
+Mode: <span class="dim">QUANTITY</span>
+
+Session codename: <span class="hi">CYGNUS-01</span>
+Zone: <span class="zone">—</span>
+
+<span class="dim">The system is watching.</span></div>
+  </div>
+  <div>
+    <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:4px;font-weight:700">Session 4 — Emerging Budget</div>
+    <div class="term">// CONSTELLATION
+<span class="dim">Session 004</span>
+
+Rank: 1 of 2.
+Distance score: 1,840.
+Stars claimed: 47.
+
+<span class="hi">HQ placed in round 2.</span>
+Same as session 2 and session 3.
+The system has noted this.
+
+Session codename: <span class="hi">VEGA-04</span>
+Zone: <span class="zone">PARALLEL</span>
+
+<span class="dim">Three sessions in the same zone.</span>
+<span class="dim">The pattern is forming.</span></div>
+  </div>
+  <div style="margin-top:10px">
+    <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:4px;font-weight:700">Session 9 — First INVERSION (announced)</div>
+    <div class="term">// CONSTELLATION
+<span class="dim">Session 009</span>
+
+The reward structure was altered.
+You were not warned in advance.
+
+<span class="hi">Strategy shift detected.</span>
+Shift occurred between rounds 4 and 6.
+The delay was 2 rounds.
+
+Session codename: <span class="hi">NOVA-09</span>
+Zone: <span class="zone">RADICAL</span>
+
+<span class="dim">First RADICAL in this student's record.</span>
+<span class="dim">The system found what it was looking for.</span></div>
+  </div>
+  <div style="margin-top:10px">
+    <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:4px;font-weight:700">Session 22 — Mature Budget, Silent INVERSION</div>
+    <div class="term">// CONSTELLATION
+<span class="dim">Session 022</span>
+
+Rank: 2 of 2.
+Score: 940.
+
+Standard configuration applied.
+
+<span class="hi">Something changed in round 3.</span>
+The system observed it.
+No further detail at this time.
+
+Session codename: <span class="hi">RIGEL-22</span>
+Zone: <span class="zone">RADICAL</span>
+
+<span class="dim">The system has an open question about</span>
+<span class="dim">this student. It will not state it yet.</span></div>
+  </div>
+</div>
+
+<div class="warn" style="margin-top:10px">
+  <strong>Terminal messages should be occasionally false enough to be interesting.</strong> (SYNTHESIS insight #11.) The terminal currently says what it observed. But occasionally — perhaps 1 in 8 sessions — it should make an inference that is probabilistically plausible but not confirmed: <em>"A pattern that began in session 7 appears to be continuing."</em> — when no such pattern has been fully confirmed but the data is consistent with it. This is the system behaving like an intelligent observer who makes probabilistic inferences, not a database. It creates better community discussion. This is a deliberate editorial choice, not an error.
+</div>
+
+<h3 style="margin-top:14px">Terminal Delivery — The Technical Path</h3>
+<div class="formula">// server.js — in game end handler, after writing Observations to ledger:
+
+async function deliverTerminal(room, studentId, sessionObs, studentState) {
+  const terminalLines = compileTerminal(sessionObs, studentState);
+  // Send to the specific player (not broadcast — each player gets their own terminal)
+  const playerClient = room.clients.find(c => c.userData?.studentId === studentId);
+  if (playerClient) {
+    playerClient.send('session_terminal', {
+      lines: terminalLines,    // [{text, delay, style}]
+      codename: sessionObs.codename,
+      zone: sessionObs.zone,
+      sessionN: studentState.total_sessions
+    });
+  }
+}
+
+// index.html — add message handler:
+room.onMessage('session_terminal', (data) => {
+  showTerminalScreen(data);  // renders the green-on-black terminal UI after game end
+});</div>
+</div>
+
+<!-- ═══════════════════════════════════ BUILD ORDER -->
+<div id="panel-build" class="panel">
+<h2>Build Order — From 100 Students Starting Now to a Fully Self-Correcting System</h2>
+
+<div class="warn" style="margin-bottom:14px">
+  The build order is driven by one constraint: observations not recorded during any phase are permanently unrecoverable. Everything else is fixable — parameters can be corrected, views can be recomputed, schemas can be extended. But an unrecorded session is gone. Phase −1 is therefore not a phase — it is a precondition. It must exist before students start.
+</div>
+
+<canvas id="build-canvas" width="100%" height="320" style="display:block;width:100%;border:1px solid #ccc;margin-bottom:14px"></canvas>
+
+<div class="grid2">
+  <div>
+    <table class="t">
+      <tr><th colspan="3" style="background:#dc2626;color:#fff">Phase −1 — Before students start (do this first)</th></tr>
+      <tr><th>Task</th><th>File</th><th>What it enables</th></tr>
+      <tr>
+        <td>Add round-end score snapshots to game loop</td>
+        <td><code>server.js</code> ~line 840</td>
+        <td>Score trajectory signal per session. Required for within-session analysis.</td>
+      </tr>
+      <tr>
+        <td>Add timestamps to claim_star / steal_star handlers</td>
+        <td><code>server.js</code> ~line 908</td>
+        <td>Move log with timing. Inter-move latency. HQ placement round.</td>
+      </tr>
+      <tr>
+        <td>Add session start/end timestamps to game_started / game_ended</td>
+        <td><code>server.js</code></td>
+        <td>Session duration. days_since computation. Forgetting measurement.</td>
+      </tr>
+      <tr>
+        <td>Write Ledger append on game_ended — per-session Observation record</td>
+        <td><code>server.js</code> — new <code>ledger.js</code> module</td>
+        <td>The Ledger exists. All future questions are now answerable from history.</td>
+      </tr>
+      <tr>
+        <td>Write Ledger append at each round boundary — per-round Observation record</td>
+        <td><code>server.js</code> — game loop</td>
+        <td>Within-session signal. Score trajectory. Round-level behavioral analysis.</td>
+      </tr>
+      <tr>
+        <td>Implement minimal State derivation from Ledger — mode_elo[6], sessions_since[6], recent_templates[6]</td>
+        <td>New <code>state.js</code> module</td>
+        <td>Compiler has a state to read. ZPD targets can be computed. Session 2 onwards uses prior data.</td>
+      </tr>
+      <tr>
+        <td>Implement minimal Compiler — mode selection via priority, difficulty calibration, config output</td>
+        <td>New <code>compiler.js</code> module</td>
+        <td>Sessions are no longer manually configured. Config vector is generated and pushed to admin panel via Colyseus presence.</td>
+      </tr>
+      <tr><th colspan="3" style="background:#d97706;color:#fff">Phase 0 — Within the first month of sessions</th></tr>
+      <tr>
+        <td>Add <code>overlay_announced</code> flag to gameConfig; implement silent INVERSION</td>
+        <td><code>server.js</code>, <code>index.html</code></td>
+        <td>Resolves Q2. Clean INV signal from first silent session. Purity flags in Ledger distinguish announced from silent.</td>
+      </tr>
+      <tr>
+        <td>Add wormhole proximity tracking per round</td>
+        <td><code>server.js</code> — round boundary</td>
+        <td>WRM behavioral signal. Path commitment detection.</td>
+      </tr>
+      <tr>
+        <td>Add black hole chain detection</td>
+        <td><code>server.js</code> — black hole handler</td>
+        <td>DST+SPT composite signal. Resolves SYNTHESIS insight #2 categorization.</td>
+      </tr>
+      <tr>
+        <td>Wire BT session data to student state via shared student_id</td>
+        <td>BT system + <code>state.js</code></td>
+        <td>transfer_elo[6] available. Gap signal live. Q1 partially resolved.</td>
+      </tr>
+      <tr>
+        <td>Run return-Elo analysis after first students miss sessions</td>
+        <td>Query against Ledger</td>
+        <td>Empirical forgetting half-life measurement. Expected to refute 14d assumption toward 30–60d.</td>
+      </tr>
+      <tr><th colspan="3" style="background:#7c3aed;color:#fff">Phase 1 — Core student experience</th></tr>
+      <tr>
+        <td>Implement terminal generation + delivery</td>
+        <td><code>compiler.js</code>, <code>server.js</code>, <code>index.html</code></td>
+        <td>Students experience the second game. Zone names appear. Community formation begins.</td>
+      </tr>
+      <tr>
+        <td>Implement Observatory (student panel wired to live Ledger)</td>
+        <td>New admin panel tab</td>
+        <td>Teacher sees per-student radar, corroboration matrix, evidence feed, compiler preview.</td>
+      </tr>
+      <tr>
+        <td>Alpha track application interface</td>
+        <td>Admin + new student page</td>
+        <td>Stage 5 students can apply for design challenge access.</td>
+      </tr>
+      <tr><th colspan="3" style="background:#15803d;color:#fff">Phase 3 — Learned parameters</th></tr>
+      <tr>
+        <td>Replace all [ASSERTED] values with regression over Ledger</td>
+        <td><code>params.js</code></td>
+        <td>difficulty_coeff, forgetting half-life, flow zone, overlay probability — all learned from actual outcomes.</td>
+      </tr>
+      <tr>
+        <td>Mode covariance model replaces independence assumption</td>
+        <td><code>state.js</code>, <code>compiler.js</code></td>
+        <td>FRT and DST correlation measurable. Cross-mode inference accurate.</td>
+      </tr>
+      <tr>
+        <td>Profile-driven map generation</td>
+        <td>New map generator module</td>
+        <td>Maps designed for this student's specific cognitive gaps. Maximum signal per session.</td>
+      </tr>
+    </table>
+  </div>
+  <div>
+    <h3>What 100 students generate in the first week</h3>
+    <div class="card" style="margin-bottom:10px">
+      <div style="font-size:10px;line-height:1.8;color:#333">
+        Assume 100 students × 2 sessions per week = 200 sessions/week.<br>
+        Per session: 1 session-level Observation + 10 round-level Observations.<br>
+        Week 1: <strong>2,000 Observation records</strong>.<br>
+        At 6 sessions per student: Latin hypercube has covered all 6 modes once per student.<br>
+        At this point: initial mode_elo[6] estimates exist for all 100 students.<br>
+        First forgetting data available (students who miss a session between weeks 1 and 2).<br>
+        BT gap signal live if BT was administered before game sessions start.<br><br>
+        <strong>The Ledger is the most valuable thing the system produces.</strong> After 1 month, it is irreplaceable. After 1 year, it is the foundation for everything learned rather than asserted.
+      </div>
+    </div>
+    <h3>The compiler pushes config to the admin panel</h3>
+    <div class="inset">
+      The admin panel already receives settings via the <code>update_settings</code> presence message. The compiler generates the config object and publishes it to the room's presence channel using the same mechanism. The admin panel displays the compiler's configuration; the teacher sees it and may override. No new UI needed for Phase −1 — the existing admin settings panel becomes the compiler's output display.
+    </div>
+    <h3>The param self-correction loop</h3>
+    <div class="formula">// Running view over Ledger — executes continuously
+// Fires when any parameter's refutation condition is met
+
+PARAM_WATCH = {
+  forgetting_half_life: {
+    current: 14,
+    check: () => {
+      // For all students with sessions_since[m] > 0,
+      // fit exp decay to Elo at return vs days elapsed.
+      // If fitted τ½ falls outside [10, 18]: refute.
+      const fitted = fitForgettingCurve(ledger);
+      if (fitted < 10 || fitted > 18) {
+        params.forgetting_half_life = fitted;
+        params.log('forgetting_half_life', 14, fitted,
+          'return-Elo data refuted Ebbinghaus assumption');
+      }
+    }
+  },
+  // Same structure for every [ASSERTED] parameter.
+  // The system grades itself. Nothing is exempt.
+}</div>
+    <h3>What "perfect" means in practice</h3>
+    <p style="font-size:10px;line-height:1.8;color:#333">
+      The system is never finished — that would require all [ASSERTED] parameters to become [LEARNED], all open questions to resolve, and all channels to be corroborated. That is Phase 3 and beyond. What "perfect" means <em>at any given moment</em> is: the system is making the best possible decision with the information available, and it knows precisely where its uncertainty lies. It is not overconfident about the things it asserted; it is not underconfident about the things it has measured. The gap between what is asserted and what is learned narrows continuously. The singularity trajectory for each student runs in parallel with the system's own singularity trajectory — the moment when all parameters are learned and all channels are corroborated is the moment the system has become objectively perfect. It will not happen at once. It gets closer with every session.
+    </p>
+  </div>
+</div>
+</div>
+
+<script>
+// ════════════════════════ LOOP CANVAS
+const LOOP_NODES = [
+  {id:'ledger', label:'LEDGER', sub:'append-only\nraw observations', x:.10, y:.50, w:110, h:60, fill:'#000', tc:'#fff',
+   detail:'The permanent foundation. Append-only. Every observation with full provenance. config_hash joins every record to the exact configuration that produced it. Never modified — only extended.'},
+  {id:'state', label:'STATE', sub:'18-dim student\nprofile (derived)', x:.30, y:.50, w:110, h:60, fill:'#fff', tc:'#000',
+   detail:'The minimum sufficient representation for session selection. Computed from the Ledger as a view. mode_elo[6], elo_velocity[6], sessions_since[6], recent_templates[6], gap[6] if BT available. Recomputed after every session.'},
+  {id:'compiler', label:'COMPILER', sub:'argmax E[KL]\nconfig generator', x:.50, y:.50, w:110, h:60, fill:'#000', tc:'#fff',
+   detail:'compile(State, Ledger, Params) → Config. Pure function. Sets every game parameter: multipliers (mode), moves (difficulty), roundLength, rounds, steals, HQ count, map, bot composition, overlay. Its reasoning is shown to the teacher in the Observatory compiler preview.'},
+  {id:'admin', label:'ADMIN PANEL', sub:'compiler output\nteacher can override', x:.70, y:.50, w:110, h:60, fill:'#fff', tc:'#000',
+   detail:'Receives the compiler\'s complete configuration via Colyseus presence update_settings. Teacher sees the config and the compiler\'s reasoning. May override specific parameters — override is recorded as TEACHER channel Observation. In Full Auto mode: accepts without change.'},
+  {id:'game', label:'GAME', sub:'constellation\n(or any game)', x:.90, y:.50, w:100, h:60, fill:'#fff', tc:'#000', border:'#000',
+   detail:'The game runs under the compiler-generated configuration. Students experience nothing different from a manually configured session. The game emits the same signals it always has. The difference is entirely in what happens before and after.'},
+  {id:'bt', label:'BT', sub:'transfer_elo[6]\ngap signal', x:.50, y:.12, w:110, h:50, fill:'#faf8ff', tc:'#7c3aed',
+   detail:'Brain Training system. Runs independently. Produces transfer_elo[6] per student — cognitive scores per dimension, mapped to the 6 modes. Gap signal = game_elo[m] − transfer_elo[m]. Wide gap: game optimization without cognitive transfer. System responds.'},
+  {id:'terminal', label:'TERMINAL', sub:'student experience\nsecond game', x:.50, y:.88, w:110, h:50, fill:'#111', tc:'#0f0',
+   detail:'Generated by compiler after game ends. Delivered as session_terminal Colyseus message to each student individually. Zone name, codename, behavioral observations, system inference (Layer 3 version shown only to teacher in Observatory). Students do not know what is Layer 1 and what is Layer 4.'},
+];
+
+let loopHover = null;
+function drawLoop() {
+  const c = document.getElementById('loop-canvas'); if (!c) return;
+  const W = c.clientWidth || 900, H = 280;
+  c.setAttribute('width', W); c.setAttribute('height', H);
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  // Draw main flow arrows between main nodes (left to right)
+  const main = ['ledger','state','compiler','admin','game'];
+  for (let i = 0; i < main.length - 1; i++) {
+    const a = LOOP_NODES.find(n=>n.id===main[i]);
+    const b = LOOP_NODES.find(n=>n.id===main[i+1]);
+    const ax = a.x*W + a.w/2, ay = H*a.y;
+    const bx = b.x*W - b.w/2, by = H*b.y;
+    ctx.strokeStyle = '#bbb'; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx-6, by); ctx.stroke();
+    ctx.fillStyle = '#bbb';
+    ctx.beginPath(); ctx.moveTo(bx-6,by-4); ctx.lineTo(bx,by); ctx.lineTo(bx-6,by+4); ctx.closePath(); ctx.fill();
+  }
+
+  // Feedback arrow: game → ledger (curved below)
+  const gn = LOOP_NODES.find(n=>n.id==='game');
+  const ln = LOOP_NODES.find(n=>n.id==='ledger');
+  const gx = gn.x*W, gy = H*gn.y + gn.h/2 + 8;
+  const lx = ln.x*W, ly = H*ln.y + ln.h/2 + 8;
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5; ctx.setLineDash([4,3]);
+  ctx.beginPath();
+  ctx.moveTo(gx, gy); ctx.bezierCurveTo(gx, gy+52, lx, ly+52, lx, ly);
+  ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = '#555';
+  ctx.beginPath(); ctx.moveTo(lx-4, ly); ctx.lineTo(lx, ly-8); ctx.lineTo(lx+4, ly); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#888'; ctx.font = '8px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('observations flow back to ledger', (gx+lx)/2, gy+62);
+
+  // BT ↕ compiler arrows
+  const btn = LOOP_NODES.find(n=>n.id==='bt');
+  const compn = LOOP_NODES.find(n=>n.id==='compiler');
+  const btx = btn.x*W, bty = H*btn.y + btn.h/2;
+  const cpx = compn.x*W, cpy = H*compn.y - compn.h/2;
+  ctx.strokeStyle = '#c4b5fd'; ctx.lineWidth = 1.5; ctx.setLineDash([3,2]);
+  ctx.beginPath(); ctx.moveTo(btx, bty); ctx.lineTo(cpx, cpy); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Terminal ↕ compiler
+  const tern = LOOP_NODES.find(n=>n.id==='terminal');
+  const terx = tern.x*W, tery = H*tern.y - tern.h/2;
+  const cpby = H*compn.y + compn.h/2;
+  ctx.strokeStyle = '#0a0'; ctx.lineWidth = 1.5; ctx.setLineDash([3,2]);
+  ctx.beginPath(); ctx.moveTo(cpx, cpby); ctx.lineTo(terx, tery-6); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#0a0';
+  ctx.beginPath(); ctx.moveTo(terx-4, tery-6); ctx.lineTo(terx, tery); ctx.lineTo(terx+4, tery-6); ctx.closePath(); ctx.fill();
+
+  // Draw nodes
+  LOOP_NODES.forEach(n => {
+    const nx = n.x * W, ny = H * n.y;
+    const hov = loopHover && loopHover.id === n.id;
+    ctx.fillStyle = n.fill || '#fff';
+    ctx.strokeStyle = n.border || (n.fill === '#000' ? '#000' : '#111') ;
+    ctx.lineWidth = hov ? 2.5 : 1.5;
+    const rx = nx - n.w/2, ry = ny - n.h/2;
+    ctx.fillRect(rx, ry, n.w, n.h);
+    ctx.strokeRect(rx, ry, n.w, n.h);
+    ctx.fillStyle = n.tc || '#000';
+    ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center';
+    ctx.fillText(n.label, nx, ny - 6);
+    if (n.sub) {
+      ctx.fillStyle = n.tc === '#fff' ? '#888' : (n.tc === '#0f0' ? '#0a0' : '#888');
+      ctx.font = '7px Arial';
+      n.sub.split('\n').forEach((s,i) => ctx.fillText(s, nx, ny + 5 + i*9));
+    }
+  });
+
+  c._nodes = LOOP_NODES.map(n => ({...n, px: n.x*W, py: H*n.y}));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const c = document.getElementById('loop-canvas'); if (!c) return;
+  c.addEventListener('mousemove', e => {
+    const r = c.getBoundingClientRect();
+    const mx = (e.clientX-r.left)*(c.width/r.width), my = (e.clientY-r.top)*(c.height/r.height);
+    if (!c._nodes) return;
+    let hit = null;
+    c._nodes.forEach(n => {
+      if (mx >= n.px-n.w/2 && mx <= n.px+n.w/2 && my >= n.py-n.h/2 && my <= n.py+n.h/2) hit = n;
+    });
+    if (hit !== loopHover) {
+      loopHover = hit; drawLoop();
+      const tt = document.getElementById('loop-tooltip');
+      if (tt) tt.innerHTML = hit ? `<strong>${hit.label}</strong> — ${hit.detail}` : 'Hover a component for detail.';
+    }
+  });
+});
+
+// ════════════════════════ BUILD CANVAS
+function drawBuild() {
+  const c = document.getElementById('build-canvas'); if (!c) return;
+  const W = c.clientWidth || 900, H = 320;
+  c.setAttribute('width', W); c.setAttribute('height', H);
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  const phases = [
+    {label:'PHASE −1', sub:'Start the Ledger\nTimestamps · Round snapshots\nState derivation · Compiler v1', col:'#dc2626', x:.11, tasks:5},
+    {label:'PHASE 0', sub:'Fix dirty signals\nSilent INVERSION · BT bridge\nWormhole + blackhole signals', col:'#d97706', x:.34, tasks:4},
+    {label:'PHASE 1', sub:'Student experience\nTerminal delivery\nObservatory · Alpha track', col:'#7c3aed', x:.57, tasks:3},
+    {label:'PHASE 2\n(BT)', sub:'Gap signal live\nbrain_metrics → core\nDimension mapping', col:'#7c3aed', x:.57, tasks:3, offset:true},
+    {label:'PHASE 3', sub:'Learned parameters\nCovariance model\nProfile-driven maps', col:'#15803d', x:.80, tasks:3},
+  ];
+
+  const pw = W*0.18, ph = 200;
+
+  phases.forEach((p,i) => {
+    if (p.offset) return; // skip BT for separate rendering
+    const px = p.x*W - pw/2;
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = p.col; ctx.lineWidth = 2;
+    ctx.fillRect(px, 24, pw, ph); ctx.strokeRect(px, 24, pw, ph);
+    ctx.fillStyle = p.col; ctx.fillRect(px, 24, pw, 36);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 8px Arial'; ctx.textAlign = 'center';
+    p.label.split('\n').forEach((line,li) => ctx.fillText(line, px+pw/2, 36+li*13));
+    ctx.fillStyle = '#555'; ctx.font = '8px Arial';
+    p.sub.split('\n').forEach((line,li) => ctx.fillText('· '+line, px+pw/2, 78+li*17));
+    if (i < phases.length - 2) {
+      const nextP = phases.find((_,ni) => ni > i && !phases[ni]?.offset);
+      if (nextP) {
+        const nx = nextP.x*W-pw/2;
+        ctx.strokeStyle = '#bbb'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(px+pw+3, 120); ctx.lineTo(nx-3, 120); ctx.stroke();
+        ctx.fillStyle = '#bbb';
+        ctx.beginPath(); ctx.moveTo(nx-3,116); ctx.lineTo(nx+3,120); ctx.lineTo(nx-3,124); ctx.closePath(); ctx.fill();
+      }
+    }
+  });
+
+  // Phase 2 BT as side annotation on Phase 1 → Phase 3
+  const p1x = phases[2].x*W;
+  ctx.fillStyle = '#faf8ff'; ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 1.5;
+  ctx.setLineDash([3,2]);
+  ctx.fillRect(p1x-pw/2, 240, pw, 60);
+  ctx.strokeRect(p1x-pw/2, 240, pw, 60);
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#7c3aed'; ctx.font = 'bold 8px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('PHASE 2 — BT', p1x, 256);
+  ctx.fillStyle = '#7c3aed'; ctx.font = '7px Arial';
+  ['· Gap signal','· transfer_elo','· brain_metrics → core'].forEach((s,i) => ctx.fillText(s, p1x, 270+i*10));
+
+  ctx.fillStyle = '#888'; ctx.font = '9px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('Do not build Phase 1 without completing Phase −1. Observations not captured during Phase −1 are permanently lost.', W/2, 305);
+}
+
+// ════════════════════════ TABS
+function showTab(name, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  el.classList.add('active');
+  setTimeout(() => { drawLoop(); drawBuild(); }, 50);
+}
+window.addEventListener('DOMContentLoaded', () => setTimeout(() => { drawLoop(); drawBuild(); }, 100));
+window.addEventListener('resize', () => { drawLoop(); drawBuild(); });
+</script>
+</body>
+</html>
