@@ -112,10 +112,10 @@ table.state-tbl input{width:52px;padding:2px 4px;font-size:10px;border:1px solid
     <div style="margin-bottom:10px">
       <h4 style="margin-bottom:5px">Reference presets — verify compiler against known terminals</h4>
       <div style="display:flex;gap:5px;flex-wrap:wrap">
-        <button class="btn" onclick="loadPreset('mvega')" title="Ref: SHIFTING · WRM · THE GATEWAY · EVENT HORIZON">M. VEGA S24</button>
-        <button class="btn" onclick="loadPreset('dkosa')" title="Ref: RADICAL · INV (silent) · HIDDEN OBJECTIVE · WRONG ANSWER">D. KOSA S10</button>
-        <button class="btn" onclick="loadPreset('srios')" title="Ref: PARALLEL · QTY · THE TIDE">S. RIOS S15</button>
-        <button class="btn" onclick="loadPreset('atanaka')" title="Ref: ECHO · FRT · NETWORK · DEEP ROOTS">A. TANAKA S32</button>
+        <button class="btn" onclick="loadPreset('mvega')" title="Ref: SHIFTING · SPT · BLIND REACH · COVERAGE">M. VEGA S24</button>
+        <button class="btn" onclick="loadPreset('dkosa')" title="Ref: RADICAL · INV (silent) · HIDDEN OBJECTIVE · THE FLIP">D. KOSA S10</button>
+        <button class="btn" onclick="loadPreset('srios')" title="Ref: PARALLEL · WRM · TUNNEL VISION · ONE THING">S. RIOS S15</button>
+        <button class="btn" onclick="loadPreset('atanaka')" title="Ref: ECHO · WRM · TUNNEL VISION · ZERO NOISE">A. TANAKA S32</button>
         <span id="preset-ref" style="font-family:'Courier New',monospace;font-size:9px;color:#888;align-self:center;margin-left:6px"></span>
       </div>
     </div>
@@ -164,42 +164,48 @@ table.state-tbl input{width:52px;padding:2px 4px;font-size:10px;border:1px solid
       </div>
     </div>
 
-    <!-- MODE STATE TABLE -->
+    <!-- MODE STATE TABLE — 18-dimensional minimum sufficient state (perfect-system.html) -->
     <div style="margin-bottom:8px">
       <table class="state-tbl">
-        <tr><th>Mode</th><th>Elo</th><th>Vel (3-sess)</th><th>τ (days)</th><th>Purity flag</th></tr>
+        <tr><th>Mode</th><th title="Sessions in this mode total">Sess</th><th>Elo</th><th>Vel (3-sess)</th><th>τ (days)</th><th>Purity flag</th></tr>
         <tr><td style="color:#d97706">QTY</td>
+          <td><input type="number" id="msess-0" value="4" style="width:44px"></td>
           <td><input type="number" id="elo-0" value="520"></td>
           <td><input type="number" id="vel-0" value="8"></td>
           <td><input type="number" id="tau-0" value="4"></td>
           <td><input type="text" id="pur-0" value="" style="width:100px;font-size:9px"></td></tr>
         <tr><td style="color:#2563eb">SPT</td>
+          <td><input type="number" id="msess-1" value="4" style="width:44px"></td>
           <td><input type="number" id="elo-1" value="610"></td>
           <td><input type="number" id="vel-1" value="-2"></td>
           <td><input type="number" id="tau-1" value="9"></td>
           <td><input type="text" id="pur-1" value="" style="width:100px;font-size:9px"></td></tr>
         <tr><td style="color:#059669">FRT</td>
+          <td><input type="number" id="msess-2" value="4" style="width:44px"></td>
           <td><input type="number" id="elo-2" value="445"></td>
           <td><input type="number" id="vel-2" value="31"></td>
           <td><input type="number" id="tau-2" value="1"></td>
           <td><input type="text" id="pur-2" value="" style="width:100px;font-size:9px"></td></tr>
         <tr><td style="color:#dc2626">DST</td>
+          <td><input type="number" id="msess-3" value="4" style="width:44px"></td>
           <td><input type="number" id="elo-3" value="690"></td>
           <td><input type="number" id="vel-3" value="-12"></td>
           <td><input type="number" id="tau-3" value="12"></td>
           <td><input type="text" id="pur-3" value="" style="width:100px;font-size:9px"></td></tr>
         <tr><td style="color:#7c3aed">WRM</td>
+          <td><input type="number" id="msess-4" value="3" style="width:44px"></td>
           <td><input type="number" id="elo-4" value="380"></td>
           <td><input type="number" id="vel-4" value="0"></td>
           <td><input type="number" id="tau-4" value="19"></td>
           <td><input type="text" id="pur-4" value="near-binary signal" style="width:100px;font-size:9px"></td></tr>
         <tr><td style="color:#0891b2">INV</td>
+          <td><input type="number" id="msess-5" value="4" style="width:44px"></td>
           <td><input type="number" id="elo-5" value="505"></td>
           <td><input type="number" id="vel-5" value="15"></td>
           <td><input type="number" id="tau-5" value="2"></td>
           <td><input type="text" id="pur-5" value="announced×4 Q2" style="width:100px;font-size:9px"></td></tr>
       </table>
-      <div style="font-size:8px;color:#888;margin-top:3px">Vel = Elo delta over last 3 sessions. τ = days since last session in this mode. Elo=0 means mode not yet covered.</div>
+      <div style="font-size:8px;color:#888;margin-top:3px">Sess = sessions in this mode (exposure depth — drives zone 2D matrix). Vel = Elo delta over last 3 sessions. τ = days since last session in this mode. Elo=0 means mode not yet covered.</div>
     </div>
 
     <!-- TEMPLATE HISTORY — feeds template exclusion logic -->
@@ -225,6 +231,16 @@ table.state-tbl input{width:52px;padding:2px 4px;font-size:10px;border:1px solid
         </div>
         <div class="field"><label>Comfortable win streak</label><input type="number" id="s-streak" value="2" min="0" max="20"></div>
         <div class="field"><label>Absence days (0 = no gap)</label><input type="number" id="s-absence" value="0" min="0" max="365"></div>
+        <div class="field"><label>Last mode played</label>
+          <select id="s-lastmode">
+            <option value="0">QTY — Quantity</option>
+            <option value="1">SPT — Spatial</option>
+            <option value="2">FRT — Fortress</option>
+            <option value="3">DST — Destruction</option>
+            <option value="4" selected>WRM — Wormhole</option>
+            <option value="5">INV — Inversion</option>
+          </select>
+        </div>
       </div>
       <div>
         <h4>Special Signals</h4>
@@ -232,6 +248,8 @@ table.state-tbl input{width:52px;padding:2px 4px;font-size:10px;border:1px solid
         <div class="field"><label>Consecutive terminal predictions (stage probe)</label><input type="number" id="s-predictions" value="0" min="0" max="10"></div>
         <div class="field"><label>Silent INV overlay planned</label>
           <select id="s-silentinv"><option value="0" selected>No</option><option value="1">Yes</option></select></div>
+        <div class="field"><label>INV cooldown active (&lt;3 sess since last INV)</label>
+          <select id="s-invcooldown"><option value="0" selected>No cooldown</option><option value="1">In cooldown</option></select></div>
         <div class="field"><label>Move budget constraint (0=none)</label><input type="number" id="s-budget" value="0" min="0" max="20"></div>
         <div class="field"><label>Staircase personal target (0=N/A)</label><input type="number" id="s-target" value="0" min="0" max="999"></div>
         <div class="field"><label>Teacher observation (optional)</label>
@@ -363,6 +381,25 @@ const CODENAMES = {
   inv:['WRONG ANSWER','THE FLIP','MIRROR LOGIC','NEGATIVE SPACE','THE REVERSAL','CONTRADICTION','INVERSION PROTOCOL','NULL SIGNAL'],
 };
 
+// ════════════════════════════════ TEMPLATE CONSTRAINT DEPTH
+// Locked axes count per template — drives selectTemplate() to prefer most developmentally specific.
+// Source: development-diagram.html Template Depth tab + entropy-architecture.html derivation table.
+// "Most constrained template eliminates the most hypotheses from the student's strategy space — highest KL."
+const TEMPLATE_DEPTH = {
+  // QTY
+  'MISER':2,'SPEED FLOOD':2,'FLOOD':2,'THE DELUGE':1,'OVERFLOW':1,'EFFICIENCY GATE':1,
+  // SPT
+  'BLIND REACH':2,'ARCHITECT':2,'REACH':2,'THE PERIMETER':1,'SIGHTLINE':1,'FURTHEST POINT':1,
+  // FRT
+  'NETWORK':3,'PATIENCE':2,'SIEGE':1,'THE LATTICE':1,'CONVERGENCE':1,'ANCHOR POINT':1,
+  // DST
+  'CHAIN REACTION':3,'HUNTER':2,'SCORCHED EARTH':1,'OBLITERATION':1,'THE DENIAL':1,'CLEARANCE':1,
+  // WRM
+  'DECOY':2,'THE GATEWAY':2,'TUNNEL VISION':2,'SIGNAL LOCK':1,'THE FOLD':1,'ONE THING':1,
+  // INV
+  'MIRROR':2,'HIDDEN OBJECTIVE':2,'NEGATIVE SPACE':1,'THE FLIP':1,'WRONG CONTEXT':1,'NULL SIGNAL':1,
+};
+
 // ════════════════════════════════ ZONE VOCABULARY
 // Canonical phrases and descriptions for each zone (from alpha-system.html).
 // Used in compiler log + terminal authoring. Zone name appears alone first; context follows.
@@ -420,65 +457,102 @@ const ZONE_VOCAB = {
 };
 
 // ════════════════════════════════ ZONE SELECTOR
-// Priority waterfall — first matching rule wins.
-// Zone describes the NAVIGATION DECISION for this session relative to the student's trajectory.
+// 2D matrix: zone = f(mode_exposure_depth × last_outcome).
+// Source: development-diagram.html Spectrum Matrix + entropy-architecture.html Phase 1.
+// "Spectrum + exposure must talk to each other. Prevent RADICAL when mode_sessions < 3."
 function selectZone(state) {
-  const {absenceDays, lastRank, lastMargin, comfortableWinStreak, zeroPctileStreak, tier} = state;
+  const {absenceDays, lastRank, lastMargin, comfortableWinStreak,
+         zeroPctileStreak, tier, lastModeIdx, modeSessions} = state;
 
-  // Return from significant absence → ECHO: continuity, not punishment
+  // ── OVERRIDE 1: Absence → always ECHO (continuity, not recalibration)
   if (absenceDays >= 14) return {
     zone:'ECHO',
     reason:`Return after ${absenceDays}d absence. ECHO rule: continuity over recalibration. REMATCH would read as punishment.`
   };
 
-  // Gifted calibrated-failure override → RADICAL: zero sub-40 outcomes means engineered failure is overdue.
-  // This fires regardless of last session rank — the deficit is structural, not outcome-based.
+  // ── OVERRIDE 2: Gifted calibrated-failure → RADICAL (structural deficit, not outcome-based)
   if (zeroPctileStreak >= 8 && tier === 'GIFTED') return {
     zone:'RADICAL',
     reason:`Gifted track: ${zeroPctileStreak} sessions, zero sub-40th-pct outcomes. Calibrated failure is overdue. [OVERRIDE] — engineered, not accidental. Feeds Q7 cohort experiment.`
   };
 
-  // Incomplete signal / very low rank → REMATCH
+  // Mode exposure depth for 2D matrix
+  const mSess = (modeSessions && lastModeIdx !== undefined) ? (modeSessions[lastModeIdx] || 0) : 5;
+  const exposure = mSess <= 2 ? 'NEW' : mSess <= 9 ? 'DEV' : 'MAS';
+
+  // ── DECISIVE LOSS: REMATCH regardless of exposure tier
   if (lastRank < 30) return {
     zone:'REMATCH',
-    reason:`Rank ${lastRank}th pct (below 30). Signal incomplete — system needs another attempt at same territory.`
+    reason:`Rank ${lastRank}th pct (below 30). Signal incomplete — REMATCH. mode_sessions=${mSess} (${exposure}).`
   };
 
-  // Close loss / unresolved challenge → ECHO (return without punishment framing)
-  if (lastRank >= 30 && lastRank < 42) return {
-    zone:'ECHO',
-    reason:`Rank ${lastRank}th pct. Below flow zone — unresolved challenge. System returning to same territory.`
-  };
+  // ── NEW TO MODE (0-2 sessions): exposure locks out RADICAL entirely;
+  //    only ECHO unless student is unexpectedly dominant.
+  if (exposure === 'NEW') {
+    if (lastRank > 82 && lastMargin > 25) return {
+      zone:'SHIFTING',
+      reason:`New to mode (${mSess} sess) but landslide win (${lastRank}th, +${lastMargin}). Even at exposure=NEW, overwhelming dominance signals mode ceiling reached already.`
+    };
+    if (lastRank >= 68 && lastMargin > 15) return {
+      zone:'PARALLEL',
+      reason:`New to mode (${mSess} sess), comfortable win (${lastRank}th, +${lastMargin}). Same cognitive territory, different template — familiarity still needed.`
+    };
+    return {
+      zone:'ECHO',
+      reason:`New to mode (${mSess} sessions — exposure=NEW). Continuity before variation. Exposure < 3 locks zone to ECHO.`
+    };
+  }
 
-  // Comfortable win streak — mode rotating away → SHIFTING (adjacent territory)
+  // ── CLOSE LOSS: ECHO for DEV; PARALLEL for MAS (mastered students recover faster)
+  if (lastRank >= 30 && lastRank < 42) {
+    if (exposure === 'MAS') return {
+      zone:'PARALLEL',
+      reason:`Mastered mode (${mSess} sess), close loss (${lastRank}th pct). PARALLEL: cognitive target unchanged, new surface forces abstraction under familiar challenge. Exposure justifies variation.`
+    };
+    return {
+      zone:'ECHO',
+      reason:`Rank ${lastRank}th pct. Below flow zone — unresolved challenge. ${exposure}=${mSess} sess. ECHO: return without punishment framing.`
+    };
+  }
+
+  // ── COMFORTABLE WIN STREAK → SHIFTING (adjacent territory)
   if (comfortableWinStreak >= 2) return {
     zone:'SHIFTING',
-    reason:`Comfortable win streak (${comfortableWinStreak} sessions). Mode rotation active — adjacent territory selected. Prior performance informs selection.`
+    reason:`Comfortable win streak (${comfortableWinStreak} sessions). Mode rotation active — adjacent territory selected. mode_sessions=${mSess} (${exposure}).`
   };
 
-  // Very high performance + large margin → RADICAL (performance threshold crossed)
-  if (lastRank > 82 && lastMargin > 25) return {
-    zone:'RADICAL',
-    reason:`Rank ${lastRank}th pct, margin +${lastMargin}. Threshold exceeded. Fundamentally different target — prior session data noted and set aside.`
-  };
+  // ── LANDSLIDE → RADICAL (gated: never if mode_sessions < 3)
+  if (lastRank > 82 && lastMargin > 25) {
+    if (mSess < 3) return {
+      zone:'PARALLEL',
+      reason:`Landslide (${lastRank}th, +${lastMargin}) but mode_sessions=${mSess} < 3. RADICAL gated — model hasn't formed. Destructing a void. PARALLEL instead. [entropy-arch Phase 1]`
+    };
+    return {
+      zone:'RADICAL',
+      reason:`Rank ${lastRank}th pct, margin +${lastMargin}. Threshold crossed. Prior session data noted and set aside. mode_sessions=${mSess} (${exposure}) — RADICAL eligible.`
+    };
+  }
 
-  // Flow zone, close margin → PARALLEL (same cognitive target, different terrain)
-  if (lastRank >= 42 && lastRank <= 80 && lastMargin < 22) return {
+  // ── FLOW ZONE → PARALLEL (primary developmental zone for DEV + MAS)
+  if (lastRank >= 42 && lastRank <= 82) return {
     zone:'PARALLEL',
-    reason:`Flow zone, rank ${lastRank}th pct, margin ${lastMargin}. Same cognitive target. Different terrain.`
+    reason:`Flow zone, rank ${lastRank}th pct. Same cognitive target, different terrain. mode_sessions=${mSess} (${exposure}).`
   };
 
   return {
     zone:'PARALLEL',
-    reason:`No exceptional signal from last session (rank ${lastRank}th pct). Standard progress — PARALLEL.`
+    reason:`Default — PARALLEL. rank=${lastRank}th pct, mode_sessions=${mSess} (${exposure}).`
   };
 }
 
 // ════════════════════════════════ MODE SELECTOR
 // Entropy/hypercube: maximize expected information gain given current state.
 // Weight = elo^0.7 × 1/(τ+1) × vel_mod × hypercube_mod × engagement_mod × purity_mod
+// INV eligibility: requires Elo < 300 threshold AND τ < 7 (model must be recent) AND not in cooldown.
+// Source: system-complete.html formal spec + entropy-architecture.html Phase 1 overlay cooldown.
 function selectMode(state, zoneResult) {
-  const {elo, vel, tau, purity, sessions, tier, track, engagement, plannedSilentOverlay} = state;
+  const {elo, vel, tau, purity, sessions, tier, track, engagement,
+         plannedSilentOverlay, invCooldownActive} = state;
   const invSuppressed = tier === 'YOUNGER' && sessions < 20;
   const wobble = engagement === 'WOBBLE' || engagement === 'RECOVERING';
 
@@ -487,6 +561,14 @@ function selectMode(state, zoneResult) {
   const weights = MODES.map((m, i) => {
     if (i === 5 && invSuppressed) return {i, w:0, label:'INV suppressed (younger, sessions<20)', eligible:false};
     if (!elo[i] || elo[i] === 0)  return {i, w:0, label:'No Elo — mode not yet introduced', eligible:false};
+
+    // INV-specific eligibility gate (system-complete.html: e[mode]<300 AND τ<7 AND sess≥6)
+    // τ≥7 means student's model has decayed — overlay targets a ghost, not a structure.
+    // Cooldown: minimum 3 sessions between INV on same mode (entropy-arch Phase 1).
+    if (i === 5 && !invSuppressed) {
+      if (invCooldownActive) return {i, w:0, label:`INV cooldown active (<3 sessions since last INV). Rebuilt structure must stabilize. [entropy-arch Phase 1]`, eligible:false};
+      if (tau[5] >= 7 && elo[5] < 300) return {i, w: Math.pow(elo[5],0.7)*0.05, label:`INV: τ=${tau[5]}d ≥ 7 — model decayed, overlay noise not signal. High-prob eligibility requires τ<7. Low weight only. [system-complete formal spec]`, eligible:true};
+    }
 
     const stale   = 1 / (tau[i] + 1);
     const velMod  = vel[i] < -8 ? 1.15 : vel[i] > 12 ? 0.88 : 1.0;
@@ -518,11 +600,15 @@ function selectMode(state, zoneResult) {
 }
 
 // ════════════════════════════════ TEMPLATE SELECTOR
+// Sort by TEMPLATE_DEPTH (locked axes count) — most constrained = highest information gain.
+// Source: development-diagram.html Template Depth tab + entropy-architecture.html derivation:
+// "Most constrained template eliminates the most hypotheses from the student's strategy space."
 function selectTemplate(state, modeIdx) {
   const pool = TEMPLATES[MODES[modeIdx].id];
-  // Exclude recent templates from history for this mode (last 2)
   const recent = new Set((state.hist && state.hist[modeIdx]) ? state.hist[modeIdx].slice(-2) : []);
   const available = pool.filter(t => !recent.has(t));
+  // Sort descending by locked axis count — prefer most developmentally specific template
+  available.sort((a, b) => (TEMPLATE_DEPTH[b] || 1) - (TEMPLATE_DEPTH[a] || 1));
   return available.length > 0 ? available[0] : pool[0];
 }
 
@@ -588,6 +674,22 @@ function pickObservations(state, modeIdx, zoneResult) {
       src:'evidence-engine·SELF-channel·singularity-trajectory'
     });
     return obs;
+  }
+
+  // 3.5 PLATEAU DETECTION: vel ≈ 0 in selected mode for recent sessions
+  // Source: perfect-system.html — "ė ≈ 0 for N sessions → difficulty override +0.10 + template rotation."
+  // plateau_window = 5 sessions [MUST DEFINE — perfect-system.html formal spec, not yet measured]
+  if (Math.abs(vel[modeIdx]) <= 3 && tau[modeIdx] < 7 && sessions >= 8 && obs.length === 0) {
+    const pLine = register === 'gifted-compressed'
+      ? `ė[${mode.id}] ≈ 0 over recent sessions. Plateau signal. Difficulty reconfiguring.`
+      : register === 'younger-warm'
+        ? `Your ${mode.n.toLowerCase()} sessions have been at a similar level lately. The system is adjusting.`
+        : `${mode.n}: no movement over recent sessions. The system is responding.`;
+    obs.push({
+      x: pLine,
+      a: `Source: elo_velocity[${mode.id}]=${vel[modeIdx]} ≈ 0 (|vel| ≤ 3). Plateau detection (perfect-system.html): difficulty target raised +0.10 and template rotation flagged. ASSERTED: plateau_window=5 sessions [MUST DEFINE — inflection point not yet measured from data]. NOT disclosed to student that difficulty is changing upward — framed as system observation, not recalibration announcement.`,
+      src: `evidence-engine·GAME-channel·plateau·mode=${mode.id}`
+    });
   }
 
   // 4. TEACHER CHANNEL CROSS (cross-channel evidence)
@@ -881,49 +983,68 @@ const PRESETS = {
     label:'M. VEGA — S24',
     sessions:23,stage:3,tier:'TEEN',track:'COMPETITIVE',register:'teen-standard',engagement:'OK',
     elo:[520,610,445,690,380,505],vel:[8,-2,31,-12,0,15],tau:[4,9,1,12,19,2],
+    modeSessions:[4,4,4,4,3,4],  // 23 sessions across 6 modes — WRM exposure=DEV (3 sess)
+    lastModeIdx:4,                // last played: WRM (τ=19d means not recently; comfortableWinStreak=2 is the zone driver)
+    invCooldownActive:false,
     purity:[[''],[''],[''],[''],['near-binary signal'],['announced×4 Q2']],
     hist:[['MISER','FLOOD'],['REACH','ARCHITECT'],['NETWORK','SIEGE'],['HUNTER','CHAIN REACTION'],['DECOY'],['MIRROR','HIDDEN OBJECTIVE']],
     lastRank:78,lastMargin:12,comfortableWinStreak:2,absenceDays:0,
     zeroPctileStreak:0,stagePredictions:0,plannedSilentOverlay:false,moveConstraint:0,personalTarget:0,
     teacherObservation:'',
-    // Reference: zone=SHIFTING · mode=WRM · template=THE GATEWAY · codename=EVENT HORIZON
-    ref:'SHIFTING · WRM · THE GATEWAY · EVENT HORIZON',
+    // Reference: zone=SHIFTING · mode=SPT · template=BLIND REACH · codename=COVERAGE
+    // Zone: comfortableWinStreak=2 fires before 2D matrix → SHIFTING. Mode: WRM tau=19 stale
+    // (stale=1/20) but elo=380 (lowest non-INV); SPT elo=610×stale(1/10)=8.9 wins decisively.
+    ref:'SHIFTING · SPT · BLIND REACH · COVERAGE',
   },
   dkosa:{
     label:'D. KOSA — S10',
     sessions:9,stage:2,tier:'GIFTED',track:'COMPETITIVE',register:'gifted-compressed',engagement:'HIGH',
     elo:[640,590,675,610,705,580],vel:[42,38,51,29,44,36],tau:[2,3,1,4,2,1],
+    modeSessions:[2,2,2,2,2,1],  // 9 sessions across 6 modes — all exposure=NEW or barely DEV
+    lastModeIdx:0,                // last played: QTY (τ=2d most recent non-INV)
+    invCooldownActive:false,
     purity:[[''],[''],[''],[''],[''],['announced×1 partially clean']],
     hist:[['MISER'],['BLIND REACH'],['PATIENCE','SIEGE'],['SCORCHED EARTH'],['DECOY'],['MIRROR','NEGATIVE SPACE']],
     lastRank:68,lastMargin:20,comfortableWinStreak:0,absenceDays:0,
     zeroPctileStreak:9,stagePredictions:0,plannedSilentOverlay:true,moveConstraint:8,personalTarget:0,
     teacherObservation:'',
-    // Reference: zone=RADICAL · mode=INV (silent) · template=HIDDEN OBJECTIVE · codename=WRONG ANSWER
-    ref:'RADICAL · INV (silent) · HIDDEN OBJECTIVE · WRONG ANSWER',
+    // Reference: zone=RADICAL (gifted zeroPctileStreak≥8 override) · mode=INV (silent, planned overlay)
+    // INV weight × 8 GIFTED-RADICAL boost → 60.5; all other modes < 10. template=HIDDEN OBJECTIVE (depth=2; MIRROR in history).
+    ref:'RADICAL · INV (silent) · HIDDEN OBJECTIVE · THE FLIP',
   },
   srios:{
     label:'S. RIOS — S15',
     sessions:14,stage:2,tier:'YOUNGER',track:'COLLABORATIVE',register:'younger-warm',engagement:'RECOVERING',
     elo:[310,255,290,180,420,0],vel:[12,9,14,4,22,0],tau:[3,6,4,11,1,0],
+    modeSessions:[4,3,3,2,3,0],  // 14 sessions; INV=0 (suppressed younger); WRM most recent
+    lastModeIdx:4,                // last played: WRM (τ=1d)
+    invCooldownActive:false,
     purity:[[''],[''],[''],['low engagement S8-9'],[''],['']],
     hist:[['FLOOD'],['REACH'],['NETWORK'],['HUNTER'],['THE GATEWAY','DECOY'],[]],
     lastRank:68,lastMargin:12,comfortableWinStreak:1,absenceDays:0,
     zeroPctileStreak:0,stagePredictions:0,plannedSilentOverlay:false,moveConstraint:0,personalTarget:96,
     teacherObservation:'explained wormhole pairing to teammate',
-    // Reference: zone=PARALLEL · mode=QTY · template=(pool) · codename=THE TIDE
-    ref:'PARALLEL · QTY · (pool) · THE TIDE',
+    // Reference: zone=PARALLEL (DEV/close-win cell of 2D matrix) · mode=WRM · template=TUNNEL VISION · codename=ONE THING
+    // WRM elo=420 (highest) wins despite tau=1 penalty: elo^0.7(68.6)×stale(0.5)×hyp(0.2)×eng(0.65)=3.92.
+    // QTY(1.80) loses because tau=3 also gets hypMod=0.20 AND elo^0.7 is much lower.
+    ref:'PARALLEL · WRM · TUNNEL VISION · ONE THING',
   },
   atanaka:{
     label:'A. TANAKA — S32',
     sessions:31,stage:4,tier:'TEEN',track:'COMPETITIVE',register:'teen-standard',engagement:'RECOVERING',
     elo:[580,475,610,555,640,635],vel:[0,0,0,0,0,0],tau:[21,21,21,21,21,21],
+    modeSessions:[5,5,5,5,5,6],  // 31 sessions; all exposure=MAS (10+)
+    lastModeIdx:2,                // last played: FRT (canonical reference)
+    invCooldownActive:false,
     purity:[['stale 21d'],['stale 21d · REMATCH-loop'],['stale 21d'],['stale 21d'],['stale 21d'],['stale 21d']],
     hist:[['SPEED FLOOD'],['ARCHITECT','REACH'],['SIEGE'],['SCORCHED EARTH'],['DECOY','THE GATEWAY'],['HIDDEN OBJECTIVE','MIRROR']],
     lastRank:75,lastMargin:20,comfortableWinStreak:0,absenceDays:21,
     zeroPctileStreak:0,stagePredictions:3,plannedSilentOverlay:false,moveConstraint:0,personalTarget:0,
     teacherObservation:'',
-    // Reference: zone=ECHO · mode=FRT · template=NETWORK · codename=DEEP ROOTS
-    ref:'ECHO · FRT · NETWORK · DEEP ROOTS',
+    // Reference: zone=ECHO (absence=21d override) · mode=WRM · template=TUNNEL VISION · codename=ZERO NOISE
+    // All modes tau=21 → hypMod=1.0, stale=1/22 for all. WRM elo=640 (highest) → elo^0.7=95.0 wins.
+    // WRM(5.23) > INV(5.21) > FRT(5.06) — WRM elo advantage is the tiebreaker on equal staleness.
+    ref:'ECHO · WRM · TUNNEL VISION · ZERO NOISE',
   },
 };
 
@@ -938,12 +1059,14 @@ function loadPreset(key) {
   document.getElementById('s-register').value    = p.register;
   document.getElementById('s-engagement').value  = p.engagement;
   for (let i=0;i<6;i++) {
-    document.getElementById(`elo-${i}`).value  = p.elo[i];
-    document.getElementById(`vel-${i}`).value  = p.vel[i];
-    document.getElementById(`tau-${i}`).value  = p.tau[i];
-    document.getElementById(`pur-${i}`).value  = (p.purity[i]||[]).filter(Boolean).join(', ');
-    document.getElementById(`hist-${i}`).value = (p.hist[i]||[]).join(', ');
+    document.getElementById(`msess-${i}`).value = (p.modeSessions||[])[i] ?? 3;
+    document.getElementById(`elo-${i}`).value   = p.elo[i];
+    document.getElementById(`vel-${i}`).value   = p.vel[i];
+    document.getElementById(`tau-${i}`).value   = p.tau[i];
+    document.getElementById(`pur-${i}`).value   = (p.purity[i]||[]).filter(Boolean).join(', ');
+    document.getElementById(`hist-${i}`).value  = (p.hist[i]||[]).join(', ');
   }
+  document.getElementById('s-lastmode').value    = p.lastModeIdx ?? 0;
   document.getElementById('s-lastrank').value    = p.lastRank;
   document.getElementById('s-margin').value      = p.lastMargin;
   document.getElementById('s-streak').value      = p.comfortableWinStreak;
@@ -951,6 +1074,7 @@ function loadPreset(key) {
   document.getElementById('s-zeropct').value     = p.zeroPctileStreak;
   document.getElementById('s-predictions').value = p.stagePredictions;
   document.getElementById('s-silentinv').value   = p.plannedSilentOverlay ? '1' : '0';
+  document.getElementById('s-invcooldown').value = p.invCooldownActive ? '1' : '0';
   document.getElementById('s-budget').value      = p.moveConstraint;
   document.getElementById('s-target').value      = p.personalTarget;
   document.getElementById('s-teacherobs').value  = p.teacherObservation;
@@ -959,11 +1083,12 @@ function loadPreset(key) {
 
 // ════════════════════════════════ STATE READER
 function readState() {
-  const elo   = [0,1,2,3,4,5].map(i=>+document.getElementById(`elo-${i}`).value||0);
-  const vel   = [0,1,2,3,4,5].map(i=>+document.getElementById(`vel-${i}`).value||0);
-  const tau   = [0,1,2,3,4,5].map(i=>+document.getElementById(`tau-${i}`).value||0);
-  const purity= [0,1,2,3,4,5].map(i=>{const v=document.getElementById(`pur-${i}`).value.trim();return v?[v]:[];});
-  const hist  = [0,1,2,3,4,5].map(i=>{
+  const elo         = [0,1,2,3,4,5].map(i=>+document.getElementById(`elo-${i}`).value||0);
+  const vel         = [0,1,2,3,4,5].map(i=>+document.getElementById(`vel-${i}`).value||0);
+  const tau         = [0,1,2,3,4,5].map(i=>+document.getElementById(`tau-${i}`).value||0);
+  const modeSessions= [0,1,2,3,4,5].map(i=>+document.getElementById(`msess-${i}`).value||0);
+  const purity      = [0,1,2,3,4,5].map(i=>{const v=document.getElementById(`pur-${i}`).value.trim();return v?[v]:[];});
+  const hist        = [0,1,2,3,4,5].map(i=>{
     const v=document.getElementById(`hist-${i}`)?.value.trim();
     return v?v.split(',').map(t=>t.trim()).filter(Boolean):[];
   });
@@ -974,7 +1099,8 @@ function readState() {
     track:      document.getElementById('s-track').value,
     register:   document.getElementById('s-register').value,
     engagement: document.getElementById('s-engagement').value,
-    elo, vel, tau, purity, hist,
+    elo, vel, tau, modeSessions, purity, hist,
+    lastModeIdx:         +document.getElementById('s-lastmode').value||0,
     lastRank:            +document.getElementById('s-lastrank').value||50,
     lastMargin:          +document.getElementById('s-margin').value||10,
     comfortableWinStreak:+document.getElementById('s-streak').value||0,
@@ -982,6 +1108,7 @@ function readState() {
     zeroPctileStreak:    +document.getElementById('s-zeropct').value||0,
     stagePredictions:    +document.getElementById('s-predictions').value||0,
     plannedSilentOverlay:document.getElementById('s-silentinv').value==='1',
+    invCooldownActive:   document.getElementById('s-invcooldown').value==='1',
     moveConstraint:      +document.getElementById('s-budget').value||0,
     personalTarget:      +document.getElementById('s-target').value||0,
     teacherObservation:  document.getElementById('s-teacherobs').value.trim()||null,
@@ -1020,14 +1147,20 @@ function renderCompilerLog(r, state) {
   const asserted = [];
   if (state.tau[r.modeIdx] > 0) asserted.push(`forgetting_half_life=14d [ASSERTED Q4]`);
   asserted.push(`difficulty_coeff=0.85 [ASSERTED]`);
+  asserted.push(`elo_weight_exponent=0.7 [ASSERTED — may be 0.5–0.6 per perfect-system.html]`);
+  asserted.push(`hypercube_window=6 sessions [ASSERTED — should reflect actual info-gain inflection]`);
   if (state.zeroPctileStreak >= 8 && state.tier==='GIFTED') asserted.push(`gifted_velocity_sd=2.0 [ASSERTED Q7]`);
-  if (state.plannedSilentOverlay) asserted.push(`P(INVERSION)=0.25 [ASSERTED]`);
+  if (state.plannedSilentOverlay) asserted.push(`P(INVERSION)=0.25 [ASSERTED — optimal P may be lower, ~0.10–0.15]`);
+  if (Math.abs(state.vel[r.modeIdx]) <= 3 && state.tau[r.modeIdx] < 7 && state.sessions >= 8) asserted.push(`plateau_window=5 sessions [MUST DEFINE — inflection not yet measured]`);
+  const mSessForLog = (state.modeSessions||[])[state.lastModeIdx||0] || 0;
+  const exposureLabel = mSessForLog <= 2 ? 'NEW' : mSessForLog <= 9 ? 'DEV' : 'MAS';
 
   const log = [
     `<span class="dim">// COMPILER LOG — S${state.sessions+1} · ${state.register} · ${state.tier}</span>`,
     ``,
     `<span class="zone">ZONE: ${r.zone}</span>`,
     `  ${r.zoneReason}`,
+    `  last_mode: ${MODES[state.lastModeIdx||0]?.n||'?'} · mode_sessions=${mSessForLog} · exposure=${exposureLabel}`,
     zv.desc ? `  desc: "${zv.desc}"` : '',
     ``,
     `<span class="hl">MODE: ${r.mode.n}</span>`,
@@ -1048,13 +1181,19 @@ function renderCompilerLog(r, state) {
     ...asserted.map(a=>`  <span class="al">⚑ ${a}</span>`),
     ``,
     state.sessions < 20 && state.tier==='YOUNGER'
-      ? `<span class="al">⚑ [INV SUPPRESSED] younger tier + sessions<20 — age rule</span>` : '',
+      ? `<span class="al">⚑ [INV SUPPRESSED] younger tier + sessions<20 — age rule (SYNTHESIS §Audiences)</span>` : '',
+    state.invCooldownActive
+      ? `<span class="al">⚑ [INV COOLDOWN] <3 sessions since last INV. Rebuilt structure must stabilize. [entropy-arch Phase 1]</span>` : '',
+    (state.tau[5]||0) >= 7 && !state.invCooldownActive
+      ? `<span class="al">⚑ [INV τ GATE] τ[INV]=${state.tau[5]}d ≥ 7. High-prob overlay requires τ<7 — model must be recent. [system-complete formal spec]</span>` : '',
     state.plannedSilentOverlay
       ? `<span class="al">⚑ [SILENT OVERLAY] INV not announced — Q2 clean signal. Omission IS the experiment.</span>` : '',
     state.absenceDays>=14
       ? `<span class="al">⚑ [Q4 DUAL-HYPOTHESIS] λ=14d and λ=40d predictions pre-registered before this session</span>` : '',
     state.zeroPctileStreak>=8&&state.tier==='GIFTED'
       ? `<span class="al">⚑ [GIFTED OVERRIDE] ZPD coeff raised 0.85→0.95, move budget=${state.moveConstraint||'none'}. Feeds Q7.</span>` : '',
+    mSessForLog < 3 && r.zone === 'PARALLEL' && state.lastRank > 82
+      ? `<span class="al">⚑ [RADICAL GATED] Landslide win but mode_sessions=${mSessForLog}<3. PARALLEL forced. [entropy-arch Phase 1]</span>` : '',
   ].filter(l=>l!==undefined).join('\n');
 
   document.getElementById('compiler-log').innerHTML = log;
