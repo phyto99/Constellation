@@ -371,14 +371,17 @@ const TEMPLATES = {
   inv:['MIRROR','HIDDEN OBJECTIVE','NEGATIVE SPACE','THE FLIP','WRONG CONTEXT','NULL SIGNAL'],
 };
 
-// Codename pools — the memorable token the student says aloud to classmates
+// Codename pools — the memorable token the student says aloud to classmates.
+// CANONICAL vocabulary from challenge-meta.html §Codename System (identical in system-complete.html).
+// Codenames must NOT collide with template names or mode names — they are community vocabulary,
+// separate from challenge mechanics. Prior compiler had invented names overlapping templates.
 const CODENAMES = {
-  qty:['THE TIDE','THE AVALANCHE','SATURATION POINT','CRITICAL MASS','OVERFLOW','THE SURGE','LEVERAGE','FLOOD PLAIN'],
-  spt:['SIGHTLINE','THE PERIMETER','BLIND REACH','BLUEPRINT','ADJACENCY','THE MAP','FURTHEST POINT','COVERAGE'],
-  frt:['DEEP ROOTS','THE NETWORK','SIEGE LINES','CONVERGENCE','PATIENCE','THE LATTICE','ANCHOR POINT','FOUNDATION'],
-  dst:['SCORCHED EARTH','THE CHAIN','OBLITERATION','CLEARANCE','THE DENIAL','NEGATIVE SUM','VOID','CHAIN REACTION'],
-  wrm:['EVENT HORIZON','THE FOLD','TUNNEL VISION','SIGNAL LOSS','SINGULARITY','THE LOCK','ONE THING','ZERO NOISE'],
-  inv:['WRONG ANSWER','THE FLIP','MIRROR LOGIC','NEGATIVE SPACE','THE REVERSAL','CONTRADICTION','INVERSION PROTOCOL','NULL SIGNAL'],
+  qty:['THE FLOOD','WAVE FRONT','MANIFEST DENSITY','THE SWARM','OVERFLOW','LANDGRAB','SATURATION','THE TIDE'],
+  spt:['THE EXPANSE','LONG REACH','FAR HORIZON','THE CARTOGRAPHER','BLIND REACH','DEEP SPACE','FURTHEST POINT','EDGE CASE'],
+  frt:['IRON CURTAIN','SIEGE LINES','THE CITADEL','DEEP ROOTS','BASTILLE','THE HOLD','STONEWORK','ENTRENCHED'],
+  dst:['CHAIN REACTION','SCORCHED EARTH','THE BREAKING','GHOST CIRCUIT','SHATTER','ERASURE','NULL FIELD','AFTERBURN'],
+  wrm:['THE GATEWAY','EVENT HORIZON','FOLD SPACE','THE BRIDGE','TRANSIT','SINGULARITY','THE NEEDLE','CROSSING'],
+  inv:['MIRROR LOGIC','NULL SPACE','THE FLIP','OPPOSITE DAY','DARK MATTER','REVERSAL','ANTI-PATTERN','WRONG ANSWER'],
 };
 
 // ════════════════════════════════ TEMPLATE CONSTRAINT DEPTH
@@ -398,6 +401,19 @@ const TEMPLATE_DEPTH = {
   'DECOY':2,'THE GATEWAY':2,'TUNNEL VISION':2,'SIGNAL LOCK':1,'THE FOLD':1,'ONE THING':1,
   // INV
   'MIRROR':2,'HIDDEN OBJECTIVE':2,'NEGATIVE SPACE':1,'THE FLIP':1,'WRONG CONTEXT':1,'NULL SIGNAL':1,
+};
+
+// ════════════════════════════════ MODE ADJACENCY MAP
+// SHIFTING zone: mode must be adjacent to lastModeIdx — no entropy jump allowed.
+// Source: challenge-meta.html §Similarity Spectrum adjacency column.
+// Bidirectional: QTY↔SPT, SPT↔FRT↔WRM, FRT↔DST, DST↔INV, INV↔WRM
+const MODE_ADJACENCY = {
+  0:[1],       // QTY → SPT
+  1:[0,2,4],   // SPT → QTY, FRT, WRM
+  2:[1,3],     // FRT → SPT, DST
+  3:[2,5],     // DST → FRT, INV
+  4:[5,1],     // WRM → INV, SPT
+  5:[3,4],     // INV → DST, WRM
 };
 
 // ════════════════════════════════ ZONE VOCABULARY
@@ -546,25 +562,62 @@ function selectZone(state) {
 }
 
 // ════════════════════════════════ MODE SELECTOR
-// Entropy/hypercube: maximize expected information gain given current state.
-// Weight = elo^0.7 × 1/(τ+1) × vel_mod × hypercube_mod × engagement_mod × purity_mod
-// INV eligibility: requires Elo < 300 threshold AND τ < 7 (model must be recent) AND not in cooldown.
-// Source: system-complete.html formal spec + entropy-architecture.html Phase 1 overlay cooldown.
+// Zone constraint (challenge-meta.html §Similarity Spectrum) is the PRIMARY gate — applied first:
+//   ECHO / PARALLEL / REMATCH → must stay on lastModeIdx (same cognitive territory)
+//   SHIFTING → must pick from MODE_ADJACENCY[lastModeIdx] only
+//   RADICAL → full entropy selection (no zone constraint)
+// Within SHIFTING adjacency ranking and RADICAL, entropy weights determine ordering:
+// w = elo^0.7 × 1/(τ+1) × vel_mod × hypercube_mod × engagement_mod × purity_mod
 function selectMode(state, zoneResult) {
   const {elo, vel, tau, purity, sessions, tier, track, engagement,
-         plannedSilentOverlay, invCooldownActive} = state;
+         plannedSilentOverlay, invCooldownActive, lastModeIdx} = state;
   const invSuppressed = tier === 'YOUNGER' && sessions < 20;
   const wobble = engagement === 'WOBBLE' || engagement === 'RECOVERING';
+  const zone = zoneResult.zone;
+  const lastIdx = (lastModeIdx !== undefined && lastModeIdx !== null) ? lastModeIdx : 0;
 
+  // ── ZONE CONSTRAINT: ECHO / PARALLEL / REMATCH → same cognitive territory → lastModeIdx
+  if (zone === 'ECHO' || zone === 'PARALLEL' || zone === 'REMATCH') {
+    // Edge case: forced mode is INV and suppressed for younger students → fall to entropy
+    if (!(lastIdx === 5 && invSuppressed)) {
+      return {i:lastIdx, mode:MODES[lastIdx], weights:null, ranked:null,
+              reason:`Zone=${zone}: same cognitive territory → ${MODES[lastIdx].n} (lastModeIdx=${lastIdx}). [challenge-meta.html §Similarity Spectrum]`};
+    }
+  }
+
+  // ── ZONE CONSTRAINT: SHIFTING → adjacent modes only (no entropy jump)
+  if (zone === 'SHIFTING') {
+    const adjacents = (MODE_ADJACENCY[lastIdx] || [1]).filter(i => {
+      if (i === 5 && invSuppressed) return false;
+      if (!elo[i] || elo[i] === 0) return false;
+      return true;
+    });
+    if (adjacents.length > 0) {
+      const adjW = adjacents.map(i => {
+        const stale  = 1 / (tau[i] + 1);
+        const velMod = vel[i] < -8 ? 1.15 : vel[i] > 12 ? 0.88 : 1.0;
+        const hypMod = tau[i] <= 3 ? 0.20 : tau[i] <= 6 ? 0.55 : 1.0;
+        const engMod = wobble ? (vel[i] >= 0 && elo[i] > 420 ? 1.25 : 0.65) : 1.0;
+        const purMod = (purity[i] && purity[i].some(p => /Q2|announced/i.test(p)) && !plannedSilentOverlay) ? 0.55 : 1.0;
+        const w      = Math.pow(elo[i], 0.7) * stale * velMod * hypMod * engMod * purMod;
+        return {i, w, label:`adj-to-${MODES[lastIdx].n}: elo^0.7(${Math.pow(elo[i],0.7).toFixed(1)}) × τ(${stale.toFixed(3)}) × vel(${velMod}) × hyp(${hypMod}) × eng(${engMod}) = ${w.toFixed(2)}`};
+      });
+      adjW.sort((a,b) => b.w - a.w);
+      const winner = adjW[0];
+      return {i:winner.i, mode:MODES[winner.i], weights:null, ranked:adjW,
+              reason:`Zone=SHIFTING: adjacent to ${MODES[lastIdx].n}(idx=${lastIdx}) → highest-weight adjacent=${MODES[winner.i].n}. ${winner.label}. [challenge-meta.html adjacency map]`};
+    }
+    // No valid adjacent (e.g. INV suppressed and all adjacents are INV) — fall to entropy
+  }
+
+  // ── RADICAL (or fallback): full entropy selection
   // Hypercube window: modes covered recently (τ ≤ 6d) reduce weight
-  // (approximates "not seen in last 6 sessions")
   const weights = MODES.map((m, i) => {
     if (i === 5 && invSuppressed) return {i, w:0, label:'INV suppressed (younger, sessions<20)', eligible:false};
     if (!elo[i] || elo[i] === 0)  return {i, w:0, label:'No Elo — mode not yet introduced', eligible:false};
 
-    // INV-specific eligibility gate (system-complete.html: e[mode]<300 AND τ<7 AND sess≥6)
+    // INV-specific eligibility gate (system-complete.html: τ<7 AND not in cooldown)
     // τ≥7 means student's model has decayed — overlay targets a ghost, not a structure.
-    // Cooldown: minimum 3 sessions between INV on same mode (entropy-arch Phase 1).
     if (i === 5 && !invSuppressed) {
       if (invCooldownActive) return {i, w:0, label:`INV cooldown active (<3 sessions since last INV). Rebuilt structure must stabilize. [entropy-arch Phase 1]`, eligible:false};
       if (tau[5] >= 7 && elo[5] < 300) return {i, w: Math.pow(elo[5],0.7)*0.05, label:`INV: τ=${tau[5]}d ≥ 7 — model decayed, overlay noise not signal. High-prob eligibility requires τ<7. Low weight only. [system-complete formal spec]`, eligible:true};
@@ -581,10 +634,8 @@ function selectMode(state, zoneResult) {
     return {i, w, label, eligible:true};
   });
 
-  // RADICAL zone on gifted track: boost INV weight to force calibrated-failure selection.
-  // INV is suppressed only for younger students; gifted students receive it early (session 4+).
-  // The boost overrides the hypercube penalty from recent coverage.
-  if (zoneResult.zone === 'RADICAL' && state.zeroPctileStreak >= 8 && tier === 'GIFTED' && !invSuppressed && elo[5] > 0) {
+  // RADICAL on gifted track: boost INV to force calibrated-failure selection.
+  if (zone === 'RADICAL' && state.zeroPctileStreak >= 8 && tier === 'GIFTED' && !invSuppressed && elo[5] > 0) {
     const invW = weights.find(w => w.i === 5);
     if (invW && invW.w > 0) {
       invW.w *= 8.0;
@@ -600,12 +651,21 @@ function selectMode(state, zoneResult) {
 }
 
 // ════════════════════════════════ TEMPLATE SELECTOR
-// Sort by TEMPLATE_DEPTH (locked axes count) — most constrained = highest information gain.
+// ECHO / REMATCH: same template as last session — continuity (challenge-meta.html zone constraint).
+// All others: exclude last 2, sort by TEMPLATE_DEPTH (most constrained = highest KL gain).
 // Source: development-diagram.html Template Depth tab + entropy-architecture.html derivation:
 // "Most constrained template eliminates the most hypotheses from the student's strategy space."
-function selectTemplate(state, modeIdx) {
+function selectTemplate(state, modeIdx, zone) {
   const pool = TEMPLATES[MODES[modeIdx].id];
-  const recent = new Set((state.hist && state.hist[modeIdx]) ? state.hist[modeIdx].slice(-2) : []);
+  const hist = (state.hist && state.hist[modeIdx]) ? state.hist[modeIdx] : [];
+
+  // ECHO / REMATCH: return to same template — continuity (challenge-meta.html §Similarity Spectrum)
+  if ((zone === 'ECHO' || zone === 'REMATCH') && hist.length > 0) {
+    const last = hist[hist.length - 1];
+    if (pool.includes(last)) return last;
+  }
+
+  const recent = new Set(hist.slice(-2));
   const available = pool.filter(t => !recent.has(t));
   // Sort descending by locked axis count — prefer most developmentally specific template
   available.sort((a, b) => (TEMPLATE_DEPTH[b] || 1) - (TEMPLATE_DEPTH[a] || 1));
@@ -859,10 +919,12 @@ function generateLines(state, zoneResult, modeResult, template, codename, observ
 
   // ── TEMPLATE (Layer 1)
   const modeKey = mode.id;
-  const recentHist = (state.hist && state.hist[modeIdx]) ? state.hist[modeIdx].slice(-2) : [];
-  const excluded = recentHist.length ? ` (excluded recent: ${recentHist.join(', ')})` : '';
+  const modeHist = (state.hist && state.hist[modeIdx]) ? state.hist[modeIdx] : [];
+  const templateNote = (zone === 'ECHO' || zone === 'REMATCH')
+    ? ` (continuity — zone=${zone} returns same template: ${modeHist[modeHist.length-1]||'none'})`
+    : (modeHist.slice(-2).length ? ` (excluded recent: ${modeHist.slice(-2).join(', ')})` : '');
   push('n', `Template: ${template}${templateConstraint(modeKey, template)}`,
-    `Layer 1. Template constraint IS the cognitive constraint. Pool: ${TEMPLATES[modeKey].join(', ')}${excluded}.`, 550);
+    `Layer 1. Template constraint IS the cognitive constraint. Pool: ${TEMPLATES[modeKey].join(', ')}${templateNote}.`, 550);
 
   // ── DIFFICULTY LINE (conditional — Q4 in production)
   if (state.absenceDays >= 14) {
@@ -965,7 +1027,7 @@ function terminalCompiler(state) {
   const zoneResult  = selectZone(state);
   const modeResult  = selectMode(state, zoneResult);
   const {i:modeIdx, mode} = modeResult;
-  const template    = selectTemplate(state, modeIdx);
+  const template    = selectTemplate(state, modeIdx, zoneResult.zone);
   const codename    = selectCodename(modeIdx, state.sessions);
   const observations= pickObservations(state, modeIdx, zoneResult);
   const lines       = generateLines(state, zoneResult, modeResult, template, codename, observations);
@@ -991,10 +1053,11 @@ const PRESETS = {
     lastRank:78,lastMargin:12,comfortableWinStreak:2,absenceDays:0,
     zeroPctileStreak:0,stagePredictions:0,plannedSilentOverlay:false,moveConstraint:0,personalTarget:0,
     teacherObservation:'',
-    // Reference: zone=SHIFTING · mode=SPT · template=BLIND REACH · codename=COVERAGE
-    // Zone: comfortableWinStreak=2 fires before 2D matrix → SHIFTING. Mode: WRM tau=19 stale
-    // (stale=1/20) but elo=380 (lowest non-INV); SPT elo=610×stale(1/10)=8.9 wins decisively.
-    ref:'SHIFTING · SPT · BLIND REACH · COVERAGE',
+    // Reference: zone=SHIFTING · mode=SPT · template=BLIND REACH · codename=EDGE CASE
+    // Zone: comfortableWinStreak=2 → SHIFTING. Mode: adjacent to WRM(4) → candidates INV(5) and SPT(1).
+    // SPT wins: w=610^0.7×(1/10)=8.91. INV loses: purMod=0.55 (Q2 flag) → w=2.51.
+    // Template: hist[SPT]=['REACH','ARCHITECT'] → BLIND REACH (depth=2). Codename: spt[23%8=7]='EDGE CASE'.
+    ref:'SHIFTING · SPT · BLIND REACH · EDGE CASE',
   },
   dkosa:{
     label:'D. KOSA — S10',
@@ -1009,8 +1072,9 @@ const PRESETS = {
     zeroPctileStreak:9,stagePredictions:0,plannedSilentOverlay:true,moveConstraint:8,personalTarget:0,
     teacherObservation:'',
     // Reference: zone=RADICAL (gifted zeroPctileStreak≥8 override) · mode=INV (silent, planned overlay)
-    // INV weight × 8 GIFTED-RADICAL boost → 60.5; all other modes < 10. template=HIDDEN OBJECTIVE (depth=2; MIRROR in history).
-    ref:'RADICAL · INV (silent) · HIDDEN OBJECTIVE · THE FLIP',
+    // INV weight × 8 GIFTED-RADICAL boost → 60.5; second=DST 8.61. Template: hist[INV]=['MIRROR','NEGATIVE SPACE']
+    // → HIDDEN OBJECTIVE (depth=2). Codename: inv[9%8=1]='NULL SPACE'. [canonical: challenge-meta.html]
+    ref:'RADICAL · INV (silent) · HIDDEN OBJECTIVE · NULL SPACE',
   },
   srios:{
     label:'S. RIOS — S15',
@@ -1024,10 +1088,10 @@ const PRESETS = {
     lastRank:68,lastMargin:12,comfortableWinStreak:1,absenceDays:0,
     zeroPctileStreak:0,stagePredictions:0,plannedSilentOverlay:false,moveConstraint:0,personalTarget:96,
     teacherObservation:'explained wormhole pairing to teammate',
-    // Reference: zone=PARALLEL (DEV/close-win cell of 2D matrix) · mode=WRM · template=TUNNEL VISION · codename=ONE THING
-    // WRM elo=420 (highest) wins despite tau=1 penalty: elo^0.7(68.6)×stale(0.5)×hyp(0.2)×eng(0.65)=3.92.
-    // QTY(1.80) loses because tau=3 also gets hypMod=0.20 AND elo^0.7 is much lower.
-    ref:'PARALLEL · WRM · TUNNEL VISION · ONE THING',
+    // Reference: zone=PARALLEL · mode=WRM · template=TUNNEL VISION · codename=THE NEEDLE
+    // Zone=PARALLEL → mode forced to lastModeIdx=4 (WRM) by zone constraint.
+    // Template: hist[WRM]=['THE GATEWAY','DECOY'] → TUNNEL VISION (depth=2). Codename: wrm[14%8=6]='THE NEEDLE'.
+    ref:'PARALLEL · WRM · TUNNEL VISION · THE NEEDLE',
   },
   atanaka:{
     label:'A. TANAKA — S32',
@@ -1041,10 +1105,11 @@ const PRESETS = {
     lastRank:75,lastMargin:20,comfortableWinStreak:0,absenceDays:21,
     zeroPctileStreak:0,stagePredictions:3,plannedSilentOverlay:false,moveConstraint:0,personalTarget:0,
     teacherObservation:'',
-    // Reference: zone=ECHO (absence=21d override) · mode=WRM · template=TUNNEL VISION · codename=ZERO NOISE
-    // All modes tau=21 → hypMod=1.0, stale=1/22 for all. WRM elo=640 (highest) → elo^0.7=95.0 wins.
-    // WRM(5.23) > INV(5.21) > FRT(5.06) — WRM elo advantage is the tiebreaker on equal staleness.
-    ref:'ECHO · WRM · TUNNEL VISION · ZERO NOISE',
+    // Reference: zone=ECHO (absence=21d override) · mode=FRT · template=SIEGE · codename=ENTRENCHED
+    // Zone=ECHO → mode forced to lastModeIdx=2 (FRT) by zone constraint. Previously entropy selected WRM.
+    // Template: ECHO → same as last → hist[FRT]=['SIEGE'] → SIEGE returned.
+    // Codename: frt[31%8=7]='ENTRENCHED'. [canonical: challenge-meta.html]
+    ref:'ECHO · FRT · SIEGE · ENTRENCHED',
   },
 };
 
