@@ -108,6 +108,18 @@ table.state-tbl input{width:52px;padding:2px 4px;font-size:10px;border:1px solid
   <div class="card">
     <h3>Student State — compiler input</h3>
 
+    <!-- REFERENCE PRESETS -->
+    <div style="margin-bottom:10px">
+      <h4 style="margin-bottom:5px">Reference presets — verify compiler against known terminals</h4>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">
+        <button class="btn" onclick="loadPreset('mvega')" title="Ref: SHIFTING · WRM · THE GATEWAY · EVENT HORIZON">M. VEGA S24</button>
+        <button class="btn" onclick="loadPreset('dkosa')" title="Ref: RADICAL · INV (silent) · HIDDEN OBJECTIVE · WRONG ANSWER">D. KOSA S10</button>
+        <button class="btn" onclick="loadPreset('srios')" title="Ref: PARALLEL · QTY · THE TIDE">S. RIOS S15</button>
+        <button class="btn" onclick="loadPreset('atanaka')" title="Ref: ECHO · FRT · NETWORK · DEEP ROOTS">A. TANAKA S32</button>
+        <span id="preset-ref" style="font-family:'Courier New',monospace;font-size:9px;color:#888;align-self:center;margin-left:6px"></span>
+      </div>
+    </div>
+
     <div class="grid3">
       <div class="field"><label>Sessions</label><input type="number" id="s-sessions" value="23" min="1" max="200"></div>
       <div class="field"><label>Stage</label>
@@ -190,6 +202,19 @@ table.state-tbl input{width:52px;padding:2px 4px;font-size:10px;border:1px solid
       <div style="font-size:8px;color:#888;margin-top:3px">Vel = Elo delta over last 3 sessions. τ = days since last session in this mode. Elo=0 means mode not yet covered.</div>
     </div>
 
+    <!-- TEMPLATE HISTORY — feeds template exclusion logic -->
+    <div style="margin-bottom:8px">
+      <h4 style="margin-bottom:4px">Recent templates per mode — excluded from selection (comma-separated)</h4>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px">
+        <div><div style="font-size:8px;font-weight:700;color:#d97706;margin-bottom:2px">QTY</div><input type="text" id="hist-0" value="" placeholder="MISER, FLOOD" style="font-size:9px;width:100%;border:1px solid #ddd;padding:2px 4px"></div>
+        <div><div style="font-size:8px;font-weight:700;color:#2563eb;margin-bottom:2px">SPT</div><input type="text" id="hist-1" value="" placeholder="REACH" style="font-size:9px;width:100%;border:1px solid #ddd;padding:2px 4px"></div>
+        <div><div style="font-size:8px;font-weight:700;color:#059669;margin-bottom:2px">FRT</div><input type="text" id="hist-2" value="" placeholder="NETWORK" style="font-size:9px;width:100%;border:1px solid #ddd;padding:2px 4px"></div>
+        <div><div style="font-size:8px;font-weight:700;color:#dc2626;margin-bottom:2px">DST</div><input type="text" id="hist-3" value="" placeholder="HUNTER" style="font-size:9px;width:100%;border:1px solid #ddd;padding:2px 4px"></div>
+        <div><div style="font-size:8px;font-weight:700;color:#7c3aed;margin-bottom:2px">WRM</div><input type="text" id="hist-4" value="" placeholder="DECOY" style="font-size:9px;width:100%;border:1px solid #ddd;padding:2px 4px"></div>
+        <div><div style="font-size:8px;font-weight:700;color:#0891b2;margin-bottom:2px">INV</div><input type="text" id="hist-5" value="" placeholder="MIRROR" style="font-size:9px;width:100%;border:1px solid #ddd;padding:2px 4px"></div>
+      </div>
+    </div>
+
     <!-- LAST SESSION + SPECIAL -->
     <div class="grid2" style="gap:8px">
       <div>
@@ -225,6 +250,7 @@ table.state-tbl input{width:52px;padding:2px 4px;font-size:10px;border:1px solid
       Client-side toggle is a preview only; the data separation must happen at the API layer.
     </div>
     <div id="compiler-log" class="log"><span class="dim">// Compile to see reasoning</span></div>
+    <div id="zone-vocab" style="margin-top:8px"></div>
     <div style="margin-top:8px">
       <h4>Mode Weights</h4>
       <table class="wt" id="weight-table"><tr><td colspan="3" style="color:#888;font-size:9px">—</td></tr></table>
@@ -337,11 +363,67 @@ const CODENAMES = {
   inv:['WRONG ANSWER','THE FLIP','MIRROR LOGIC','NEGATIVE SPACE','THE REVERSAL','CONTRADICTION','INVERSION PROTOCOL','NULL SIGNAL'],
 };
 
+// ════════════════════════════════ ZONE VOCABULARY
+// Canonical phrases and descriptions for each zone (from alpha-system.html).
+// Used in compiler log + terminal authoring. Zone name appears alone first; context follows.
+const ZONE_VOCAB = {
+  REMATCH:{
+    desc:'Previous session ended before the system had what it needed. Signal was incomplete.',
+    pill:'#f8f8f8',pillText:'#888',pillBorder:'#ccc',
+    phrases:[
+      'The previous session generated an incomplete signal. The system requires another attempt.',
+      'REMATCH. The signal was incomplete. The system requires one more attempt.',
+      'Close loss. REMATCH configuration active.',
+      'The system is not finished. REMATCH.',
+    ]
+  },
+  ECHO:{
+    desc:'An unresolved challenge has been detected. Continuity — not punishment.',
+    pill:'#111',pillText:'#eee',pillBorder:'#444',
+    phrases:[
+      'An unresolved challenge has been detected. The system is returning you to it.',
+      'The system is not finished with this challenge. ECHO configuration active.',
+      'ECHO. The margin was close. The system is watching the same territory again.',
+      'ECHO. An unresolved challenge has been detected. The system is returning you to it.',
+    ]
+  },
+  PARALLEL:{
+    desc:'Same cognitive target. Different terrain. Underlying challenge is unchanged.',
+    pill:'#fff',pillText:'#000',pillBorder:'#000',
+    phrases:[
+      'PARALLEL path selected. Same cognitive target. Different terrain.',
+      'PARALLEL. The system has chosen a different approach to the same challenge.',
+      'Same destination. New route. PARALLEL.',
+    ]
+  },
+  SHIFTING:{
+    desc:'The system has moved to adjacent territory. Prior knowledge partially applies.',
+    pill:'#fff',pillText:'#555',pillBorder:'#888',
+    phrases:[
+      'SHIFTING. The system has moved to adjacent territory.',
+      'SHIFTING trajectory. What you learned here will partially apply.',
+      'Adjacent domain selected. SHIFTING.',
+      'Mode transition initiated. Prior performance has informed the selection.',
+    ]
+  },
+  RADICAL:{
+    desc:'Fundamentally different target. Prior session data noted and set aside.',
+    pill:'#000',pillText:'#fff',pillBorder:'#000',
+    phrases:[
+      'RADICAL departure initiated. What you learned here does not apply there.',
+      'The threshold has been crossed. RADICAL.',
+      'RADICAL. The system has selected a fundamentally different target. Proceed accordingly.',
+      'Prior session data noted and set aside. RADICAL trajectory.',
+      'Performance threshold exceeded. A harder target has been selected. Proceed accordingly.',
+    ]
+  },
+};
+
 // ════════════════════════════════ ZONE SELECTOR
 // Priority waterfall — first matching rule wins.
 // Zone describes the NAVIGATION DECISION for this session relative to the student's trajectory.
 function selectZone(state) {
-  const {absenceDays, lastRank, lastMargin, comfortableWinStreak} = state;
+  const {absenceDays, lastRank, lastMargin, comfortableWinStreak, zeroPctileStreak, tier} = state;
 
   // Return from significant absence → ECHO: continuity, not punishment
   if (absenceDays >= 14) return {
@@ -349,25 +431,32 @@ function selectZone(state) {
     reason:`Return after ${absenceDays}d absence. ECHO rule: continuity over recalibration. REMATCH would read as punishment.`
   };
 
-  // Incomplete signal / low rank → REMATCH
+  // Gifted calibrated-failure override → RADICAL: zero sub-40 outcomes means engineered failure is overdue.
+  // This fires regardless of last session rank — the deficit is structural, not outcome-based.
+  if (zeroPctileStreak >= 8 && tier === 'GIFTED') return {
+    zone:'RADICAL',
+    reason:`Gifted track: ${zeroPctileStreak} sessions, zero sub-40th-pct outcomes. Calibrated failure is overdue. [OVERRIDE] — engineered, not accidental. Feeds Q7 cohort experiment.`
+  };
+
+  // Incomplete signal / very low rank → REMATCH
   if (lastRank < 30) return {
     zone:'REMATCH',
     reason:`Rank ${lastRank}th pct (below 30). Signal incomplete — system needs another attempt at same territory.`
   };
 
-  // Close loss / unresolved challenge → ECHO
+  // Close loss / unresolved challenge → ECHO (return without punishment framing)
   if (lastRank >= 30 && lastRank < 42) return {
     zone:'ECHO',
-    reason:`Rank ${lastRank}th pct. Below flow zone but not catastrophic — unresolved challenge. System returning.`
+    reason:`Rank ${lastRank}th pct. Below flow zone — unresolved challenge. System returning to same territory.`
   };
 
-  // Comfortable win streak + mode rotating away → SHIFTING (adjacent territory)
+  // Comfortable win streak — mode rotating away → SHIFTING (adjacent territory)
   if (comfortableWinStreak >= 2) return {
     zone:'SHIFTING',
-    reason:`Comfortable win streak (${comfortableWinStreak}). Mode rotation active — adjacent territory selected. Prior performance informs selection.`
+    reason:`Comfortable win streak (${comfortableWinStreak} sessions). Mode rotation active — adjacent territory selected. Prior performance informs selection.`
   };
 
-  // Very high performance + large margin → RADICAL (threshold crossed)
+  // Very high performance + large margin → RADICAL (performance threshold crossed)
   if (lastRank > 82 && lastMargin > 25) return {
     zone:'RADICAL',
     reason:`Rank ${lastRank}th pct, margin +${lastMargin}. Threshold exceeded. Fundamentally different target — prior session data noted and set aside.`
@@ -410,11 +499,19 @@ function selectMode(state, zoneResult) {
     return {i, w, label, eligible:true};
   });
 
+  // RADICAL zone on gifted track: boost INV weight to force calibrated-failure selection.
+  // INV is suppressed only for younger students; gifted students receive it early (session 4+).
+  // The boost overrides the hypercube penalty from recent coverage.
+  if (zoneResult.zone === 'RADICAL' && state.zeroPctileStreak >= 8 && tier === 'GIFTED' && !invSuppressed && elo[5] > 0) {
+    const invW = weights.find(w => w.i === 5);
+    if (invW && invW.w > 0) {
+      invW.w *= 8.0;
+      invW.label += ' · [GIFTED RADICAL: calibrated-failure override ×8 — INV selected]';
+    }
+  }
+
   const ranked = [...weights].filter(x => x.w > 0).sort((a,b) => b.w - a.w);
   if (ranked.length === 0) return {i:0, mode:MODES[0], weights, reason:'No eligible modes — fallback to QTY'};
-
-  // RADICAL override: for mastered-mode departure, prefer a mode that challenges the student's weakest frontier
-  // (the entropy engine selects this naturally via weight — weakest unvisited mode gets highest weight)
 
   const winner = ranked[0];
   return {i:winner.i, mode:MODES[winner.i], weights, ranked, reason:winner.label};
@@ -691,10 +788,12 @@ function generateLines(state, zoneResult, modeResult, template, codename, observ
       `Collaborative staircase: personal ceiling + delta, stated plainly. No rank exists on this track. Engagement is the primary signal; competitive rank would corrupt the measurement.`, 500);
   }
 
-  // ── STAGE 4 META-LINE (if flagged and not already in observations)
+  // ── STAGE 4 META-LINE: mutual-information loop, stated exactly once at the Designer threshold.
+  // Three consecutive correct predictions is the criterion — not two. Two could be chance.
+  // If already in observations (first slot), do not repeat.
   if (stage >= 4 && state.stagePredictions >= 3 && !observations.some(o=>o.src&&o.src.includes('singularity'))) {
     push('meta', `You predicted the last ${state.stagePredictions} sessions before reading them. The system is aware that you are reading it.`,
-      `Stage 4 acknowledgment — mutual-information loop stated exactly once. This is the invitation to the design track without naming it. Timing: at the threshold of Designer, never before.`, 750);
+      `Stage 4 acknowledgment — mutual-information loop stated exactly once, at the threshold of Designer. Never before this criterion is met; never repeated after. Source: SELF channel prediction log.`, 750);
   }
 
   // ── BLANK
@@ -713,19 +812,48 @@ function generateLines(state, zoneResult, modeResult, template, codename, observ
 
 function templateConstraint(modeKey, template) {
   const constraints = {
-    'THE GATEWAY':      ' — instant win. All multipliers irrelevant.',
+    // QTY
+    'MISER':            ' — move budget: 12/round. Efficiency over volume.',
+    'FLOOD':            ' — uncapped claim rate. Speed is the only constraint.',
+    'SPEED FLOOD':      ' — claim rate halves each round. Front-loading is correct.',
+    'THE DELUGE':       ' — all multipliers doubled. Calibration is off.',
+    'OVERFLOW':         ' — excess stars transfer to opponent. Precision required.',
+    'EFFICIENCY GATE':  ' — claim rate penalized above 65th pct. Counter-intuitive ceiling.',
+    // SPT
+    'BLIND REACH':      ' — fog of war active. Distance must be estimated.',
+    'ARCHITECT':        ' — HQ bonus for longest connection path.',
+    'REACH':            ' — endpoint distance scored. HQs are irrelevant.',
+    'THE PERIMETER':    ' — perimeter stars only. Interior stars score zero.',
+    'SIGHTLINE':        ' — line-of-sight constraint. Diagonal claims blocked.',
+    'FURTHEST POINT':   ' — single star. Maximum distance from origin wins.',
+    // FRT
+    'NETWORK':          ' — 4 HQs. Destruction penalized. Connectivity before aggression.',
+    'SIEGE':            ' — HQ movement disabled after round 2.',
+    'PATIENCE':         ' — destruction heavily penalized. Build only.',
+    'THE LATTICE':      ' — grid adjacency required. No arbitrary connections.',
+    'CONVERGENCE':      ' — all HQs must link before any scoring begins.',
+    'ANCHOR POINT':     ' — one HQ locked at spawn. Cannot relocate.',
+    // DST
+    'SCORCHED EARTH':   ' — no HQ connections. Destruction is the only path.',
+    'HUNTER':           ' — bonus multiplier for steal rate this round.',
+    'CHAIN REACTION':   ' — multi-steal chains score exponentially.',
+    'OBLITERATION':     ' — destruction counts double. Acquisition is secondary.',
+    'THE DENIAL':       ' — stars deplete on capture. Take to destroy, not to keep.',
+    'CLEARANCE':        ' — map resets at round 4. First half score is discarded.',
+    // WRM
+    'DECOY':            ' — false wormhole visible. The system will not confirm which.',
+    'THE GATEWAY':      ' — wormhole instant win. All other scores irrelevant.',
+    'TUNNEL VISION':    ' — only one wormhole active. No backup objective.',
+    'SIGNAL LOCK':      ' — wormhole target revealed at round 4. Wait for it.',
+    'THE FOLD':         ' — wormhole pairs swap at round 3. First pair is bait.',
+    'ONE THING':        ' — wormhole score only. Everything else zeroes out.',
+    // INV
+    'MIRROR':           ' — symmetric map, asymmetric objective. Find the asymmetry.',
     'HIDDEN OBJECTIVE': ' — no further information.',
-    'PATIENCE':         ' — no destruction allowed.',
-    'DECOY':            ' — false objective visible.',
-    'MIRROR':           ' — symmetric map, asymmetric objective.',
-    'MISER':            ' — move budget active.',
-    'NETWORK':          ' — 4 HQs. Destruction penalized.',
-    'SIEGE':            ' — HQ movement disabled.',
-    'BLIND REACH':      ' — fog of war active.',
-    'SCORCHED EARTH':   ' — no HQ connections. Destruction only.',
-    'SIGNAL LOCK':      ' — wormhole target revealed at round 4.',
-    'THE FOLD':         ' — wormhole pairs swap at round 3.',
-    'NULL SIGNAL':      ' — no feedback until session end.',
+    'NEGATIVE SPACE':   ' — score what you did not claim. Restraint is the skill.',
+    'THE FLIP':         ' — inversion triggers at round 3, not session start.',
+    'WRONG CONTEXT':    ' — stated objective is incorrect. Discover the real one.',
+    'NULL SIGNAL':      ' — no score feedback until session end. Operate blind.',
   };
   return constraints[template] || '';
 }
@@ -745,12 +873,100 @@ function terminalCompiler(state) {
           template, codename, observations};
 }
 
+// ════════════════════════════════ REFERENCE PRESETS
+// The 4 canonical simulated students from student-observatory.html.
+// Load one to test compiler output against the reference terminal sequences.
+const PRESETS = {
+  mvega:{
+    label:'M. VEGA — S24',
+    sessions:23,stage:3,tier:'TEEN',track:'COMPETITIVE',register:'teen-standard',engagement:'OK',
+    elo:[520,610,445,690,380,505],vel:[8,-2,31,-12,0,15],tau:[4,9,1,12,19,2],
+    purity:[[''],[''],[''],[''],['near-binary signal'],['announced×4 Q2']],
+    hist:[['MISER','FLOOD'],['REACH','ARCHITECT'],['NETWORK','SIEGE'],['HUNTER','CHAIN REACTION'],['DECOY'],['MIRROR','HIDDEN OBJECTIVE']],
+    lastRank:78,lastMargin:12,comfortableWinStreak:2,absenceDays:0,
+    zeroPctileStreak:0,stagePredictions:0,plannedSilentOverlay:false,moveConstraint:0,personalTarget:0,
+    teacherObservation:'',
+    // Reference: zone=SHIFTING · mode=WRM · template=THE GATEWAY · codename=EVENT HORIZON
+    ref:'SHIFTING · WRM · THE GATEWAY · EVENT HORIZON',
+  },
+  dkosa:{
+    label:'D. KOSA — S10',
+    sessions:9,stage:2,tier:'GIFTED',track:'COMPETITIVE',register:'gifted-compressed',engagement:'HIGH',
+    elo:[640,590,675,610,705,580],vel:[42,38,51,29,44,36],tau:[2,3,1,4,2,1],
+    purity:[[''],[''],[''],[''],[''],['announced×1 partially clean']],
+    hist:[['MISER'],['BLIND REACH'],['PATIENCE','SIEGE'],['SCORCHED EARTH'],['DECOY'],['MIRROR','NEGATIVE SPACE']],
+    lastRank:68,lastMargin:20,comfortableWinStreak:0,absenceDays:0,
+    zeroPctileStreak:9,stagePredictions:0,plannedSilentOverlay:true,moveConstraint:8,personalTarget:0,
+    teacherObservation:'',
+    // Reference: zone=RADICAL · mode=INV (silent) · template=HIDDEN OBJECTIVE · codename=WRONG ANSWER
+    ref:'RADICAL · INV (silent) · HIDDEN OBJECTIVE · WRONG ANSWER',
+  },
+  srios:{
+    label:'S. RIOS — S15',
+    sessions:14,stage:2,tier:'YOUNGER',track:'COLLABORATIVE',register:'younger-warm',engagement:'RECOVERING',
+    elo:[310,255,290,180,420,0],vel:[12,9,14,4,22,0],tau:[3,6,4,11,1,0],
+    purity:[[''],[''],[''],['low engagement S8-9'],[''],['']],
+    hist:[['FLOOD'],['REACH'],['NETWORK'],['HUNTER'],['THE GATEWAY','DECOY'],[]],
+    lastRank:68,lastMargin:12,comfortableWinStreak:1,absenceDays:0,
+    zeroPctileStreak:0,stagePredictions:0,plannedSilentOverlay:false,moveConstraint:0,personalTarget:96,
+    teacherObservation:'explained wormhole pairing to teammate',
+    // Reference: zone=PARALLEL · mode=QTY · template=(pool) · codename=THE TIDE
+    ref:'PARALLEL · QTY · (pool) · THE TIDE',
+  },
+  atanaka:{
+    label:'A. TANAKA — S32',
+    sessions:31,stage:4,tier:'TEEN',track:'COMPETITIVE',register:'teen-standard',engagement:'RECOVERING',
+    elo:[580,475,610,555,640,635],vel:[0,0,0,0,0,0],tau:[21,21,21,21,21,21],
+    purity:[['stale 21d'],['stale 21d · REMATCH-loop'],['stale 21d'],['stale 21d'],['stale 21d'],['stale 21d']],
+    hist:[['SPEED FLOOD'],['ARCHITECT','REACH'],['SIEGE'],['SCORCHED EARTH'],['DECOY','THE GATEWAY'],['HIDDEN OBJECTIVE','MIRROR']],
+    lastRank:75,lastMargin:20,comfortableWinStreak:0,absenceDays:21,
+    zeroPctileStreak:0,stagePredictions:3,plannedSilentOverlay:false,moveConstraint:0,personalTarget:0,
+    teacherObservation:'',
+    // Reference: zone=ECHO · mode=FRT · template=NETWORK · codename=DEEP ROOTS
+    ref:'ECHO · FRT · NETWORK · DEEP ROOTS',
+  },
+};
+
+function loadPreset(key) {
+  const p = PRESETS[key];
+  if (!p) return;
+  document.getElementById('preset-ref').textContent = p.ref ? `Ref: ${p.ref}` : '';
+  document.getElementById('s-sessions').value    = p.sessions;
+  document.getElementById('s-stage').value       = p.stage;
+  document.getElementById('s-tier').value        = p.tier;
+  document.getElementById('s-track').value       = p.track;
+  document.getElementById('s-register').value    = p.register;
+  document.getElementById('s-engagement').value  = p.engagement;
+  for (let i=0;i<6;i++) {
+    document.getElementById(`elo-${i}`).value  = p.elo[i];
+    document.getElementById(`vel-${i}`).value  = p.vel[i];
+    document.getElementById(`tau-${i}`).value  = p.tau[i];
+    document.getElementById(`pur-${i}`).value  = (p.purity[i]||[]).filter(Boolean).join(', ');
+    document.getElementById(`hist-${i}`).value = (p.hist[i]||[]).join(', ');
+  }
+  document.getElementById('s-lastrank').value    = p.lastRank;
+  document.getElementById('s-margin').value      = p.lastMargin;
+  document.getElementById('s-streak').value      = p.comfortableWinStreak;
+  document.getElementById('s-absence').value     = p.absenceDays;
+  document.getElementById('s-zeropct').value     = p.zeroPctileStreak;
+  document.getElementById('s-predictions').value = p.stagePredictions;
+  document.getElementById('s-silentinv').value   = p.plannedSilentOverlay ? '1' : '0';
+  document.getElementById('s-budget').value      = p.moveConstraint;
+  document.getElementById('s-target').value      = p.personalTarget;
+  document.getElementById('s-teacherobs').value  = p.teacherObservation;
+  compile();
+}
+
 // ════════════════════════════════ STATE READER
 function readState() {
-  const elo  = [0,1,2,3,4,5].map(i=>+document.getElementById(`elo-${i}`).value||0);
-  const vel  = [0,1,2,3,4,5].map(i=>+document.getElementById(`vel-${i}`).value||0);
-  const tau  = [0,1,2,3,4,5].map(i=>+document.getElementById(`tau-${i}`).value||0);
-  const purity=[0,1,2,3,4,5].map(i=>{const v=document.getElementById(`pur-${i}`).value.trim();return v?[v]:[];});
+  const elo   = [0,1,2,3,4,5].map(i=>+document.getElementById(`elo-${i}`).value||0);
+  const vel   = [0,1,2,3,4,5].map(i=>+document.getElementById(`vel-${i}`).value||0);
+  const tau   = [0,1,2,3,4,5].map(i=>+document.getElementById(`tau-${i}`).value||0);
+  const purity= [0,1,2,3,4,5].map(i=>{const v=document.getElementById(`pur-${i}`).value.trim();return v?[v]:[];});
+  const hist  = [0,1,2,3,4,5].map(i=>{
+    const v=document.getElementById(`hist-${i}`)?.value.trim();
+    return v?v.split(',').map(t=>t.trim()).filter(Boolean):[];
+  });
   return {
     sessions:   +document.getElementById('s-sessions').value||1,
     stage:      +document.getElementById('s-stage').value||1,
@@ -758,18 +974,17 @@ function readState() {
     track:      document.getElementById('s-track').value,
     register:   document.getElementById('s-register').value,
     engagement: document.getElementById('s-engagement').value,
-    elo, vel, tau, purity,
-    hist: [[],[],[],[],[],[]],
-    lastRank:          +document.getElementById('s-lastrank').value||50,
-    lastMargin:        +document.getElementById('s-margin').value||10,
+    elo, vel, tau, purity, hist,
+    lastRank:            +document.getElementById('s-lastrank').value||50,
+    lastMargin:          +document.getElementById('s-margin').value||10,
     comfortableWinStreak:+document.getElementById('s-streak').value||0,
-    absenceDays:       +document.getElementById('s-absence').value||0,
-    zeroPctileStreak:  +document.getElementById('s-zeropct').value||0,
-    stagePredictions:  +document.getElementById('s-predictions').value||0,
-    plannedSilentOverlay: document.getElementById('s-silentinv').value==='1',
-    moveConstraint:    +document.getElementById('s-budget').value||0,
-    personalTarget:    +document.getElementById('s-target').value||0,
-    teacherObservation: document.getElementById('s-teacherobs').value.trim()||null,
+    absenceDays:         +document.getElementById('s-absence').value||0,
+    zeroPctileStreak:    +document.getElementById('s-zeropct').value||0,
+    stagePredictions:    +document.getElementById('s-predictions').value||0,
+    plannedSilentOverlay:document.getElementById('s-silentinv').value==='1',
+    moveConstraint:      +document.getElementById('s-budget').value||0,
+    personalTarget:      +document.getElementById('s-target').value||0,
+    teacherObservation:  document.getElementById('s-teacherobs').value.trim()||null,
   };
 }
 
@@ -793,50 +1008,72 @@ function compile() {
 }
 
 function renderCompilerLog(r, state) {
+  const zv = ZONE_VOCAB[r.zone] || {};
   const zp = `<span class="zp zp-${r.zone}">${r.zone}</span>`;
+
   document.getElementById('result-summary').innerHTML =
     `Zone: ${zp} &nbsp;·&nbsp; Mode: <strong>${r.mode.n}</strong> &nbsp;·&nbsp; Template: <strong>${r.template}</strong> &nbsp;·&nbsp; Codename: <strong>${r.codename}</strong>`;
-
   document.getElementById('term-zone-label').innerHTML =
     `Zone: <span class="zp zp-${r.zone}">${r.zone}</span> &nbsp;·&nbsp; ${r.mode.n} &nbsp;·&nbsp; ${r.template}`;
 
+  // Asserted parameters active in this session
+  const asserted = [];
+  if (state.tau[r.modeIdx] > 0) asserted.push(`forgetting_half_life=14d [ASSERTED Q4]`);
+  asserted.push(`difficulty_coeff=0.85 [ASSERTED]`);
+  if (state.zeroPctileStreak >= 8 && state.tier==='GIFTED') asserted.push(`gifted_velocity_sd=2.0 [ASSERTED Q7]`);
+  if (state.plannedSilentOverlay) asserted.push(`P(INVERSION)=0.25 [ASSERTED]`);
+
   const log = [
-    `<span class="dim">// COMPILER LOG — S${state.sessions+1}</span>`,
+    `<span class="dim">// COMPILER LOG — S${state.sessions+1} · ${state.register} · ${state.tier}</span>`,
     ``,
     `<span class="zone">ZONE: ${r.zone}</span>`,
     `  ${r.zoneReason}`,
+    zv.desc ? `  desc: "${zv.desc}"` : '',
     ``,
     `<span class="hl">MODE: ${r.mode.n}</span>`,
     `  ${r.weights.find(w=>w.i===r.modeIdx)?.label||''}`,
     ``,
-    `TEMPLATE: ${r.template}`,
-    `  pool size: ${TEMPLATES[r.mode.id].length} · excluded recent: ${(state.hist[r.modeIdx]||[]).slice(-2).join(', ')||'none'}`,
+    `TEMPLATE: ${r.template}${templateConstraint(r.mode.id, r.template)}`,
+    `  history excluded: ${(state.hist[r.modeIdx]||[]).join(', ')||'none'}`,
+    `  full pool: ${TEMPLATES[r.mode.id].join(', ')}`,
     ``,
     `CODENAME: ${r.codename}`,
-    `  pool[${state.sessions % CODENAMES[r.mode.id].length}] from ${r.mode.id.toUpperCase()}`,
+    `  pool[${state.sessions % CODENAMES[r.mode.id].length}/${CODENAMES[r.mode.id].length}] from ${r.mode.id.toUpperCase()}`,
     ``,
     `OBSERVATIONS (${r.observations.length}):`,
     ...r.observations.map((o,i)=>`  ${i+1}. [${o.src}]\n     "${o.x}"`),
-    r.observations.length===0 ? `  (none — standard session)` : '',
+    r.observations.length===0 ? `  (none — standard session, no exceptional ledger signal)` : '',
+    ``,
+    `PARAMETER REGISTRY — active in this session:`,
+    ...asserted.map(a=>`  <span class="al">⚑ ${a}</span>`),
     ``,
     state.sessions < 20 && state.tier==='YOUNGER'
-      ? `<span class="al">[INV SUPPRESSED] younger tier + sessions < 20</span>` : '',
+      ? `<span class="al">⚑ [INV SUPPRESSED] younger tier + sessions<20 — age rule</span>` : '',
     state.plannedSilentOverlay
-      ? `<span class="al">[SILENT OVERLAY] INV not announced — Q2 clean signal</span>` : '',
+      ? `<span class="al">⚑ [SILENT OVERLAY] INV not announced — Q2 clean signal. Omission IS the experiment.</span>` : '',
     state.absenceDays>=14
-      ? `<span class="al">[Q4 DUAL-HYPOTHESIS] λ=14d and λ=40d predictions pre-registered</span>` : '',
+      ? `<span class="al">⚑ [Q4 DUAL-HYPOTHESIS] λ=14d and λ=40d predictions pre-registered before this session</span>` : '',
     state.zeroPctileStreak>=8&&state.tier==='GIFTED'
-      ? `<span class="al">[GIFTED OVERRIDE] calibrated failure — ZPD coeff 0.95, feeds Q7</span>` : '',
+      ? `<span class="al">⚑ [GIFTED OVERRIDE] ZPD coeff raised 0.85→0.95, move budget=${state.moveConstraint||'none'}. Feeds Q7.</span>` : '',
   ].filter(l=>l!==undefined).join('\n');
 
   document.getElementById('compiler-log').innerHTML = log;
+
+  // Zone vocabulary panel
+  const zvHtml = zv.phrases ? `
+    <div style="margin-top:8px">
+      <h4>Zone Vocabulary — <span class="zp zp-${r.zone}">${r.zone}</span> canonical phrases</h4>
+      <div style="font-size:9px;color:#555;margin-bottom:4px">${zv.desc||''}</div>
+      ${zv.phrases.map(p=>`<div style="font-family:'Courier New',monospace;font-size:9px;color:#333;padding:2px 0;border-bottom:1px solid #eee">"${p}"</div>`).join('')}
+    </div>` : '';
+  document.getElementById('zone-vocab').innerHTML = zvHtml;
 
   // Weight table
   const rows = (r.ranked||[]).map(w =>
     `<tr class="${w.i===r.modeIdx?'winner':''}">
        <td style="color:${MODES[w.i].col};font-weight:700">${MODES[w.i].id.toUpperCase()}</td>
-       <td>${w.w.toFixed(2)}</td>
-       <td style="color:#888">${w.label}</td>
+       <td style="font-family:'Courier New',monospace">${w.w.toFixed(2)}</td>
+       <td style="color:#888;font-size:9px">${w.label}</td>
      </tr>`).join('');
   document.getElementById('weight-table').innerHTML =
     `<tr style="font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888"><td>Mode</td><td>Weight</td><td>Breakdown</td></tr>${rows}`;
