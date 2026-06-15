@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Layer 0 — The Ledger</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:11px;line-height:1.5;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{border-bottom:2px solid #000;padding:8px 14px;display:flex;align-items:baseline;gap:16px;flex-shrink:0;background:#fff;z-index:10}
+.hd-title{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase}
+.hd-sub{font-size:9px;color:#888;letter-spacing:1px}
+.hd-link{margin-left:auto;font-size:9px;letter-spacing:1px;color:#888;text-decoration:none;border:1px solid #ddd;padding:3px 9px;cursor:pointer}
+.hd-link:hover{border-color:#000;color:#000}
+.axiom-bar{background:#000;color:#fff;font-size:8px;letter-spacing:2px;text-transform:uppercase;padding:4px 14px;flex-shrink:0}
+.main{flex:1;display:grid;grid-template-columns:280px 1fr 310px;min-height:0;overflow:hidden}
+/* FEED */
+.feed-panel{border-right:1px solid #ddd;display:flex;flex-direction:column;overflow:hidden}
+.panel-hd{padding:7px 10px;border-bottom:1px solid #ddd;font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#555;background:#fafafa;flex-shrink:0;display:flex;align-items:center;gap:6px}
+.feed-scroll{flex:1;overflow-y:auto;padding:0}
+.obs-row{padding:6px 10px;border-bottom:1px solid #f0f0f0;cursor:pointer;transition:background .08s}
+.obs-row:hover{background:#f5f5f5}
+.obs-row.selected{background:#000;color:#fff}
+.obs-row.selected .obs-meta{color:#888}
+.obs-row.selected .obs-sig{color:#aaa}
+.obs-hash{font-family:'Courier New',monospace;font-size:9px;color:#888;margin-bottom:2px}
+.obs-row.selected .obs-hash{color:#666}
+.obs-student{font-weight:700;font-size:10px;letter-spacing:1px;text-transform:uppercase}
+.obs-vec{font-family:'Courier New',monospace;font-size:8px;color:#555;word-break:break-all;line-height:1.5;margin-top:2px}
+.obs-row.selected .obs-vec{color:#999}
+.obs-outcome{display:inline-block;padding:0 6px;font-size:8px;font-weight:700;letter-spacing:1px;border:1px solid;margin-top:3px}
+.obs-meta{font-size:8px;color:#aaa;margin-top:2px}
+.obs-sig{font-family:'Courier New',monospace;font-size:8px;color:#aaa;margin-top:2px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#0a0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+/* SCATTER */
+.scatter-panel{display:flex;flex-direction:column;overflow:hidden}
+.controls{padding:7px 12px;border-bottom:1px solid #ddd;display:flex;align-items:center;gap:10px;flex-shrink:0;background:#fafafa}
+.ctrl-btn{padding:2px 8px;border:1px solid #ccc;background:#fff;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.ctrl-btn:hover{border-color:#000}
+.ctrl-btn.active{background:#000;color:#fff;border-color:#000}
+.scatter-wrap{flex:1;position:relative;min-height:0}
+#scatter-canvas{display:block;width:100%;height:100%}
+#scatter-tooltip{position:absolute;pointer-events:none;display:none;background:#000;color:#fff;font-family:'Courier New',monospace;font-size:9px;padding:6px 9px;white-space:pre;z-index:5;line-height:1.7}
+.axis-label{position:absolute;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:#888}
+/* INSPECTOR */
+.inspector-panel{border-left:1px solid #ddd;display:flex;flex-direction:column;overflow:hidden}
+.inspector-scroll{flex:1;overflow-y:auto;padding:10px 12px}
+.inspect-field{margin-bottom:8px}
+.field-name{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:2px}
+.field-val{font-family:'Courier New',monospace;font-size:10px;color:#111;line-height:1.6}
+.field-note{font-size:9px;color:#888;font-style:italic;margin-top:2px;line-height:1.5}
+.vec-row{display:flex;gap:6px;align-items:baseline;margin-bottom:1px}
+.vec-idx{font-family:'Courier New',monospace;font-size:8px;color:#aaa;width:20px;flex-shrink:0}
+.vec-name{font-size:9px;color:#555;flex:1}
+.vec-val{font-family:'Courier New',monospace;font-size:10px;font-weight:700;color:#111;width:55px;text-align:right}
+.vec-bar{width:60px;height:8px;background:#eee;flex-shrink:0;position:relative}
+.vec-bar-fill{height:100%;background:#000;position:absolute;left:0;top:0}
+.vec-neg{background:#dc2626}
+.no-select{color:#888;font-size:10px;padding:20px 12px;font-style:italic;line-height:1.7;text-align:center}
+.sig-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.sig-name{font-size:9px;color:#555;width:120px;flex-shrink:0}
+.sig-val{font-family:'Courier New',monospace;font-size:10px;font-weight:700}
+.traj-bar{display:flex;gap:1px;margin-top:4px}
+.traj-seg{height:24px;background:#ddd;flex:1;position:relative}
+.traj-fill{position:absolute;bottom:0;left:0;right:0;background:#000}
+/* axioms panel */
+.axioms-panel{padding:20px;overflow-y:auto;display:none}
+.axioms-panel.active-tab{display:block}
+.ax-item{border-left:3px solid #000;padding:10px 14px;margin-bottom:14px}
+.ax-num{font-size:28px;font-weight:700;opacity:.1;float:right;line-height:1}
+.ax-title{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.ax-body{font-size:11px;line-height:1.8;color:#333}
+.ax-impl{font-size:10px;color:#555;margin-top:6px;padding-top:6px;border-top:1px solid #eee;font-style:italic}
+/* tabs */
+.tab-bar{display:flex;border-bottom:1px solid #ddd;padding:0 14px;gap:0;flex-shrink:0;background:#fff}
+.tab-btn{padding:7px 12px;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;color:#888;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab-btn:hover{color:#000}
+.tab-btn.active{color:#000;border-bottom-color:#000}
+.outcome-chip{display:inline-block;width:32px;text-align:center;font-size:8px;font-weight:700;padding:1px 0;margin-top:3px;border:1px solid #000}
+::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-track{background:#fff}::-webkit-scrollbar-thumb{background:#ddd}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="hd-title">Layer 0</span>
+  <span class="hd-sub">— The Ledger — Append-Only · Non-Segmenting · Permanent</span>
+  <a class="hd-link" href="layer-1-approximation.html">Layer 1 Approximation →</a>
+</header>
+<div class="axiom-bar">The Ledger does not know which mode a session was. It records what happened. Mode is a view you apply later.</div>
+
+<div class="tab-bar">
+  <div class="tab-btn active" onclick="setTab('live',this)">Live Feed</div>
+  <div class="tab-btn" onclick="setTab('space',this)">Config Space</div>
+  <div class="tab-btn" onclick="setTab('axioms',this)">Permanence</div>
+</div>
+
+<div class="main" id="main-live">
+  <!-- ── FEED ── -->
+  <div class="feed-panel">
+    <div class="panel-hd"><div class="live-dot"></div>Observation Stream<span style="margin-left:auto;font-size:8px;color:#aaa" id="obs-count"></span></div>
+    <div class="feed-scroll" id="feed-scroll"></div>
+  </div>
+
+  <!-- ── SCATTER ── -->
+  <div class="scatter-panel">
+    <div class="controls">
+      <span style="font-size:8px;color:#888;letter-spacing:1px;text-transform:uppercase">X axis:</span>
+      <select id="axis-x" onchange="drawScatter()" style="font-size:9px;font-family:Arial,sans-serif;border:1px solid #ccc;padding:2px 4px">
+        <option value="0">count_mult</option>
+        <option value="1">dist_mult</option>
+        <option value="2">hq_mult</option>
+        <option value="3">dest_mult</option>
+        <option value="4">moves</option>
+        <option value="5">round_length_s</option>
+      </select>
+      <span style="font-size:8px;color:#888;letter-spacing:1px;text-transform:uppercase">Y:</span>
+      <select id="axis-y" onchange="drawScatter()" style="font-size:9px;font-family:Arial,sans-serif;border:1px solid #ccc;padding:2px 4px">
+        <option value="1" selected>dist_mult</option>
+        <option value="0">count_mult</option>
+        <option value="2">hq_mult</option>
+        <option value="3">dest_mult</option>
+        <option value="5">round_length_s</option>
+      </select>
+      <button class="ctrl-btn" id="btn-labels" onclick="toggleLabels(this)">Show L1 Regions</button>
+      <span style="margin-left:auto;font-size:8px;color:#888">Brightness = outcome · Shape = dest sign · Fill = hq level</span>
+    </div>
+    <div class="scatter-wrap" id="scatter-wrap">
+      <canvas id="scatter-canvas"></canvas>
+      <div id="scatter-tooltip"></div>
+    </div>
+  </div>
+
+  <!-- ── INSPECTOR ── -->
+  <div class="inspector-panel">
+    <div class="panel-hd">Inspector</div>
+    <div class="inspector-scroll" id="inspector-scroll">
+      <div class="no-select">Select any record from the feed or the config space to inspect it in full detail.<br><br>No interpretation. No mode label. Just what happened.</div>
+    </div>
+  </div>
+</div>
+
+<div class="axioms-panel" id="tab-axioms">
+  <h2 style="font-size:9px;letter-spacing:2px;font-weight:700;text-transform:uppercase;border-bottom:1px solid #000;padding-bottom:5px;margin-bottom:16px">The Four Permanence Axioms</h2>
+  <div class="ax-item">
+    <div class="ax-num">1</div>
+    <div class="ax-title">Append-Only</div>
+    <div class="ax-body">Every measurement event is written once and never modified. A session ends — its Observation record is appended to the Ledger. The record's content is fixed at write time. No correction, no amendment, no deletion. If an observation was recorded incorrectly, a correction record is appended alongside the original. Both remain visible. The history is not sanitized.</div>
+    <div class="ax-impl">Implementation: Ledger is a write-once log. Records carry a <code>t</code> (timestamp) that is the join key for all later interpretation. A "corrected" observation references the original's id in its <code>supersedes</code> field. Views can filter by latest-correction-wins; the raw log never does.</div>
+  </div>
+  <div class="ax-item">
+    <div class="ax-num">2</div>
+    <div class="ax-title">Non-Segmenting</div>
+    <div class="ax-body">The Ledger stores configurations as raw vectors — 12 continuous parameters. It does not store "mode: SPATIAL" or "template: FLOOD." Those labels are Layer 1 views applied to the config vector after the fact. A session with config_vector[1] = 500 is not a SPATIAL session — it is a session with dist_mult = 500. The label SPATIAL is one possible name for a region of config space. Naming the region does not create the region.</div>
+    <div class="ax-impl">Implementation: Observation schema has <code>config_vector: float[12]</code> and <code>config_hash: string</code>. The <code>mode_label</code> field does not exist at Layer 0. Layer 1 views derive it as: mode = argmax(config_vector[0:4] / sum(config_vector[0:4])).</div>
+  </div>
+  <div class="ax-item">
+    <div class="ax-num">3</div>
+    <div class="ax-title">Retroactive Reinterpretation</div>
+    <div class="ax-body">When a better model arrives — a more accurate Elo algorithm, a new BT dimension mapping, a Phase 3 continuous skill surface — it is applied to the full Ledger history. All past observations are reinterpreted under the new model. This is possible only because the Ledger stores raw observations, not interpretations. A system that stores only the current interpretation of its data cannot retroactively correct its past.</div>
+    <div class="ax-impl">Implementation: Every view is a query over the Ledger with explicit parameter versions. Changing <code>params_version</code> reruns the query with new weights. The scatter in Config Space re-renders under any projection. No data is frozen in interpreted form.</div>
+  </div>
+  <div class="ax-item">
+    <div class="ax-num">4</div>
+    <div class="ax-title">Full Provenance</div>
+    <div class="ax-body">Every Layer 1 value traces back to specific Layer 0 records. The confidence interval on a student's SPATIAL Elo is not a property of the number — it is a property of the set of records that produced it. When you see Elo = 720 ± 55, the ± 55 means: "here are the 4 sessions in config_vector[1] ≥ 300 that produced this estimate; their outcome variance is what generates the confidence band." Click any Layer 1 value. The Layer 0 records that produced it are shown.</div>
+    <div class="ax-impl">Implementation: Layer 1 values carry a <code>source_obs_ids: string[]</code> field listing the Layer 0 record ids used in their derivation. Any uncertainty metric is derived from those records, not asserted independently.</div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// MOCK LEDGER DATA
+// config_vector: [count_mult, dist_mult, hq_mult, dest_mult, moves, round_length_s, rounds, steals, hq_count, map_idx, bot_type, bot_aggression×100]
+// bot_type: 0=HAL 1=CAESAR 2=ATHENA 3=ROBIN 4=EINSTEIN 5=LORENZ
+// outcome: rank percentile 0.0–1.0
+// ═══════════════════════════════════════════════════════════════════
+
+const PARAM_NAMES = ['count_mult','dist_mult','hq_mult','dest_mult','moves','round_length_s','rounds','steals','hq_count','map_idx','bot_type','bot_aggression'];
+const PARAM_MAX   = [600,600,600,600,25,65,15,60,5,3,5,100];
+const BOT_NAMES   = ['HAL','CAESAR','ATHENA','ROBIN','EINSTEIN','LORENZ'];
+const MAP_NAMES   = ['AETHER','PROVIDENCE','CITADEL','DELTA'];
+const STUDENT_NAMES = {aria:'ARIA',bram:'BRAM',clio:'CLIO',dara:'DARA'};
+
+// Observation records — raw, no mode labels
+const OBS = [
+  // ── ARIA (22 sessions total) — 10 representative
+  {id:'a01',t:1717200000,s:'aria',c:[500,1, 5,  1,15,30, 8,15,2,0,0,50],o:0.62,sig:{rnd:[0.14,0.28,0.42,0.56,0.67,0.76,0.85,0.95]}},
+  {id:'a02',t:1717286400,s:'aria',c:[500,1, 5,  1,15,30, 8,15,2,0,2,60],o:0.71,sig:{rnd:[0.16,0.31,0.49,0.63,0.73,0.82,0.89,0.96]}},
+  {id:'a05',t:1717545600,s:'aria',c:[  1,500,1,  1,15,32,10, 5,0,1,5,40],o:0.58,sig:{rnd:[0.08,0.18,0.29,0.42,0.54,0.67,0.79,0.88,0.95,1.0]}},
+  {id:'a08',t:1717804800,s:'aria',c:[  1,500,1,  1,12,32,10, 5,0,1,1,60],o:0.73,sig:{rnd:[0.09,0.21,0.36,0.51,0.64,0.76,0.86,0.93,0.97,1.0]}},
+  {id:'a12',t:1718150400,s:'aria',c:[ 50,  1,500,-200,15,30,10, 3,4,2,0,50],o:0.48,sig:{rnd:[0.11,0.24,0.35,0.45,0.54,0.61,0.68,0.74,0.79,0.83]}},
+  {id:'a16',t:1718496000,s:'aria',c:[  1,500,1,  1,12,35,10, 5,0,1,1,70],o:0.76,sig:{rnd:[0.11,0.24,0.40,0.55,0.68,0.79,0.88,0.94,0.98,1.0]}},
+  {id:'a18',t:1718668800,s:'aria',c:[-100,1, 1, 1,15,30,10,15,2,0,5,40],o:0.31,sig:{rnd:[0.18,0.31,0.39,0.42,0.43,0.44,0.45,0.45,0.46,0.46]}},// silent INV
+  {id:'a20',t:1718841600,s:'aria',c:[  1,500,1,  1,12,35,10, 5,0,1,1,70],o:0.79,sig:{rnd:[0.12,0.27,0.43,0.57,0.70,0.81,0.89,0.94,0.97,1.0]}},
+  {id:'a21',t:1718928000,s:'aria',c:[500,1, 5,  1,15,30,10,15,2,0,0,50],o:0.64,sig:{rnd:[0.13,0.27,0.41,0.54,0.65,0.74,0.82,0.88,0.93,0.97]}},
+  {id:'a22',t:1719014400,s:'aria',c:[  1,500,1,  1,10,35,10, 5,0,1,1,70],o:0.82,sig:{rnd:[0.13,0.29,0.45,0.60,0.72,0.82,0.89,0.94,0.97,1.0]}},
+  // ── BRAM (5 sessions) — all
+  {id:'b01',t:1717545600,s:'bram',c:[500,1, 5,  1,15,30, 8,15,2,0,0,50],o:0.44,sig:{rnd:[0.09,0.19,0.28,0.38,0.46,0.53,0.60,0.44]}},
+  {id:'b02',t:1717632000,s:'bram',c:[  1,500,1,  1,15,32,10, 5,0,1,5,40],o:0.52,sig:{rnd:[0.06,0.14,0.22,0.32,0.41,0.50,0.57,0.64,0.70,0.52]}},
+  {id:'b03',t:1717804800,s:'bram',c:[ 50,  1,500,-200,15,30,10, 3,4,2,0,50],o:0.29,sig:{rnd:[0.07,0.13,0.18,0.23,0.27,0.29,0.30,0.30,0.30,0.29]}},
+  {id:'b04',t:1717977600,s:'bram',c:[  1,  1,1,200,15,30,10,40,2,0,3,60],o:0.58,sig:{rnd:[0.11,0.23,0.34,0.44,0.52,0.58,0.62,0.64,0.64,0.58]}},
+  {id:'b05',t:1718150400,s:'bram',c:[  1,  1,1,  1,12,30,10,10,1,3,4,90],o:0.49,sig:{rnd:[0.08,0.18,0.28,0.37,0.46,0.54,0.60,0.65,0.68,0.49]}},
+  // ── CLIO (51 sessions) — 8 late-stage
+  {id:'c44',t:1716940800,s:'clio',c:[  1,500,1,  1,10,32,10, 5,0,1,1,70],o:0.89,sig:{rnd:[0.14,0.30,0.47,0.62,0.74,0.83,0.89,0.93,0.96,0.99]}},
+  {id:'c46',t:1717113600,s:'clio',c:[ 50,  1,500,-200,10,30,10, 3,4,2,2,80],o:0.92,sig:{rnd:[0.16,0.33,0.50,0.64,0.76,0.85,0.91,0.95,0.97,1.0]}},
+  {id:'c48',t:1717286400,s:'clio',c:[  1,-300,1,-200,15,30,10,15,2,0,5,40],o:0.78,sig:{rnd:[0.22,0.39,0.53,0.64,0.72,0.79,0.84,0.87,0.89,0.90]}},// INV on SPT
+  {id:'c49',t:1717372800,s:'clio',c:[500,1, 5,  1,10,25, 8,15,2,0,1,70],o:0.91,sig:{rnd:[0.16,0.34,0.51,0.65,0.77,0.85,0.91,0.96]}},
+  {id:'c50',t:1717459200,s:'clio',c:[ 50,  1,500,-200,10,30,10, 3,4,2,0,60],o:0.94,sig:{rnd:[0.17,0.35,0.53,0.67,0.78,0.87,0.92,0.96,0.98,1.0]}},
+  {id:'c51',t:1717545600,s:'clio',c:[  1,  1,1,  1,10,30,10,10,1,3,4,90],o:0.88,sig:{rnd:[0.15,0.32,0.49,0.63,0.75,0.84,0.90,0.94,0.97,1.0]}},
+  {id:'c52',t:1717718400,s:'clio',c:[  1,500,1,  1, 8,35,10, 5,0,1,1,80],o:0.93,sig:{rnd:[0.16,0.33,0.50,0.65,0.77,0.86,0.91,0.95,0.97,1.0]}},
+  {id:'c53',t:1717804800,s:'clio',c:[ 50,  1,500,-200, 8,30,10, 3,4,2,0,80],o:0.95,sig:{rnd:[0.18,0.36,0.53,0.67,0.79,0.88,0.93,0.96,0.98,1.0]}},
+  // ── DARA (11 sessions) — 7 representative
+  {id:'d01',t:1717718400,s:'dara',c:[500,1, 5,  1,15,30, 8,15,2,0,0,50],o:0.55,sig:{rnd:[0.11,0.22,0.33,0.44,0.53,0.60,0.66,0.55]}},
+  {id:'d03',t:1717891200,s:'dara',c:[  1,500,1,  1,15,32,10, 5,0,1,5,40],o:0.37,sig:{rnd:[0.06,0.12,0.17,0.22,0.27,0.32,0.36,0.39,0.40,0.37]}},
+  {id:'d05',t:1718064000,s:'dara',c:[  1,  1,1,320,15,30,10,40,2,0,3,60],o:0.84,sig:{rnd:[0.14,0.29,0.45,0.58,0.69,0.77,0.83,0.87,0.90,0.93]}},
+  {id:'d07',t:1718236800,s:'dara',c:[ 50,  1,500,-200,15,30,10, 3,4,2,0,50],o:0.43,sig:{rnd:[0.09,0.18,0.26,0.33,0.39,0.44,0.47,0.49,0.50,0.43]}},
+  {id:'d09',t:1718409600,s:'dara',c:[  1,  1,1,360,15,30,10,45,2,0,3,80],o:0.91,sig:{rnd:[0.16,0.33,0.49,0.62,0.73,0.81,0.87,0.91,0.93,0.96]}},
+  {id:'d10',t:1718496000,s:'dara',c:[  1,500,1,  1,15,32,10, 5,0,1,1,50],o:0.39,sig:{rnd:[0.07,0.14,0.20,0.26,0.31,0.36,0.39,0.40,0.41,0.39]}},
+  {id:'d11',t:1718582400,s:'dara',c:[  1,  1,1,360,12,30,10,40,2,0,2,80],o:0.88,sig:{rnd:[0.15,0.31,0.47,0.60,0.71,0.80,0.86,0.90,0.93,0.95]}},
+];
+
+// ── Sort newest first
+OBS.sort((a,b) => b.t - a.t);
+
+// ── State
+let selectedId = null;
+let showLabels = false;
+
+// ── Helpers
+function fmtTime(t){
+  const d=new Date(t*1000);
+  return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+'  '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+}
+
+function outcomeLabel(o){
+  if(o>=0.80)return{text:'HIGH',border:'#000',bg:'#000',col:'#fff'};
+  if(o>=0.55)return{text:'MID',border:'#555',bg:'#fff',col:'#555'};
+  return{text:'LOW',border:'#ccc',bg:'#fff',col:'#aaa'};
+}
+
+function vecStr(c){
+  return '['+c.join(', ')+']';
+}
+
+// ── Render Feed
+function renderFeed(){
+  const el=document.getElementById('feed-scroll');
+  document.getElementById('obs-count').textContent=OBS.length+' records';
+  el.innerHTML=OBS.map(o=>{
+    const ol=outcomeLabel(o.o);
+    const sel=selectedId===o.id;
+    return `<div class="obs-row${sel?' selected':''}" onclick="selectObs('${o.id}')">
+      <div class="obs-hash">${o.id} · ${fmtTime(o.t)}</div>
+      <div class="obs-student">${STUDENT_NAMES[o.s]}</div>
+      <div class="obs-vec">${vecStr(o.c)}</div>
+      <span class="outcome-chip" style="border-color:${ol.border};background:${ol.bg};color:${ol.col}">
+        ${(o.o*100).toFixed(0)}%
+      </span>
+      <div class="obs-sig">rnd_trajectory[${o.sig.rnd.length}]</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Inspector
+function selectObs(id){
+  selectedId=id;
+  renderFeed();
+  drawScatter();
+  renderInspector(OBS.find(o=>o.id===id));
+}
+
+function renderInspector(o){
+  if(!o){document.getElementById('inspector-scroll').innerHTML='<div class="no-select">No record selected.</div>';return;}
+  const ol=outcomeLabel(o.o);
+  const botName=BOT_NAMES[o.c[10]]||'?';
+  const mapName=MAP_NAMES[o.c[9]]||'?';
+  document.getElementById('inspector-scroll').innerHTML=`
+    <div class="inspect-field">
+      <div class="field-name">Record ID</div>
+      <div class="field-val">${o.id}</div>
+    </div>
+    <div class="inspect-field">
+      <div class="field-name">Timestamp</div>
+      <div class="field-val">${fmtTime(o.t)}</div>
+      <div class="field-note">Epoch ${o.t} · absolute, never relative</div>
+    </div>
+    <div class="inspect-field">
+      <div class="field-name">Student</div>
+      <div class="field-val">${STUDENT_NAMES[o.s]}</div>
+    </div>
+    <div class="inspect-field" style="background:#f8f8f8;border:1px solid #000;padding:8px;margin-bottom:8px">
+      <div class="field-name" style="margin-bottom:4px;color:#000">Configuration Vector — 12 parameters</div>
+      <div class="field-note" style="margin-bottom:8px;color:#555">No mode label. These numbers ARE the configuration. Mode is a view derived later.</div>
+      ${o.c.map((v,i)=>{
+        const pct=Math.max(0,(v+(i===3?600:0))/((i===3?1200:1)*(PARAM_MAX[i]||100)));
+        const neg=v<0;
+        const displayV = i===11 ? (v/100).toFixed(2) : (i===10?botName+(` (${v})`):i===9?mapName+(` (${v})`):v);
+        return `<div class="vec-row">
+          <div class="vec-idx">${i}</div>
+          <div class="vec-name">${PARAM_NAMES[i]}</div>
+          <div class="vec-val" style="${neg?'color:#dc2626':''}">${displayV}</div>
+          <div class="vec-bar"><div class="vec-bar-fill${neg?' vec-neg':''}" style="width:${Math.min(100,Math.abs(v)/PARAM_MAX[i]*100)}%"></div></div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="inspect-field">
+      <div class="field-name">Outcome</div>
+      <div class="field-val">${(o.o*100).toFixed(1)}th percentile</div>
+      <div class="field-note">Raw rank percentile. No Elo update shown at Layer 0.</div>
+    </div>
+    <div class="inspect-field">
+      <div class="field-name">Round Trajectory · ${o.sig.rnd.length} rounds</div>
+      <div class="traj-bar">${o.sig.rnd.map(v=>`<div class="traj-seg"><div class="traj-fill" style="height:${v*100}%"></div></div>`).join('')}</div>
+      <div class="field-note">Normalized cumulative score per round. Raw signal. No interpretation.</div>
+    </div>
+    <div style="background:#111;color:#888;font-family:'Courier New',monospace;font-size:9px;padding:8px 10px;margin-top:8px;line-height:1.7">
+      <span style="color:#555">// Layer 0 has no field named 'mode'</span><br>
+      <span style="color:#555">// Layer 0 has no field named 'template'</span><br>
+      <span style="color:#555">// Layer 0 has no field named 'elo_delta'</span><br>
+      <span style="color:#fff">config_hash</span>: <span style="color:#0f0">sha256("${o.c.join(',')}")</span><br>
+      <span style="color:#fff">record_type</span>: <span style="color:#0f0">OBSERVATION</span><br>
+      <span style="color:#fff">mutable</span>: <span style="color:#dc6464">FALSE</span>
+    </div>`;
+}
+
+// ── Config Space Scatter
+let scatterPts=[];
+
+function drawScatter(){
+  const c=document.getElementById('scatter-canvas');
+  const wrap=document.getElementById('scatter-wrap');
+  if(!c||!wrap)return;
+  const W=wrap.clientWidth||600, H=wrap.clientHeight||420;
+  c.width=W; c.height=H;
+  const ctx=c.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  const xi=parseInt(document.getElementById('axis-x').value);
+  const yi=parseInt(document.getElementById('axis-y').value);
+  const mx=PARAM_MAX[xi], my=PARAM_MAX[yi];
+
+  const pad={l:48,r:20,t:20,b:40};
+  const pw=W-pad.l-pad.r, ph=H-pad.t-pad.b;
+
+  // Grid
+  ctx.strokeStyle='#f0f0f0'; ctx.lineWidth=1;
+  for(let g=0;g<=5;g++){
+    const gx=pad.l+g*pw/5, gy=pad.t+g*ph/5;
+    ctx.beginPath(); ctx.moveTo(gx,pad.t); ctx.lineTo(gx,pad.t+ph); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pad.l,gy); ctx.lineTo(pad.l+pw,gy); ctx.stroke();
+  }
+
+  // Axes
+  ctx.strokeStyle='#000'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(pad.l,pad.t); ctx.lineTo(pad.l,pad.t+ph); ctx.lineTo(pad.l+pw,pad.t+ph); ctx.stroke();
+
+  // Axis labels
+  ctx.fillStyle='#888'; ctx.font='8px Arial'; ctx.textAlign='center';
+  ctx.fillText(PARAM_NAMES[xi], pad.l+pw/2, H-6);
+  ctx.save(); ctx.translate(12, pad.t+ph/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText(PARAM_NAMES[yi], 0, 0); ctx.restore();
+
+  // L1 region overlay (optional)
+  if(showLabels && xi===0 && yi===1){
+    const regions=[
+      {label:'QTY region',x:0.4,y:0.0,w:0.6,h:0.25,col:'#d97706'},
+      {label:'SPT region',x:0.0,y:0.4,w:0.25,h:0.6,col:'#2563eb'},
+      {label:'WRM / neutral',x:0.0,y:0.0,w:0.15,h:0.2,col:'#7c3aed'},
+    ];
+    regions.forEach(r=>{
+      const rx=pad.l+r.x*pw, ry=pad.t+(1-r.y-r.h)*ph, rw=r.w*pw, rh=r.h*ph;
+      ctx.strokeStyle=r.col; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+      ctx.strokeRect(rx,ry,rw,rh);
+      ctx.setLineDash([]);
+      ctx.fillStyle=r.col+'33';
+      ctx.fillRect(rx,ry,rw,rh);
+      ctx.fillStyle=r.col; ctx.font='bold 8px Arial'; ctx.textAlign='left';
+      ctx.fillText(r.label, rx+4, ry+12);
+    });
+    ctx.fillStyle='#888'; ctx.font='8px Arial'; ctx.textAlign='left';
+    ctx.fillText('← These region labels are a Layer 1 view applied to Layer 0 data. They do not exist in the Ledger.', pad.l, pad.t+ph+32);
+  }
+
+  // Plot points
+  scatterPts=[];
+  OBS.forEach(o=>{
+    const xv=o.c[xi], yv=o.c[yi];
+    // Map: negative values handled
+    const xr=(xv+600)/(mx+600), yr=(yv+600)/(my+600);
+    const px2=pad.l+xr*pw, py2=pad.t+(1-yr)*ph;
+
+    // Style: brightness from outcome, size 8, shape from dest sign
+    const bright=Math.round(o.o*200);
+    const col=`rgb(${255-bright},${255-bright},${255-bright})`;
+    const hqLevel=Math.min(1,o.c[2]/500);
+    const isNegDest=o.c[3]<0;
+    const isSel=selectedId===o.id;
+    const r=isSel?10:8;
+
+    ctx.save();
+    ctx.strokeStyle=isSel?'#ff0000':'#000';
+    ctx.lineWidth=isSel?2:1;
+    ctx.fillStyle=col;
+
+    // HQ level: stroke width shows hq magnitude
+    if(hqLevel>0.5){
+      ctx.strokeStyle=isSel?'#ff0000':'#555';
+      ctx.lineWidth=isSel?2.5:2;
+    }
+
+    if(isNegDest){
+      // Negative dest → diamond
+      ctx.beginPath();
+      ctx.moveTo(px2,py2-r); ctx.lineTo(px2+r,py2); ctx.lineTo(px2,py2+r); ctx.lineTo(px2-r,py2);
+      ctx.closePath();
+    } else {
+      ctx.beginPath(); ctx.arc(px2,py2,r,0,Math.PI*2);
+    }
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+
+    scatterPts.push({id:o.id,px:px2,py:py2,r,o});
+  });
+
+  // Tick labels
+  ctx.fillStyle='#888'; ctx.font='8px Arial';
+  for(let g=0;g<=5;g++){
+    const xv=((mx+600)*g/5-600).toFixed(0);
+    const yv=((my+600)*g/5-600).toFixed(0);
+    ctx.textAlign='center';
+    ctx.fillText(xv,pad.l+g*pw/5,pad.t+ph+12);
+    ctx.textAlign='right';
+    ctx.fillText(yv,pad.l-4,pad.t+ph-(g*ph/5)+3);
+  }
+
+  // Legend
+  const lx=pad.l+pw-120, ly=pad.t+8;
+  ctx.fillStyle='#000'; ctx.fillRect(lx-4,ly-4,130,58);
+  ctx.fillStyle='#fff'; ctx.font='7px Arial'; ctx.textAlign='left';
+  ctx.fillText('● outcome high (bright)', lx, ly+8);
+  ctx.fillText('● outcome low (dark)', lx, ly+18);
+  ctx.fillText('◆ negative dest_mult', lx, ly+28);
+  ctx.fillText('thick stroke: hq_mult > 250', lx, ly+38);
+  ctx.fillText('NO MODE BOUNDARIES', lx, ly+50);
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  renderFeed();
+  setTimeout(drawScatter, 80);
+
+  const c=document.getElementById('scatter-canvas');
+  c.addEventListener('mousemove', e=>{
+    const r=c.getBoundingClientRect();
+    const mx=(e.clientX-r.left)*(c.width/r.width);
+    const my=(e.clientY-r.top)*(c.height/r.height);
+    let hit=null;
+    scatterPts.forEach(p=>{
+      if(Math.hypot(p.px-mx,p.py-my)<p.r+4)hit=p;
+    });
+    const tt=document.getElementById('scatter-tooltip');
+    if(hit){
+      tt.style.display='block';
+      tt.style.left=(e.clientX-c.getBoundingClientRect().left+10)+'px';
+      tt.style.top=(e.clientY-c.getBoundingClientRect().top-20)+'px';
+      const o=hit.o;
+      tt.textContent=`${o.id}  ${STUDENT_NAMES[o.s]}
+c[0]:${o.c[0]}  c[1]:${o.c[1]}  c[2]:${o.c[2]}  c[3]:${o.c[3]}
+outcome: ${(o.o*100).toFixed(1)}%
+No mode label at Layer 0.`;
+    } else {
+      tt.style.display='none';
+    }
+  });
+  c.addEventListener('click', e=>{
+    const r=c.getBoundingClientRect();
+    const mx=(e.clientX-r.left)*(c.width/r.width);
+    const my=(e.clientY-r.top)*(c.height/r.height);
+    let hit=null;
+    scatterPts.forEach(p=>{if(Math.hypot(p.px-mx,p.py-my)<p.r+4)hit=p;});
+    if(hit)selectObs(hit.o.id);
+  });
+  c.style.cursor='crosshair';
+});
+
+window.addEventListener('resize',drawScatter);
+
+function toggleLabels(btn){
+  showLabels=!showLabels;
+  btn.classList.toggle('active',showLabels);
+  drawScatter();
+}
+
+// ── Tabs
+function setTab(name,el){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  const mainLive=document.getElementById('main-live');
+  const mainAx=document.getElementById('tab-axioms');
+  if(name==='axioms'){mainLive.style.display='none';mainAx.style.display='block';}
+  else{mainLive.style.display='';mainAx.style.display='none';setTimeout(drawScatter,50);}
+}
+</script>
+</body>
+</html>

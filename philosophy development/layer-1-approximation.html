@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Layer 1 — Current Approximation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:11px;line-height:1.5;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{border-bottom:2px solid #000;padding:8px 14px;display:flex;align-items:baseline;gap:16px;flex-shrink:0}
+.hd-title{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888}
+.hd-sub{font-size:9px;color:#bbb;letter-spacing:1px}
+.hd-warn{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #d97706;color:#d97706;padding:2px 8px;background:#fef3c7}
+.hd-link{margin-left:auto;font-size:9px;letter-spacing:1px;color:#888;text-decoration:none;border:1px solid #ddd;padding:3px 9px;cursor:pointer}
+.hd-link:hover{border-color:#000;color:#000}
+/* Students */
+.student-bar{border-bottom:2px solid #000;display:flex;flex-shrink:0}
+.stu-card{padding:10px 16px;cursor:pointer;border-right:1px solid #ddd;transition:background .1s;flex:1}
+.stu-card:hover{background:#f8f8f8}
+.stu-card.active{background:#000;color:#fff}
+.stu-card.active .stu-sub{color:#888}
+.stu-name{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.stu-sub{font-size:8px;color:#888;margin-top:2px}
+.stu-card.active .stu-badge{background:#fff;color:#000}
+.stu-badge{display:inline-block;font-size:7px;font-weight:700;letter-spacing:1px;padding:1px 6px;border:1px solid #ccc;text-transform:uppercase;margin-top:3px}
+/* Main layout */
+.main{flex:1;display:grid;grid-template-columns:1fr 260px 1fr;min-height:0;overflow:hidden}
+/* Mode table */
+.mode-panel{border-right:1px solid #ddd;display:flex;flex-direction:column;overflow:hidden}
+.panel-hd{padding:7px 10px;border-bottom:1px solid #ddd;font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#555;background:#fafafa;flex-shrink:0}
+.mode-scroll{flex:1;overflow-y:auto}
+table.mt{width:100%;border-collapse:collapse;font-size:10px}
+table.mt th{font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 6px;border-bottom:2px solid #000;background:#f0f0f0;white-space:nowrap;text-align:right}
+table.mt th:first-child{text-align:left}
+table.mt td{padding:5px 6px;border-bottom:1px solid #f0f0f0;text-align:right;vertical-align:top}
+table.mt td:first-child{text-align:left;font-weight:700;letter-spacing:1px;font-size:9px}
+table.mt tr:hover td{background:#f8f8f8}
+.asserted{display:inline-block;font-size:7px;font-weight:700;color:#d97706;border:1px solid #d97706;padding:0 3px;vertical-align:middle;letter-spacing:0.5px}
+.learned{display:inline-block;font-size:7px;font-weight:700;color:#15803d;border:1px solid #15803d;padding:0 3px;vertical-align:middle;letter-spacing:0.5px}
+.gap-pos{color:#dc2626;font-weight:700}
+.gap-neg{color:#15803d;font-weight:700}
+.ci-bar{display:flex;align-items:center;gap:4px;justify-content:flex-end}
+.ci-track{width:50px;height:8px;background:#f0f0f0;border:1px solid #ddd;position:relative;flex-shrink:0}
+.ci-fill{position:absolute;top:0;height:100%;background:#000}
+.ci-err{position:absolute;top:0;height:100%;background:#ddd}
+.vel-pos{color:#15803d}.vel-neg{color:#dc2626}.vel-zero{color:#888}
+.stale-warn{color:#d97706;font-size:8px}
+/* Radar */
+.radar-panel{display:flex;flex-direction:column;align-items:center;overflow:hidden;border-right:1px solid #ddd}
+#radar-canvas{display:block}
+.radar-legend{padding:8px 12px;border-top:1px solid #ddd;width:100%;font-size:9px}
+.radar-legend-row{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+/* Right panel: formulas + provenance */
+.right-panel{display:flex;flex-direction:column;overflow:hidden}
+.tab-bar{display:flex;border-bottom:1px solid #ddd;flex-shrink:0}
+.t-btn{padding:6px 12px;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;color:#888;border-bottom:2px solid transparent;margin-bottom:-1px}
+.t-btn:hover{color:#000}.t-btn.active{color:#000;border-bottom-color:#000}
+.r-scroll{flex:1;overflow-y:auto;padding:10px 12px}
+/* Formula display */
+.formula-block{background:#f5f5f5;border:1px solid #ddd;padding:10px 12px;font-family:'Courier New',monospace;font-size:9px;line-height:1.8;margin-bottom:10px;white-space:pre-wrap}
+.f-asserted{color:#d97706}
+.f-learned{color:#15803d}
+.f-comment{color:#aaa}
+.f-key{color:#000;font-weight:700}
+.refute-box{background:#fff8e6;border:1px solid #d97706;padding:6px 8px;font-size:9px;line-height:1.6;margin:4px 0 10px}
+.refute-lbl{font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#d97706;margin-bottom:2px}
+/* Provenance */
+.prov-link{border:1px solid #ddd;padding:6px 8px;margin-bottom:6px;cursor:pointer;transition:border-color .1s;display:flex;gap:10px;align-items:flex-start}
+.prov-link:hover{border-color:#000}
+.prov-hash{font-family:'Courier New',monospace;font-size:9px;color:#888}
+.prov-detail{font-size:9px;line-height:1.6;flex:1}
+.prov-outcome{font-size:9px;font-weight:700;margin-left:auto;flex-shrink:0}
+/* Next session */
+.ns-field{margin-bottom:7px}
+.ns-lbl{font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:2px}
+.ns-val{font-family:'Courier New',monospace;font-size:10px}
+.ns-card{border:2px solid #000;padding:10px 12px;background:#000;color:#fff;margin-bottom:10px}
+.ns-card-lbl{font-size:7px;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:6px}
+/* Utils */
+::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-track{background:#fff}::-webkit-scrollbar-thumb{background:#ddd}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="hd-title">Layer 1</span>
+  <span class="hd-sub">— Current Approximation — computed from Layer 0</span>
+  <span class="hd-warn">APPROXIMATION — every value has a refutation condition — every formula will be replaced</span>
+  <a class="hd-link" href="layer-0-ledger.html">← Layer 0 Ledger</a>
+</header>
+
+<div class="student-bar" id="student-bar"></div>
+
+<div class="main">
+  <!-- ── MODE TABLE ── -->
+  <div class="mode-panel">
+    <div class="panel-hd">State Dimensions — 18 values derived from Layer 0</div>
+    <div class="mode-scroll">
+      <table class="mt" id="mode-table">
+        <thead>
+          <tr>
+            <th>MODE</th>
+            <th>game_elo ± CI</th>
+            <th>velocity</th>
+            <th>transfer_elo</th>
+            <th>gap</th>
+            <th>n</th>
+            <th>since</th>
+          </tr>
+        </thead>
+        <tbody id="mode-tbody"></tbody>
+      </table>
+      <div style="padding:10px;font-size:9px;color:#888;border-top:1px solid #eee;line-height:1.7">
+        <strong style="color:#d97706">ASSERTED</strong> = formula parameter not validated against data<br>
+        <strong style="color:#15803d">LEARNED</strong> = value derived from observed outcomes<br>
+        <strong>gap</strong> = game_elo − transfer_elo · positive = game skill ahead of cognitive development
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RADAR ── -->
+  <div class="radar-panel">
+    <div class="panel-hd" style="width:100%">Profile Radar</div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:12px;gap:8px">
+      <canvas id="radar-canvas" width="230" height="230"></canvas>
+      <div class="radar-legend">
+        <div class="radar-legend-row"><div style="width:16px;height:2px;background:#000"></div><span>game_elo (Layer 1 view)</span></div>
+        <div class="radar-legend-row"><div style="width:16px;height:2px;background:#2563eb;border-top:2px dashed #2563eb"></div><span>transfer_elo (BT)</span></div>
+        <div class="radar-legend-row"><div style="width:16px;height:8px;background:#ddd;border:1px solid #ccc"></div><span>±CI (uncertainty)</span></div>
+      </div>
+    </div>
+    <div style="padding:8px 12px;border-top:1px solid #ddd;font-size:8px;color:#888;line-height:1.7">
+      Dashed inner polygon: uncertainty band. The polygon IS an approximation. In Phase 3 this radar is replaced by a continuous skill surface.<br><br>
+      <strong>Hollow segments:</strong> sessions_since &gt; 5 — forgetting decay applied <span class="asserted">ASSERTED τ=14d</span>
+    </div>
+  </div>
+
+  <!-- ── RIGHT: FORMULAS / PROVENANCE / NEXT SESSION ── -->
+  <div class="right-panel">
+    <div class="tab-bar">
+      <div class="t-btn active" onclick="setRightTab('formula',this)">Formulas</div>
+      <div class="t-btn" onclick="setRightTab('prov',this)">Provenance</div>
+      <div class="t-btn" onclick="setRightTab('next',this)">Next Session</div>
+    </div>
+    <div class="r-scroll" id="right-formula">
+      <div style="font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:8px">Every formula in this view is temporary. Every parameter is a hypothesis.</div>
+      <div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;color:#d97706">Elo Update Rule <span class="asserted">ASSERTED</span></div>
+      <div class="formula-block"><span class="f-comment">// Applied after every session, for the mode active this session</span>
+<span class="f-key">E</span> = 1 / (1 + 10^((<span class="f-comment">R_bot</span> − <span class="f-comment">R_student</span>) / <span class="f-asserted">400</span>))
+<span class="f-key">S</span> = session_rank_percentile   <span class="f-comment">// 0.0–1.0</span>
+<span class="f-key">K</span> = <span class="f-asserted">40</span> if n_in_mode ≤ <span class="f-asserted">5</span>
+<span class="f-key">K</span> = <span class="f-asserted">20</span> if n_in_mode ≤ <span class="f-asserted">20</span>
+<span class="f-key">K</span> = <span class="f-asserted">10</span> if n_in_mode &gt; <span class="f-asserted">20</span>
+<span class="f-key">ΔElo</span> = K × (S − E)
+<span class="f-key">new_elo[m]</span> = old_elo[m] + ΔElo</div>
+      <div class="refute-box"><div class="refute-lbl">Refutation condition</div>If Elo residuals (predicted rank − actual rank) show systematic bias &gt; 0.10 over ≥ 30 sessions per mode: refute K schedule, refit from data. Phase 3 replaces Elo entirely with a fitted function over the full config × outcome history in Layer 0.</div>
+      <div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;color:#d97706">Elo Velocity <span class="asserted">ASSERTED window=3</span></div>
+      <div class="formula-block"><span class="f-comment">// Rate of change over last 3 sessions in this mode</span>
+<span class="f-key">velocity[m]</span> = (elo[m] at session N) − (elo[m] at session N−<span class="f-asserted">3</span>) / <span class="f-asserted">3</span>
+<span class="f-comment">// Undefined if n_in_mode &lt; 4. High variance if n_in_mode &lt; 8.</span></div>
+      <div class="refute-box"><div class="refute-lbl">Refutation condition</div>If window=3 produces higher autocorrelation than window=5 in held-out prediction: expand window. Velocity is a proxy for learning rate — the proxy's accuracy is itself measurable.</div>
+      <div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;color:#d97706">ZPD Target <span class="asserted">ASSERTED coeff=0.85</span></div>
+      <div class="formula-block"><span class="f-comment">// Target difficulty for next session in mode m</span>
+<span class="f-key">decay</span> = exp(−sessions_since[m] / <span class="f-asserted">14</span>)
+<span class="f-key">zpd_target[m]</span> = elo[m] × <span class="f-asserted">0.85</span> × decay</div>
+      <div class="refute-box"><div class="refute-lbl">Refutation condition</div>If sessions with difficulty at 0.85×Elo produce worse Δelo_velocity than sessions at 0.90× or 0.80×: refute 0.85. If forgetting curve fit over return-Elo data produces τ outside [10d, 18d]: refute τ=14d (expected to refute toward 30–60d).</div>
+      <div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;color:#d97706">Confidence Interval <span class="asserted">ASSERTED</span></div>
+      <div class="formula-block"><span class="f-comment">// Uncertainty on elo[m] estimate</span>
+<span class="f-key">se</span> = std(outcomes_in_mode) / sqrt(n_in_mode)
+<span class="f-key">ci_95</span> = elo[m] ± <span class="f-asserted">1.96</span> × se × <span class="f-asserted">400</span>
+<span class="f-comment">// Wide CI: few sessions, high outcome variance</span>
+<span class="f-comment">// Narrow CI: many sessions, consistent outcomes</span></div>
+      <div class="refute-box"><div class="refute-lbl">Phase 3 replacement</div>Bayesian posterior over skill estimate, updated after every session. The ±CI is then a credible interval from the posterior, not a frequentist approximation. Requires ≥ 50 sessions per student to fit reliably.</div>
+      <div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;color:#d97706">Mode Assignment (L1 view over L0) <span class="asserted">ASSERTED</span></div>
+      <div class="formula-block"><span class="f-comment">// Mode label is derived from config_vector, NOT stored in Layer 0</span>
+<span class="f-key">mults</span> = [c[0], c[1], c[2], c[3]]  <span class="f-comment">// from Layer 0</span>
+<span class="f-key">mode_label</span> = argmax(mults) mapped to name
+<span class="f-comment">// QTY   if c[0] dominates</span>
+<span class="f-comment">// SPT   if c[1] dominates</span>
+<span class="f-comment">// FRT   if c[2] dominates</span>
+<span class="f-comment">// DST   if c[3] dominates (positive)</span>
+<span class="f-comment">// INV   if any c[0:4] &lt; 0</span>
+<span class="f-comment">// WRM   if all c[0:4] &lt; 10 (wormhole win condition)</span></div>
+      <div class="refute-box"><div class="refute-lbl">Phase 3 replacement</div>Mode segmentation is a human convenience. The system will eventually work with the full config_vector as input — no discretization. Current segmentation into 6 modes is an assertion that these regions of config space are meaningfully distinct. This is measurable: if BT factor analysis does not recover 6 loadings matching the 6 modes, the segmentation is wrong.</div>
+    </div>
+    <div class="r-scroll" id="right-prov" style="display:none">
+      <div style="font-size:8px;color:#888;line-height:1.7;margin-bottom:10px">Every Layer 1 value traces to specific Layer 0 records. Click a mode row in the table to see which records produced its Elo estimate.</div>
+      <div id="prov-content"><div style="font-size:10px;color:#888;font-style:italic;padding:10px 0">Click a row in the Mode Table to see its source records.</div></div>
+    </div>
+    <div class="r-scroll" id="right-next" style="display:none">
+      <div id="next-content"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// SHARED DATA (matches layer-0-ledger.html)
+// ═══════════════════════════════════════════════════════════════════
+const PARAM_NAMES=['count_mult','dist_mult','hq_mult','dest_mult','moves','round_length_s','rounds','steals','hq_count','map_idx','bot_type','bot_aggression'];
+const BOT_NAMES=['HAL','CAESAR','ATHENA','ROBIN','EINSTEIN','LORENZ'];
+const MAP_NAMES=['AETHER','PROVIDENCE','CITADEL','DELTA'];
+
+const OBS_RAW=[
+  {id:'a01',t:1717200000,s:'aria',c:[500,1, 5,  1,15,30, 8,15,2,0,0,50],o:0.62,sig:{rnd:[0.14,0.28,0.42,0.56,0.67,0.76,0.85,0.95]}},
+  {id:'a02',t:1717286400,s:'aria',c:[500,1, 5,  1,15,30, 8,15,2,0,2,60],o:0.71,sig:{rnd:[0.16,0.31,0.49,0.63,0.73,0.82,0.89,0.96]}},
+  {id:'a05',t:1717545600,s:'aria',c:[  1,500,1,  1,15,32,10, 5,0,1,5,40],o:0.58,sig:{rnd:[0.08,0.18,0.29,0.42,0.54,0.67,0.79,0.88,0.95,1.0]}},
+  {id:'a08',t:1717804800,s:'aria',c:[  1,500,1,  1,12,32,10, 5,0,1,1,60],o:0.73,sig:{rnd:[0.09,0.21,0.36,0.51,0.64,0.76,0.86,0.93,0.97,1.0]}},
+  {id:'a12',t:1718150400,s:'aria',c:[ 50,  1,500,-200,15,30,10, 3,4,2,0,50],o:0.48,sig:{rnd:[0.11,0.24,0.35,0.45,0.54,0.61,0.68,0.74,0.79,0.83]}},
+  {id:'a16',t:1718496000,s:'aria',c:[  1,500,1,  1,12,35,10, 5,0,1,1,70],o:0.76,sig:{rnd:[0.11,0.24,0.40,0.55,0.68,0.79,0.88,0.94,0.98,1.0]}},
+  {id:'a18',t:1718668800,s:'aria',c:[-100,1, 1, 1,15,30,10,15,2,0,5,40],o:0.31,sig:{rnd:[0.18,0.31,0.39,0.42,0.43,0.44,0.45,0.45,0.46,0.46]}},
+  {id:'a20',t:1718841600,s:'aria',c:[  1,500,1,  1,12,35,10, 5,0,1,1,70],o:0.79,sig:{rnd:[0.12,0.27,0.43,0.57,0.70,0.81,0.89,0.94,0.97,1.0]}},
+  {id:'a21',t:1718928000,s:'aria',c:[500,1, 5,  1,15,30,10,15,2,0,0,50],o:0.64,sig:{rnd:[0.13,0.27,0.41,0.54,0.65,0.74,0.82,0.88,0.93,0.97]}},
+  {id:'a22',t:1719014400,s:'aria',c:[  1,500,1,  1,10,35,10, 5,0,1,1,70],o:0.82,sig:{rnd:[0.13,0.29,0.45,0.60,0.72,0.82,0.89,0.94,0.97,1.0]}},
+  {id:'b01',t:1717545600,s:'bram',c:[500,1, 5,  1,15,30, 8,15,2,0,0,50],o:0.44,sig:{rnd:[0.09,0.19,0.28,0.38,0.46,0.53,0.60,0.44]}},
+  {id:'b02',t:1717632000,s:'bram',c:[  1,500,1,  1,15,32,10, 5,0,1,5,40],o:0.52,sig:{rnd:[0.06,0.14,0.22,0.32,0.41,0.50,0.57,0.64,0.70,0.52]}},
+  {id:'b03',t:1717804800,s:'bram',c:[ 50,  1,500,-200,15,30,10, 3,4,2,0,50],o:0.29,sig:{rnd:[0.07,0.13,0.18,0.23,0.27,0.29,0.30,0.30,0.30,0.29]}},
+  {id:'b04',t:1717977600,s:'bram',c:[  1,  1,1,200,15,30,10,40,2,0,3,60],o:0.58,sig:{rnd:[0.11,0.23,0.34,0.44,0.52,0.58,0.62,0.64,0.64,0.58]}},
+  {id:'b05',t:1718150400,s:'bram',c:[  1,  1,1,  1,12,30,10,10,1,3,4,90],o:0.49,sig:{rnd:[0.08,0.18,0.28,0.37,0.46,0.54,0.60,0.65,0.68,0.49]}},
+  {id:'c44',t:1716940800,s:'clio',c:[  1,500,1,  1,10,32,10, 5,0,1,1,70],o:0.89,sig:{rnd:[0.14,0.30,0.47,0.62,0.74,0.83,0.89,0.93,0.96,0.99]}},
+  {id:'c46',t:1717113600,s:'clio',c:[ 50,  1,500,-200,10,30,10, 3,4,2,2,80],o:0.92,sig:{rnd:[0.16,0.33,0.50,0.64,0.76,0.85,0.91,0.95,0.97,1.0]}},
+  {id:'c48',t:1717286400,s:'clio',c:[  1,-300,1,-200,15,30,10,15,2,0,5,40],o:0.78,sig:{rnd:[0.22,0.39,0.53,0.64,0.72,0.79,0.84,0.87,0.89,0.90]}},
+  {id:'c49',t:1717372800,s:'clio',c:[500,1, 5,  1,10,25, 8,15,2,0,1,70],o:0.91,sig:{rnd:[0.16,0.34,0.51,0.65,0.77,0.85,0.91,0.96]}},
+  {id:'c50',t:1717459200,s:'clio',c:[ 50,  1,500,-200,10,30,10, 3,4,2,0,60],o:0.94,sig:{rnd:[0.17,0.35,0.53,0.67,0.78,0.87,0.92,0.96,0.98,1.0]}},
+  {id:'c51',t:1717545600,s:'clio',c:[  1,  1,1,  1,10,30,10,10,1,3,4,90],o:0.88,sig:{rnd:[0.15,0.32,0.49,0.63,0.75,0.84,0.90,0.94,0.97,1.0]}},
+  {id:'c52',t:1717718400,s:'clio',c:[  1,500,1,  1, 8,35,10, 5,0,1,1,80],o:0.93,sig:{rnd:[0.16,0.33,0.50,0.65,0.77,0.86,0.91,0.95,0.97,1.0]}},
+  {id:'c53',t:1717804800,s:'clio',c:[ 50,  1,500,-200, 8,30,10, 3,4,2,0,80],o:0.95,sig:{rnd:[0.18,0.36,0.53,0.67,0.79,0.88,0.93,0.96,0.98,1.0]}},
+  {id:'d01',t:1717718400,s:'dara',c:[500,1, 5,  1,15,30, 8,15,2,0,0,50],o:0.55,sig:{rnd:[0.11,0.22,0.33,0.44,0.53,0.60,0.66,0.55]}},
+  {id:'d03',t:1717891200,s:'dara',c:[  1,500,1,  1,15,32,10, 5,0,1,5,40],o:0.37,sig:{rnd:[0.06,0.12,0.17,0.22,0.27,0.32,0.36,0.39,0.40,0.37]}},
+  {id:'d05',t:1718064000,s:'dara',c:[  1,  1,1,320,15,30,10,40,2,0,3,60],o:0.84,sig:{rnd:[0.14,0.29,0.45,0.58,0.69,0.77,0.83,0.87,0.90,0.93]}},
+  {id:'d07',t:1718236800,s:'dara',c:[ 50,  1,500,-200,15,30,10, 3,4,2,0,50],o:0.43,sig:{rnd:[0.09,0.18,0.26,0.33,0.39,0.44,0.47,0.49,0.50,0.43]}},
+  {id:'d09',t:1718409600,s:'dara',c:[  1,  1,1,360,15,30,10,45,2,0,3,80],o:0.91,sig:{rnd:[0.16,0.33,0.49,0.62,0.73,0.81,0.87,0.91,0.93,0.96]}},
+  {id:'d10',t:1718496000,s:'dara',c:[  1,500,1,  1,15,32,10, 5,0,1,1,50],o:0.39,sig:{rnd:[0.07,0.14,0.20,0.26,0.31,0.36,0.39,0.40,0.41,0.39]}},
+  {id:'d11',t:1718582400,s:'dara',c:[  1,  1,1,360,12,30,10,40,2,0,2,80],o:0.88,sig:{rnd:[0.15,0.31,0.47,0.60,0.71,0.80,0.86,0.90,0.93,0.95]}},
+];
+
+// Transfer Elo (BT scores) — provided externally, not from game sessions
+const TRANSFER_ELO = {
+  aria: {QTY:450,SPT:730,FRT:490,DST:520,WRM:390,INV:360},
+  bram: null, // BT not yet administered
+  clio: {QTY:800,SPT:795,FRT:780,DST:740,WRM:650,INV:705},
+  dara: {QTY:510,SPT:400,FRT:430,DST:410,WRM:370,INV:320},
+};
+
+const STUDENTS = [
+  {id:'aria', name:'ARIA',     sub:'22 sessions · Stage 2', badge:'MATURE'},
+  {id:'bram', name:'BRAM',     sub:'5 sessions · Stage 1',  badge:'EMERGING'},
+  {id:'clio', name:'CLIO',     sub:'51 sessions · Stage 4', badge:'EXPERT'},
+  {id:'dara', name:'DARA',     sub:'11 sessions · Stage 2', badge:'DEVELOPED'},
+];
+
+// ── Mode assignment from config vector (Layer 1 view over Layer 0)
+function assignMode(c){
+  if(c[0]<0||c[1]<0||c[2]<0||c[3]<0)return'INV';
+  const mults=[c[0],c[1],c[2],c[3]];
+  const sum=mults.reduce((a,b)=>a+b,0);
+  if(sum<20)return'WRM';
+  const idx=mults.indexOf(Math.max(...mults));
+  return['QTY','SPT','FRT','DST'][idx];
+}
+
+// ── Compute state for a student
+function computeState(sid){
+  const sessions=OBS_RAW.filter(o=>o.s===sid).sort((a,b)=>a.t-b.t);
+  const modes=['QTY','SPT','FRT','DST','WRM','INV'];
+  const modeObs={QTY:[],SPT:[],FRT:[],DST:[],WRM:[],INV:[]};
+  sessions.forEach(o=>{ const m=assignMode(o.c); if(modeObs[m])modeObs[m].push(o); });
+
+  const K=n=>n<=5?40:n<=20?20:10;
+  const BASE_ELO=500;
+
+  function computeElo(obs){
+    let elo=BASE_ELO;
+    obs.forEach(o=>{
+      const R_bot=520; // typical bot elo
+      const E=1/(1+Math.pow(10,(R_bot-elo)/400));
+      const S=o.o;
+      elo+=K(obs.length)*(S-E);
+    });
+    return elo;
+  }
+
+  const now=Math.max(...sessions.map(o=>o.t));
+  const result={};
+  modes.forEach(m=>{
+    const obs=modeObs[m];
+    const n=obs.length;
+    if(n===0){result[m]={elo:null,ci:null,vel:null,n:0,since:null,obsIds:[]};return;}
+
+    const elo=computeElo(obs);
+    const outcomes=obs.map(o=>o.o);
+    const mean_o=outcomes.reduce((a,b)=>a+b,0)/outcomes.length;
+    const se_o=Math.sqrt(outcomes.map(v=>(v-mean_o)**2).reduce((a,b)=>a+b,0)/outcomes.length)/Math.sqrt(n);
+    const ci=1.96*se_o*400;
+
+    // Velocity: last 3 vs 3 before that
+    let vel=null;
+    if(n>=4){
+      const eloAt=i=>computeElo(obs.slice(0,i+1));
+      const lastElo=eloAt(n-1);
+      const prevElo=eloAt(Math.max(0,n-4));
+      vel=(lastElo-prevElo)/Math.min(3,n-1);
+    }
+
+    // Sessions since last (in session count terms)
+    const lastT=obs[obs.length-1].t;
+    const sinceT=now-lastT;
+    const sinceD=sinceT/(86400);
+    const sinceSessions=Math.round(sinceD/3.5); // ~3.5 days between sessions approx
+
+    result[m]={elo:Math.round(elo),ci:Math.round(ci),vel:vel?Math.round(vel):null,n,since:sinceSessions,obsIds:obs.map(o=>o.id)};
+  });
+  return result;
+}
+
+// ── State
+let currentStudent='aria';
+let currentMode=null;
+const STATES={};
+STUDENTS.forEach(s=>{ STATES[s.id]=computeState(s.id); });
+
+// ── Render students
+function renderStudentBar(){
+  const el=document.getElementById('student-bar');
+  el.innerHTML=STUDENTS.map(s=>`
+    <div class="stu-card${s.id===currentStudent?' active':''}" onclick="selectStudent('${s.id}')">
+      <div class="stu-name">${s.name}</div>
+      <div class="stu-sub">${s.sub}</div>
+      <span class="stu-badge">${s.badge}</span>
+    </div>`).join('');
+}
+
+function selectStudent(id){
+  currentStudent=id;
+  currentMode=null;
+  renderStudentBar();
+  renderModeTable();
+  drawRadar();
+  renderNext();
+}
+
+// ── Mode table
+const MODE_COLORS={QTY:'#d97706',SPT:'#2563eb',FRT:'#059669',DST:'#dc2626',WRM:'#7c3aed',INV:'#0891b2'};
+const MODES=['QTY','SPT','FRT','DST','WRM','INV'];
+
+function renderModeTable(){
+  const state=STATES[currentStudent];
+  const bt=TRANSFER_ELO[currentStudent];
+  const tbody=document.getElementById('mode-tbody');
+  tbody.innerHTML=MODES.map(m=>{
+    const d=state[m];
+    if(!d||d.n===0){
+      return`<tr><td style="color:${MODE_COLORS[m]}">${m}</td><td colspan="6" style="color:#ccc;font-style:italic">no sessions yet</td></tr>`;
+    }
+    const velStr=d.vel==null?'—':
+      d.vel>0?`<span class="vel-pos">+${d.vel}/sess</span>`:
+      d.vel<0?`<span class="vel-neg">${d.vel}/sess</span>`:
+      `<span class="vel-zero">0</span>`;
+    const btElo=bt?bt[m]:null;
+    const btStr=btElo?btElo:'<span style="color:#ccc">—</span>';
+    const gapVal=btElo?d.elo-btElo:null;
+    const gapStr=gapVal==null?'<span style="color:#ccc">—</span>':
+      gapVal>80?`<span class="gap-pos">+${gapVal} !</span>`:
+      gapVal>20?`<span class="gap-pos">+${gapVal}</span>`:
+      gapVal<-20?`<span class="gap-neg">${gapVal}</span>`:
+      `<span style="color:#888">+${gapVal}</span>`;
+    const staleStr=d.since>4?`<span class="stale-warn">${d.since}s</span>`:d.since;
+    const ciPct=d.ci/1000*100;
+    const eloPct=d.elo/1000*100;
+    return`<tr onclick="selectMode('${m}')" style="cursor:pointer;${currentMode===m?'background:#f0f0f0;font-weight:700':''}">
+      <td style="color:${MODE_COLORS[m]}">${m}</td>
+      <td>
+        <div class="ci-bar">
+          ${d.elo} <span class="asserted" title="CI formula asserted">±${d.ci}</span>
+          <div class="ci-track">
+            <div class="ci-err" style="left:${Math.max(0,eloPct-ciPct)}%;width:${Math.min(100,ciPct*2)}%"></div>
+            <div class="ci-fill" style="left:0;width:${eloPct}%"></div>
+          </div>
+        </div>
+      </td>
+      <td>${velStr}</td>
+      <td>${btStr}</td>
+      <td>${gapStr}</td>
+      <td>${d.n}</td>
+      <td>${staleStr}</td>
+    </tr>`;
+  }).join('');
+
+  // Gap alert for aria
+  const btLink=TRANSFER_ELO[currentStudent];
+  if(btLink){
+    const qtyGap=state['QTY'].elo&&btLink.QTY?state['QTY'].elo-btLink.QTY:null;
+    if(qtyGap&&qtyGap>100){
+      const alert=document.createElement('tr');
+      alert.innerHTML=`<td colspan="7" style="background:#fff0f0;border:1px solid #dc2626;padding:6px 8px;font-size:9px;color:#dc2626">
+        <strong>GAP ALERT:</strong> QTY gap = +${qtyGap} pts. game_elo far exceeds transfer_elo. Student optimizing game mechanics without cognitive transfer. System response: reduce ECHO, introduce INVERSION on next QTY session, weight toward SPT and FRT.
+      </td>`;
+      tbody.appendChild(alert);
+    }
+  }
+}
+
+// ── Radar
+function drawRadar(){
+  const c=document.getElementById('radar-canvas');
+  const ctx=c.getContext('2d');
+  const W=230,H=230,cx=115,cy=115,R=88;
+  ctx.clearRect(0,0,W,H);
+  const state=STATES[currentStudent];
+  const bt=TRANSFER_ELO[currentStudent];
+  const n=6,angles=MODES.map((_,i)=>-Math.PI/2+i*2*Math.PI/n);
+
+  // Grid rings
+  [0.25,0.5,0.75,1.0].forEach(r=>{
+    ctx.strokeStyle=r===1?'#bbb':'#eee'; ctx.lineWidth=r===1?1.5:1;
+    ctx.beginPath();
+    angles.forEach((a,i)=>{const x=cx+Math.cos(a)*R*r,y=cy+Math.sin(a)*R*r;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+    ctx.closePath(); ctx.stroke();
+    if(r<1){ctx.fillStyle='#ccc';ctx.font='7px Arial';ctx.textAlign='center';ctx.fillText((r*1000).toFixed(0),cx,cy-R*r-2);}
+  });
+
+  // Spokes
+  angles.forEach(a=>{
+    ctx.strokeStyle='#eee'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(a)*R,cy+Math.sin(a)*R); ctx.stroke();
+  });
+
+  // CI band (uncertainty polygon)
+  const eloData=MODES.map(m=>{const d=state[m];return d&&d.n>0?{elo:d.elo,ci:d.ci}:{elo:null,ci:null};});
+  const maxElo=1000;
+
+  // Draw CI polygon first
+  ctx.beginPath();
+  let first=true;
+  MODES.forEach((m,i)=>{
+    const d=eloData[i];
+    if(!d.elo)return;
+    const r=Math.max(0,(d.elo+d.ci)/maxElo)*R;
+    const x=cx+Math.cos(angles[i])*r, y=cy+Math.sin(angles[i])*r;
+    if(first){ctx.moveTo(x,y);first=false;}else ctx.lineTo(x,y);
+  });
+  ctx.closePath(); ctx.fillStyle='rgba(0,0,0,0.06)'; ctx.fill();
+
+  ctx.beginPath(); first=true;
+  MODES.forEach((m,i)=>{
+    const d=eloData[i];
+    if(!d.elo)return;
+    const r=Math.max(0,(d.elo-d.ci)/maxElo)*R;
+    const x=cx+Math.cos(angles[i])*r, y=cy+Math.sin(angles[i])*r;
+    if(first){ctx.moveTo(x,y);first=false;}else ctx.lineTo(x,y);
+  });
+  ctx.closePath(); ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.fill();
+
+  // BT polygon (dashed, blue)
+  if(bt){
+    ctx.beginPath(); first=true;
+    MODES.forEach((m,i)=>{
+      const v=bt[m]||0;
+      const r=(v/maxElo)*R;
+      const x=cx+Math.cos(angles[i])*r, y=cy+Math.sin(angles[i])*r;
+      if(first){ctx.moveTo(x,y);first=false;}else ctx.lineTo(x,y);
+    });
+    ctx.closePath(); ctx.strokeStyle='#2563eb'; ctx.lineWidth=1.5; ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  // Game Elo polygon
+  ctx.beginPath(); first=true;
+  MODES.forEach((m,i)=>{
+    const d=eloData[i];
+    const v=d.elo||0;
+    const r=(v/maxElo)*R;
+    const x=cx+Math.cos(angles[i])*r, y=cy+Math.sin(angles[i])*r;
+    if(first){ctx.moveTo(x,y);first=false;}else ctx.lineTo(x,y);
+  });
+  ctx.closePath(); ctx.strokeStyle='#000'; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle='rgba(0,0,0,0.08)'; ctx.fill();
+
+  // Points + velocity arrows
+  MODES.forEach((m,i)=>{
+    const d=state[m];
+    if(!d||!d.elo)return;
+    const r=(d.elo/maxElo)*R;
+    const x=cx+Math.cos(angles[i])*r, y=cy+Math.sin(angles[i])*r;
+    ctx.fillStyle=MODE_COLORS[m]; ctx.strokeStyle='#fff'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2); ctx.fill(); ctx.stroke();
+
+    // Velocity arrow
+    if(d.vel){
+      const mag=Math.min(Math.abs(d.vel)/30,1)*14;
+      const dir=d.vel>0?1:-1;
+      const ax=x+Math.cos(angles[i])*mag*dir;
+      const ay=y+Math.sin(angles[i])*mag*dir;
+      ctx.strokeStyle=d.vel>0?'#15803d':'#dc2626'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(ax,ay); ctx.stroke();
+    }
+  });
+
+  // Labels
+  ctx.font='bold 8px Arial'; ctx.textAlign='center';
+  MODES.forEach((m,i)=>{
+    const x=cx+Math.cos(angles[i])*(R+14), y=cy+Math.sin(angles[i])*(R+14)+3;
+    ctx.fillStyle=MODE_COLORS[m];
+    ctx.fillText(m,x,y);
+  });
+}
+
+// ── Provenance
+function selectMode(m){
+  currentMode=m;
+  const state=STATES[currentStudent];
+  const d=state[m];
+  setRightTab('prov',document.querySelectorAll('.t-btn')[1]);
+  const prov=document.getElementById('prov-content');
+  if(!d||d.n===0){prov.innerHTML='<div style="color:#888;font-style:italic;padding:10px 0">No sessions in this mode.</div>';return;}
+  const obsForMode=OBS_RAW.filter(o=>d.obsIds.includes(o.id)).sort((a,b)=>b.t-a.t);
+  prov.innerHTML=`<div style="font-size:9px;color:#555;margin-bottom:8px"><strong>${m}</strong> Elo = ${d.elo} ± ${d.ci} — derived from ${d.n} session${d.n!==1?'s':''} in Layer 0:</div>`+
+  obsForMode.map(o=>{
+    const d2=new Date(o.t*1000);
+    const dt=d2.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+    return`<div class="prov-link" onclick="window.open('layer-0-ledger.html','_blank')">
+      <div class="prov-hash">${o.id}</div>
+      <div class="prov-detail">
+        <div style="font-size:9px;color:#555">${dt} · config[0:4]=[${o.c[0]},${o.c[1]},${o.c[2]},${o.c[3]}]</div>
+        <div style="font-size:8px;color:#888">Mode label "${m}" is a Layer 1 view applied to this record. The record has no mode field.</div>
+      </div>
+      <div class="prov-outcome" style="color:${o.o>=0.65?'#15803d':o.o>=0.45?'#888':'#dc2626'}">${(o.o*100).toFixed(0)}%</div>
+    </div>`;
+  }).join('')+
+  `<div style="margin-top:8px;padding:8px;background:#f8f8f8;border:1px dashed #ccc;font-size:9px;line-height:1.7">
+    <strong>Note:</strong> The mode label "${m}" was derived by the Layer 1 view rule:<br>
+    <code style="font-size:8px">mode = argmax([c[0],c[1],c[2],c[3]])</code> applied to each record.<br>
+    If this rule changes in Phase 3, all ${d.n} records are reinterpreted. The Ledger is unchanged.
+  </div>`;
+  renderModeTable();
+}
+
+// ── Next session
+function renderNext(){
+  const state=STATES[currentStudent];
+  const bt=TRANSFER_ELO[currentStudent];
+  const MODES_ARR=['QTY','SPT','FRT','DST','WRM','INV'];
+
+  // Priority: lowest Elo + most sessions since + wide gap
+  let best=null, bestScore=-Infinity;
+  MODES_ARR.forEach(m=>{
+    const d=state[m];
+    const elo=d&&d.elo?d.elo:400;
+    const since=d&&d.since!=null?d.since:6;
+    const gap=bt&&d&&d.elo?d.elo-bt[m]:0;
+    const score=(1-(elo/1000))*0.5 + (since/6)*0.3 + (gap/200)*0.2;
+    if(score>bestScore){bestScore=score;best=m;}
+  });
+
+  const d=state[best]||{elo:500,ci:100,n:0,since:0};
+  const moves=d.elo>700?10:d.elo>550?12:15;
+  const rl=best==='SPT'?35:best==='QTY'?25:30;
+  const botType=best==='DST'?3:best==='WRM'?4:best==='FRT'?2:1;
+
+  const el=document.getElementById('next-content');
+  el.innerHTML=`
+    <div class="ns-card">
+      <div class="ns-card-lbl">Compiler — Next Session Preview</div>
+      <div style="font-size:8px;color:#888;margin-bottom:8px">All values labeled. Every number is a hypothesis.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div class="ns-field"><div class="ns-lbl">Mode (selected)</div><div class="ns-val" style="color:${MODE_COLORS[best]};font-size:14px;font-weight:700">${best}</div><div style="font-size:8px;color:#888">priority = f(elo, since, gap) <span class="asserted" style="color:#f0a60a;border-color:#f0a60a">ASSERTED weights</span></div></div>
+        <div class="ns-field"><div class="ns-lbl">Predicted zone</div><div class="ns-val">${d.since>3?'SHIFTING':'PARALLEL'}</div></div>
+      </div>
+    </div>
+    <div style="padding:0 2px">
+      <div class="ns-field"><div class="ns-lbl">count_mult</div><div class="ns-val">${best==='QTY'?500:best==='FRT'?50:1}</div></div>
+      <div class="ns-field"><div class="ns-lbl">dist_mult</div><div class="ns-val">${best==='SPT'?500:1}</div></div>
+      <div class="ns-field"><div class="ns-lbl">hq_mult</div><div class="ns-val">${best==='FRT'?500:5}</div></div>
+      <div class="ns-field"><div class="ns-lbl">dest_mult</div><div class="ns-val">${best==='FRT'?-200:best==='DST'?400:1}</div></div>
+      <div class="ns-field"><div class="ns-lbl">moves <span class="asserted">ASSERTED diff_coeff=0.85</span></div><div class="ns-val">${moves}</div></div>
+      <div class="ns-field"><div class="ns-lbl">round_length_s</div><div class="ns-val">${rl}s</div></div>
+      <div class="ns-field"><div class="ns-lbl">bot_type</div><div class="ns-val">${['HAL','CAESAR','ATHENA','ROBIN','EINSTEIN','LORENZ'][botType]}</div></div>
+      <div class="ns-field"><div class="ns-lbl">ZPD target <span class="asserted">ASSERTED</span></div><div class="ns-val">${Math.round(d.elo*0.85)} Elo</div></div>
+    </div>
+    <div style="background:#f8f8f8;border:1px solid #ddd;padding:8px;margin-top:8px;font-size:9px;line-height:1.7;color:#555">
+      <strong>Note:</strong> This is a Layer 1 approximation of the compiler's output. The true compiler (not yet built) reads the full Ledger and outputs a complete 12-parameter config_vector. Every weight shown above — 0.5, 0.3, 0.2, 0.85 — is ASSERTED. Phase 3 replaces all of them with values fitted from outcome data in Layer 0.
+    </div>`;
+}
+
+// ── Tab control
+function setRightTab(name,el){
+  document.querySelectorAll('.t-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  ['formula','prov','next'].forEach(n=>{
+    document.getElementById('right-'+n).style.display=n===name?'':'none';
+  });
+}
+
+// ── Init
+document.addEventListener('DOMContentLoaded',()=>{
+  renderStudentBar();
+  renderModeTable();
+  drawRadar();
+  renderNext();
+});
+</script>
+</body>
+</html>
