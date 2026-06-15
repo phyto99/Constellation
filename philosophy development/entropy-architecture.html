@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Entropy as Architecture — Constellation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.4}
+nav{position:sticky;top:0;z-index:100;background:#fff;border-bottom:2px solid #000;display:flex;align-items:stretch;padding:0 14px;gap:0;overflow-x:auto}
+.logo{font-size:9px;letter-spacing:2px;font-weight:700;padding:10px 14px 10px 0;border-right:1px solid #ccc;margin-right:4px;white-space:nowrap;align-self:center;text-transform:uppercase;color:#555}
+.tab{padding:10px 13px;cursor:pointer;font-size:9px;letter-spacing:1px;color:#888;border-bottom:3px solid transparent;transition:all .1s;white-space:nowrap;font-weight:700;text-transform:uppercase}
+.tab:hover{color:#000}.tab.active{color:#000;border-bottom-color:#000}
+.panel{display:none;padding:20px}.panel.active{display:block}
+h2{font-size:9px;letter-spacing:2px;font-weight:700;text-transform:uppercase;border-bottom:1px solid #000;padding-bottom:5px;margin-bottom:14px;color:#333}
+h3{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+h4{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;color:#444}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.card{border:1px solid #ccc;padding:12px;background:#fafafa}
+.card-dk{border:1px solid #000;padding:12px;background:#000;color:#fff}
+.sep{border:none;border-top:1px solid #ddd;margin:10px 0}
+.sep-bold{border:none;border-top:2px solid #000;margin:12px 0}
+table.t{width:100%;border-collapse:collapse;font-size:11px}
+table.t th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 8px;border-bottom:2px solid #000;text-align:left;background:#f0f0f0}
+table.t td{padding:5px 8px;border-bottom:1px solid #e8e8e8;vertical-align:top}
+table.t tr:hover td{background:#f5f5f5}
+.inset{background:#f0f0f0;border-left:3px solid #000;padding:8px 10px;font-size:11px;line-height:1.7;margin:8px 0}
+.warn{background:#f8f8f8;border:1px dashed #000;padding:8px 10px;font-size:10px;line-height:1.7;margin:8px 0}
+.formula{font-family:'Courier New',monospace;font-size:11px;line-height:1.9;background:#f0f0f0;border:1px solid #ccc;padding:12px 14px;white-space:pre-wrap}
+.badge{display:inline-block;padding:1px 7px;font-size:9px;letter-spacing:1px;text-transform:uppercase;border:1px solid #000;font-weight:700}
+.badge-inv{background:#000;color:#fff;border-color:#000}
+input[type=range]{accent-color:#000;width:100%}
+.srow{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.srow label{font-size:10px;color:#555;flex-shrink:0}
+.sval{width:44px;text-align:right;font-size:10px;font-weight:700}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:#fff}::-webkit-scrollbar-thumb{background:#ccc}
+@media(max-width:760px){.grid2,.grid3,.grid6{grid-template-columns:1fr}}
+/* earned color: mode palette */
+.c-qty{color:#d97706}.c-spt{color:#2563eb}.c-frt{color:#059669}
+.c-dst{color:#dc2626}.c-wrm{color:#7c3aed}.c-inv{color:#0891b2}
+/* earned color: information-theoretic */
+.c-gain{color:#16a34a}    /* information gain — the optimization target */
+.c-noise{color:#dc2626}   /* noise — the failure mode */
+.c-zdp{color:#92400e}     /* zone of proximal development boundary */
+</style>
+</head>
+<body>
+<nav>
+  <span class="logo">Entropy as Architecture</span>
+  <div class="tab active" onclick="showTab('principle',this)">Principle</div>
+  <div class="tab" onclick="showTab('derivation',this)">Derivation</div>
+  <div class="tab" onclick="showTab('geometry',this)">Information Geometry</div>
+  <div class="tab" onclick="showTab('loop',this)">The Loop</div>
+  <div class="tab" onclick="showTab('evolution',this)">Evolution</div>
+</nav>
+
+<!-- ══════════════════════════════════════════════════ PRINCIPLE -->
+<div id="panel-principle" class="panel active">
+  <h2>The Single Unifying Principle</h2>
+
+  <div class="warn" style="margin-bottom:16px">
+    <strong>The diagnosis.</strong> The current system has five separate optimization objectives — mode coverage, difficulty targeting, template selection, spectrum zone, overlay timing — each designed independently and bolted together. That is not a system. That is a checklist with arrows. A beautiful system has one principle that everything else falls out of.
+  </div>
+
+  <!-- THE PRINCIPLE — large, prominent -->
+  <div style="border:2px solid #000;padding:20px 24px;margin-bottom:16px;background:#fff">
+    <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:10px">The Single Objective</div>
+    <div class="formula" style="font-size:12px;border:none;background:transparent;padding:0;line-height:2.2">next_session = <span style="font-weight:700">argmax</span><sub style="font-size:9px">S</sub>  𝔼[ KL( <span class="c-gain">posterior_student</span> ‖ prior_student ) | session S ]
+
+subject to:  S is within the student's <span class="c-zdp">zone of proximal development</span></div>
+    <div class="sep"></div>
+    <div style="font-size:10px;color:#555;line-height:1.8">
+      Every session is an experiment. The student has a prior cognitive model — beliefs about which strategies work under which conditions.
+      The session is a perturbation. The system's only job: choose the perturbation that produces the <strong>maximum update</strong> to that model.
+      This is expected information gain. Everything else is derived from it.
+    </div>
+  </div>
+
+  <!-- WHAT THE LAYERS WERE vs WHAT THE PRINCIPLE GENERATES -->
+  <div class="grid2" style="margin-bottom:16px">
+    <div>
+      <h3 style="margin-bottom:8px">What the layers were solving</h3>
+      <table class="t">
+        <tr><th>Layer</th><th>Problem it solved</th><th>How it was justified</th></tr>
+        <tr><td>Latin hypercube</td><td>Mode repetition</td><td>Pedagogical heuristic — coverage is good</td></tr>
+        <tr><td>Priority formula</td><td>Which mode to pick</td><td>Weak modes need training</td></tr>
+        <tr><td>Difficulty × 0.85</td><td>Challenge level</td><td>Vygotsky ZPD approximation</td></tr>
+        <tr><td>Spectrum zones</td><td>Session similarity</td><td>Balance repetition vs novelty</td></tr>
+        <tr><td>Overlay eligibility</td><td>When to use INVERSION</td><td>Need heuristics before challenging them</td></tr>
+      </table>
+      <div style="font-size:10px;color:#888;margin-top:8px;font-style:italic">Five separate engineers, five separate solutions. Each correct in isolation. No unified logic connecting them.</div>
+    </div>
+    <div>
+      <h3 style="margin-bottom:8px">What the principle generates</h3>
+      <table class="t">
+        <tr><th>Component</th><th>Derivation from E[KL]</th></tr>
+        <tr><td><strong>Mode selection</strong></td><td>Pick mode with highest prior entropy in student model — uncertain dimensions gain most from targeted experience</td></tr>
+        <tr><td><strong>Difficulty</strong></td><td>Challenge level where student is most likely to be <em>surprised</em> by outcome — not overwhelmed (noise), not bored (expected)</td></tr>
+        <tr><td><strong>Template</strong></td><td>Most constrained template eliminates most strategies from hypothesis space — highest-information disambiguation</td></tr>
+        <tr><td><strong>Spectrum zone</strong></td><td>Controls step size of model update — too similar = low ΔKL, too different = unstable update, PARALLEL = max stable information rate</td></tr>
+        <tr><td><strong>Overlays</strong></td><td>Controlled entropy spike — collapses a well-formed model to force rebuild at higher complexity. Requires a structure to destroy.</td></tr>
+        <tr><td><strong>Budget</strong></td><td>The system's own model uncertainty decreasing — not a gating mechanism, it's the system's information accumulation curve</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- THE MUTUAL MODELING INSIGHT -->
+  <div class="card-dk" style="padding:16px 20px">
+    <h4 style="color:#fff;margin-bottom:8px">The mutual modeling insight</h4>
+    <div style="font-size:11px;line-height:1.9;color:#ccc">
+      The student is modeling the system — building beliefs about what each mode rewards, how to read the loading terminal, when INVERSION is active.
+      The system is modeling the student — tracking mode Elo, behavioral signals, heuristic use.<br><br>
+      <strong style="color:#fff">Each session, both models update.</strong> The student's posterior is more precise than their prior.
+      The system's uncertainty about the student decreases. The next session is chosen from a more informed position, by a student with a more capable model.<br><br>
+      The convergence target is not "student wins consistently." It is: <strong style="color:#fff">student's cognitive model reaches maximum complexity across all six dimensions.</strong>
+      At that point the system has nothing left to teach. The student generates maximum entropy outputs — unpredictable, creative, adaptive play.
+      That is the objective.
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ DERIVATION -->
+<div id="panel-derivation" class="panel">
+  <h2>Derivation — Every Layer Falls Out of One Principle</h2>
+
+  <div class="inset" style="margin-bottom:14px">
+    Each row shows: the component as it currently exists (heuristic justification) and the same component as derived from the information-maximization principle. The decisions are mostly the same. The difference is that the derived version is <strong>not an assumption</strong> — it is a consequence. Parameters that were hardcoded become learnable. Thresholds that were asserted become measurable.
+  </div>
+
+  <!-- PIPELINE vs FIELD diagram -->
+  <div class="grid2" style="margin-bottom:16px">
+    <div class="card" style="border-color:#000">
+      <h4 style="margin-bottom:8px">Current structure — pipeline</h4>
+      <svg width="100%" height="200" id="pipeline-svg" style="display:block"></svg>
+      <div style="font-size:9px;color:#888;margin-top:6px">Five independent decisions made sequentially. Each correct in isolation. No feedback between layers.</div>
+    </div>
+    <div class="card" style="border-color:#000">
+      <h4 style="margin-bottom:8px">Unified structure — field</h4>
+      <svg width="100%" height="200" id="field-svg" style="display:block"></svg>
+      <div style="font-size:9px;color:#888;margin-top:6px">One optimization surface. All dimensions evaluated simultaneously. Every choice informs every other.</div>
+    </div>
+  </div>
+
+  <!-- DERIVATION TABLE -->
+  <table class="t" style="margin-bottom:14px">
+    <tr>
+      <th style="width:14%">Component</th>
+      <th style="width:22%">Current justification</th>
+      <th style="width:22%">Derived from E[KL]</th>
+      <th style="width:22%">What becomes learnable</th>
+      <th style="width:20%">Signal that verifies it</th>
+    </tr>
+    <tr>
+      <td><strong>Mode selection</strong><br><span style="font-size:9px;color:#888">Latin hypercube + elo_weight × coverage_weight</span></td>
+      <td>Coverage is good. Weak modes need training. Don't repeat.</td>
+      <td>Modes with highest prior entropy in student model yield highest expected KL gain. Coverage prevents degenerate distributions (all mass on one mode).</td>
+      <td>The weighting exponent (currently 0.7). May not be 0.7 — should be the value that empirically maximizes Elo velocity.</td>
+      <td>Mode Elo delta per session. Does entropy-selected mode produce faster improvement than coverage-only selection?</td>
+    </tr>
+    <tr>
+      <td><strong>Difficulty calibration</strong><br><span style="font-size:9px;color:#888">elo × 0.85 → 30–40th pct</span></td>
+      <td>Vygotsky ZPD. Barely winning = optimal learning signal.</td>
+      <td>Information gain peaks where the student is most likely to be surprised and able to process the surprise. Too easy: posterior ≈ prior. Too hard: noise, no update. The peak is the flow zone lower edge.</td>
+      <td>The 0.85 coefficient. Also: the asymmetry of the information gain curve — overwhelm kills signal faster than boredom.</td>
+      <td>Observed ΔElo as function of predicted difficulty. The coefficient that maximizes ΔElo is the correct one.</td>
+    </tr>
+    <tr>
+      <td><strong>Template selection</strong><br><span style="font-size:9px;color:#888">Most locked axes</span></td>
+      <td>Locked axes prevent cognitive target bypass. More constraints = more specific training.</td>
+      <td>Most constrained template eliminates the most hypotheses from the student's strategy space. Higher elimination = higher expected KL divergence between prior and posterior strategy beliefs.</td>
+      <td>The constraint-specificity scoring function. Currently binary (locked/free). Should weight constraints by how frequently students use the bypassed strategy.</td>
+      <td>Does choosing highest-constraint template produce faster mode Elo gain than random template selection within mode?</td>
+    </tr>
+    <tr>
+      <td><strong>Spectrum zone</strong><br><span style="font-size:9px;color:#888">5 discrete zones from outcome</span></td>
+      <td>Balance repetition vs novelty. Same mode lets students build; different mode forces breadth.</td>
+      <td>Session similarity controls the step size of the model update. Optimal step size = largest update that doesn't destabilize the model. PARALLEL/SHIFTING is the max stable information rate. RADICAL is too large a step — model can't integrate the update.</td>
+      <td>The step size function itself. Currently: 5 discrete zones. Should be: continuous similarity score, with thresholds learned from: what step size produced most stable Elo improvement?</td>
+      <td>Elo variance after zone selection. RADICAL should increase variance. PARALLEL should produce low-variance, steady improvement.</td>
+    </tr>
+    <tr>
+      <td><strong>Overlay timing</strong><br><span style="font-size:9px;color:#888">Elo &lt;300 AND sessions ≥6</span></td>
+      <td>Need heuristics before they can be challenged. Overlays on empty models = noise.</td>
+      <td>INVERSION is productive destruction — collapses a well-formed model to force a rebuild at higher complexity. This is only high-information when the model being collapsed is well-formed (high prior entropy <em>about</em> the model). Applied to unformed model: you are adding noise to noise. The KL gain is zero or negative.</td>
+      <td>The eligibility thresholds (Elo 300, 6 sessions). May not be correct for all student profiles. Natural talent vs accumulated experience require different thresholds.</td>
+      <td>strategy_shift_speed signal after INVERSION. Eligible students should show fast adaptation (high reversal learning signal). Ineligible students should show confusion signal.</td>
+    </tr>
+    <tr>
+      <td><strong>Entropy budget</strong><br><span style="font-size:9px;color:#888">Session count gates feature activation</span></td>
+      <td>More sessions = more data = more reliable inferences. Prevent overfitting.</td>
+      <td>The budget is the system's own posterior about the student. Low budget = high system uncertainty = coarse decisions. High budget = low system uncertainty = precise interventions. Budget is not a gate — it is the system's information accumulation curve, symmetric to the student's.</td>
+      <td>The session thresholds (1, 6, 20, 50). Should reflect the actual information gain curve of the system's model — when does adding one more session meaningfully reduce system uncertainty?</td>
+      <td>Prediction accuracy of session outcome as function of sessions seen. Threshold should be where prediction accuracy plateaus (marginal information gain from new sessions drops below threshold).</td>
+    </tr>
+  </table>
+
+  <div class="warn">
+    <strong>The critical distinction.</strong> Current system: parameters are asserted from first principles and educational science heuristics.
+    They are probably mostly correct — the science is solid. But "probably correct" is different from "verified correct for this student population playing this game."
+    Derived system: the same decisions, but each parameter has a clear measurement criterion. You know what data would confirm or refute each value.
+    That is what makes a system scientific rather than well-designed.
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ INFORMATION GEOMETRY -->
+<div id="panel-geometry" class="panel">
+  <h2>Information Geometry — The Shape of Learning</h2>
+
+  <div class="grid2" style="margin-bottom:16px">
+    <div>
+      <h3 style="margin-bottom:8px">Information Gain as Function of Challenge</h3>
+      <div style="font-size:10px;color:#555;margin-bottom:8px">Drag the challenge slider to observe information gain. The system targets the peak.</div>
+      <canvas id="info-curve" width="420" height="260" style="display:block;border:1px solid #ccc"></canvas>
+      <div class="srow" style="margin-top:8px">
+        <label style="width:110px">Challenge level</label>
+        <input type="range" min="0" max="100" value="38" id="challenge-slider" oninput="updateCurve(+this.value/100)">
+        <div class="sval" id="challenge-val">0.38</div>
+      </div>
+      <div id="curve-feedback" style="font-size:10px;margin-top:6px;padding:8px;border:1px solid #ccc;min-height:36px"></div>
+    </div>
+    <div>
+      <h3 style="margin-bottom:8px">Why the Curve is Asymmetric</h3>
+      <div style="font-size:11px;line-height:1.8;margin-bottom:10px">
+        The information gain curve peaks at the <strong>lower edge of the flow zone</strong> (~30–40th predicted percentile) and drops asymmetrically:
+      </div>
+      <table class="t" style="margin-bottom:10px">
+        <tr><th>Region</th><th>What happens</th><th>Why gain is low</th></tr>
+        <tr>
+          <td><span class="c-noise">Below ZPD</span></td>
+          <td>Student overwhelmed</td>
+          <td>Cannot process the signal. Posterior ≈ prior from confusion, not certainty.</td>
+        </tr>
+        <tr>
+          <td><span class="c-zdp">ZPD entry</span></td>
+          <td>Hard but tractable</td>
+          <td>Maximum surprise + maximum ability to update. Steep gain increase.</td>
+        </tr>
+        <tr>
+          <td style="color:#16a34a"><strong>Flow zone lower edge</strong></td>
+          <td>Barely winning</td>
+          <td><strong>Peak information gain.</strong> Surprise is high, strategy can be updated, outcome is interpretable.</td>
+        </tr>
+        <tr>
+          <td>Flow zone upper edge</td>
+          <td>Comfortable win</td>
+          <td>Outcome expected. Small posterior update. Gain decays slowly.</td>
+        </tr>
+        <tr>
+          <td><span style="color:#666">Above flow</span></td>
+          <td>Bored</td>
+          <td>No surprise. Student already knows the answer. Gain approaches zero slowly.</td>
+        </tr>
+      </table>
+      <div class="inset">
+        Overwhelm kills signal <strong>faster</strong> than boredom. This asymmetry means the system should err toward slightly-too-easy rather than slightly-too-hard — the information gain loss from over-challenge is steeper than from under-challenge. The 0.85 coefficient encodes this asymmetry.
+      </div>
+    </div>
+  </div>
+
+  <!-- 6 MODE INFORMATION LANDSCAPES -->
+  <h3 style="margin-bottom:8px">Per-Mode Information Landscapes</h3>
+  <div class="warn" style="margin-bottom:10px">
+    Each mode has a different information gain profile because each targets a different cognitive skill with different variance properties. INVERSION has the widest ZPD (the skill is tolerance of uncertainty — hard to be overwhelmed by uncertainty if that's the target). WORMHOLE has the narrowest (binary outcome: activation or not — little partial information available).
+  </div>
+  <canvas id="mode-curves" width="860" height="200" style="display:block;border:1px solid #ccc;margin-bottom:6px"></canvas>
+  <div id="mode-curve-legend" style="display:flex;gap:16px;flex-wrap:wrap;font-size:10px"></div>
+
+  <!-- ZPD AS CONSTRAINT -->
+  <div style="margin-top:14px">
+    <h3 style="margin-bottom:8px">The ZPD as the Valid Region</h3>
+    <div class="grid2">
+      <div>
+        <div class="formula">ZPD(student, mode) = [diff_min, diff_max]
+
+diff_min = point where E[KL] > noise_floor
+         ≈ elo[mode]/999 − 0.25   (hard lower bound)
+
+diff_max = point where student can still
+           form interpretable posterior
+         ≈ elo[mode]/999 + 0.15   (hard upper bound)
+
+system_target = diff_min + 0.3 × (diff_max − diff_min)
+              ≈ elo[mode]/999 × 0.85
+              → lower third of ZPD
+              → 30–40th predicted percentile</div>
+      </div>
+      <div style="font-size:11px;line-height:1.8;color:#333">
+        The ZPD is not a fixed range — it is student-specific and mode-specific. A student with Elo 200 in SPATIAL has a different ZPD than a student with Elo 700. The system targets the lower third of the ZPD, not the center, because information gain peaks there — the student is at their ceiling, maximally surprised, maximally updating.<br><br>
+        The ZPD also widens as the student advances. A more capable student can absorb larger perturbations without the signal becoming noise. This means the difficulty curve steepens with competence — harder challenges become available faster as Elo improves.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ THE LOOP -->
+<div id="panel-loop" class="panel">
+  <h2>The Mutual Information Loop — Architecture of a Living System</h2>
+
+  <div class="inset" style="margin-bottom:14px">
+    A pipeline processes. A loop learns. The distinction is that in a loop, the output of each cycle changes the input of the next. Both the student and the system are modeling each other. Both update after every session. The system that exists after session 50 is not the same system that ran session 1 — it has a richer model of the student. The student who plays session 50 is not the same student who played session 1 — they have a richer cognitive model. This mutual refinement is the mechanism of development.
+  </div>
+
+  <div style="text-align:center;margin-bottom:8px">
+    <canvas id="loop-canvas" width="700" height="380" style="display:inline-block;border:1px solid #ccc"></canvas>
+  </div>
+  <div style="text-align:center;margin-bottom:14px">
+    <button onclick="toggleLoop()" id="loop-btn" style="background:#000;color:#fff;border:none;padding:6px 18px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer">PAUSE</button>
+  </div>
+
+  <div class="grid3" style="margin-bottom:14px">
+    <div class="card">
+      <h4 style="margin-bottom:6px">Student model update</h4>
+      <div style="font-size:10px;line-height:1.8;color:#333">
+        Before session: student has prior beliefs about what each mode rewards, which strategies work, how the system behaves.<br><br>
+        After session: behavioral signals (score, rank, steal_rate, hq_connection_speed...) update the prior. The posterior is more accurate.<br><br>
+        Rate of update = information gain of the session. Optimal sessions produce maximum posterior update.
+      </div>
+    </div>
+    <div class="card" style="border-color:#000">
+      <h4 style="margin-bottom:6px">The session as mediator</h4>
+      <div style="font-size:10px;line-height:1.8;color:#333">
+        The session is the information channel between student and system. It is chosen by the system to maximize mutual information — to be maximally informative to both parties simultaneously.<br><br>
+        The system learns from the session. The student learns from the session. Neither party is passive. The session is not a test — it is a <strong>joint experiment</strong>.
+      </div>
+    </div>
+    <div class="card">
+      <h4 style="margin-bottom:6px">System model update</h4>
+      <div style="font-size:10px;line-height:1.8;color:#333">
+        Before session: system has prior beliefs about student's mode Elo, bot affinity, behavioral signals, current ZPD.<br><br>
+        After session: outcome and signals update the prior. System's uncertainty about the student decreases. The entropy budget is this uncertainty, decreasing over time.<br><br>
+        At budget 5 (50+ sessions): system has low uncertainty → precise interventions. At budget 1: high uncertainty → coarse-grained decisions only.
+      </div>
+    </div>
+  </div>
+
+  <!-- CONVERGENCE -->
+  <div class="grid2">
+    <div>
+      <h3 style="margin-bottom:8px">What convergence looks like</h3>
+      <table class="t">
+        <tr><th>Stage</th><th>Student model</th><th>System model</th><th>Session type</th></tr>
+        <tr>
+          <td style="font-size:10px">Sessions 1–6</td>
+          <td style="font-size:10px">No priors. Building first model of each mode.</td>
+          <td style="font-size:10px">High uncertainty. Budget 1–2.</td>
+          <td style="font-size:10px">Coverage rotation. ECHO/PARALLEL. No overlays.</td>
+        </tr>
+        <tr>
+          <td style="font-size:10px">Sessions 7–20</td>
+          <td style="font-size:10px">Mode models forming. Can recognize when strategy fails.</td>
+          <td style="font-size:10px">Moderate certainty. Budget 3. Mode Elo reliable.</td>
+          <td style="font-size:10px">Priority-weighted. PARALLEL/SHIFTING. First eligible overlays.</td>
+        </tr>
+        <tr>
+          <td style="font-size:10px">Sessions 21–50</td>
+          <td style="font-size:10px">Strong mode models. Cross-mode transfer beginning.</td>
+          <td style="font-size:10px">High certainty. Budget 4. Bot affinity tracked.</td>
+          <td style="font-size:10px">Targeted. SHIFTING/RADICAL for mastered modes. Regular overlays.</td>
+        </tr>
+        <tr>
+          <td style="font-size:10px">Sessions 50+</td>
+          <td style="font-size:10px">Full model across all 6 dimensions. Maximum entropy outputs.</td>
+          <td style="font-size:10px">Very high certainty. Budget 5. Full adaptive curriculum.</td>
+          <td style="font-size:10px">Precise interventions. High overlay probability. RADICAL as default for mastered modes.</td>
+        </tr>
+      </table>
+    </div>
+    <div>
+      <h3 style="margin-bottom:8px">Maximum entropy as the final state</h3>
+      <div class="card-dk" style="padding:14px">
+        <div style="font-size:10px;line-height:1.9;color:#ccc">
+          The student who has completed convergence is not predictable. They do not have a "strategy" — they have a model of the game sophisticated enough to generate the appropriate strategy for any configuration on the fly.<br><br>
+          This is maximum entropy output: the observer cannot predict their behavior from prior sessions, because their behavior is fully conditioned on the current configuration, not on habit.<br><br>
+          <strong style="color:#fff">This is cognitive flexibility at full expression.</strong> The goal of INVERSION mode — originally conceived as an overlay — becomes the student's permanent operating state. Every session is effectively INVERSION, because the student is always reasoning from first principles rather than pattern-matching.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ EVOLUTION -->
+<div id="panel-evolution" class="panel">
+  <h2>Evolution Path — From Well-Designed to Proven</h2>
+
+  <div class="warn" style="margin-bottom:14px">
+    <strong>The epistemological gap.</strong> The current system applies solid educational science — Vygotsky ZPD, Csikszentmihalyi flow, Bjork's desirable difficulties, spaced repetition, interleaving. These validate the architecture. They do not validate the specific parameters. The 0.85 coefficient, the 6-session window, the 30–40th percentile target, the P=0.25 overlay probability — these were derived from theory. Theory says the right direction. Only data says the right magnitude.
+  </div>
+
+  <!-- 4 PHASES -->
+  <h3 style="margin-bottom:10px">The Four Phases</h3>
+  <div style="position:relative;margin-bottom:16px">
+    <svg id="phase-svg" width="100%" height="100" style="display:block"></svg>
+  </div>
+
+  <div class="grid2" style="margin-bottom:14px">
+    <div>
+      <table class="t">
+        <tr><th colspan="2" style="background:#000;color:#fff">Phase 1 — Tune (now)</th></tr>
+        <tr><td style="font-size:10px"><strong>Add Elo velocity</strong></td><td style="font-size:10px">Track ΔElo over last 5 sessions. Student improving fast → stay in mode longer. Student plateauing → push mode change even if last outcome was good.</td></tr>
+        <tr><td style="font-size:10px"><strong>Forgetting decay</strong></td><td style="font-size:10px">Reduce difficulty on mode return after long gap. Decay = exp(−days / half_life). Initial half_life ≈ 14 days.</td></tr>
+        <tr><td style="font-size:10px"><strong>Overlay cooldown</strong></td><td style="font-size:10px">Minimum 3 sessions between INVERSION on same mode. Productive destruction requires the rebuilt structure to have had time to stabilize.</td></tr>
+        <tr><td style="font-size:10px"><strong>Session-size adjustment</strong></td><td style="font-size:10px">Widen flow zone for small sessions (2-player rank is binary, noisier signal). Standard zone for 4+ players.</td></tr>
+        <tr><td style="font-size:10px"><strong>Spectrum + exposure unify</strong></td><td style="font-size:10px">Prevent RADICAL when mode_sessions &lt; 3 regardless of outcome. Hypercube and spectrum must talk to each other.</td></tr>
+      </table>
+    </div>
+    <div>
+      <table class="t">
+        <tr><th colspan="2" style="background:#000;color:#fff">Phase 2 — Instrument</th></tr>
+        <tr><td style="font-size:10px"><strong>Track objective function</strong></td><td style="font-size:10px">Log ΔElo per session as primary metric. This is the thing being maximized. Currently it is computed but not tracked as the driving signal.</td></tr>
+        <tr><td style="font-size:10px"><strong>Parameter logging</strong></td><td style="font-size:10px">For each session: which template × difficulty × spectrum zone → what ΔElo resulted? This is the dataset that Phase 3 requires.</td></tr>
+        <tr><td style="font-size:10px"><strong>Retention tracking</strong></td><td style="font-size:10px">After N sessions away from a mode, how much Elo was retained? This calibrates the forgetting decay half_life.</td></tr>
+        <tr><td style="font-size:10px"><strong>Transfer detection</strong></td><td style="font-size:10px">When SPATIAL Elo improves, does WORMHOLE Elo improve without direct training? Measure cross-mode transfer coefficients.</td></tr>
+      </table>
+      <table class="t" style="margin-top:8px">
+        <tr><th colspan="2" style="background:#333;color:#fff">Phase 3 — Learn</th></tr>
+        <tr><td style="font-size:10px"><strong>Replace hardcoded params</strong></td><td style="font-size:10px">0.85 coefficient, zone thresholds, overlay probabilities → learned from Phase 2 data. The empirically optimal value replaces the theoretically derived value.</td></tr>
+        <tr><td style="font-size:10px"><strong>Student-specific curves</strong></td><td style="font-size:10px">The information gain curve shape may differ by student. Some students have wider ZPDs than others. The system should learn this per student.</td></tr>
+      </table>
+      <table class="t" style="margin-top:8px">
+        <tr><th colspan="2" style="background:#666;color:#fff">Phase 4 — Validate</th></tr>
+        <tr><td style="font-size:10px"><strong>External validity</strong></td><td style="font-size:10px">Do in-game mode Elo gains correlate with performance on external cognitive tasks? This is the fundamental question the system cannot answer internally.</td></tr>
+        <tr><td style="font-size:10px"><strong>Controlled comparison</strong></td><td style="font-size:10px">Adaptive system vs random session assignment. If the adaptive system doesn't outperform random assignment in a controlled comparison, the complexity isn't justified by outcomes.</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- WHAT OBJECTIVELY PERFECT REQUIRES -->
+  <h3 style="margin-bottom:8px">What "objectively perfect" actually requires</h3>
+  <div class="grid3">
+    <div class="card" style="border-color:#000">
+      <h4 style="margin-bottom:6px">A validated objective function</h4>
+      <div style="font-size:10px;line-height:1.8;color:#333">
+        Currently: maximize rate of mode Elo improvement.<br>
+        But: is Elo the right proxy? Options are mode Elo gain, cross-mode transfer, long-term retention, external cognitive task performance, student engagement and return rate.<br><br>
+        <strong>These are not the same objective.</strong> The system that maximizes short-term Elo gain may not maximize long-term retention. Choosing the objective is a values decision, not a technical one.
+      </div>
+    </div>
+    <div class="card">
+      <h4 style="margin-bottom:6px">A feedback loop that tunes the system</h4>
+      <div style="font-size:10px;line-height:1.8;color:#333">
+        Currently: system emits SessionSpec and receives {rank, percentile, signals}. It does not use those signals to update its own parameters.<br><br>
+        Required: after N sessions, parameters that produced high ΔElo should increase in weight. Parameters that produced low ΔElo should decrease. The system should be tuning itself from its own outcomes — not waiting for a human to read the logs.
+      </div>
+    </div>
+    <div class="card">
+      <h4 style="margin-bottom:6px">Controlled comparison evidence</h4>
+      <div style="font-size:10px;line-height:1.8;color:#333">
+        Currently: the system is well-designed by first principles. It implements what educational science says should work.<br><br>
+        Required: evidence that it actually works better than simpler alternatives. A random session generator might produce similar Elo gains with far less complexity. Until a controlled comparison exists, "objectively perfect" is an aspiration, not a claim.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+
+const MODES=[
+  {id:'qty',name:'QUANTITY',color:'#d97706',
+   zdpWidth:0.3,peakOffset:0.38,leftSlope:0.22,rightSlope:0.42,
+   note:'Wide ZPD — expansion strategies are numerous, many ways to be partly right.'},
+  {id:'spt',name:'SPATIAL',color:'#2563eb',
+   zdpWidth:0.28,peakOffset:0.36,leftSlope:0.20,rightSlope:0.40,
+   note:'Moderate ZPD — direction commitment is binary but partial paths carry signal.'},
+  {id:'frt',name:'FORTRESS',color:'#059669',
+   zdpWidth:0.32,peakOffset:0.40,leftSlope:0.25,rightSlope:0.45,
+   note:'Wide ZPD — network planning has many partial solutions, rich intermediate signal.'},
+  {id:'dst',name:'DESTRUCTION',color:'#dc2626',
+   zdpWidth:0.26,peakOffset:0.35,leftSlope:0.18,rightSlope:0.38,
+   note:'Narrower ZPD — opponent modeling either works or produces noise quickly.'},
+  {id:'wrm',name:'WORMHOLE',color:'#7c3aed',
+   zdpWidth:0.22,peakOffset:0.42,leftSlope:0.16,rightSlope:0.30,
+   note:'Narrowest ZPD — outcome is near-binary (activation or not), little partial signal.'},
+  {id:'inv',name:'INVERSION',color:'#0891b2',
+   zdpWidth:0.40,peakOffset:0.45,leftSlope:0.35,rightSlope:0.55,
+   note:'Widest ZPD — cognitive flexibility is itself a tolerance of uncertainty. Hard to overwhelm.'},
+];
+
+// ── INFO GAIN CURVE ───────────────────────────────────────────────────────────
+
+function infoGain(x, peak, leftSlope, rightSlope) {
+  if(x <= 0.05 || x >= 0.95) return 0;
+  if(x <= peak) return Math.exp(-0.5*Math.pow((x-peak)/leftSlope,2));
+  return Math.exp(-0.5*Math.pow((x-peak)/rightSlope,2));
+}
+
+let currentChallenge = 0.38;
+
+function drawInfoCurve(challenge) {
+  const c = document.getElementById('info-curve');
+  if(!c) return;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const PAD = {l:48, r:16, t:20, b:48};
+  const IW = W-PAD.l-PAD.r, IH = H-PAD.t-PAD.b;
+  const px = x => PAD.l + x*IW;
+  const py = y => PAD.t + (1-y)*IH;
+
+  // ZPD region (shaded)
+  ctx.fillStyle = 'rgba(0,0,0,0.04)';
+  ctx.fillRect(px(0.15), PAD.t, px(0.85)-px(0.15), IH);
+
+  // Flow zone band
+  ctx.fillStyle = 'rgba(22,163,74,0.08)';
+  ctx.fillRect(px(0.25), PAD.t, px(0.55)-px(0.25), IH);
+
+  // Grid
+  ctx.strokeStyle = '#eee'; ctx.lineWidth = 1;
+  [0,0.2,0.4,0.6,0.8,1.0].forEach(v => {
+    ctx.beginPath(); ctx.moveTo(PAD.l, py(v)); ctx.lineTo(PAD.l+IW, py(v)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px(v), PAD.t); ctx.lineTo(px(v), PAD.t+IH); ctx.stroke();
+  });
+
+  // Info gain curve
+  ctx.beginPath();
+  ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5;
+  let first = true;
+  for(let i=0; i<=200; i++) {
+    const x = i/200;
+    const y = infoGain(x, 0.38, 0.22, 0.42);
+    if(first){ctx.moveTo(px(x), py(y)); first=false;}
+    else ctx.lineTo(px(x), py(y));
+  }
+  ctx.stroke();
+
+  // ZPD boundaries
+  ctx.strokeStyle = '#92400e'; ctx.lineWidth = 1; ctx.setLineDash([4,3]);
+  [0.12, 0.88].forEach(x => {
+    ctx.beginPath(); ctx.moveTo(px(x), PAD.t); ctx.lineTo(px(x), PAD.t+IH); ctx.stroke();
+  });
+  ctx.setLineDash([]);
+
+  // Flow zone markers
+  ctx.strokeStyle = '#16a34a'; ctx.lineWidth = 1; ctx.setLineDash([2,3]);
+  [0.25, 0.55].forEach(x => {
+    ctx.beginPath(); ctx.moveTo(px(x), PAD.t); ctx.lineTo(px(x), PAD.t+IH); ctx.stroke();
+  });
+  ctx.setLineDash([]);
+
+  // Peak marker
+  ctx.strokeStyle = '#16a34a'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(px(0.38), py(0)); ctx.lineTo(px(0.38), py(1)); ctx.stroke();
+
+  // Current challenge vertical line
+  const gain = infoGain(challenge, 0.38, 0.22, 0.42);
+  ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(px(challenge), py(0)); ctx.lineTo(px(challenge), py(gain)); ctx.stroke();
+
+  // Challenge dot
+  ctx.beginPath(); ctx.arc(px(challenge), py(gain), 6, 0, Math.PI*2);
+  ctx.fillStyle = '#000'; ctx.fill();
+
+  // Horizontal gain line
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 1; ctx.setLineDash([2,2]);
+  ctx.beginPath(); ctx.moveTo(PAD.l, py(gain)); ctx.lineTo(px(challenge), py(gain)); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Axes
+  ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD.l, PAD.t); ctx.lineTo(PAD.l, PAD.t+IH); ctx.lineTo(PAD.l+IW, PAD.t+IH); ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = '#888'; ctx.font = '9px Arial'; ctx.textAlign = 'center';
+  ['0','0.2','0.4','0.6','0.8','1.0'].forEach((v,i) => ctx.fillText(v, px(i/5), PAD.t+IH+14));
+  ctx.textAlign = 'center'; ctx.fillText('challenge level', PAD.l+IW/2, PAD.t+IH+28);
+  ctx.save(); ctx.translate(14, PAD.t+IH/2); ctx.rotate(-Math.PI/2);
+  ctx.textAlign='center'; ctx.fillText('information gain', 0, 0); ctx.restore();
+
+  // Value labels
+  ctx.fillStyle='#16a34a'; ctx.font='bold 9px Arial'; ctx.textAlign='center';
+  ctx.fillText('FLOW ZONE', px(0.40), PAD.t+8);
+  ctx.fillStyle='#92400e'; ctx.font='8px Arial';
+  ctx.fillText('ZPD', px(0.12), PAD.t+8);
+  ctx.fillText('ZPD', px(0.88), PAD.t+8);
+  ctx.fillStyle='#555'; ctx.textAlign='right';
+  ctx.fillText(gain.toFixed(3), PAD.l-4, py(gain)+3);
+
+  // Update feedback
+  const fb = document.getElementById('curve-feedback');
+  if(fb) {
+    let msg, col;
+    if(challenge < 0.12) {msg='Below ZPD — overwhelm. Student cannot process the signal. Posterior ≈ prior from confusion, not certainty. Information gain ≈ 0.'; col='#dc2626';}
+    else if(challenge < 0.25) {msg='ZPD entry — hard but tractable. Student can engage. Information gain rising steeply.'; col='#92400e';}
+    else if(challenge <= 0.42) {msg='Flow zone lower edge — system target. Maximum surprise + ability to update. Peak information gain. Barely winning.'; col='#16a34a';}
+    else if(challenge <= 0.60) {msg='Flow zone center — good but not optimal. Comfortable win. Outcome becoming expected. Gain declining slowly.'; col='#555';}
+    else if(challenge < 0.88) {msg='Above flow zone — comfortable to easy. Student knows the answer before playing. Low surprise. Gain near zero.'; col='#888';}
+    else {msg='Above ZPD — pure boredom. No perturbation to the model. Zero information gain.'; col='#aaa';}
+    fb.innerHTML=`<span style="color:${col}">${msg}</span> <strong>ΔInfo = ${gain.toFixed(3)}</strong>`;
+  }
+}
+
+function updateCurve(v) {
+  currentChallenge = v;
+  document.getElementById('challenge-val').textContent = v.toFixed(2);
+  drawInfoCurve(v);
+}
+
+// ── MODE CURVES ───────────────────────────────────────────────────────────────
+
+function drawModeCurves() {
+  const c = document.getElementById('mode-curves');
+  if(!c) return;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+  const PAD = {l:16, r:16, t:24, b:30};
+  const IW = W - PAD.l - PAD.r;
+  const IH = H - PAD.t - PAD.b;
+  const modeW = IW / 6;
+
+  MODES.forEach((m, mi) => {
+    const ox = PAD.l + mi * modeW;
+    const px = x => ox + x * modeW;
+    const py = y => PAD.t + (1-y) * IH;
+
+    // Background
+    ctx.fillStyle = mi%2===0?'#fafafa':'#fff';
+    ctx.fillRect(px(0), PAD.t, modeW, IH);
+
+    // Flow zone band
+    ctx.fillStyle = `${m.color}15`;
+    ctx.fillRect(px(0.22), PAD.t, px(0.60)-px(0.22), IH);
+
+    // Grid line
+    ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(px(0), py(0.5)); ctx.lineTo(px(1), py(0.5)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px(1), PAD.t); ctx.lineTo(px(1), PAD.t+IH); ctx.stroke();
+
+    // Curve
+    ctx.beginPath();
+    ctx.strokeStyle = m.color; ctx.lineWidth = 2.5;
+    let first = true;
+    for(let i=0; i<=100; i++) {
+      const x = i/100;
+      const y = infoGain(x, m.peakOffset, m.leftSlope, m.rightSlope);
+      if(first){ctx.moveTo(px(x), py(y)); first=false;}
+      else ctx.lineTo(px(x), py(y));
+    }
+    ctx.stroke();
+
+    // Peak marker
+    const peakY = infoGain(m.peakOffset, m.peakOffset, m.leftSlope, m.rightSlope);
+    ctx.beginPath(); ctx.arc(px(m.peakOffset), py(peakY), 4, 0, Math.PI*2);
+    ctx.fillStyle = m.color; ctx.fill();
+
+    // Mode label
+    ctx.fillStyle = m.color; ctx.font = 'bold 8px Arial'; ctx.textAlign = 'center';
+    ctx.fillText(m.name, px(0.5), PAD.t-8);
+  });
+
+  // Legend
+  const leg = document.getElementById('mode-curve-legend');
+  if(leg) leg.innerHTML = MODES.map(m=>
+    `<span style="color:${m.color}"><strong>${m.name}</strong> — ${m.note}</span>`
+  ).join('&emsp;');
+}
+
+// ── PIPELINE SVG ──────────────────────────────────────────────────────────────
+
+function drawPipeline() {
+  const svg = document.getElementById('pipeline-svg');
+  if(!svg) return;
+  const W = svg.clientWidth||400, H = 200;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const stages = ['MODE\nSELECT','TEMPLATE','DIFFICULTY','SPECTRUM','OVERLAYS','OUTPUT'];
+  const colors = ['#d97706','#2563eb','#059669','#dc2626','#7c3aed','#000'];
+  const sw = (W-24)/(stages.length);
+  let h = '';
+  stages.forEach((s,i) => {
+    const x = 12 + i*sw;
+    const last = i===stages.length-1;
+    h += `<rect x="${x}" y="20" width="${sw-10}" height="60" fill="${last?'#000':'#fff'}" stroke="${colors[i]}" stroke-width="${last?2:1.5}"/>`;
+    s.split('\n').forEach((line,li) => {
+      h += `<text x="${x+(sw-10)/2}" y="${45+li*14}" text-anchor="middle" font-size="9" font-family="Arial" font-weight="700" fill="${last?'#fff':colors[i]}" letter-spacing="0.5">${line}</text>`;
+    });
+    if(i<stages.length-1) {
+      h += `<line x1="${x+sw-10}" y1="50" x2="${x+sw-2}" y2="50" stroke="#ccc" stroke-width="1.5"/>`;
+      h += `<polygon points="${x+sw-2},46 ${x+sw+4},50 ${x+sw-2},54" fill="#ccc"/>`;
+    }
+  });
+  // Labels beneath
+  h += `<text x="${W/2}" y="105" text-anchor="middle" font-size="9" font-family="Arial" fill="#888">Five independent decisions — no feedback between layers</text>`;
+  svg.innerHTML = h;
+}
+
+function drawField() {
+  const svg = document.getElementById('field-svg');
+  if(!svg) return;
+  const W = svg.clientWidth||400, H = 200;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const cx = W/2, cy = 55, r = 38;
+  const comps = ['MODE','TEMPLATE','DIFFICULTY','SPECTRUM','OVERLAYS'];
+  const colors = ['#d97706','#2563eb','#059669','#dc2626','#7c3aed'];
+  let h = '';
+
+  // Center
+  h += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#000" stroke="none"/>`;
+  h += `<text x="${cx}" y="${cy-5}" text-anchor="middle" font-size="8" font-family="Arial" font-weight="700" fill="#fff" letter-spacing="1">argmax</text>`;
+  h += `<text x="${cx}" y="${cy+8}" text-anchor="middle" font-size="8" font-family="Arial" fill="#aaa">𝔼[KL]</text>`;
+
+  // Outer nodes
+  comps.forEach((name, i) => {
+    const angle = (i/comps.length)*Math.PI*2 - Math.PI/2;
+    const nx = cx + Math.cos(angle)*82;
+    const ny = cy + Math.sin(angle)*72;
+    const ex = cx + Math.cos(angle)*40;
+    const ey = cy + Math.sin(angle)*40;
+    h += `<line x1="${ex}" y1="${ey}" x2="${nx+(nx<cx?16:-16)}" y2="${ny}" stroke="${colors[i]}" stroke-width="1.5"/>`;
+    h += `<rect x="${nx-22}" y="${ny-10}" width="44" height="20" fill="#fff" stroke="${colors[i]}" stroke-width="1.5"/>`;
+    h += `<text x="${nx}" y="${ny+4}" text-anchor="middle" font-size="8" font-family="Arial" font-weight="700" fill="${colors[i]}">${name}</text>`;
+  });
+
+  h += `<text x="${W/2}" y="148" text-anchor="middle" font-size="9" font-family="Arial" fill="#888">One objective surface — all dimensions simultaneously</text>`;
+  svg.innerHTML = h;
+}
+
+// ── MUTUAL INFORMATION LOOP ANIMATION ────────────────────────────────────────
+
+let loopRunning = true;
+let loopFrame = 0;
+let loopRaf;
+
+function drawLoop(frame) {
+  const c = document.getElementById('loop-canvas');
+  if(!c) return;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const cx = W/2;
+
+  // Node positions
+  const SESSION   = {x:cx, y:70,   w:140, h:48, label:'SESSION', sub:'the joint experiment'};
+  const STUDENT   = {x:150, y:280, w:140, h:48, label:'STUDENT MODEL', sub:'prior → posterior'};
+  const SYSTEM    = {x:W-150, y:280, w:140, h:48, label:'SYSTEM MODEL', sub:'uncertainty ↓'};
+
+  const nodes = [SESSION, STUDENT, SYSTEM];
+
+  // Draw connection arrows (curved)
+  function arrow(x1,y1,x2,y2,label,col,curve) {
+    ctx.strokeStyle=col||'#000'; ctx.lineWidth=1.5; ctx.fillStyle=col||'#000';
+    ctx.beginPath();
+    if(curve) {
+      ctx.moveTo(x1,y1);
+      ctx.quadraticCurveTo(curve.cx,curve.cy,x2,y2);
+    } else {
+      ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
+    }
+    ctx.stroke();
+    // arrowhead
+    const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
+    const ux=dx/len, uy=dy/len;
+    const ax=x2-ux*10, ay=y2-uy*10;
+    ctx.beginPath(); ctx.moveTo(x2,y2);
+    ctx.lineTo(ax-uy*5,ay+ux*5); ctx.lineTo(ax+uy*5,ay-ux*5); ctx.closePath(); ctx.fill();
+    if(label) {
+      ctx.fillStyle='#666'; ctx.font='8px Arial'; ctx.textAlign='center';
+      ctx.fillText(label,(x1+x2)/2+(curve?(curve.cx-x1)/4:0),(y1+y2)/2+(curve?(curve.cy-y1)/4:0)-6);
+    }
+  }
+
+  // SYSTEM → SESSION
+  arrow(SYSTEM.x-SYSTEM.w/2, SYSTEM.y-SYSTEM.h/2+14, SESSION.x+SESSION.w/4, SESSION.y+SESSION.h/2,
+    'chooses argmax 𝔼[KL]','#555',{cx:W-80,cy:180});
+
+  // SESSION → STUDENT
+  arrow(SESSION.x-SESSION.w/4, SESSION.y+SESSION.h/2, STUDENT.x+STUDENT.w/2, STUDENT.y-STUDENT.h/2+14,
+    'challenge · feedback','#555',{cx:80,cy:190});
+
+  // STUDENT → SYSTEM (behavioral signals)
+  arrow(STUDENT.x+STUDENT.w/2+4, STUDENT.y+4, SYSTEM.x-SYSTEM.w/2-4, SYSTEM.y+4,
+    'signals · rank · outcome','#aaa');
+
+  // Self-update loops (arcs on nodes)
+  // Student self-update
+  ctx.strokeStyle='#059669'; ctx.lineWidth=1.5; ctx.setLineDash([3,2]);
+  ctx.beginPath(); ctx.arc(STUDENT.x-STUDENT.w/2-12, STUDENT.y, 12, -Math.PI/2, Math.PI/2); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // System self-update
+  ctx.strokeStyle='#2563eb'; ctx.lineWidth=1.5; ctx.setLineDash([3,2]);
+  ctx.beginPath(); ctx.arc(SYSTEM.x+SYSTEM.w/2+12, SYSTEM.y, 12, Math.PI/2, -Math.PI/2); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Draw nodes
+  nodes.forEach(n => {
+    ctx.fillStyle='#fff'; ctx.strokeStyle='#000'; ctx.lineWidth=2;
+    ctx.fillRect(n.x-n.w/2, n.y-n.h/2, n.w, n.h);
+    ctx.strokeRect(n.x-n.w/2, n.y-n.h/2, n.w, n.h);
+    ctx.fillStyle='#000'; ctx.font='bold 10px Arial'; ctx.textAlign='center';
+    ctx.fillText(n.label, n.x, n.y);
+    ctx.fillStyle='#888'; ctx.font='8px Arial';
+    ctx.fillText(n.sub, n.x, n.y+14);
+  });
+
+  // Animated particle
+  const t = (frame%240)/240;
+  // Path: SESSION (bottom) → STUDENT (top-right) → SYSTEM (top-left) → SESSION (bottom)
+  let px, py;
+  const s1 = {x:SESSION.x-SESSION.w/4, y:SESSION.y+SESSION.h/2};
+  const s2 = {x:STUDENT.x+STUDENT.w/2, y:STUDENT.y-STUDENT.h/2+14};
+  const s3 = {x:STUDENT.x+STUDENT.w/2+4, y:STUDENT.y+4};
+  const s4 = {x:SYSTEM.x-SYSTEM.w/2-4, y:SYSTEM.y+4};
+  const s5 = {x:SYSTEM.x-SYSTEM.w/2, y:SYSTEM.y-SYSTEM.h/2+14};
+  const s6 = {x:SESSION.x+SESSION.w/4, y:SESSION.y+SESSION.h/2};
+
+  const segs = [
+    {from:s1,to:s2,ctrl:{cx:80,cy:190}},
+    {from:s3,to:s4,ctrl:null},
+    {from:s5,to:s6,ctrl:{cx:W-80,cy:180}},
+  ];
+  const segT = t*3;
+  const si = Math.floor(segT);
+  const st = segT - si;
+  if(si < segs.length) {
+    const seg = segs[si];
+    if(seg.ctrl) {
+      px = (1-st)*(1-st)*seg.from.x + 2*(1-st)*st*seg.ctrl.cx + st*st*seg.to.x;
+      py = (1-st)*(1-st)*seg.from.y + 2*(1-st)*st*seg.ctrl.cy + st*st*seg.to.y;
+    } else {
+      px = seg.from.x + st*(seg.to.x-seg.from.x);
+      py = seg.from.y + st*(seg.to.y-seg.from.y);
+    }
+    ctx.beginPath(); ctx.arc(px,py,5,0,Math.PI*2);
+    ctx.fillStyle='#000'; ctx.fill();
+  }
+
+  // Labels
+  ctx.fillStyle='#059669'; ctx.font='bold 8px Arial'; ctx.textAlign='left';
+  ctx.fillText('model update', STUDENT.x-STUDENT.w/2-60, STUDENT.y+4);
+  ctx.fillStyle='#2563eb'; ctx.textAlign='right';
+  ctx.fillText('uncertainty ↓', SYSTEM.x+SYSTEM.w/2+56, SYSTEM.y+4);
+
+  // Center label
+  ctx.fillStyle='#bbb'; ctx.font='9px Arial'; ctx.textAlign='center';
+  ctx.fillText('both learn', cx, H/2+10);
+  ctx.fillText('every session', cx, H/2+22);
+}
+
+function animateLoop() {
+  if(!loopRunning) return;
+  loopFrame++;
+  drawLoop(loopFrame);
+  loopRaf = requestAnimationFrame(animateLoop);
+}
+
+function toggleLoop() {
+  loopRunning = !loopRunning;
+  document.getElementById('loop-btn').textContent = loopRunning ? 'PAUSE' : 'PLAY';
+  if(loopRunning) animateLoop();
+}
+
+// ── PHASE SVG ─────────────────────────────────────────────────────────────────
+
+function drawPhases() {
+  const svg = document.getElementById('phase-svg');
+  if(!svg) return;
+  const W = svg.clientWidth||800, H = 100;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const phases = [
+    {n:'Phase 1',sub:'TUNE',desc:'Tune existing params\nfrom first principles',col:'#000'},
+    {n:'Phase 2',sub:'INSTRUMENT',desc:'Track objective function\nand parameter outcomes',col:'#333'},
+    {n:'Phase 3',sub:'LEARN',desc:'Replace hardcoded params\nwith learned values',col:'#555'},
+    {n:'Phase 4',sub:'VALIDATE',desc:'External validity\ncontrolled comparison',col:'#888'},
+  ];
+  const pw = (W-20)/phases.length;
+  let h = '';
+  phases.forEach((p,i) => {
+    const x = 10+i*pw;
+    h += `<rect x="${x}" y="10" width="${pw-8}" height="55" fill="${i===0?'#000':'#fff'}" stroke="${p.col}" stroke-width="${i===0?2:1}"/>`;
+    h += `<text x="${x+(pw-8)/2}" y="30" text-anchor="middle" font-size="9" font-family="Arial" font-weight="700" fill="${i===0?'#fff':p.col}" letter-spacing="1">${p.sub}</text>`;
+    p.desc.split('\n').forEach((line,li) => {
+      h += `<text x="${x+(pw-8)/2}" y="${45+li*11}" text-anchor="middle" font-size="8" font-family="Arial" fill="${i===0?'#aaa':'#888'}">${line}</text>`;
+    });
+    if(i<phases.length-1) {
+      h += `<line x1="${x+pw-8}" y1="37" x2="${x+pw}" y2="37" stroke="#ccc" stroke-width="1.5"/>`;
+      h += `<polygon points="${x+pw},33 ${x+pw+6},37 ${x+pw},41" fill="#ccc"/>`;
+    }
+    h += `<text x="${x+(pw-8)/2}" y="82" text-anchor="middle" font-size="8" font-family="Arial" fill="${p.col}">${p.n}</text>`;
+  });
+  svg.innerHTML = h;
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+
+function showTab(name, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  el.classList.add('active');
+  setTimeout(() => {
+    drawPipeline(); drawField();
+    if(name==='loop') {loopRunning=true;animateLoop();}
+    else {loopRunning=false;}
+    if(name==='geometry') {drawInfoCurve(currentChallenge); drawModeCurves();}
+    if(name==='evolution') drawPhases();
+  }, 50);
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+
+window.addEventListener('DOMContentLoaded', () => {
+  drawInfoCurve(currentChallenge);
+  drawModeCurves();
+  setTimeout(() => { drawPipeline(); drawField(); drawPhases(); }, 100);
+  animateLoop();
+});
+window.addEventListener('resize', () => { drawPipeline(); drawField(); drawPhases(); });
+</script>
+</body>
+</html>

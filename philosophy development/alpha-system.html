@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Alpha System — Constellation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.5}
+nav{position:sticky;top:0;z-index:100;background:#fff;border-bottom:2px solid #000;display:flex;align-items:stretch;padding:0 14px;overflow-x:auto;gap:0}
+.logo{font-size:9px;letter-spacing:2px;font-weight:700;padding:10px 14px 10px 0;border-right:1px solid #ccc;margin-right:4px;white-space:nowrap;align-self:center;text-transform:uppercase;color:#555}
+.tab{padding:10px 13px;cursor:pointer;font-size:9px;letter-spacing:1px;color:#888;border-bottom:3px solid transparent;transition:all .1s;white-space:nowrap;font-weight:700;text-transform:uppercase}
+.tab:hover{color:#000}.tab.active{color:#000;border-bottom-color:#000}
+.panel{display:none;padding:20px}.panel.active{display:block}
+h2{font-size:9px;letter-spacing:2px;font-weight:700;text-transform:uppercase;border-bottom:1px solid #000;padding-bottom:5px;margin-bottom:14px;color:#333}
+h3{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+h4{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;color:#444}
+p{font-size:11px;line-height:1.8;color:#222;margin-bottom:8px}
+ul,ol{margin-left:16px;margin-bottom:10px}
+li{font-size:11px;line-height:1.8;color:#222;margin-bottom:2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.card{border:1px solid #ccc;padding:12px;background:#fafafa}
+.card-dk{border:2px solid #000;padding:14px;background:#000;color:#fff}
+.sep{border:none;border-top:1px solid #ddd;margin:10px 0}
+table.t{width:100%;border-collapse:collapse;font-size:11px}
+table.t th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 8px;border-bottom:2px solid #000;text-align:left;background:#f0f0f0}
+table.t td{padding:5px 8px;border-bottom:1px solid #eee;vertical-align:top}
+table.t tr:hover td{background:#f5f5f5}
+.inset{background:#f0f0f0;border-left:3px solid #000;padding:8px 10px;font-size:11px;line-height:1.7;margin:8px 0}
+.warn{background:#f8f8f8;border:1px dashed #000;padding:8px 10px;font-size:10px;line-height:1.7;margin:8px 0}
+.badge{display:inline-block;padding:1px 7px;font-size:9px;letter-spacing:1px;text-transform:uppercase;border:1px solid #000;font-weight:700}
+.badge-inv{background:#000;color:#fff}
+/* terminal */
+#alpha-terminal{background:#000;color:#0f0;font-family:'Courier New',monospace;font-size:11px;padding:16px;min-height:220px;border:2px solid #000;overflow-y:auto}
+#alpha-terminal .line{margin-bottom:2px;opacity:0;transition:opacity .08s}
+#alpha-terminal .line.show{opacity:1}
+/* zone pills */
+.zone-pill{display:inline-block;padding:2px 10px;font-size:10px;font-weight:700;letter-spacing:2px;border:1px solid #000;margin:2px 0;text-transform:uppercase}
+.zone-echo{background:#111;color:#eee;border-color:#444}
+.zone-parallel{background:#fff;color:#000;border-color:#000}
+.zone-shifting{background:#fff;color:#555;border-color:#888}
+.zone-radical{background:#000;color:#fff;border-color:#000}
+.zone-rematch{background:#f8f8f8;color:#888;border-color:#ccc}
+/* stages */
+.stage-row{display:flex;gap:0;overflow-x:auto;margin:12px 0}
+.stage-box{flex:1;min-width:90px;border:1px solid #ccc;padding:8px;text-align:center;font-size:9px;background:#fff;position:relative}
+.stage-box.highlight{border-color:#000;border-width:2px;background:#000;color:#fff}
+.stage-box:not(:last-child)::after{content:'→';position:absolute;right:-8px;top:50%;transform:translateY(-50%);color:#ccc;font-size:11px}
+.stage-box .stitle{font-weight:700;font-size:10px;margin-bottom:3px}
+/* calibration */
+.cal-row{display:flex;height:60px;margin:8px 0;border:1px solid #ccc}
+.cal-zone{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;text-align:center;padding:4px;border-right:1px solid #eee}
+.cal-zone:last-child{border-right:none}
+.cal-zone .cz-name{font-weight:700;letter-spacing:1px;font-size:8px;text-transform:uppercase;margin-bottom:2px}
+.cal-zone .cz-ex{color:#888;font-style:italic;font-size:8px;line-height:1.4}
+/* alpha form */
+.form-section{border:1px solid #ccc;padding:12px;margin-bottom:10px;background:#fafafa}
+.form-section h4{border-bottom:1px solid #ddd;padding-bottom:4px;margin-bottom:8px}
+.form-q{font-size:10px;color:#333;margin-bottom:6px;line-height:1.6}
+.form-q strong{color:#000}
+.form-area{width:100%;border:1px solid #ccc;padding:8px;font-family:Arial,sans-serif;font-size:10px;resize:vertical;min-height:50px;background:#fff}
+.eval-badge{display:inline-block;padding:2px 8px;font-size:9px;font-weight:700;letter-spacing:1px;border:1px solid;margin:2px}
+.eval-surface{border-color:#888;color:#888}
+.eval-deep{border-color:#000;color:#000;background:#f0f0f0}
+.eval-alpha{border-color:#000;color:#fff;background:#000}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:#fff}::-webkit-scrollbar-thumb{background:#ccc}
+@media(max-width:760px){.grid2,.grid3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav>
+  <span class="logo">Alpha System</span>
+  <div class="tab active" onclick="showTab('zones',this)">Zone Names</div>
+  <div class="tab" onclick="showTab('alpha',this)">Alpha Track</div>
+  <div class="tab" onclick="showTab('detective',this)">Detective Framework</div>
+  <div class="tab" onclick="showTab('application',this)">Application</div>
+  <div class="tab" onclick="showTab('calibration',this)">Mystery Calibration</div>
+</nav>
+
+<!-- ═══════════════════════════════════ ZONE NAMES -->
+<div id="panel-zones" class="panel active">
+  <h2>Zone Names in the Terminal — Making the System Feel Alive</h2>
+
+  <div class="warn" style="margin-bottom:14px">
+    The zone names (RADICAL, ECHO, PARALLEL, SHIFTING, REMATCH) should appear in the terminal as declarations, not labels. The system does not explain what they mean. It states them as fact. Students will notice them, compare them, and theorize about them. The vocabulary becomes the community's shared language through this process of reverse-engineering — not through being taught.
+  </div>
+
+  <div class="grid2" style="margin-bottom:16px">
+    <div>
+      <h3 style="margin-bottom:8px">How Each Zone Appears</h3>
+      <div style="margin-bottom:10px">
+        <div class="zone-pill zone-rematch">REMATCH</div>
+        <div style="font-size:10px;color:#555;margin-top:4px;line-height:1.7">
+          "The previous session ended before the system had what it needed. REMATCH."<br>
+          "REMATCH. The signal was incomplete. The system requires one more attempt."<br>
+          "Close loss. REMATCH configuration active."
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <div class="zone-pill zone-echo">ECHO</div>
+        <div style="font-size:10px;color:#555;margin-top:4px;line-height:1.7">
+          "ECHO. An unresolved challenge has been detected. The system is returning you to it."<br>
+          "The system is not finished with this challenge. ECHO configuration active."<br>
+          "ECHO. The margin was close. The system is watching the same territory again."
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <div class="zone-pill zone-parallel">PARALLEL</div>
+        <div style="font-size:10px;color:#555;margin-top:4px;line-height:1.7">
+          "PARALLEL path selected. Same cognitive target. Different terrain."<br>
+          "PARALLEL. The system has chosen a different approach to the same challenge."<br>
+          "Same destination. New route. PARALLEL."
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <div class="zone-pill zone-shifting">SHIFTING</div>
+        <div style="font-size:10px;color:#555;margin-top:4px;line-height:1.7">
+          "SHIFTING. The system has moved to adjacent territory."<br>
+          "SHIFTING trajectory. What you learned here will partially apply."<br>
+          "Adjacent domain selected. SHIFTING."
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <div class="zone-pill zone-radical">RADICAL</div>
+        <div style="font-size:10px;color:#555;margin-top:4px;line-height:1.7">
+          "RADICAL departure initiated. What you learned here does not apply there."<br>
+          "The threshold has been crossed. RADICAL."<br>
+          "RADICAL. The system has selected a fundamentally different target. Proceed accordingly."<br>
+          "Prior session data noted and set aside. RADICAL trajectory."
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <h3 style="margin-bottom:8px">Live Terminal Preview</h3>
+      <div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap">
+        <button onclick="previewZone('rematch')" style="border:1px solid #ccc;padding:3px 10px;font-size:9px;font-weight:700;cursor:pointer;background:#f8f8f8;letter-spacing:1px">REMATCH</button>
+        <button onclick="previewZone('echo')" style="border:1px solid #444;padding:3px 10px;font-size:9px;font-weight:700;cursor:pointer;background:#111;color:#eee;letter-spacing:1px">ECHO</button>
+        <button onclick="previewZone('parallel')" style="border:1px solid #000;padding:3px 10px;font-size:9px;font-weight:700;cursor:pointer;background:#fff;letter-spacing:1px">PARALLEL</button>
+        <button onclick="previewZone('shifting')" style="border:1px solid #888;padding:3px 10px;font-size:9px;font-weight:700;cursor:pointer;background:#fff;color:#555;letter-spacing:1px">SHIFTING</button>
+        <button onclick="previewZone('radical')" style="border:1px solid #000;padding:3px 10px;font-size:9px;font-weight:700;cursor:pointer;background:#000;color:#fff;letter-spacing:1px">RADICAL</button>
+      </div>
+      <div id="alpha-terminal">
+        <div class="line show" style="opacity:.35;font-size:10px">// select a zone to preview</div>
+      </div>
+      <div style="font-size:9px;color:#888;margin-top:6px">The zone name lands alone, first. Then the context. The name is the declaration; the sentence is the observation. Students hear the word before the explanation.</div>
+    </div>
+  </div>
+
+  <h3 style="margin-bottom:8px">Why Names Rather Than Descriptions</h3>
+  <div class="grid2">
+    <div class="card">
+      <h4 style="margin-bottom:5px">Without names — current system</h4>
+      <div style="font-family:'Courier New',monospace;font-size:10px;background:#000;color:#0f0;padding:10px;line-height:1.7">
+        An unresolved challenge has been detected.<br>
+        The system is returning you to the same<br>
+        mode. Difficulty adjusted.
+      </div>
+      <div style="font-size:10px;color:#555;margin-top:6px">Informative but forgettable. Students read and move on. Nothing to share with a classmate. No vocabulary generated.</div>
+    </div>
+    <div class="card" style="border-color:#000">
+      <h4 style="margin-bottom:5px">With names — community generation</h4>
+      <div style="font-family:'Courier New',monospace;font-size:10px;background:#000;color:#0f0;padding:10px;line-height:1.7">
+        <span style="color:#fff;font-size:13px;font-weight:700;letter-spacing:3px">ECHO.</span><br>
+        An unresolved challenge has been detected.<br>
+        The system is returning you to it.
+      </div>
+      <div style="font-size:10px;color:#555;margin-top:6px">The word is memorable, shareable, and mysterious. "I got an ECHO again" becomes the sentence students say to each other. The community builds vocabulary through accumulation.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ ALPHA TRACK -->
+<div id="panel-alpha" class="panel">
+  <h2>The Alpha Track — Top 1% by Understanding, Not Performance</h2>
+
+  <div class="card-dk" style="margin-bottom:16px">
+    <h4 style="color:#fff;margin-bottom:8px">The core principle</h4>
+    <div style="font-size:11px;line-height:1.9;color:#ccc">
+      Alpha is not awarded for winning. A student who wins consistently may have optimized for Constellation mechanics rather than developed cognitively. Alpha is awarded for demonstrated understanding of what the game is developing and why. The Alpha application tests this understanding through detective work — without ever asking the student to name the thing the system is measuring.
+    </div>
+  </div>
+
+  <div class="stage-row" style="margin-bottom:14px">
+    <div class="stage-box">
+      <div class="stitle">Player</div>
+      <div>Plays sessions. Receives terminal observations. Starts noticing patterns.</div>
+    </div>
+    <div class="stage-box">
+      <div class="stitle">Observer</div>
+      <div>Connects terminal language to play outcomes. Develops theories. Compares with others.</div>
+    </div>
+    <div class="stage-box">
+      <div class="stitle">Theorist</div>
+      <div>Consistent theories about what the system tracks. Can predict terminal output.</div>
+    </div>
+    <div class="stage-box highlight">
+      <div class="stitle">Alpha Candidate</div>
+      <div>Applies by submitting a constructive analysis of another team's session. Reviewed.</div>
+    </div>
+    <div class="stage-box highlight">
+      <div class="stitle">Alpha ◈</div>
+      <div>Accepted. Visible in community. Access to design tools. Can review future applications.</div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <h3 style="margin-bottom:8px">Alpha Eligibility</h3>
+      <table class="t">
+        <tr><th>Requirement</th><th>Rationale</th></tr>
+        <tr><td>≥15 competitive sessions</td><td>Enough experience to have developed genuine understanding, not just early impressions</td></tr>
+        <tr><td>All 6 modes encountered at least once</td><td>Cannot analyze mode-specific behavior without having played all modes</td></tr>
+        <tr><td>At least one INVERSION session</td><td>INVERSION is the most analytically demanding mode to discuss accurately</td></tr>
+        <tr><td>Not currently in REMATCH loop</td><td>A student stuck in REMATCH is still resolving a fundamental challenge — not yet ready to analyze others</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3 style="margin-bottom:8px">What Alpha Status Unlocks</h3>
+      <table class="t">
+        <tr><th>Access</th><th>Why at this stage</th></tr>
+        <tr><td>Template proposals (admin-reviewed)</td><td>Alpha student has demonstrated they understand locked/free axis logic</td></tr>
+        <tr><td>Reviewing future Alpha applications</td><td>Peer review is itself a development exercise — evaluating others' analysis quality</td></tr>
+        <tr><td>Annotated replay access</td><td>Can view session replays with system signal overlays (partial visibility)</td></tr>
+        <tr><td>Custom bot configuration</td><td>Can design custom opponent behavior for their sessions</td></tr>
+        <tr><td>Map submission</td><td>Can contribute maps with a stated cognitive intent</td></tr>
+        <tr><td>◈ badge visible to peers</td><td>Community recognition — not for winning, for understanding</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ DETECTIVE FRAMEWORK -->
+<div id="panel-detective" class="panel">
+  <h2>The Detective Framework — What the Analysis Must Cover</h2>
+
+  <div class="warn" style="margin-bottom:14px">
+    The detective framing is not decorative. It is the correct cognitive register for this task. A detective does not prescribe — they observe, infer, and explain. The analysis that says "they should have connected their HQs faster" is a command. The analysis that says "the HQ network never extended past the third cluster, which left distance score on the table in every round after round 4" is detective work. One tells. One shows.
+  </div>
+
+  <div class="grid2" style="margin-bottom:14px">
+    <div>
+      <h3 style="margin-bottom:8px">Analysis Structure</h3>
+      <div class="form-section">
+        <h4>PHASE 1 — Pre-Session (Planning Stage)</h4>
+        <div class="form-q">What did you observe about the team's approach before the session started? Did they appear to have a shared plan? What strategy does their opening seem to suggest?</div>
+        <div style="font-size:9px;color:#888">Note: this phase may not always be visible. When it is, it is the most revealing — a team that does not discuss strategy before a FORTRESS session is a different kind of team than one that argues about HQ placement.</div>
+      </div>
+      <div class="form-section">
+        <h4>PHASE 2 — Round by Round (Playing Stage)</h4>
+        <div class="form-q">Walk through each round as a detective. What decisions were made? Where did the plan hold and where did it break down? What did individual players contribute?</div>
+        <div style="font-size:9px;color:#888">You are not narrating the game. You are reading what the decisions reveal about the team's model of the session. A team that keeps expanding in a FORTRESS session may not have understood the multipliers.</div>
+      </div>
+      <div class="form-section">
+        <h4>PHASE 3 — Team Dynamics</h4>
+        <div class="form-q">How effectively did the team coordinate? Who drove decisions? Were there moments where individual play diverged from team strategy? What did this cost them?</div>
+      </div>
+      <div class="form-section">
+        <h4>PHASE 4 — Detective Observations</h4>
+        <div class="form-q">What did you notice that the players probably didn't notice themselves? These are your most valuable observations. Something that was consistent across rounds. A pattern in decision timing. A resource they consistently left unused.</div>
+      </div>
+      <div class="form-section">
+        <h4>PHASE 5 — Course Correction</h4>
+        <div class="form-q">If you were giving them one piece of direction after round 3 — not after the session, during it — what would you say? Why round 3 specifically? What did the data show by then?</div>
+        <div style="font-size:9px;color:#888">Round 3 is significant: early enough to change the session, late enough to have real data. A good answer demonstrates both strategic understanding and pedagogical timing.</div>
+      </div>
+    </div>
+    <div>
+      <h3 style="margin-bottom:8px">Evaluation — Surface vs Deep</h3>
+      <p>Analyses are evaluated on a three-level scale. The evaluation is not shown to the applicant — only the outcome (accepted / not yet / feedback). This preserves the mystery of what the system values.</p>
+      <table class="t" style="margin-bottom:12px">
+        <tr><th colspan="2">Surface Analysis <span class="eval-badge eval-surface">Not Alpha</span></th></tr>
+        <tr><td colspan="2" style="font-size:10px;color:#555">
+          Names events without interpreting them. Prescribes corrections without explaining why they are corrections. Focuses on outcome (score) rather than process (decisions). Shows no evidence of understanding what the session was training.<br><br>
+          <em>Example: "They lost because they didn't claim enough stars and their opponents stole from them. They should have played more aggressively."</em>
+        </td></tr>
+        <tr><th colspan="2">Mode-Aware Analysis <span class="eval-badge eval-deep">Close</span></th></tr>
+        <tr><td colspan="2" style="font-size:10px;color:#555">
+          Demonstrates understanding of the session's scoring mechanic. Identifies decisions inconsistent with the mode. Suggests corrections that are mode-appropriate. Does not yet demonstrate cross-session or cross-mode awareness.<br><br>
+          <em>Example: "In a FORTRESS session the HQ distance matters most, and they spent too many moves on star count in the middle rounds. Better HQ timing from round 2 would have changed the network by round 6."</em>
+        </td></tr>
+        <tr><th colspan="2">Strategic-Cognitive Analysis <span class="eval-badge eval-alpha">Alpha ◈</span></th></tr>
+        <tr><td colspan="2" style="font-size:10px;color:#555">
+          Demonstrates understanding of what cognitive skill the session was developing and how the team's decisions reveal their current model. Identifies behavioral patterns across rounds. Makes specific, round-referenced observations. The detective observations section contains something the players could not have told you themselves.<br><br>
+          <em>Example: "The team's HQ placement in round 2 was geometrically sound, but their expansion in rounds 3–5 was volume-oriented rather than connectivity-oriented — they were playing QTY logic inside an FRT session. The pivot came in round 6 when their network distance score fell behind, but by then the map topology made late connections expensive. Their opponent made fewer total moves but built a longer network. The team's model of what the session was rewarding didn't update until the score told them it was too late to act on it."</em>
+        </td></tr>
+      </table>
+      <div class="inset">
+        <strong>Why the Alpha analysis preserves the mystery.</strong> A student analyzing others never learns "here is what the system is measuring about you." They demonstrate that they already know what the game rewards at a strategic level. The deeper mystery — what the terminal is tracking in their own behavioral signals, what INVERSION inverts, what an ECHO means vs a RADICAL — remains opaque. The detective work operates at the game's surface level. The system's deep level requires the student's own experience to decode.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ APPLICATION -->
+<div id="panel-application" class="panel">
+  <h2>Alpha Application — The Form</h2>
+  <div style="max-width:680px">
+    <div class="card-dk" style="margin-bottom:14px">
+      <div style="font-size:9px;letter-spacing:2px;color:#888;margin-bottom:4px">CONSTELLATION — ALPHA APPLICATION</div>
+      <div style="font-size:11px;color:#ccc;line-height:1.8">
+        Submit a constructive analysis of a team's Constellation session. You will be reviewing both the planning stage and the playing stage. Your analysis is evaluated not on whether the team won or lost, but on the quality of your observations. Alpha status is awarded for demonstrated understanding, not for performance.
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h4>Session Reference</h4>
+      <div class="form-q"><strong>Which session are you analyzing?</strong> (Session ID, date, or description)</div>
+      <input type="text" placeholder="e.g. Session 7, Team B vs HAL — Tuesday's class" style="width:100%;border:1px solid #ccc;padding:6px 8px;font-size:10px">
+    </div>
+
+    <div class="form-section">
+      <h4>Phase 1 — Before the Session</h4>
+      <div class="form-q"><strong>If you observed the planning stage:</strong> What was the team's apparent strategy going in? Did they have a shared understanding of what the session required? What did their preparation reveal?</div>
+      <textarea class="form-area" placeholder="Describe what you observed before the session started, if available. If no planning stage was visible, note what the team's opening moves suggest about their pre-game thinking."></textarea>
+    </div>
+
+    <div class="form-section">
+      <h4>Phase 2 — The Playing Stage</h4>
+      <div class="form-q"><strong>Walk through the session as a detective.</strong> What did the team do in each round? Where did decisions align with the session's requirements, and where did they not? Be specific — name rounds, name players if possible, name the decision and why you read it as you do.</div>
+      <textarea class="form-area" style="min-height:100px" placeholder="Round-by-round analysis. Focus on decisions and what they reveal about the team's model of the session — not just what happened, but what the decisions tell you about how they understood the challenge."></textarea>
+    </div>
+
+    <div class="form-section">
+      <h4>Phase 3 — Team Coordination</h4>
+      <div class="form-q"><strong>How effectively did the team work together?</strong> Who drove the key decisions? Were there moments where individual play diverged from team strategy? What was the effect?</div>
+      <textarea class="form-area" placeholder="Team dynamics analysis. This is not about blaming individuals — it's about understanding how coordination affected collective performance."></textarea>
+    </div>
+
+    <div class="form-section" style="border-color:#000;border-width:2px">
+      <h4>Phase 4 — Your Detective Observations</h4>
+      <div class="form-q" style="color:#000"><strong>What did you notice that the team probably didn't notice themselves?</strong> This is the most important part of your application. A pattern across rounds. A resource consistently left unused. A decision that made sense locally but cost them at the session level. Something specific and verifiable — not general advice.</div>
+      <textarea class="form-area" style="min-height:90px;border-color:#000" placeholder="Your sharpest observation. Something the replay would confirm if someone went back to check. The more specific the better — 'their steal rate dropped to zero after round 5, even though their opponent's network was most vulnerable in rounds 6 and 7' is better than 'they didn't steal enough'."></textarea>
+    </div>
+
+    <div class="form-section">
+      <h4>Phase 5 — Course Correction</h4>
+      <div class="form-q"><strong>If you could pause the session at the end of round 3 and say one thing to the team</strong> — not after, during — what would it be? Why round 3? What did you know by then that they apparently didn't?</div>
+      <textarea class="form-area" placeholder="One intervention, one moment, one sentence. Explain why this is the right moment and what you would say. This should be specific enough that the team could act on it immediately."></textarea>
+    </div>
+
+    <div class="form-section">
+      <h4>Anything Else</h4>
+      <div class="form-q">Anything your analysis didn't capture. Questions you had. Things you noticed but couldn't fully explain.</div>
+      <textarea class="form-area"></textarea>
+    </div>
+
+    <div class="card-dk" style="margin-top:14px;padding:12px 14px">
+      <div style="font-size:10px;color:#ccc;line-height:1.8">
+        Your application will be reviewed by the class administrator and, if other Alphas exist, by them as well. You will receive a response — not a score, but a reaction. Applications are not ranked; they are either accepted, returned with specific feedback, or declined with direction toward what to develop further. There is no penalty for applying and being declined. The application itself is a development exercise.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ CALIBRATION -->
+<div id="panel-calibration" class="panel">
+  <h2>Mystery Calibration — What the System Reveals and When</h2>
+
+  <div class="inset" style="margin-bottom:14px">
+    The mystery has two layers. The first layer is strategic: what does each mode reward? This is discoverable by playing. A student who doesn't understand that FORTRESS rewards HQ distance will see it in their score breakdown. This layer is meant to be solved. The second layer is systemic: what is the terminal measuring about how you play, why do you get a RADICAL vs an ECHO, what does INVERSION invert exactly? This layer is meant to be decoded slowly, through accumulation, comparison, and community. The Alpha system operates at the first layer. The second layer remains opaque even to Alphas.
+  </div>
+
+  <canvas id="calib-canvas" width="100%" height="140" style="display:block;width:100%;border:1px solid #ccc;margin-bottom:14px"></canvas>
+
+  <div class="grid3" style="margin-bottom:14px">
+    <div class="card">
+      <h4 style="margin-bottom:5px">Layer 1 — Visible to all</h4>
+      <ul style="font-size:10px;color:#333">
+        <li>Score breakdown by multiplier component</li>
+        <li>Round-by-round scores</li>
+        <li>Win/loss and rank</li>
+        <li>Mode name (FORTRESS, SPATIAL, etc.)</li>
+        <li>Zone names in terminal (ECHO, RADICAL)</li>
+        <li>Bot archetypes and aggression</li>
+      </ul>
+      <div style="font-size:9px;color:#888;margin-top:6px">The game. What happened. Students should be able to understand why they won or lost from this information alone.</div>
+    </div>
+    <div class="card" style="border-color:#000">
+      <h4 style="margin-bottom:5px">Layer 2 — Decoded through play</h4>
+      <ul style="font-size:10px;color:#333">
+        <li>Zone name meanings (discovered by comparing messages across sessions)</li>
+        <li>What produces a RADICAL vs ECHO (detectable from outcome patterns)</li>
+        <li>Mode adjacency (students who play all 6 notice SHIFTING patterns)</li>
+        <li>Codename vocabulary by mode (learnable from accumulation)</li>
+        <li>Overlay indicators (students learn INVERSION markers)</li>
+      </ul>
+      <div style="font-size:9px;color:#888;margin-top:6px">The meta-game. What the system is doing. Decoded through sustained attention and community comparison.</div>
+    </div>
+    <div class="card">
+      <h4 style="margin-bottom:5px">Layer 3 — Never fully revealed</h4>
+      <ul style="font-size:10px;color:#333">
+        <li>Exact signal thresholds (when does RADICAL trigger?)</li>
+        <li>The specific behavioral signals being tracked per session</li>
+        <li>The student's exact Elo and how it's computed</li>
+        <li>Why PARALLEL rather than SHIFTING was selected</li>
+        <li>The overlay probability formula</li>
+        <li>The forgetting decay rate</li>
+      </ul>
+      <div style="font-size:9px;color:#888;margin-top:6px">The system's internals. Admin-only. The opaque layer that keeps the second game permanently interesting even for advanced students.</div>
+    </div>
+  </div>
+
+  <h3 style="margin-bottom:8px">The Zone Name Calibration Table</h3>
+  <table class="t">
+    <tr><th>Zone</th><th>What terminal says</th><th>What student can infer</th><th>What student cannot infer</th></tr>
+    <tr>
+      <td><span class="zone-pill zone-rematch" style="padding:1px 6px;font-size:8px">REMATCH</span></td>
+      <td style="font-size:10px">"The system requires one more signal. REMATCH."</td>
+      <td style="font-size:10px">Something was unresolved. Similar session coming.</td>
+      <td style="font-size:10px">Exact threshold that triggered REMATCH vs ECHO. Whether difficulty changed.</td>
+    </tr>
+    <tr>
+      <td><span class="zone-pill zone-echo" style="padding:1px 6px;font-size:8px">ECHO</span></td>
+      <td style="font-size:10px">"ECHO. The system is returning you to unfinished territory."</td>
+      <td style="font-size:10px">Similar but not identical to last session. Close outcome triggered this.</td>
+      <td style="font-size:10px">Whether ECHO means same template or same mode. Difficulty adjustment.</td>
+    </tr>
+    <tr>
+      <td><span class="zone-pill zone-parallel" style="padding:1px 6px;font-size:8px">PARALLEL</span></td>
+      <td style="font-size:10px">"PARALLEL. Same destination. New route."</td>
+      <td style="font-size:10px">Same mode, probably different template. Solid performance triggered this.</td>
+      <td style="font-size:10px">Exact template selection logic. Why PARALLEL rather than SHIFTING.</td>
+    </tr>
+    <tr>
+      <td><span class="zone-pill zone-shifting" style="padding:1px 6px;font-size:8px">SHIFTING</span></td>
+      <td style="font-size:10px">"SHIFTING. Adjacent territory. Prior knowledge is partially applicable."</td>
+      <td style="font-size:10px">Mode change coming, but related to last mode. Comfortable win triggered this.</td>
+      <td style="font-size:10px">What "adjacent" means exactly. The mode adjacency map.</td>
+    </tr>
+    <tr>
+      <td><span class="zone-pill zone-radical" style="padding:1px 6px;font-size:8px">RADICAL</span></td>
+      <td style="font-size:10px">"RADICAL departure. What you learned here does not apply there."</td>
+      <td style="font-size:10px">Complete mode change. Either dominated or hit a streak limit.</td>
+      <td style="font-size:10px">Whether it was triggered by performance or streak. Which mode is coming.</td>
+    </tr>
+  </table>
+
+  <div class="warn" style="margin-top:14px">
+    <strong>The calibration principle.</strong> Each zone name tells the student something true about what is happening, without telling them why the system decided this or how to produce a different outcome next time. The student who understands what RADICAL means strategically — "I performed too well, the system is moving me somewhere harder" — has decoded Layer 2. The student who understands <em>exactly</em> what threshold triggers RADICAL has found Layer 3. Layer 3 is never fully decodable from the terminal alone. This ensures the second game never ends.
+  </div>
+</div>
+
+<script>
+const ZONE_SEQUENCES = {
+  rematch:[
+    {t:0,text:'// SESSION 8 — CHALLENGE COMPILER v2',col:'#0a0'},
+    {t:500,text:'Scanning behavioral history...',col:'#0f0'},
+    {t:1000,text:'Rank percentile: 28%. Challenge exceeded current capacity.',col:'#0f0'},
+    {t:1600,text:'Win margin: 22% behind.',col:'#0f0'},
+    {t:2100,text:'',col:'#0f0'},
+    {t:2200,text:'REMATCH.',col:'#fff',big:true},
+    {t:2600,text:'The system requires one more signal.',col:'#0f0'},
+    {t:3000,text:'Previous session ended before the data was complete.',col:'#0f0'},
+    {t:3500,text:'Difficulty adjusted. Map seed: new.',col:'#888'},
+    {t:4000,text:'',col:'#0f0'},
+    {t:4200,text:'SESSION 8: IRON CURTAIN',col:'#fff',big:true},
+    {t:4700,text:'> Hold your network. They will come for it.',col:'#aaa'},
+  ],
+  echo:[
+    {t:0,text:'// SESSION 12 — CHALLENGE COMPILER v2',col:'#0a0'},
+    {t:500,text:'Scanning behavioral history...',col:'#0f0'},
+    {t:1000,text:'Win margin: 6%. The signal is unresolved.',col:'#0f0'},
+    {t:1500,text:'Same-mode data: incomplete.',col:'#0f0'},
+    {t:2100,text:'',col:'#0f0'},
+    {t:2200,text:'ECHO.',col:'#fff',big:true},
+    {t:2600,text:'An unresolved challenge has been detected.',col:'#0f0'},
+    {t:3100,text:'The system is returning you to it.',col:'#0f0'},
+    {t:3600,text:'Template: SIEGE — bot aggression recalibrated.',col:'#888'},
+    {t:4100,text:'',col:'#0f0'},
+    {t:4300,text:'SESSION 12: THE HOLD',col:'#fff',big:true},
+    {t:4800,text:'> They will come for your network. Hold it.',col:'#aaa'},
+  ],
+  parallel:[
+    {t:0,text:'// SESSION 19 — CHALLENGE COMPILER v2',col:'#0a0'},
+    {t:500,text:'Scanning behavioral history...',col:'#0f0'},
+    {t:1000,text:'Rank percentile: 58%. Close win. Mode productive.',col:'#0f0'},
+    {t:1500,text:'HQ connection speed: session mean.',col:'#0f0'},
+    {t:2100,text:'',col:'#0f0'},
+    {t:2200,text:'PARALLEL.',col:'#fff',big:true},
+    {t:2600,text:'Same cognitive target. Different terrain.',col:'#0f0'},
+    {t:3100,text:'Template rotated. The objective is unchanged.',col:'#0f0'},
+    {t:3600,text:'Mode: FORTRESS. Template: PATIENCE.',col:'#888'},
+    {t:4100,text:'',col:'#0f0'},
+    {t:4300,text:'SESSION 19: STONEWORK',col:'#fff',big:true},
+    {t:4800,text:'> Every move must serve the chain. No waste.',col:'#aaa'},
+  ],
+  shifting:[
+    {t:0,text:'// SESSION 24 — CHALLENGE COMPILER v2',col:'#0a0'},
+    {t:500,text:'Scanning behavioral history...',col:'#0f0'},
+    {t:1000,text:'Rank percentile: 74%. Comfortable win. Margin: 22%.',col:'#0f0'},
+    {t:1600,text:'FORTRESS performance: above flow zone.',col:'#0f0'},
+    {t:2100,text:'',col:'#0f0'},
+    {t:2200,text:'SHIFTING.',col:'#fff',big:true},
+    {t:2600,text:'Adjacent territory selected.',col:'#0f0'},
+    {t:3100,text:'Prior expertise is partially applicable.',col:'#0f0'},
+    {t:3600,text:'Mode: DESTRUCTION. What you built, you will now learn to take apart.',col:'#888'},
+    {t:4200,text:'',col:'#0f0'},
+    {t:4400,text:'SESSION 24: GHOST CIRCUIT',col:'#fff',big:true},
+    {t:4900,text:'> Owning stars costs you. Destroying them pays.',col:'#aaa'},
+  ],
+  radical:[
+    {t:0,text:'// SESSION 31 — CHALLENGE COMPILER v2',col:'#0a0'},
+    {t:500,text:'Scanning behavioral history...',col:'#0f0'},
+    {t:1000,text:'Rank percentile: 91%. Win margin: 47%. Dominant outcome.',col:'#0f0'},
+    {t:1600,text:'Performance threshold exceeded. Recalibrating.',col:'#0f0'},
+    {t:2200,text:'Prior session data noted and set aside.',col:'#888'},
+    {t:2800,text:'',col:'#0f0'},
+    {t:2900,text:'RADICAL.',col:'#fff',big:true},
+    {t:3300,text:'A fundamentally different target has been selected.',col:'#0f0'},
+    {t:3800,text:'What you learned here does not apply there.',col:'#0f0'},
+    {t:4200,text:'Proceed accordingly.',col:'#888'},
+    {t:4700,text:'',col:'#0f0'},
+    {t:4900,text:'SESSION 31: THE GATEWAY',col:'#fff',big:true},
+    {t:5400,text:'> Score nothing. Do one thing.',col:'#aaa'},
+  ],
+};
+
+let timers=[];
+function previewZone(zone){
+  timers.forEach(clearTimeout);timers=[];
+  const term=document.getElementById('alpha-terminal');
+  term.innerHTML='';
+  const seq=ZONE_SEQUENCES[zone]||[];
+  seq.forEach(l=>{
+    const id=setTimeout(()=>{
+      if(!l.text){term.innerHTML+='<div class="line show">&nbsp;</div>';return;}
+      const div=document.createElement('div');
+      div.className='line show';
+      if(l.big){
+        div.style.cssText=`color:#fff;font-weight:700;font-size:${zone==='radical'?'18':'14'}px;letter-spacing:${zone==='radical'?'6':'4'}px;margin:4px 0`;
+      } else {
+        div.style.color=l.col||'#0f0';
+        if(l.col==='#888')div.style.opacity='.6';
+      }
+      div.textContent=l.text;
+      term.appendChild(div);
+      term.scrollTop=term.scrollHeight;
+    },l.t);
+    timers.push(id);
+  });
+}
+
+function drawCalib(){
+  const el=document.getElementById('calib-canvas');if(!el)return;
+  const W=el.clientWidth||800,H=140;
+  el.setAttribute('width',W);el.setAttribute('height',H);
+  const ctx=el.getContext('2d');ctx.clearRect(0,0,W,H);
+  const zones=[
+    {name:'LAYER 1',sub:'Game surface\nVisible to all',x:.0,w:.28,fill:'rgba(0,0,0,.04)',stroke:'#ccc'},
+    {name:'LAYER 2',sub:'Meta-game\nDecoded through play',x:.28,w:.42,fill:'rgba(0,0,0,.08)',stroke:'#000'},
+    {name:'LAYER 3',sub:'System internals\nAdmin only / never full',x:.70,w:.30,fill:'rgba(0,0,0,.03)',stroke:'#ccc'},
+  ];
+  zones.forEach(z=>{
+    ctx.fillStyle=z.fill;ctx.fillRect(z.x*W+2,10,z.w*W-4,80);
+    ctx.strokeStyle=z.stroke;ctx.lineWidth=z.stroke==='#000'?2:1;
+    ctx.strokeRect(z.x*W+2,10,z.w*W-4,80);
+    ctx.fillStyle=z.stroke==='#000'?'#000':'#888';
+    ctx.font='bold 9px Arial';ctx.textAlign='center';
+    ctx.fillText(z.name,(z.x+z.w/2)*W,28);
+    ctx.fillStyle='#888';ctx.font='8px Arial';
+    z.sub.split('\n').forEach((line,li)=>ctx.fillText(line,(z.x+z.w/2)*W,44+li*12));
+  });
+  // Arrow
+  ctx.strokeStyle='#000';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(0.04*W,120);ctx.lineTo(0.96*W,120);ctx.stroke();
+  ctx.fillStyle='#000';ctx.beginPath();
+  ctx.moveTo(.96*W,116);ctx.lineTo(.96*W,124);ctx.lineTo(.96*W+7,120);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#555';ctx.font='9px Arial';ctx.textAlign='left';ctx.fillText('student-accessible',.04*W,135);
+  ctx.textAlign='right';ctx.fillText('system-internal',.94*W,135);
+  ctx.fillStyle='#000';ctx.font='bold 8px Arial';ctx.textAlign='center';
+  ctx.fillText('▲ Alpha operates here',.28*W+.21*W,110);
+  ctx.fillStyle='#888';ctx.font='8px Arial';
+  ctx.fillText('Zone names live here',.14*W,110);
+}
+
+function showTab(name,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  el.classList.add('active');
+  setTimeout(()=>drawCalib(),50);
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(()=>drawCalib(),100);
+});
+window.addEventListener('resize',()=>drawCalib());
+</script>
+</body>
+</html>

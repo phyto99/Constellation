@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Terminal Compiler — Constellation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.4}
+nav{position:sticky;top:0;z-index:100;background:#fff;border-bottom:2px solid #000;display:flex;align-items:center;padding:0 14px;gap:10px;min-height:40px}
+.logo{font-size:9px;letter-spacing:2px;font-weight:700;text-transform:uppercase;color:#555;padding-right:14px;border-right:1px solid #ccc;white-space:nowrap}
+.nav-right{display:flex;gap:6px;margin-left:auto}
+button.btn{background:#fff;border:1px solid #000;color:#000;padding:4px 12px;cursor:pointer;font-size:9px;font-family:Arial;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+button.btn:hover{background:#000;color:#fff}
+button.btn.act{background:#000;color:#fff}
+button.btn.primary{background:#000;color:#fff}
+button.btn.primary:hover{background:#333}
+main{padding:14px 18px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.card{border:1px solid #ccc;padding:12px;background:#fafafa}
+h3{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+h4{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#555;margin-bottom:4px}
+label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555;display:block;margin-bottom:2px}
+input[type=number],select{border:1px solid #ccc;padding:3px 6px;font-size:11px;font-family:Arial;width:100%;background:#fff}
+input[type=number]:focus,select:focus{outline:none;border-color:#000}
+table.state-tbl{width:100%;border-collapse:collapse;font-size:10px}
+table.state-tbl th{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 6px;border-bottom:2px solid #000;text-align:center;background:#f0f0f0}
+table.state-tbl td{padding:3px 4px;border-bottom:1px solid #eee;text-align:center}
+table.state-tbl td:first-child{text-align:left;font-weight:700;font-size:9px}
+table.state-tbl input{width:52px;padding:2px 4px;font-size:10px;border:1px solid #ddd;text-align:center}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px}
+.field{margin-bottom:7px}
+/* compiler log */
+.log{font-family:'Courier New',monospace;font-size:9.5px;line-height:1.8;background:#f0f0f0;border:1px solid #ccc;padding:10px;white-space:pre-wrap;max-height:320px;overflow-y:auto}
+.log .hl{color:#15803d;font-weight:700}.log .al{color:#dc2626;font-weight:700}.log .dim{color:#888}.log .zone{color:#000;font-weight:700}
+/* terminal */
+#term-wrap{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#term-wrap.student-mode{grid-template-columns:1fr}
+#term{background:#000;color:#0f0;font-family:'Courier New',monospace;font-size:11px;padding:16px;min-height:320px;max-height:420px;border:2px solid #000;overflow-y:auto}
+#term .line{margin-bottom:2px;opacity:0;transition:opacity .08s}
+#term .line.show{opacity:1}
+#ann{border:1px solid #ccc;background:#fafafa;padding:10px;min-height:320px;max-height:420px;overflow-y:auto}
+.ann-line{border-bottom:1px solid #eee;padding:5px 0;font-size:10px}
+.ann-line .at{font-family:'Courier New',monospace;color:#000}
+.ann-line .aa{font-size:9px;color:#555;margin-top:2px;line-height:1.5}
+.ann-line .asrc{font-family:'Courier New',monospace;font-size:8px;color:#888;margin-top:1px}
+/* loading */
+#loadview{display:none;background:#000;border:2px solid #000;min-height:320px;padding:28px 24px;text-align:center}
+#load-code{font-family:'Courier New',monospace;font-size:26px;font-weight:700;letter-spacing:8px;color:#fff;margin:28px 0 5px}
+#load-sub{font-size:9px;letter-spacing:3px;color:#666;font-family:'Courier New',monospace;margin-bottom:26px}
+#load-bar{height:3px;background:#1a1a1a;margin:0 40px 12px;position:relative}
+#load-fill{height:100%;width:0%;background:#0f0;transition:width .3s linear}
+#load-line{font-family:'Courier New',monospace;font-size:10px;color:#0a0;min-height:16px}
+#load-pct{font-family:'Courier New',monospace;font-size:9px;color:#444;margin-top:6px}
+/* zone pill */
+.zp{display:inline-block;padding:1px 7px;font-size:8px;font-weight:700;letter-spacing:1px;border:1px solid #000;text-transform:uppercase}
+.zp-ECHO{background:#111;color:#eee;border-color:#444}
+.zp-PARALLEL{background:#fff;color:#000}
+.zp-SHIFTING{background:#fff;color:#555;border-color:#888}
+.zp-RADICAL{background:#000;color:#fff}
+.zp-REMATCH{background:#f8f8f8;color:#888;border-color:#ccc}
+/* weight table */
+.wt{width:100%;border-collapse:collapse;font-size:9.5px;font-family:'Courier New',monospace;margin-top:6px}
+.wt td{padding:2px 6px;border-bottom:1px solid #eee}.wt td:first-child{color:#555}
+.wt .winner{background:#f0f0f0;font-weight:700}
+/* student view overlay */
+#student-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#fff;z-index:200;overflow-y:auto}
+#stu-nav{background:#000;padding:0 18px;display:flex;align-items:center;min-height:38px;gap:10px}
+#stu-nav .logo{color:#333;font-size:9px;letter-spacing:2px;font-weight:700;text-transform:uppercase;border-right:1px solid #222;padding-right:12px}
+#stu-nav button{background:transparent;border:1px solid #444;color:#888;padding:3px 10px;cursor:pointer;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;font-family:Arial}
+#stu-nav button:hover{border-color:#888;color:#ccc}
+#stu-nav button.act{border-color:#0f0;color:#0f0}
+#stu-main{padding:24px 20px;max-width:680px;margin:0 auto}
+#stu-term{background:#000;color:#0f0;font-family:'Courier New',monospace;font-size:12px;padding:18px;min-height:360px;border:2px solid #000;overflow-y:auto}
+#stu-term .line{margin-bottom:2px;opacity:0;transition:opacity .08s}
+#stu-term .line.show{opacity:1}
+#stu-load{display:none;background:#000;border:2px solid #000;min-height:360px;padding:32px 28px;text-align:center}
+#stu-load-code{font-family:'Courier New',monospace;font-size:28px;font-weight:700;letter-spacing:8px;color:#fff;margin:32px 0 6px}
+#stu-load-sub{font-size:9px;letter-spacing:3px;color:#555;font-family:'Courier New',monospace;margin-bottom:28px}
+#stu-load-bar{height:3px;background:#111;margin:0 36px 12px}
+#stu-load-fill{height:100%;width:0%;background:#0f0;transition:width .3s linear}
+#stu-load-line{font-family:'Courier New',monospace;font-size:11px;color:#0a0;min-height:18px}
+#stu-load-pct{font-family:'Courier New',monospace;font-size:9px;color:#333;margin-top:8px}
+.inset{background:#f0f0f0;border-left:3px solid #000;padding:8px 10px;font-size:10px;line-height:1.7;margin:8px 0}
+.warn{background:#f8f8f8;border:1px dashed #000;padding:8px 10px;font-size:10px;line-height:1.7;margin:8px 0}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:#fff}::-webkit-scrollbar-thumb{background:#ccc}
+@media(max-width:900px){.grid2,#term-wrap{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════ ADMIN NAV -->
+<nav>
+  <span class="logo">Terminal Compiler</span>
+  <button class="btn primary" onclick="compile()">▶ Compile</button>
+  <div id="result-summary" style="font-size:9px;color:#888;font-family:'Courier New',monospace;flex:1"></div>
+  <div class="nav-right">
+    <button class="btn" id="btn-load-admin" onclick="toggleAdminLoading()">Loading Screen</button>
+    <button class="btn" onclick="openStudentView()">Student View ↗</button>
+  </div>
+</nav>
+
+<main>
+
+<!-- ════════════════════════════════════════ STATE EDITOR + COMPILER LOG -->
+<div class="grid2">
+
+  <!-- STATE EDITOR -->
+  <div class="card">
+    <h3>Student State — compiler input</h3>
+
+    <div class="grid3">
+      <div class="field"><label>Sessions</label><input type="number" id="s-sessions" value="23" min="1" max="200"></div>
+      <div class="field"><label>Stage</label>
+        <select id="s-stage">
+          <option value="1">1 — Consumer</option>
+          <option value="2">2 — Observer</option>
+          <option value="3" selected>3 — Theorist</option>
+          <option value="4">4 — Predictor</option>
+          <option value="5">5 — Designer</option>
+          <option value="6">6 — Teacher</option>
+        </select>
+      </div>
+      <div class="field"><label>Tier</label>
+        <select id="s-tier" onchange="syncRegister()">
+          <option value="TEEN" selected>Teen (13–17)</option>
+          <option value="YOUNGER">Younger (&lt;13)</option>
+          <option value="GIFTED">Gifted Accelerated</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid3">
+      <div class="field"><label>Track</label>
+        <select id="s-track">
+          <option value="COMPETITIVE" selected>Competitive</option>
+          <option value="COLLABORATIVE">Collaborative Staircase</option>
+        </select>
+      </div>
+      <div class="field"><label>Register</label>
+        <select id="s-register">
+          <option value="teen-standard" selected>teen-standard</option>
+          <option value="younger-warm">younger-warm</option>
+          <option value="gifted-compressed">gifted-compressed</option>
+        </select>
+      </div>
+      <div class="field"><label>Engagement</label>
+        <select id="s-engagement">
+          <option value="HIGH">HIGH</option>
+          <option value="OK" selected>OK</option>
+          <option value="RECOVERING">RECOVERING</option>
+          <option value="WOBBLE">WOBBLE</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- MODE STATE TABLE -->
+    <div style="margin-bottom:8px">
+      <table class="state-tbl">
+        <tr><th>Mode</th><th>Elo</th><th>Vel (3-sess)</th><th>τ (days)</th><th>Purity flag</th></tr>
+        <tr><td style="color:#d97706">QTY</td>
+          <td><input type="number" id="elo-0" value="520"></td>
+          <td><input type="number" id="vel-0" value="8"></td>
+          <td><input type="number" id="tau-0" value="4"></td>
+          <td><input type="text" id="pur-0" value="" style="width:100px;font-size:9px"></td></tr>
+        <tr><td style="color:#2563eb">SPT</td>
+          <td><input type="number" id="elo-1" value="610"></td>
+          <td><input type="number" id="vel-1" value="-2"></td>
+          <td><input type="number" id="tau-1" value="9"></td>
+          <td><input type="text" id="pur-1" value="" style="width:100px;font-size:9px"></td></tr>
+        <tr><td style="color:#059669">FRT</td>
+          <td><input type="number" id="elo-2" value="445"></td>
+          <td><input type="number" id="vel-2" value="31"></td>
+          <td><input type="number" id="tau-2" value="1"></td>
+          <td><input type="text" id="pur-2" value="" style="width:100px;font-size:9px"></td></tr>
+        <tr><td style="color:#dc2626">DST</td>
+          <td><input type="number" id="elo-3" value="690"></td>
+          <td><input type="number" id="vel-3" value="-12"></td>
+          <td><input type="number" id="tau-3" value="12"></td>
+          <td><input type="text" id="pur-3" value="" style="width:100px;font-size:9px"></td></tr>
+        <tr><td style="color:#7c3aed">WRM</td>
+          <td><input type="number" id="elo-4" value="380"></td>
+          <td><input type="number" id="vel-4" value="0"></td>
+          <td><input type="number" id="tau-4" value="19"></td>
+          <td><input type="text" id="pur-4" value="near-binary signal" style="width:100px;font-size:9px"></td></tr>
+        <tr><td style="color:#0891b2">INV</td>
+          <td><input type="number" id="elo-5" value="505"></td>
+          <td><input type="number" id="vel-5" value="15"></td>
+          <td><input type="number" id="tau-5" value="2"></td>
+          <td><input type="text" id="pur-5" value="announced×4 Q2" style="width:100px;font-size:9px"></td></tr>
+      </table>
+      <div style="font-size:8px;color:#888;margin-top:3px">Vel = Elo delta over last 3 sessions. τ = days since last session in this mode. Elo=0 means mode not yet covered.</div>
+    </div>
+
+    <!-- LAST SESSION + SPECIAL -->
+    <div class="grid2" style="gap:8px">
+      <div>
+        <h4>Last Session Outcome</h4>
+        <div class="grid2" style="gap:6px">
+          <div class="field"><label>Rank (pct)</label><input type="number" id="s-lastrank" value="78" min="0" max="100"></div>
+          <div class="field"><label>Margin pts</label><input type="number" id="s-margin" value="12"></div>
+        </div>
+        <div class="field"><label>Comfortable win streak</label><input type="number" id="s-streak" value="2" min="0" max="20"></div>
+        <div class="field"><label>Absence days (0 = no gap)</label><input type="number" id="s-absence" value="0" min="0" max="365"></div>
+      </div>
+      <div>
+        <h4>Special Signals</h4>
+        <div class="field"><label>Zero sub-40pct streak (gifted)</label><input type="number" id="s-zeropct" value="0" min="0" max="50"></div>
+        <div class="field"><label>Consecutive terminal predictions (stage probe)</label><input type="number" id="s-predictions" value="0" min="0" max="10"></div>
+        <div class="field"><label>Silent INV overlay planned</label>
+          <select id="s-silentinv"><option value="0" selected>No</option><option value="1">Yes</option></select></div>
+        <div class="field"><label>Move budget constraint (0=none)</label><input type="number" id="s-budget" value="0" min="0" max="20"></div>
+        <div class="field"><label>Staircase personal target (0=N/A)</label><input type="number" id="s-target" value="0" min="0" max="999"></div>
+        <div class="field"><label>Teacher observation (optional)</label>
+          <input type="text" id="s-teacherobs" value="" placeholder="e.g. explained wormhole pairing to teammate" style="font-size:10px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPILER LOG (admin only) -->
+  <div class="card" id="log-card">
+    <h3>Compiler Log — Layer 3 reasoning · admin only</h3>
+    <div class="warn" style="margin-bottom:8px;font-size:9px">
+      <strong>SECURITY:</strong> In production this panel is server-rendered for authenticated admins only.
+      The student endpoint <code>/api/session/{token}</code> returns <code>{t,s,x}</code> per line — no provenance (<code>a</code>), no weights, no zone reason.
+      The admin endpoint <code>/api/admin/student/{id}</code> returns the full object.
+      Client-side toggle is a preview only; the data separation must happen at the API layer.
+    </div>
+    <div id="compiler-log" class="log"><span class="dim">// Compile to see reasoning</span></div>
+    <div style="margin-top:8px">
+      <h4>Mode Weights</h4>
+      <table class="wt" id="weight-table"><tr><td colspan="3" style="color:#888;font-size:9px">—</td></tr></table>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════ TERMINAL -->
+<div class="card" style="margin-bottom:12px">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+    <h3 style="margin:0">Terminal — <span id="term-zone-label" style="font-weight:400;color:#888">compile to generate</span></h3>
+    <div style="display:flex;gap:6px">
+      <button class="btn act" id="btn-replay" onclick="replayTerminal()">▶ Replay</button>
+      <button class="btn" id="btn-load-admin2" onclick="toggleAdminLoading()">Loading Screen</button>
+    </div>
+  </div>
+  <div id="term-wrap">
+    <div>
+      <div id="term"><div style="opacity:.3;color:#0f0;font-family:'Courier New',monospace;font-size:11px;padding:4px">// compile to generate terminal sequence</div></div>
+      <div id="loadview">
+        <div style="font-size:8px;letter-spacing:3px;color:#444;font-family:'Courier New',monospace">// CONSTELLATION</div>
+        <div id="load-code">—</div>
+        <div id="load-sub"></div>
+        <div id="load-bar"><div id="load-fill"></div></div>
+        <div id="load-line"></div>
+        <div id="load-pct">0%</div>
+      </div>
+      <div style="font-size:8px;color:#888;margin-top:5px">Student render. Same line sequence drives both terminal and loading screen — one dialogue system, two presentations.</div>
+    </div>
+    <div id="ann-col">
+      <div id="ann"><div style="font-size:9px;color:#888;padding:5px 0">Per-line provenance appears here. Layer 3 — never shown to students.</div></div>
+      <div style="font-size:8px;color:#888;margin-top:5px">Every sentence the student reads is traced to the observation and threshold that produced it.</div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- ════════════════════════════════════════ STUDENT VIEW (separate DOM subtree — no admin data rendered here) -->
+<div id="student-overlay">
+  <div id="stu-nav">
+    <span class="logo">Constellation</span>
+    <button id="stu-btn-replay" onclick="stuReplay()">▶ Replay</button>
+    <button id="stu-btn-load" onclick="stuToggleLoad()">Loading Screen</button>
+    <button onclick="closeStudentView()" style="margin-left:auto">✕ Admin View</button>
+  </div>
+  <div id="stu-main">
+    <div class="warn" style="margin-bottom:14px;font-size:9px;border-color:#ccc;color:#888">
+      <strong>STUDENT VIEW PREVIEW</strong> — This is what the student sees. No provenance. No elo. No system reasoning.
+      In production: served from a separate authenticated route. The JS bundle sent to this page contains no <code>a</code> (provenance) fields and no admin data objects.
+    </div>
+    <div id="stu-term"></div>
+    <div id="stu-load">
+      <div style="font-size:8px;letter-spacing:3px;color:#444;font-family:'Courier New',monospace">// CONSTELLATION</div>
+      <div id="stu-load-code">—</div>
+      <div id="stu-load-sub"></div>
+      <div id="stu-load-bar"><div id="stu-load-fill"></div></div>
+      <div id="stu-load-line"></div>
+      <div id="stu-load-pct">0%</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/*
+ * TERMINAL COMPILER — Constellation
+ *
+ * Pure function: terminalCompiler(state) → {lines, zone, mode, template, codename, ...}
+ *
+ * Architecture:
+ *   Layer 1 — Always disclosed to student (mode, template name, move budget if constrained)
+ *   Layer 2 — Zone vocabulary. Shown without explanation. Students decode it. That decoding IS development.
+ *   Layer 3 — Admin only. Zone reasons, weights, provenance, ZPD targets, parameter flags.
+ *
+ * Security model:
+ *   Admin route  → /api/admin/student/:id  → full {t,s,x,a} per line + weights + zone reason (auth required)
+ *   Student route → /api/session/:token    → {t,s,x} per line only (token expires after use)
+ *   Client-side student view is a PREVIEW only. In production the admin data is never in the student page bundle.
+ */
+
+// ════════════════════════════════ VOCABULARY
+
+const MODES = [
+  {id:'qty', n:'QUANTITY',    col:'#d97706'},
+  {id:'spt', n:'SPATIAL',     col:'#2563eb'},
+  {id:'frt', n:'FORTRESS',    col:'#059669'},
+  {id:'dst', n:'DESTRUCTION', col:'#dc2626'},
+  {id:'wrm', n:'WORMHOLE',    col:'#7c3aed'},
+  {id:'inv', n:'INVERSION',   col:'#0891b2'},
+];
+
+// Template pools per mode (Fisher-Yates selection excludes recent history)
+const TEMPLATES = {
+  qty:['MISER','FLOOD','SPEED FLOOD','THE DELUGE','OVERFLOW','EFFICIENCY GATE'],
+  spt:['BLIND REACH','ARCHITECT','REACH','THE PERIMETER','SIGHTLINE','FURTHEST POINT'],
+  frt:['NETWORK','SIEGE','PATIENCE','THE LATTICE','CONVERGENCE','ANCHOR POINT'],
+  dst:['SCORCHED EARTH','HUNTER','CHAIN REACTION','OBLITERATION','THE DENIAL','CLEARANCE'],
+  wrm:['DECOY','THE GATEWAY','TUNNEL VISION','SIGNAL LOCK','THE FOLD','ONE THING'],
+  inv:['MIRROR','HIDDEN OBJECTIVE','NEGATIVE SPACE','THE FLIP','WRONG CONTEXT','NULL SIGNAL'],
+};
+
+// Codename pools — the memorable token the student says aloud to classmates
+const CODENAMES = {
+  qty:['THE TIDE','THE AVALANCHE','SATURATION POINT','CRITICAL MASS','OVERFLOW','THE SURGE','LEVERAGE','FLOOD PLAIN'],
+  spt:['SIGHTLINE','THE PERIMETER','BLIND REACH','BLUEPRINT','ADJACENCY','THE MAP','FURTHEST POINT','COVERAGE'],
+  frt:['DEEP ROOTS','THE NETWORK','SIEGE LINES','CONVERGENCE','PATIENCE','THE LATTICE','ANCHOR POINT','FOUNDATION'],
+  dst:['SCORCHED EARTH','THE CHAIN','OBLITERATION','CLEARANCE','THE DENIAL','NEGATIVE SUM','VOID','CHAIN REACTION'],
+  wrm:['EVENT HORIZON','THE FOLD','TUNNEL VISION','SIGNAL LOSS','SINGULARITY','THE LOCK','ONE THING','ZERO NOISE'],
+  inv:['WRONG ANSWER','THE FLIP','MIRROR LOGIC','NEGATIVE SPACE','THE REVERSAL','CONTRADICTION','INVERSION PROTOCOL','NULL SIGNAL'],
+};
+
+// ════════════════════════════════ ZONE SELECTOR
+// Priority waterfall — first matching rule wins.
+// Zone describes the NAVIGATION DECISION for this session relative to the student's trajectory.
+function selectZone(state) {
+  const {absenceDays, lastRank, lastMargin, comfortableWinStreak} = state;
+
+  // Return from significant absence → ECHO: continuity, not punishment
+  if (absenceDays >= 14) return {
+    zone:'ECHO',
+    reason:`Return after ${absenceDays}d absence. ECHO rule: continuity over recalibration. REMATCH would read as punishment.`
+  };
+
+  // Incomplete signal / low rank → REMATCH
+  if (lastRank < 30) return {
+    zone:'REMATCH',
+    reason:`Rank ${lastRank}th pct (below 30). Signal incomplete — system needs another attempt at same territory.`
+  };
+
+  // Close loss / unresolved challenge → ECHO
+  if (lastRank >= 30 && lastRank < 42) return {
+    zone:'ECHO',
+    reason:`Rank ${lastRank}th pct. Below flow zone but not catastrophic — unresolved challenge. System returning.`
+  };
+
+  // Comfortable win streak + mode rotating away → SHIFTING (adjacent territory)
+  if (comfortableWinStreak >= 2) return {
+    zone:'SHIFTING',
+    reason:`Comfortable win streak (${comfortableWinStreak}). Mode rotation active — adjacent territory selected. Prior performance informs selection.`
+  };
+
+  // Very high performance + large margin → RADICAL (threshold crossed)
+  if (lastRank > 82 && lastMargin > 25) return {
+    zone:'RADICAL',
+    reason:`Rank ${lastRank}th pct, margin +${lastMargin}. Threshold exceeded. Fundamentally different target — prior session data noted and set aside.`
+  };
+
+  // Flow zone, close margin → PARALLEL (same cognitive target, different terrain)
+  if (lastRank >= 42 && lastRank <= 80 && lastMargin < 22) return {
+    zone:'PARALLEL',
+    reason:`Flow zone, rank ${lastRank}th pct, margin ${lastMargin}. Same cognitive target. Different terrain.`
+  };
+
+  return {
+    zone:'PARALLEL',
+    reason:`No exceptional signal from last session (rank ${lastRank}th pct). Standard progress — PARALLEL.`
+  };
+}
+
+// ════════════════════════════════ MODE SELECTOR
+// Entropy/hypercube: maximize expected information gain given current state.
+// Weight = elo^0.7 × 1/(τ+1) × vel_mod × hypercube_mod × engagement_mod × purity_mod
+function selectMode(state, zoneResult) {
+  const {elo, vel, tau, purity, sessions, tier, track, engagement, plannedSilentOverlay} = state;
+  const invSuppressed = tier === 'YOUNGER' && sessions < 20;
+  const wobble = engagement === 'WOBBLE' || engagement === 'RECOVERING';
+
+  // Hypercube window: modes covered recently (τ ≤ 6d) reduce weight
+  // (approximates "not seen in last 6 sessions")
+  const weights = MODES.map((m, i) => {
+    if (i === 5 && invSuppressed) return {i, w:0, label:'INV suppressed (younger, sessions<20)', eligible:false};
+    if (!elo[i] || elo[i] === 0)  return {i, w:0, label:'No Elo — mode not yet introduced', eligible:false};
+
+    const stale   = 1 / (tau[i] + 1);
+    const velMod  = vel[i] < -8 ? 1.15 : vel[i] > 12 ? 0.88 : 1.0;
+    const hypMod  = tau[i] <= 3 ? 0.20 : tau[i] <= 6 ? 0.55 : 1.0;
+    const engMod  = wobble ? (vel[i] >= 0 && elo[i] > 420 ? 1.25 : 0.65) : 1.0;
+    const purMod  = (purity[i] && purity[i].some(p => /Q2|announced/i.test(p)) && !plannedSilentOverlay) ? 0.55 : 1.0;
+
+    const w = Math.pow(elo[i], 0.7) * stale * velMod * hypMod * engMod * purMod;
+    const label = `elo^0.7(${Math.pow(elo[i],0.7).toFixed(1)}) × τ(${stale.toFixed(3)}) × vel(${velMod}) × hyp(${hypMod}) × eng(${engMod})${purMod<1?' × purity('+purMod+')':''} = ${w.toFixed(2)}`;
+    return {i, w, label, eligible:true};
+  });
+
+  const ranked = [...weights].filter(x => x.w > 0).sort((a,b) => b.w - a.w);
+  if (ranked.length === 0) return {i:0, mode:MODES[0], weights, reason:'No eligible modes — fallback to QTY'};
+
+  // RADICAL override: for mastered-mode departure, prefer a mode that challenges the student's weakest frontier
+  // (the entropy engine selects this naturally via weight — weakest unvisited mode gets highest weight)
+
+  const winner = ranked[0];
+  return {i:winner.i, mode:MODES[winner.i], weights, ranked, reason:winner.label};
+}
+
+// ════════════════════════════════ TEMPLATE SELECTOR
+function selectTemplate(state, modeIdx) {
+  const pool = TEMPLATES[MODES[modeIdx].id];
+  // Exclude recent templates from history for this mode (last 2)
+  const recent = new Set((state.hist && state.hist[modeIdx]) ? state.hist[modeIdx].slice(-2) : []);
+  const available = pool.filter(t => !recent.has(t));
+  return available.length > 0 ? available[0] : pool[0];
+}
+
+// Codename cycles through pool indexed by session count
+function selectCodename(modeIdx, sessions) {
+  const pool = CODENAMES[MODES[modeIdx].id];
+  return pool[sessions % pool.length];
+}
+
+// ════════════════════════════════ OBSERVATION PICKER
+// Priority waterfall: highest-signal observation about this student right now.
+// Each observation: {x: student-facing text, a: provenance annotation, src: ledger source}
+function pickObservations(state, modeIdx, zoneResult) {
+  const {tier, register, sessions, stage, absenceDays, tau, vel, elo, zeroPctileStreak,
+         stagePredictions, teacherObservation, engagement} = state;
+  const obs = [];
+  const mode = MODES[modeIdx];
+
+  // 1. ABSENCE — always top priority when present (handled in generateLines for the second line)
+  if (absenceDays >= 14) {
+    if (register === 'gifted-compressed') {
+      obs.push({
+        x:`τ_gap = ${absenceDays}d. All models stale. Recalibration session.`,
+        a:`Gifted-compressed register: telemetry format. Same factual content (τ fold); no emotional framing. Student prefers precision (SYNTHESIS insight #15).`,
+        src:'ledger·τ-fold·absence'
+      });
+    } else if (register === 'younger-warm') {
+      obs.push({
+        x:`The system has been waiting ${absenceDays} days for this session. It remembered where you left off.`,
+        a:`Register: younger-warm. Absence framed as system patience, not student failure. Factually accurate.`,
+        src:'ledger·τ-fold·absence'
+      });
+    } else {
+      obs.push({
+        x:`${absenceDays} days. The system kept the time.`,
+        a:`Source: absence fold — τ across all modes = ${absenceDays}d. For Stage ${stage} student: the line is also a tell — lets her theorize about calibration correctly.`,
+        src:'ledger·τ-fold·absence'
+      });
+      obs.push({
+        x:`The model of you is ${Math.round(absenceDays/7)} week${absenceDays>=14?'s':''} old. This session updates it. Expect the system to be slightly wrong.`,
+        a:`Honesty about uncertainty (evidence-engine·parameter-registry·Q4). Dual-hypothesis session pre-registered (λ=14d vs λ=40d). "Slightly wrong" is true under either λ — the numbers stay in the ledger; student sees none of them.`,
+        src:'evidence-engine·Q4·dual-hypothesis'
+      });
+    }
+    return obs.slice(0,2);
+  }
+
+  // 2. ZERO-PERCENTILE STREAK (gifted calibrated-failure setup)
+  if (zeroPctileStreak >= 8 && tier === 'GIFTED') {
+    obs.push({
+      x:`${zeroPctileStreak} sessions. Zero failures. The system has noticed what is missing.`,
+      a:`Source: outcome fold — rank<40 count = 0 across ${zeroPctileStreak} sessions. Calibrated-failure setup line. Names the absence without promising what comes. Never softened.`,
+      src:'evidence-engine·claims·gifted-calibrated-failure'
+    });
+    return obs;
+  }
+
+  // 3. STAGE 4 PREDICTION ACKNOWLEDGMENT (mutual-information loop — stated exactly once)
+  if (stage >= 4 && stagePredictions >= 3) {
+    obs.push({
+      x:`You predicted the last ${stagePredictions} sessions before reading them. The system is aware that you are reading it.`,
+      a:`Stage 4 acknowledgment — mutual-information loop stated to the student exactly once, at Designer threshold. This is the invitation to the design track without naming it. Source: SELF channel prediction log.`,
+      src:'evidence-engine·SELF-channel·singularity-trajectory'
+    });
+    return obs;
+  }
+
+  // 4. TEACHER CHANNEL CROSS (cross-channel evidence)
+  if (teacherObservation && teacherObservation.trim()) {
+    const stuText = register === 'younger-warm'
+      ? `${teacherObservation.trim()} That was noticed too.`
+      : register === 'gifted-compressed'
+        ? `TEACHER[${sessions}]: ${teacherObservation.trim()}`
+        : `${teacherObservation.trim()} The system noticed.`;
+    obs.push({
+      x: stuText,
+      a:`Source: TEACHER channel structured tag. Terminal cites cross-channel evidence — student experiences one watching system, not multiple databases. The channel itself is never named to the student.`,
+      src:'evidence-engine·TEACHER-channel'
+    });
+  }
+
+  // 5. MODE STALENESS on the selected mode
+  if (tau[modeIdx] >= 14) {
+    if (register === 'younger-warm') {
+      obs.push({
+        x:`Your ${mode.n.toLowerCase()} sessions have been on pause for ${tau[modeIdx]} days. Time to continue.`,
+        a:`Register: younger-warm. Staleness framed as continuity (τ[${mode.id}]=${tau[modeIdx]}d). Younger register: warmer, same truth.`,
+        src:`ledger·τ-fold·${mode.id}`
+      });
+    } else {
+      obs.push({
+        x:`No ${mode.n.toLowerCase()} engagement in ${tau[modeIdx]} days. This changes now.`,
+        a:`Source: τ[${mode.id}]=${tau[modeIdx]}d (ledger fold). Surveillance aesthetic: references the gap without interpreting it. Verifiable by the student — they can count.`,
+        src:`ledger·τ-fold·${mode.id}`
+      });
+    }
+  }
+
+  // 6. VELOCITY SIGNAL (notable trajectory)
+  if (vel[modeIdx] > 18 && obs.length < 2) {
+    if (register !== 'younger-warm') {
+      obs.push({
+        x:`${mode.n} trajectory: +${vel[modeIdx]} over three sessions. The signal is clear.`,
+        a:`Source: vel[${mode.id}]=+${vel[modeIdx]}. Derived from 3-session Elo delta. "Signal is clear" is accurate under GAME channel — does not overclaim (single-channel = MEASURED, not CORROBORATED).`,
+        src:`evidence-engine·GAME-channel·elo-velocity`
+      });
+    }
+  } else if (vel[modeIdx] < -10 && obs.length < 2) {
+    obs.push({
+      x: register === 'younger-warm'
+        ? `Your last few ${mode.n.toLowerCase()} sessions have been tougher. The system is adjusting.`
+        : `${mode.n}: ${vel[modeIdx]} over three sessions. The system is responding.`,
+      a:`Source: vel[${mode.id}]=${vel[modeIdx]}. Declining velocity → weight boost (×1.15) and difficulty-floor enforcement. Disclosed obliquely: "adjusting/responding" — truthful, non-specific (Layer 2). ZPD floor prevents over-punishment.`,
+      src:`evidence-engine·GAME-channel·elo-velocity`
+    });
+  }
+
+  // 7. ENGAGEMENT RECOVERY
+  if ((engagement === 'RECOVERING') && obs.length < 2) {
+    if (register === 'younger-warm') {
+      obs.push({
+        x:`Last time was harder. This one is different. The system remembers.`,
+        a:`Source: engagement fold — wobble + recovery pattern. Engagement is the hard constraint (SYNTHESIS II): below minimum, nothing else matters. Younger register: acknowledgment without analysis.`,
+        src:`evidence-engine·GAME-channel·engagement`
+      });
+    }
+  }
+
+  return obs.slice(0,2);
+}
+
+// ════════════════════════════════ HINT GENERATOR
+function generateHint(modeId, zone, register, state) {
+  // Re-entry after absence: the one time the terminal obliquely acknowledges the forgetting model
+  if (zone === 'ECHO' && state.absenceDays >= 14) {
+    const mode = MODES[MODES.findIndex(m=>m.id===modeId)];
+    return {
+      text:`Place your pieces the way you know how. Show the system the knowledge survived the gap.`,
+      a:`Re-entry register: references retained knowledge explicitly — the only moment the terminal acknowledges the forgetting model to the student, and only obliquely. Source: absence fold.`
+    };
+  }
+  // Gifted calibrated failure
+  if (zone === 'RADICAL' && state.tier === 'GIFTED' && state.zeroPctileStreak >= 8) {
+    return {
+      text:`There is no comfortable line to find here.`,
+      a:`Calibrated failure hint: truthful, non-prescriptive. Does not promise success. Constraint is the challenge.`
+    };
+  }
+  // Meta-line for INV mode when student is modeling the system
+  if (modeId === 'inv' && state.stagePredictions >= 2) {
+    return {
+      text:`The system is also capable of saying nothing at all.`,
+      a:`Meta-line: acknowledges the observer without explaining the mechanism. Exactly once per career milestone. He flagged for modeling the system — the terminal acknowledges its observer.`
+    };
+  }
+
+  const H = {
+    qty:{
+      'teen-standard':   {t:'Cover the open space early. The edges can wait.',            a:'Non-prescriptive about method; absolute about objective. QTY: maximize star count.'},
+      'younger-warm':    {t:'Cover as much space as you can. Start in the middle.',        a:'More directive — scaffolding tolerance is higher at this age (SYNTHESIS #15). Same cognitive target.'},
+      'gifted-compressed':{t:'Optimal coverage. Solve it.',                                a:'Minimum scaffolding. Student derives the how.'},
+    },
+    spt:{
+      'teen-standard':   {t:'Distance is the multiplier. Earn it before you connect.',     a:'SPT: maximize Euclidean distance between stars. Names the mechanic, not the method.'},
+      'younger-warm':    {t:'Spread your stars as far apart as you can before connecting.',a:'Concrete language. Same instruction, warmer register.'},
+      'gifted-compressed':{t:'Maximize Euclidean sum. Connection is a constraint, not a target.',a:''},
+    },
+    frt:{
+      'teen-standard':   {t:'Build the network first. The siege comes later.',             a:'FRT: connectivity before point scoring. Sequencing is the cognitive target.'},
+      'younger-warm':    {t:'Connect your bases before you go for points.',                a:'Younger: "bases" instead of "HQs". Same sequence instruction.'},
+      'gifted-compressed':{t:'Graph connectivity precedes point optimization. Order matters.',a:''},
+    },
+    dst:{
+      'teen-standard':   {t:'Score nothing. Take everything.',                             a:'DST: inhibitory control. Hint models the mode\'s target — denial, not acquisition.'},
+      'younger-warm':    {t:'Try to stop the other team more than you score for yourself.',a:'Concrete, positive framing of inhibition. Same cognitive target.'},
+      'gifted-compressed':{t:'Inhibitory priority. Acquisition is secondary.',             a:''},
+    },
+    wrm:{
+      'teen-standard':   {t:'Score nothing. Do one thing.',                               a:'WRM: singular objective, ignore all distractions. The hint is absolute.'},
+      'younger-warm':    {t:'Only the wormhole matters this time. Everything else can wait.',a:'Warmer. Same singular focus.'},
+      'gifted-compressed':{t:'Single objective. Remove all secondary considerations.',     a:''},
+    },
+    inv:{
+      'teen-standard':   {t:'What you learned in the last session may cost you here.',     a:'INV: cognitive flexibility. Hint signals reversal without announcing it directly.'},
+      'younger-warm':    {t:'This one might surprise you. That is the point.',             a:'INV suppressed for younger <20 sessions — this fires if edge case reached.'},
+      'gifted-compressed':{t:'Parameters are inverted. Derive the new optimum.',           a:''},
+    },
+  };
+
+  const pool = H[modeId] || H.qty;
+  const h = pool[register] || pool['teen-standard'];
+  return {text: h.t, a: h.a};
+}
+
+// ════════════════════════════════ LINE GENERATOR
+function generateLines(state, zoneResult, modeResult, template, codename, observations) {
+  const {sessions, stage, register, tier, elo, tau, plannedSilentOverlay, moveConstraint, personalTarget, track} = state;
+  const {zone} = zoneResult;
+  const {i:modeIdx, mode} = modeResult;
+  const lines = [];
+  let t = 0;
+
+  function push(s, x, a, dt) {
+    lines.push({t, s, x: x||'', a: a||''});
+    t += dt || 600;
+  }
+
+  // ── FRAME
+  if (register === 'younger-warm') {
+    push('dim', `// SESSION ${sessions+1}`,
+      'Compiler header shortened — surveillance frame muted for younger tier. Same system, different register.', 400);
+  } else {
+    push('dim', `// SESSION ${sessions+1} — CHALLENGE COMPILER v2`,
+      'Frame line. Session number anchors the message — students track arcs, share codenames. The number is part of the community grammar.', 400);
+    push('dim', 'Scanning behavioral history...',
+      'Cosmetic latency. No computation here — selection completed at previous session close. The pause is a register choice: declares that something was observed.', 700);
+  }
+
+  // ── OBSERVATIONS
+  observations.forEach(obs => {
+    push('obs', obs.x, obs.a, 850);
+  });
+
+  // ── ZONE (Layer 2 — shown without explanation)
+  push('n', `Spectrum zone: ${zone}`,
+    `Layer 2 vocabulary. Threshold: ${zoneResult.reason} Zone names are not explained — students decode them. That decoding process IS cognitive development.`, 750);
+
+  // ── MODE (Layer 1 — always disclosed)
+  const invSilent = modeIdx === 5 && plannedSilentOverlay;
+  push('b', `Mode selected: ${mode.n}`,
+    `Layer 1 — always disclosed. ${modeResult.reason}${invSilent ? ' · INVERSION overlay SILENT: terminal will not announce (Q2 clean signal). The omission IS the experiment.' : ''}`, 550);
+
+  // ── TEMPLATE (Layer 1)
+  const modeKey = mode.id;
+  const recentHist = (state.hist && state.hist[modeIdx]) ? state.hist[modeIdx].slice(-2) : [];
+  const excluded = recentHist.length ? ` (excluded recent: ${recentHist.join(', ')})` : '';
+  push('n', `Template: ${template}${templateConstraint(modeKey, template)}`,
+    `Layer 1. Template constraint IS the cognitive constraint. Pool: ${TEMPLATES[modeKey].join(', ')}${excluded}.`, 550);
+
+  // ── DIFFICULTY LINE (conditional — Q4 in production)
+  if (state.absenceDays >= 14) {
+    const zpd14 = (elo[modeIdx]/999)*0.85*Math.exp(-tau[modeIdx]/14);
+    const zpd40 = (elo[modeIdx]/999)*0.85*Math.exp(-tau[modeIdx]/40);
+    push('n', `Difficulty: recalibrated. Expect the session to feel slightly off.`,
+      `[Q4 DUAL-HYPOTHESIS] λ=14d → ZPD=${zpd14.toFixed(3)}; λ=40d → ZPD=${zpd40.toFixed(3)}. Compiler uses midpoint. Admits recalibration (truthful) without the number (Layer 3). Both predictions pre-registered in ledger before session.`, 650);
+  } else if (tier === 'GIFTED' && state.zeroPctileStreak >= 8) {
+    push('n', `Difficulty: above ceiling. Proceed.`,
+      `[OVERRIDE LOGGED] Gifted calibrated-failure session. ZPD coeff raised to 0.95 from standard 0.85. Outcome feeds Q7 cohort experiment. Constraint: engineered, not accidental.`, 650);
+    if (moveConstraint > 0) {
+      push('n', `Move budget: ${moveConstraint} per round.`,
+        `Layer 1 constraint: disclosed because visible in-game. Never misrepresent Layer 1. The budget IS the constraint; student can see it.`, 450);
+    }
+  } else if (tau[modeIdx] > 10) {
+    const zpd = (elo[modeIdx]/999)*0.85*Math.exp(-tau[modeIdx]/14);
+    push('n', `Difficulty: recalibrated downward. The system will not say by how much.`,
+      `[Q4] τ=${tau[modeIdx]}d → decay adjustment, ZPD=${zpd.toFixed(3)} under λ=14d (ASSERTED — may be 2–3× too aggressive). Admits recalibration (truthful) without the number (Layer 3). The honesty is deliberate.`, 650);
+  }
+
+  // ── STAIRCASE PERSONAL TARGET
+  if (track === 'COLLABORATIVE' && personalTarget > 0) {
+    const best = personalTarget - 5;
+    push('n', `Your target this time: ${personalTarget} stars. Your best is ${best}.`,
+      `Collaborative staircase: personal ceiling + delta, stated plainly. No rank exists on this track. Engagement is the primary signal; competitive rank would corrupt the measurement.`, 500);
+  }
+
+  // ── STAGE 4 META-LINE (if flagged and not already in observations)
+  if (stage >= 4 && state.stagePredictions >= 3 && !observations.some(o=>o.src&&o.src.includes('singularity'))) {
+    push('meta', `You predicted the last ${state.stagePredictions} sessions before reading them. The system is aware that you are reading it.`,
+      `Stage 4 acknowledgment — mutual-information loop stated exactly once. This is the invitation to the design track without naming it. Timing: at the threshold of Designer, never before.`, 750);
+  }
+
+  // ── BLANK
+  push('blank', '', '', 450);
+
+  // ── CODENAME
+  push('code', `SESSION ${sessions+1}: ${codename}`,
+    `Codename from ${modeKey.toUpperCase()} pool. Cycles by session count (deterministic; admin can predict). Memorable token — the thing the student says to classmates. Community vocabulary mechanism.`, 650);
+
+  // ── HINT
+  const hint = generateHint(mode.id, zone, register, state);
+  push('hint', `> ${hint.text}`, hint.a, 650);
+
+  return lines;
+}
+
+function templateConstraint(modeKey, template) {
+  const constraints = {
+    'THE GATEWAY':      ' — instant win. All multipliers irrelevant.',
+    'HIDDEN OBJECTIVE': ' — no further information.',
+    'PATIENCE':         ' — no destruction allowed.',
+    'DECOY':            ' — false objective visible.',
+    'MIRROR':           ' — symmetric map, asymmetric objective.',
+    'MISER':            ' — move budget active.',
+    'NETWORK':          ' — 4 HQs. Destruction penalized.',
+    'SIEGE':            ' — HQ movement disabled.',
+    'BLIND REACH':      ' — fog of war active.',
+    'SCORCHED EARTH':   ' — no HQ connections. Destruction only.',
+    'SIGNAL LOCK':      ' — wormhole target revealed at round 4.',
+    'THE FOLD':         ' — wormhole pairs swap at round 3.',
+    'NULL SIGNAL':      ' — no feedback until session end.',
+  };
+  return constraints[template] || '';
+}
+
+// ════════════════════════════════ THE COMPILER
+function terminalCompiler(state) {
+  const zoneResult  = selectZone(state);
+  const modeResult  = selectMode(state, zoneResult);
+  const {i:modeIdx, mode} = modeResult;
+  const template    = selectTemplate(state, modeIdx);
+  const codename    = selectCodename(modeIdx, state.sessions);
+  const observations= pickObservations(state, modeIdx, zoneResult);
+  const lines       = generateLines(state, zoneResult, modeResult, template, codename, observations);
+
+  return {lines, zone:zoneResult.zone, zoneReason:zoneResult.reason,
+          mode, modeIdx, weights:modeResult.weights, ranked:modeResult.ranked,
+          template, codename, observations};
+}
+
+// ════════════════════════════════ STATE READER
+function readState() {
+  const elo  = [0,1,2,3,4,5].map(i=>+document.getElementById(`elo-${i}`).value||0);
+  const vel  = [0,1,2,3,4,5].map(i=>+document.getElementById(`vel-${i}`).value||0);
+  const tau  = [0,1,2,3,4,5].map(i=>+document.getElementById(`tau-${i}`).value||0);
+  const purity=[0,1,2,3,4,5].map(i=>{const v=document.getElementById(`pur-${i}`).value.trim();return v?[v]:[];});
+  return {
+    sessions:   +document.getElementById('s-sessions').value||1,
+    stage:      +document.getElementById('s-stage').value||1,
+    tier:       document.getElementById('s-tier').value,
+    track:      document.getElementById('s-track').value,
+    register:   document.getElementById('s-register').value,
+    engagement: document.getElementById('s-engagement').value,
+    elo, vel, tau, purity,
+    hist: [[],[],[],[],[],[]],
+    lastRank:          +document.getElementById('s-lastrank').value||50,
+    lastMargin:        +document.getElementById('s-margin').value||10,
+    comfortableWinStreak:+document.getElementById('s-streak').value||0,
+    absenceDays:       +document.getElementById('s-absence').value||0,
+    zeroPctileStreak:  +document.getElementById('s-zeropct').value||0,
+    stagePredictions:  +document.getElementById('s-predictions').value||0,
+    plannedSilentOverlay: document.getElementById('s-silentinv').value==='1',
+    moveConstraint:    +document.getElementById('s-budget').value||0,
+    personalTarget:    +document.getElementById('s-target').value||0,
+    teacherObservation: document.getElementById('s-teacherobs').value.trim()||null,
+  };
+}
+
+// ════════════════════════════════ RENDER
+let RESULT = null;
+let adminLoadingMode = false;
+let stuLoadingMode   = false;
+let tTimers = [];
+
+function compile() {
+  const state = readState();
+  RESULT = terminalCompiler(state);
+  renderCompilerLog(RESULT, state);
+  renderAdminTerminal(RESULT);
+  if (adminLoadingMode) runAdminLoading();
+  // Update student view if open
+  if (document.getElementById('student-overlay').style.display === 'block') {
+    renderStudentTerminal(RESULT);
+    if (stuLoadingMode) runStuLoading();
+  }
+}
+
+function renderCompilerLog(r, state) {
+  const zp = `<span class="zp zp-${r.zone}">${r.zone}</span>`;
+  document.getElementById('result-summary').innerHTML =
+    `Zone: ${zp} &nbsp;·&nbsp; Mode: <strong>${r.mode.n}</strong> &nbsp;·&nbsp; Template: <strong>${r.template}</strong> &nbsp;·&nbsp; Codename: <strong>${r.codename}</strong>`;
+
+  document.getElementById('term-zone-label').innerHTML =
+    `Zone: <span class="zp zp-${r.zone}">${r.zone}</span> &nbsp;·&nbsp; ${r.mode.n} &nbsp;·&nbsp; ${r.template}`;
+
+  const log = [
+    `<span class="dim">// COMPILER LOG — S${state.sessions+1}</span>`,
+    ``,
+    `<span class="zone">ZONE: ${r.zone}</span>`,
+    `  ${r.zoneReason}`,
+    ``,
+    `<span class="hl">MODE: ${r.mode.n}</span>`,
+    `  ${r.weights.find(w=>w.i===r.modeIdx)?.label||''}`,
+    ``,
+    `TEMPLATE: ${r.template}`,
+    `  pool size: ${TEMPLATES[r.mode.id].length} · excluded recent: ${(state.hist[r.modeIdx]||[]).slice(-2).join(', ')||'none'}`,
+    ``,
+    `CODENAME: ${r.codename}`,
+    `  pool[${state.sessions % CODENAMES[r.mode.id].length}] from ${r.mode.id.toUpperCase()}`,
+    ``,
+    `OBSERVATIONS (${r.observations.length}):`,
+    ...r.observations.map((o,i)=>`  ${i+1}. [${o.src}]\n     "${o.x}"`),
+    r.observations.length===0 ? `  (none — standard session)` : '',
+    ``,
+    state.sessions < 20 && state.tier==='YOUNGER'
+      ? `<span class="al">[INV SUPPRESSED] younger tier + sessions < 20</span>` : '',
+    state.plannedSilentOverlay
+      ? `<span class="al">[SILENT OVERLAY] INV not announced — Q2 clean signal</span>` : '',
+    state.absenceDays>=14
+      ? `<span class="al">[Q4 DUAL-HYPOTHESIS] λ=14d and λ=40d predictions pre-registered</span>` : '',
+    state.zeroPctileStreak>=8&&state.tier==='GIFTED'
+      ? `<span class="al">[GIFTED OVERRIDE] calibrated failure — ZPD coeff 0.95, feeds Q7</span>` : '',
+  ].filter(l=>l!==undefined).join('\n');
+
+  document.getElementById('compiler-log').innerHTML = log;
+
+  // Weight table
+  const rows = (r.ranked||[]).map(w =>
+    `<tr class="${w.i===r.modeIdx?'winner':''}">
+       <td style="color:${MODES[w.i].col};font-weight:700">${MODES[w.i].id.toUpperCase()}</td>
+       <td>${w.w.toFixed(2)}</td>
+       <td style="color:#888">${w.label}</td>
+     </tr>`).join('');
+  document.getElementById('weight-table').innerHTML =
+    `<tr style="font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888"><td>Mode</td><td>Weight</td><td>Breakdown</td></tr>${rows}`;
+}
+
+const STYLE_MAP = {
+  dim:  'opacity:.45;color:#0f0',
+  obs:  'color:#0f0',
+  b:    'color:#fff;font-weight:700',
+  n:    'color:#0f0',
+  meta: 'color:#888;font-style:italic',
+  hint: 'color:#aaa',
+  code: 'color:#fff;font-weight:700;font-size:16px;letter-spacing:5px;margin:6px 0',
+};
+
+function renderAdminTerminal(r) {
+  clearTimers();
+  const term = document.getElementById('term');
+  term.innerHTML = '';
+
+  r.lines.forEach(l => {
+    tTimers.push(setTimeout(() => {
+      if (l.s === 'blank') { term.innerHTML += '<div class="line show">&nbsp;</div>'; return; }
+      const d = document.createElement('div');
+      d.className = 'line show';
+      d.style.cssText = STYLE_MAP[l.s] || 'color:#0f0';
+      d.textContent = (l.s==='dim'||l.s==='code'?'':'  ') + l.x;
+      term.appendChild(d); term.scrollTop = term.scrollHeight;
+    }, l.t));
+  });
+
+  // Provenance panel
+  document.getElementById('ann').innerHTML = r.lines.filter(l=>l.s!=='blank').map(l =>
+    `<div class="ann-line">
+       <div class="at" style="${l.s==='code'?'font-weight:700;letter-spacing:2px':''}${l.s==='dim'?'opacity:.45':''}">${l.x||'&nbsp;'}</div>
+       <div class="aa">${l.a}</div>
+     </div>`).join('');
+}
+
+function replayTerminal() {
+  if (!RESULT) return;
+  if (adminLoadingMode) { runAdminLoading(); return; }
+  renderAdminTerminal(RESULT);
+}
+
+// ── ADMIN LOADING SCREEN
+function toggleAdminLoading() {
+  adminLoadingMode = !adminLoadingMode;
+  const id = ['btn-load-admin','btn-load-admin2'];
+  id.forEach(i => document.getElementById(i)?.classList.toggle('act', adminLoadingMode));
+  document.getElementById('term').style.display = adminLoadingMode ? 'none' : 'block';
+  document.getElementById('loadview').style.display = adminLoadingMode ? 'block' : 'none';
+  if (adminLoadingMode) runAdminLoading(); else { if(RESULT) renderAdminTerminal(RESULT); }
+}
+
+function runAdminLoading() {
+  if (!RESULT) return;
+  clearTimers();
+  const seq = RESULT.lines.filter(l=>l.s!=='blank');
+  const total = RESULT.lines[RESULT.lines.length-1].t + 800;
+  const codeLine = seq.find(l=>l.s==='code');
+  const code = codeLine ? codeLine.x.replace(/^SESSION \d+: /,'') : '—';
+  const sub  = codeLine ? codeLine.x.match(/^SESSION \d+/)?.[0] : '';
+  document.getElementById('load-code').textContent = '';
+  document.getElementById('load-sub').textContent  = sub;
+  document.getElementById('load-fill').style.width = '0%';
+  document.getElementById('load-line').textContent = '';
+  document.getElementById('load-pct').textContent  = '0%';
+  seq.forEach(l => {
+    tTimers.push(setTimeout(()=>{
+      const pct = Math.min(100, Math.round(l.t/total*100));
+      document.getElementById('load-fill').style.width = pct+'%';
+      document.getElementById('load-pct').textContent  = pct+'%';
+      if (l.s==='code') { document.getElementById('load-code').textContent = code; return; }
+      document.getElementById('load-line').textContent = l.x;
+    }, l.t));
+  });
+  tTimers.push(setTimeout(()=>{
+    document.getElementById('load-fill').style.width='100%';
+    document.getElementById('load-pct').textContent='100% — session ready';
+  }, total));
+}
+
+// ════════════════════════════════ STUDENT VIEW
+// ONLY renders {t,s,x} — no provenance (a) fields are injected into the student DOM.
+// In production: the student page bundle never receives 'a' fields from the API.
+function openStudentView() {
+  if (!RESULT) { alert('Compile first.'); return; }
+  renderStudentTerminal(RESULT);
+  document.getElementById('student-overlay').style.display = 'block';
+}
+function closeStudentView() {
+  document.getElementById('student-overlay').style.display = 'none';
+}
+
+let stuTimers = [];
+function clearStuTimers() { stuTimers.forEach(clearTimeout); stuTimers=[]; }
+
+function renderStudentTerminal(r) {
+  clearStuTimers();
+  stuLoadingMode = false;
+  document.getElementById('stu-btn-load').classList.remove('act');
+  document.getElementById('stu-term').style.display='block';
+  document.getElementById('stu-load').style.display='none';
+
+  const term = document.getElementById('stu-term');
+  term.innerHTML = '';
+
+  // Only push {t, s, x} — no provenance
+  r.lines.forEach(l => {
+    stuTimers.push(setTimeout(()=>{
+      if (l.s==='blank') { term.innerHTML+='<div class="line show">&nbsp;</div>'; return; }
+      const d = document.createElement('div');
+      d.className='line show';
+      d.style.cssText = STYLE_MAP[l.s]||'color:#0f0';
+      d.textContent = (l.s==='dim'||l.s==='code'?'':'  ')+l.x;
+      term.appendChild(d); term.scrollTop=term.scrollHeight;
+    }, l.t));
+  });
+}
+
+function stuReplay() {
+  if (!RESULT) return;
+  if (stuLoadingMode) { runStuLoading(); return; }
+  renderStudentTerminal(RESULT);
+}
+
+function stuToggleLoad() {
+  stuLoadingMode = !stuLoadingMode;
+  document.getElementById('stu-btn-load').classList.toggle('act', stuLoadingMode);
+  document.getElementById('stu-term').style.display = stuLoadingMode?'none':'block';
+  document.getElementById('stu-load').style.display = stuLoadingMode?'block':'none';
+  if (stuLoadingMode) runStuLoading(); else stuReplay();
+}
+
+function runStuLoading() {
+  if (!RESULT) return;
+  clearStuTimers();
+  const seq = RESULT.lines.filter(l=>l.s!=='blank');
+  const total = RESULT.lines[RESULT.lines.length-1].t+800;
+  const codeLine = seq.find(l=>l.s==='code');
+  const code = codeLine ? codeLine.x.replace(/^SESSION \d+: /,'') : '—';
+  const sub  = codeLine ? codeLine.x.match(/^SESSION \d+/)?.[0] : '';
+  document.getElementById('stu-load-code').textContent='';
+  document.getElementById('stu-load-sub').textContent=sub;
+  document.getElementById('stu-load-fill').style.width='0%';
+  document.getElementById('stu-load-line').textContent='';
+  document.getElementById('stu-load-pct').textContent='0%';
+  seq.forEach(l=>{
+    stuTimers.push(setTimeout(()=>{
+      const pct=Math.min(100,Math.round(l.t/total*100));
+      document.getElementById('stu-load-fill').style.width=pct+'%';
+      document.getElementById('stu-load-pct').textContent=pct+'%';
+      if(l.s==='code'){document.getElementById('stu-load-code').textContent=code;return;}
+      document.getElementById('stu-load-line').textContent=l.x;
+    },l.t));
+  });
+  stuTimers.push(setTimeout(()=>{
+    document.getElementById('stu-load-fill').style.width='100%';
+    document.getElementById('stu-load-pct').textContent='100% — session ready';
+  },total));
+}
+
+function clearTimers(){tTimers.forEach(clearTimeout);tTimers=[];}
+
+function syncRegister(){
+  const tier=document.getElementById('s-tier').value;
+  document.getElementById('s-register').value=
+    tier==='YOUNGER'?'younger-warm':tier==='GIFTED'?'gifted-compressed':'teen-standard';
+}
+
+// Auto-compile on load
+window.addEventListener('DOMContentLoaded', ()=>setTimeout(compile, 80));
+</script>
+</body>
+</html>

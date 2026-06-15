@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maximum Development Architecture — Constellation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0a;--surf:#111;--surf2:#1a1a1a;--b1:#252525;--b2:#333;
+  --t0:#f0f0f0;--t1:#aaa;--t2:#666;--t3:#2a2a2a;
+  --qty:#f59e0b;--spt:#60a5fa;--frt:#34d399;
+  --dst:#f87171;--wrm:#a78bfa;--inv:#22d3ee;
+  --ok:#22c55e;--warn:#f59e0b;--bad:#ef4444;--neu:#6b7280;
+}
+body{background:var(--bg);color:var(--t0);font-family:Arial,sans-serif;font-size:12px;line-height:1.4}
+nav{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--b1);display:flex;align-items:stretch;padding:0 16px;gap:0;overflow-x:auto}
+.logo{font-size:9px;letter-spacing:3px;font-weight:700;padding:12px 16px 12px 0;border-right:1px solid var(--b1);margin-right:4px;white-space:nowrap;color:var(--t2);text-transform:uppercase;align-self:center}
+.tab{padding:11px 14px;cursor:pointer;font-size:9px;letter-spacing:1.5px;color:var(--t2);border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;font-weight:700;text-transform:uppercase}
+.tab:hover{color:var(--t0)}.tab.active{color:var(--t0);border-bottom-color:var(--t0)}
+.panel{display:none;padding:20px}.panel.active{display:block}
+h2{font-size:9px;letter-spacing:3px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--b2);padding-bottom:6px;margin-bottom:14px;color:var(--t2)}
+h3{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+h4{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;color:var(--t1)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.card{border:1px solid var(--b1);padding:12px;background:var(--surf)}
+.card2{border:1px solid var(--b2);padding:12px;background:var(--surf2)}
+.sep{border:none;border-top:1px solid var(--b1);margin:8px 0}
+table.t{width:100%;border-collapse:collapse;font-size:10px}
+table.t th{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 8px;border-bottom:1px solid var(--b2);text-align:left;color:var(--t2);background:var(--surf2)}
+table.t td{padding:4px 8px;border-bottom:1px solid var(--b1);vertical-align:top;color:var(--t1)}
+table.t tr:hover td{background:var(--surf2)}
+.badge{display:inline-block;padding:1px 6px;font-size:8px;letter-spacing:1px;text-transform:uppercase;border:1px solid var(--b2);font-weight:700;color:var(--t1)}
+.badge-ok{background:var(--ok);color:#000;border-color:var(--ok)}
+.badge-warn{background:var(--warn);color:#000;border-color:var(--warn)}
+.badge-bad{background:var(--bad);color:#fff;border-color:var(--bad)}
+input[type=range]{accent-color:var(--t0)}
+.srow{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.srow label{font-size:9px;color:var(--t2);flex-shrink:0}
+.sval{width:42px;text-align:right;font-size:10px;font-weight:700;color:var(--t0)}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.bar-lbl{font-size:9px;color:var(--t2);flex-shrink:0}
+.bar-track{flex:1;height:12px;background:var(--surf2);border:1px solid var(--b1);position:relative;overflow:hidden}
+.bar-fill{height:100%;position:absolute;transition:width .3s}
+.inset{background:var(--surf2);border-left:2px solid var(--b2);padding:8px 10px;font-size:10px;line-height:1.7;margin:6px 0;color:var(--t1)}
+.callout{background:var(--surf2);border:1px solid var(--b2);padding:10px 12px;font-size:10px;line-height:1.7;margin-bottom:12px;color:var(--t1)}
+.formula{font-family:'Courier New',monospace;font-size:10px;line-height:1.9;background:var(--surf2);border:1px solid var(--b2);padding:12px 14px;color:var(--t1);white-space:pre-wrap}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--b2)}
+@media(max-width:760px){.grid2,.grid3,.grid6{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav>
+  <span class="logo">Max Development System</span>
+  <div class="tab active" onclick="showTab('arch',this)">Architecture</div>
+  <div class="tab" onclick="showTab('engine',this)">Priority Engine</div>
+  <div class="tab" onclick="showTab('depth',this)">Template Depth</div>
+  <div class="tab" onclick="showTab('spectrum',this)">Spectrum Matrix</div>
+  <div class="tab" onclick="showTab('overlay',this)">Overlay Gate</div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════ ARCHITECTURE -->
+<div id="panel-arch" class="panel active">
+  <h2>Maximum Development Architecture — Complete System</h2>
+
+  <!-- CORE TENSION -->
+  <div style="margin-bottom:18px">
+    <div class="callout" style="border-color:var(--t2)">
+      Comfort and development are <strong style="color:var(--t0)">not mutually exclusive — but inversely correlated above a threshold.</strong>
+      Below the threshold: no signal, no development (student overwhelmed or disengaged).
+      Above it: discomfort <em>is</em> the mechanism. The system targets
+      <strong style="color:var(--ok)">minimum comfort consistent with clean signal</strong> — not maximum comfort.
+    </div>
+    <div style="position:relative;height:32px;border:1px solid var(--b2);overflow:hidden;margin-bottom:4px">
+      <div style="height:100%;background:linear-gradient(90deg,#7f1d1d 0%,#dc2626 12%,#f59e0b 22%,#22c55e 32%,#16a34a 50%,#3b82f6 68%,#1e3a8a 82%,#111 100%)"></div>
+      <div style="position:absolute;top:-3px;left:21%;width:2px;height:38px;background:var(--warn);opacity:.9"></div>
+      <div style="position:absolute;top:-3px;left:40%;width:3px;height:38px;background:var(--ok);box-shadow:0 0 8px rgba(34,197,94,.7)"></div>
+      <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;padding:0 10px;justify-content:space-between">
+        <span style="font-size:8px;color:rgba(255,255,255,.5)">overwhelming</span>
+        <span style="font-size:8px;font-weight:700;color:rgba(255,255,255,.9);letter-spacing:1px">▲ TARGET: 30–40th pct (barely winning)</span>
+        <span style="font-size:8px;color:rgba(255,255,255,.4)">bored</span>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:8px;color:var(--t2);letter-spacing:1px;text-transform:uppercase">
+      <span style="color:var(--bad)">no signal · student checks out</span>
+      <span style="color:var(--warn)">threshold</span>
+      <span style="color:var(--ok)">max cognitive strain + clean signal</span>
+      <span style="color:var(--spt)">comfortable</span>
+      <span>no development</span>
+    </div>
+  </div>
+
+  <!-- 6 MODES -->
+  <div style="margin-bottom:18px">
+    <h3 style="margin-bottom:8px">Six Cognitive Dimensions — The Training Targets</h3>
+    <div class="grid6" id="mode-cards"></div>
+  </div>
+
+  <!-- PIPELINE -->
+  <div style="margin-bottom:18px">
+    <h3 style="margin-bottom:8px">Generation Pipeline</h3>
+    <div id="pipeline" style="display:flex;align-items:stretch;gap:0;overflow-x:auto;margin-bottom:6px"></div>
+  </div>
+
+  <!-- FORMULA + INSIGHTS -->
+  <div class="grid2">
+    <div>
+      <h3 style="margin-bottom:8px">The Development Priority Formula</h3>
+      <div class="formula"><span style="color:var(--ok);font-weight:700">development_priority</span>(m) =
+  <span style="color:var(--warn)">(mode_elo[m] / 999)</span>^0.7    <span style="color:var(--t2)">← elo_weight: weaker = higher priority</span>
+× <span style="color:var(--spt)">1 / (mode_sessions[m] + 1)</span>  <span style="color:var(--t2)">← coverage_weight: less seen = higher</span>
+
+<span style="color:var(--t2)">// Latin hypercube OVERRIDES weights:</span>
+<span style="color:var(--frt)">if any mode uncovered in last 6 sessions →
+  force that mode regardless of priority score</span>
+
+<span style="color:var(--ok);font-weight:700">template_priority</span>(t) =
+  <span style="color:var(--dst)">locked_axes.length</span> × <span style="color:var(--wrm)">constraint_specificity</span>
+  <span style="color:var(--t2)">← most constrained = most developmentally specific</span>
+
+<span style="color:var(--ok);font-weight:700">difficulty_target</span> =
+  base(mode_elo[m] / 999) × <span style="color:var(--ok)">0.85</span>
+  <span style="color:var(--t2)">← 15% below ceiling → 30–40th predicted pct</span>
+
+<span style="color:var(--ok);font-weight:700">overlay_eligible</span>(m) =
+  mode_elo[m] &lt; <span style="color:var(--ok)">300</span>       <span style="color:var(--t2)">← strong in this mode</span>
+  AND mode_sessions[m] ≥ <span style="color:var(--ok)">6</span>  <span style="color:var(--t2)">← has heuristics to challenge</span>
+  → P(INVERSION) = <span style="color:var(--wrm)">0.25</span>  vs default <span style="color:var(--t2)">0.05</span></div>
+    </div>
+    <div>
+      <h3 style="margin-bottom:8px">Structural Principles</h3>
+      <table class="t">
+        <tr><th>Principle</th><th>Rule</th><th>Why</th></tr>
+        <tr>
+          <td style="color:var(--t0)">Breadth before depth</td>
+          <td>Latin hypercube — all 6 modes before any repeat</td>
+          <td>Cannot develop spatial reasoning through INVERSION sessions alone</td>
+        </tr>
+        <tr>
+          <td style="color:var(--t0)">Target ceiling, not center</td>
+          <td>30–40th pct predicted rank, not 50th</td>
+          <td>Barely winning = max cognitive strain + clean signal</td>
+        </tr>
+        <tr>
+          <td style="color:var(--t0)">Generalization over repetition</td>
+          <td>PARALLEL / SHIFTING over ECHO when mode-mature</td>
+          <td>Same cognitive target, new surface = forces abstraction</td>
+        </tr>
+        <tr>
+          <td style="color:var(--t0)">Overlay requires prerequisite</td>
+          <td>INVERSION only when mode mastered (Elo &lt;300, 6+ sessions)</td>
+          <td>Overlays challenge built heuristics — useless applied to a void</td>
+        </tr>
+        <tr>
+          <td style="color:var(--t0)">Spectrum × exposure</td>
+          <td>Zone driven by mode_sessions depth, not last outcome alone</td>
+          <td>New-to-mode students need familiarity before variation is developmental</td>
+        </tr>
+        <tr>
+          <td style="color:var(--t0)">Max entropy ≠ max development</td>
+          <td>Max entropy = max flexibility training (INV mode only)</td>
+          <td>INVERSION develops one cognitive skill. All 6 needed for full development.</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ PRIORITY ENGINE -->
+<div id="panel-engine" class="panel">
+  <h2>Development Priority Engine — Interactive Calculator</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3 style="margin-bottom:10px">Player Variables</h3>
+      <h4>Mode Elo &nbsp;<span style="font-weight:400;color:var(--t2)">(000 = strongest · 999 = weakest)</span></h4>
+      <div id="elo-sliders" style="margin-bottom:12px"></div>
+      <hr class="sep">
+      <h4>Sessions Played per Mode</h4>
+      <div id="sess-sliders"></div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:10px">
+        <h3 style="margin-bottom:8px">Development Priority Scores</h3>
+        <div id="priority-bars"></div>
+        <hr class="sep">
+        <div id="selected-mode" style="text-align:center;padding:12px;border:1px solid var(--b2);background:var(--surf2)">
+          <div style="font-size:8px;letter-spacing:2px;color:var(--t2);margin-bottom:4px">SELECTED MODE</div>
+          <div id="sel-name" style="font-size:22px;font-weight:700;letter-spacing:3px">—</div>
+          <div id="sel-reason" style="font-size:9px;color:var(--t2);margin-top:4px"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h4 style="margin-bottom:6px">Live Formula Output</h4>
+        <div id="live-formula" class="formula" style="font-size:9px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:12px">
+    <h3 style="margin-bottom:8px">Entropy Budget — Active Inference Layers</h3>
+    <div class="card">
+      <div class="srow" style="margin-bottom:10px">
+        <label style="width:130px">Total competitive sessions</label>
+        <input type="range" min="0" max="60" value="12" id="total-sess" oninput="updateBudget(+this.value)" style="flex:1">
+        <div class="sval" id="total-sess-v">12</div>
+      </div>
+      <div id="budget-display"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ TEMPLATE DEPTH -->
+<div id="panel-depth" class="panel">
+  <h2>Template Constraint Depth — Developmental Ranking by Mode</h2>
+  <div class="callout">
+    Within a selected mode, the most developmental template has the <strong style="color:var(--t0)">most locked axes</strong>.
+    Locked axes are the cognitive constraint — they prevent the student from bypassing the cognitive target through an alternative strategy.
+    Free axes scale difficulty without changing what's being trained.
+    <strong style="color:var(--t0)">Top of each column = most developmental template for that mode.</strong>
+  </div>
+  <div class="grid3" id="depth-grid"></div>
+  <div style="margin-top:10px;display:flex;gap:16px;font-size:9px;color:var(--t2)">
+    <span>⊗ locked axis — cognitive constraint, must not change</span>
+    <span>⊕ free axis — difficulty lever only</span>
+    <span style="color:var(--t0)">Top-ranked template = system default for max development</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SPECTRUM MATRIX -->
+<div id="panel-spectrum" class="panel">
+  <h2>Spectrum Zone Selection — Mode Exposure × Last Outcome</h2>
+  <div class="callout">
+    The existing system selects spectrum zone from <em>last outcome only.</em>
+    Maximum development requires a second axis: <strong style="color:var(--t0)">mode exposure depth.</strong>
+    A student new to a mode needs ECHO (familiarity before variation).
+    A mode-mature student needs PARALLEL or SHIFTING (same cognitive target, new surface form — forces abstraction).
+    RADICAL is only developmental when the mode is mastered and outcome confirms it.
+  </div>
+  <div id="spectrum-matrix-wrap" style="margin-bottom:14px"></div>
+  <h3 style="margin-bottom:8px">Zone Reference</h3>
+  <div class="grid2" id="zone-defs"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ OVERLAY GATE -->
+<div id="panel-overlay" class="panel">
+  <h2>Overlay Gate — When INVERSION and ITHKUIL Are Developmental vs Noise</h2>
+  <div class="callout">
+    INVERSION is only developmental when applied to a <strong style="color:var(--t0)">mastered mode.</strong>
+    The mechanism: student notices their heuristics are failing and adapts.
+    This requires stable heuristics to exist first.
+    Applied to an unmastered mode: the student cannot recognize what changed because they had no working model.
+    <strong style="color:var(--t0)">Overlay must challenge a built structure, not a void.</strong>
+  </div>
+  <div class="grid2" style="margin-bottom:14px">
+    <div>
+      <h3 style="margin-bottom:8px">Eligibility Map — Mode Sessions × Elo Strength</h3>
+      <canvas id="overlay-canvas" width="380" height="300" style="display:block"></canvas>
+      <div style="display:flex;gap:12px;margin-top:6px;flex-wrap:wrap">
+        <span style="font-size:8px;color:var(--ok)">■ overlay eligible — developmental</span>
+        <span style="font-size:8px;color:var(--warn)">■ marginal</span>
+        <span style="font-size:8px;color:var(--bad)">■ not eligible — noise</span>
+      </div>
+    </div>
+    <div>
+      <h3 style="margin-bottom:8px">Overlay Probability Table</h3>
+      <table class="t" style="margin-bottom:10px">
+        <tr><th>Condition</th><th>P(INV)</th><th>P(ITHKUIL)</th><th>Rationale</th></tr>
+        <tr>
+          <td>Elo &lt;300 AND sessions ≥ 6</td>
+          <td><span class="badge badge-ok">0.25</span></td>
+          <td><span class="badge badge-ok">0.15</span></td>
+          <td>Mastered + experienced — maximum developmental value</td>
+        </tr>
+        <tr>
+          <td>Elo &lt;300 AND sessions 3–5</td>
+          <td><span class="badge badge-warn">0.10</span></td>
+          <td><span class="badge badge-warn">0.10</span></td>
+          <td>Strong but few sessions — marginal, proceed with caution</td>
+        </tr>
+        <tr>
+          <td>Elo ≥ 300 (not yet mastered)</td>
+          <td><span class="badge">0.03</span></td>
+          <td><span class="badge">0.05</span></td>
+          <td>Student struggling — overlay adds confusion, not challenge</td>
+        </tr>
+        <tr>
+          <td>sessions &lt; 3</td>
+          <td><span class="badge">0.00</span></td>
+          <td><span class="badge">0.05</span></td>
+          <td>No heuristics exist — nothing to challenge</td>
+        </tr>
+      </table>
+      <div class="card2">
+        <h4 style="margin-bottom:6px">The Heuristic Prerequisite</h4>
+        <div style="font-size:10px;line-height:1.8;color:var(--t1)">
+          INVERSION's developmental mechanism is <em>productive destruction</em>: the student
+          has built a working model, the overlay invalidates it, and the student must build a new one.
+          That cycle is the cognitive flexibility training.<br><br>
+          Without the prior model there is nothing to destroy — the student is already operating
+          without stable strategy. INVERSION applied here produces noise signals and demoralization,
+          not adaptation speed signals.
+        </div>
+      </div>
+    </div>
+  </div>
+  <h3 style="margin-bottom:8px">Per-Mode Overlay Status</h3>
+  <div class="grid6" id="per-mode-overlay"></div>
+  <div style="font-size:9px;color:var(--t2);margin-top:6px">↑ Updates live from Priority Engine sliders</div>
+</div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────────────
+
+const MODES=[
+  {id:'qty',name:'QUANTITY',icon:'⬡',color:'#f59e0b',
+   cognitive:'Rapid decision-making under time pressure. Spatial breadth. Working memory tracking claimed vs unclaimed territory.',
+   dev_template:'MISER — 8 moves/round fixed. Forces selectivity over raw expansion. Every claim must count.',
+   signals:['star_count_rate','move_efficiency','claim_selectivity']},
+  {id:'spt',name:'SPATIAL',icon:'◎',color:'#60a5fa',
+   cognitive:'Euclidean estimation. Path optimization under constraints. Direction commitment with incomplete information.',
+   dev_template:'BLIND REACH — map hidden, reveals on proximity. Forces directional commitment from partial info.',
+   signals:['avg_claim_distance','direction_commitment','furthest_star']},
+  {id:'frt',name:'FORTRESS',icon:'⬢',color:'#34d399',
+   cognitive:'Graph connectivity reasoning. Multi-step network planning. Long-horizon construction under adversarial pressure.',
+   dev_template:'PATIENCE — 10 moves/round fixed. Forces deliberate, waste-free network construction.',
+   signals:['hq_connection_speed','network_distance','move_entropy']},
+  {id:'dst',name:'DESTRUCTION',icon:'✕',color:'#f87171',
+   cognitive:'Inhibitory control (when NOT to act). Opponent modeling. Strategic denial over self-construction.',
+   dev_template:'SCORCHED EARTH — denial score only. Forces pure opponent modeling over self-optimization.',
+   signals:['opponent_disruption','blackhole_activations','denial_rate']},
+  {id:'wrm',name:'WORMHOLE',icon:'⊕',color:'#a78bfa',
+   cognitive:'Pattern recognition. Goal-directed search ignoring irrelevant information. Constraint satisfaction under competitive pressure.',
+   dev_template:'DECOY — 3 pairs, 1 active, 2 traps. Forces pattern discrimination, punishes false matching.',
+   signals:['pattern_discrimination','false_start_rate','wormhole_proximity']},
+  {id:'inv',name:'INVERSION',icon:'⊘',color:'#22d3ee',
+   cognitive:'Cognitive flexibility. Reversal learning. Epistemic humility — willingness to abandon working strategies.',
+   dev_template:'MIRROR — exact inverse of last session. Maximum reversal learning signal.',
+   signals:['reversal_learning_speed','strategy_shift_speed','session_delta']},
+];
+
+const TEMPLATES={
+  qty:[
+    {name:'MISER',locked:['move count (=8 fixed)','count multiplier'],free:['bot type','bot aggression'],constraint:'8 moves/round — forces claim selectivity'},
+    {name:'SPEED FLOOD',locked:['round count (=5 fixed)','count multiplier'],free:['roundLength','moves/round'],constraint:'5 rounds — forces front-loading vs pacing decision'},
+    {name:'FLOOD',locked:['count multiplier','steal mechanics (=0)'],free:['moves per round','bot aggression'],constraint:'count×500, pure expansion baseline'},
+  ],
+  spt:[
+    {name:'BLIND REACH',locked:['distance multiplier','hidden map mechanic'],free:['reveal radius','moves/round'],constraint:'Map hidden — forces direction commitment from partial info'},
+    {name:'ARCHITECT',locked:['pattern shape (fixed)','distance multiplier'],free:['pattern complexity','moves/round'],constraint:'Pattern target shown — spatial reconstruction required'},
+    {name:'REACH',locked:['distance multiplier','HQ mechanic (=0)'],free:['moves per round','map size'],constraint:'distance×500, no HQs — pure distance baseline'},
+  ],
+  frt:[
+    {name:'PATIENCE',locked:['move count (=10 fixed)','hq multiplier'],free:['round count','map size'],constraint:'10 moves/round — forces deliberate network construction'},
+    {name:'SIEGE',locked:['hq multiplier'],free:['bot aggression (0.2→1.0)','bot count (1→3)'],constraint:'Sustained ATHENA pressure — forces network maintenance under attack'},
+    {name:'NETWORK',locked:['hq multiplier','destruction penalty','HQ count (=4)'],free:['map connectivity','bot aggression'],constraint:'4 HQs, destruction penalty — pure network construction'},
+  ],
+  dst:[
+    {name:'SCORCHED EARTH',locked:['destruction multiplier'],free:['map density','bot count'],constraint:'Denial score = opponent HQ network — forces opponent modeling'},
+    {name:'CHAIN REACTION',locked:['destruction multiplier','count penalty','blackhole mechanic'],free:['blackhole spacing','bot aggression'],constraint:'count multiplier negative — owning stars costs points'},
+    {name:'HUNTER',locked:['steal count (=50 fixed)','destruction multiplier'],free:['bot type','bot aggression'],constraint:'50 steals max — forces target selection quality'},
+  ],
+  wrm:[
+    {name:'DECOY',locked:['active pair count (=1)','win condition'],free:['decoy count','visual similarity'],constraint:'3 pairs, only 1 real — forces pattern discrimination under pressure'},
+    {name:'THE GATEWAY',locked:['win condition','all multipliers irrelevant'],free:['req star count','wormhole pair distance'],constraint:'INSTANT WIN only — forces complete goal prioritization'},
+  ],
+  inv:[
+    {name:'MIRROR',locked:['inversion structure (exact)','reference session'],free:['inversion magnitude'],constraint:'Exact inverse of last session — max reversal learning signal'},
+    {name:'NEGATIVE SPACE',locked:['all multipliers negative'],free:['magnitude per unit'],constraint:'Everything costs points — restraint is the correct strategy'},
+    {name:'HIDDEN OBJECTIVE',locked:['shuffle mechanism','server truth'],free:['shuffle distance','ithkuil overlay'],constraint:'Fisher-Yates shuffle — deduction from score feedback required'},
+  ],
+};
+
+const ZONE_DEFS=[
+  {id:'rematch',name:'REMATCH',color:'#f87171',bg:'#1a0000',
+   when:'Decisive loss (>15% behind) — student overmatched',
+   what:'Near-identical session. Same mode, same template, new map seed. Difficulty −15%.',
+   dev:'Lowest yield. Priority is restoring signal quality, not challenge.'},
+  {id:'echo',name:'ECHO',color:'#f59e0b',bg:'#1a1400',
+   when:'New to mode (0–2 sessions) OR close loss (<15% behind)',
+   what:'Same mode, same template variant. Difficulty −5–10%.',
+   dev:'Good for new-to-mode. Suboptimal for experienced student — too little variation to force abstraction.'},
+  {id:'parallel',name:'PARALLEL',color:'#34d399',bg:'#001a0a',
+   when:'Mode developing (3–9 sessions) AND moderate outcome',
+   what:'Same mode, different template. Same cognitive target, new surface form.',
+   dev:'Highest yield for developing students. Forces recognition of underlying cognitive structure beyond surface mechanics.'},
+  {id:'shifting',name:'SHIFTING',color:'#60a5fa',bg:'#00101a',
+   when:'Mode mastered (10+ sessions) OR comfortable win (15–40% margin)',
+   what:'Adjacent mode (per adjacency map), recalibrated difficulty.',
+   dev:'High yield for mastered modes. Forces transfer of cognitive principles to adjacent domain.'},
+  {id:'radical',name:'RADICAL',color:'#a78bfa',bg:'#0e001a',
+   when:'Landslide win (>40%) AND mastered mode, OR same-mode streak ≥3',
+   what:'Different mode entirely, new template, recalibrated difficulty.',
+   dev:'High when correctly triggered. Risk: breaks learning arc if applied before mode is mature.'},
+];
+
+// ── SHARED STATE ─────────────────────────────────────────────────────────────
+
+const eloVals={qty:500,spt:500,frt:500,dst:500,wrm:500,inv:500};
+const sessVals={qty:5,spt:5,frt:5,dst:5,wrm:5,inv:5};
+
+// ── ARCHITECTURE: MODE CARDS ─────────────────────────────────────────────────
+
+function initModeCards(){
+  document.getElementById('mode-cards').innerHTML=MODES.map(m=>`
+    <div style="border:1px solid ${m.color}30;padding:10px;background:var(--surf)">
+      <div style="color:${m.color};font-size:18px;margin-bottom:4px">${m.icon}</div>
+      <div style="color:${m.color};font-size:9px;font-weight:700;letter-spacing:2px;margin-bottom:5px">${m.name}</div>
+      <div style="font-size:9px;color:var(--t1);line-height:1.6;margin-bottom:7px">${m.cognitive}</div>
+      <div style="border-top:1px solid ${m.color}25;padding-top:6px">
+        <div style="font-size:8px;color:${m.color};letter-spacing:1px;margin-bottom:2px">MOST DEVELOPMENTAL TEMPLATE</div>
+        <div style="font-size:9px;color:var(--t2);line-height:1.5">${m.dev_template}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ── ARCHITECTURE: PIPELINE ────────────────────────────────────────────────────
+
+function initPipeline(){
+  const stages=[
+    {label:'PROFILE',sub:'mode_elo[6]\nmode_sessions[6]\nlast_outcome',color:'#555',end:false},
+    {label:'MODE SELECT',sub:'hypercube guard\n+ dev_priority\n→ selected_mode',color:'#22c55e',end:false},
+    {label:'TEMPLATE',sub:'max locked_axes\n= most constrained\n= most specific',color:'#f59e0b',end:false},
+    {label:'DIFFICULTY',sub:'elo × 0.85\n→ 30–40th pct\n(barely winning)',color:'#60a5fa',end:false},
+    {label:'SPECTRUM',sub:'mode_sessions\n× last_outcome\n→ PARALLEL/SHIFT',color:'#22d3ee',end:false},
+    {label:'OVERLAYS',sub:'eligible only\n(mastered + 6+)\n→ roll 25%',color:'#a78bfa',end:false},
+    {label:'SESSION OUT',sub:'config · codename\nnarrative · signals\nloading sequence',color:'#f0f0f0',end:true},
+  ];
+  document.getElementById('pipeline').innerHTML=stages.map((s,i)=>
+    `${i>0?`<div style="display:flex;align-items:center;color:var(--t2);padding:0 2px;font-size:14px">→</div>`:''}
+     <div style="flex-shrink:0;border:1px solid ${s.end?s.color:s.color+'55'};padding:10px 12px;background:${s.end?s.color:'var(--surf)'};text-align:center;min-width:96px">
+       <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;color:${s.end?'#000':s.color};margin-bottom:4px">${s.label}</div>
+       <div style="font-size:8px;color:${s.end?'#333':'var(--t2)'};white-space:pre;line-height:1.5">${s.sub}</div>
+     </div>`
+  ).join('');
+}
+
+// ── PRIORITY ENGINE ───────────────────────────────────────────────────────────
+
+function computePriorities(){
+  const p={};
+  for(const m of MODES){
+    const eloW=Math.pow(eloVals[m.id]/999,0.7);
+    const covW=1/(sessVals[m.id]+1);
+    p[m.id]=eloW*covW;
+  }
+  return p;
+}
+
+function initEngine(){
+  const es=document.getElementById('elo-sliders');
+  es.innerHTML=MODES.map(m=>`
+    <div class="srow">
+      <label style="width:80px;color:${m.color}">${m.name}</label>
+      <input type="range" min="0" max="999" value="${eloVals[m.id]}" step="1"
+        style="flex:1;accent-color:${m.color}"
+        oninput="eloVals['${m.id}']=+this.value;document.getElementById('ev-${m.id}').textContent=String(this.value).padStart(3,'0');updateEngine()">
+      <div class="sval" id="ev-${m.id}" style="color:${m.color}">${String(eloVals[m.id]).padStart(3,'0')}</div>
+    </div>`).join('');
+
+  const ss=document.getElementById('sess-sliders');
+  ss.innerHTML=MODES.map(m=>`
+    <div class="srow">
+      <label style="width:80px;color:${m.color}">${m.name}</label>
+      <input type="range" min="0" max="30" value="${sessVals[m.id]}" step="1"
+        style="flex:1;accent-color:${m.color}"
+        oninput="sessVals['${m.id}']=+this.value;document.getElementById('sv-${m.id}').textContent=this.value;updateEngine()">
+      <div class="sval" id="sv-${m.id}" style="color:${m.color}">${sessVals[m.id]}</div>
+    </div>`).join('');
+
+  updateEngine();
+  updateBudget(12);
+}
+
+function updateEngine(){
+  const p=computePriorities();
+  const maxP=Math.max(...Object.values(p));
+  const selId=Object.keys(p).reduce((a,b)=>p[a]>p[b]?a:b);
+  const sel=MODES.find(m=>m.id===selId);
+
+  document.getElementById('priority-bars').innerHTML=MODES.map(m=>{
+    const pct=(p[m.id]/maxP)*100;
+    const isSel=m.id===selId;
+    return`<div class="bar-row">
+      <div class="bar-lbl" style="width:78px;color:${m.color}">${m.name}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${pct}%;background:${isSel?m.color:'#2a2a2a'}"></div>
+      </div>
+      <div style="width:46px;text-align:right;font-size:9px;color:${isSel?m.color:'var(--t2)'};font-weight:${isSel?700:400}">
+        ${p[m.id].toFixed(3)}</div>
+      ${isSel?`<div style="font-size:9px;color:${m.color};margin-left:4px;font-weight:700">◀</div>`:''}
+    </div>`;
+  }).join('');
+
+  const nameEl=document.getElementById('sel-name');
+  nameEl.style.color=sel.color;
+  nameEl.textContent=sel.name;
+
+  const eloW=Math.pow(eloVals[selId]/999,0.7).toFixed(3);
+  const covW=(1/(sessVals[selId]+1)).toFixed(3);
+  document.getElementById('sel-reason').textContent=
+    `elo_weight ${eloW} × coverage_weight ${covW} = ${p[selId].toFixed(4)}`;
+
+  const diff=(Math.min(0.99,eloVals[selId]/999)*0.85).toFixed(2);
+  const specZone=sessVals[selId]<3?'ECHO':sessVals[selId]<10?'PARALLEL':'SHIFTING';
+  const specColor=specZone==='PARALLEL'?'var(--ok)':specZone==='ECHO'?'var(--warn)':'var(--spt)';
+  const eligible=eloVals[selId]<300&&sessVals[selId]>=6;
+
+  document.getElementById('live-formula').innerHTML=
+    `<span style="color:var(--t2)">// mode: </span><span style="color:${sel.color};font-weight:700">${sel.name}</span>
+elo_weight   = (${eloVals[selId]}/999)^0.7 = <span style="color:var(--warn)">${eloW}</span>
+coverage_wt  = 1/(${sessVals[selId]}+1)    = <span style="color:var(--spt)">${covW}</span>
+priority     = ${eloW} × ${covW}  = <span style="color:${sel.color};font-weight:700">${p[selId].toFixed(4)}</span>
+
+difficulty_t = ${eloVals[selId]}/999 × 0.85 = <span style="color:var(--ok)">${diff}</span>  <span style="color:var(--t2)">(→ ~30–40th pct predicted rank)</span>
+spectrum_zone= <span style="color:${specColor};font-weight:700">${specZone}</span>  <span style="color:var(--t2)">(${sessVals[selId]} sessions in this mode)</span>
+inv_eligible = <span style="color:${eligible?'var(--ok)':'var(--bad)'};font-weight:700">${eligible}</span>  <span style="color:var(--t2)">(elo&lt;300: ${eloVals[selId]<300}, sessions≥6: ${sessVals[selId]>=6})</span>
+inv_prob     = <span style="color:var(--wrm)">${eligible?'0.25':sessVals[selId]>=3&&eloVals[selId]<300?'0.10':'0.03'}</span>`;
+
+  updateOverlayDisplay();
+}
+
+function updateBudget(v){
+  document.getElementById('total-sess-v').textContent=v;
+  const budget=v>=50?5:v>=20?4:v>=6?3:v>=1?2:1;
+  const tiers=[
+    {l:'Mode rotation — Latin hypercube',t:0,color:'var(--t0)'},
+    {l:'Global Elo weighting',t:1,color:'var(--ok)'},
+    {l:'Mode-Elo personalizes difficulty',t:6,color:'var(--spt)'},
+    {l:'Bot affinity + behavioral signal tracking',t:20,color:'var(--warn)'},
+    {l:'Full adaptive curriculum + overlay eligibility',t:50,color:'var(--inv)'},
+  ];
+  let h=`<div style="font-size:9px;color:var(--t2);margin-bottom:8px">Active budget: <strong style="color:var(--t0)">${budget} / 5</strong></div>`;
+  for(const b of tiers){
+    const on=v>=b.t;
+    h+=`<div class="bar-row" style="margin-bottom:5px">
+      <div style="width:240px;font-size:9px;color:${on?b.color:'var(--t3)'}">${b.l}</div>
+      <div style="font-size:8px;font-weight:700;letter-spacing:1px;color:${on?b.color:'var(--t3)'}">${on?'ACTIVE':'—'}</div>
+    </div>`;
+  }
+  document.getElementById('budget-display').innerHTML=h;
+}
+
+// ── TEMPLATE DEPTH ────────────────────────────────────────────────────────────
+
+function initDepth(){
+  document.getElementById('depth-grid').innerHTML=MODES.map(m=>{
+    const ts=(TEMPLATES[m.id]||[]).slice().sort((a,b)=>b.locked.length-a.locked.length);
+    return`<div style="border:1px solid ${m.color}35;background:var(--surf)">
+      <div style="background:${m.color}18;border-bottom:1px solid ${m.color}35;padding:8px 10px">
+        <span style="color:${m.color};font-size:9px;font-weight:700;letter-spacing:2px">${m.icon} ${m.name}</span>
+      </div>
+      ${ts.map((t,i)=>`
+        <div style="padding:9px 10px;border-bottom:1px solid var(--b1);${i===0?'background:'+m.color+'0d;border-left:2px solid '+m.color:'border-left:2px solid transparent'}">
+          <div style="font-weight:700;font-size:10px;color:${i===0?m.color:'var(--t1)'};margin-bottom:2px">${t.name}</div>
+          <div style="font-size:8px;color:var(--t2);margin-bottom:5px">${t.constraint}</div>
+          <div style="display:flex;gap:3px;flex-wrap:wrap">
+            ${t.locked.map(l=>`<span style="font-size:7px;background:${m.color}20;color:${m.color};padding:1px 5px;border:1px solid ${m.color}40;letter-spacing:.5px">⊗ ${l}</span>`).join('')}
+            ${t.free.map(f=>`<span style="font-size:7px;background:var(--surf2);color:var(--t2);padding:1px 5px;border:1px solid var(--b1)">⊕ ${f}</span>`).join('')}
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+// ── SPECTRUM MATRIX ───────────────────────────────────────────────────────────
+
+function initSpectrumMatrix(){
+  const rows=[
+    {label:'NEW TO MODE',sub:'0–2 sessions'},
+    {label:'DEVELOPING',sub:'3–9 sessions'},
+    {label:'MASTERED',sub:'10+ sessions'},
+  ];
+  const cols=[
+    {label:'DECISIVE LOSS',sub:'>15% behind',icon:'▽▽'},
+    {label:'CLOSE LOSS',sub:'<15% behind',icon:'▽'},
+    {label:'CLOSE WIN',sub:'<15% margin',icon:'≈'},
+    {label:'COMFORTABLE WIN',sub:'15–40% margin',icon:'▲'},
+    {label:'LANDSLIDE WIN',sub:'>40% margin',icon:'▲▲'},
+  ];
+  const matrix=[
+    ['rematch','echo','echo','parallel','shifting'],
+    ['echo','echo','parallel','shifting','radical'],
+    ['echo','parallel','parallel','shifting','radical'],
+  ];
+  const notes=[
+    ['De-escalate. Restore signal quality.','Familiar ground. One more attempt.','Good signal. Slight reduction.','New template in this mode.','Too easy even when new. Jump modes.'],
+    ['Familiar ground needed.','Near-repeat. One more try.','Optimal. New template, same target.','Template var + mode shift.','Force mode change.'],
+    ['De-escalate even for mastered mode.','New template. One more at this mode.','Optimal. New template. Generalize.','Mode shift. Transfer learning.','Max variety. Mode rotation.'],
+  ];
+  const zColors={rematch:'#f87171',echo:'#f59e0b',parallel:'#34d399',shifting:'#60a5fa',radical:'#a78bfa'};
+  const zBgs={rematch:'#1a0000',echo:'#1a1200',parallel:'#001a09',shifting:'#000f1a',radical:'#0d0017'};
+
+  let h=`<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:640px">
+    <tr>
+      <th style="padding:8px;font-size:8px;color:var(--t2);border:1px solid var(--b1);background:var(--surf2);text-align:left;min-width:100px">EXPOSURE × OUTCOME</th>
+      ${cols.map(c=>`<th style="padding:8px;font-size:8px;color:var(--t1);border:1px solid var(--b1);background:var(--surf2);text-align:center">
+        <div style="font-weight:700;letter-spacing:.5px">${c.icon} ${c.label}</div>
+        <div style="font-size:8px;color:var(--t2);font-weight:400;margin-top:2px">${c.sub}</div>
+      </th>`).join('')}
+    </tr>
+    ${rows.map((row,ri)=>`<tr>
+      <td style="padding:8px;font-size:9px;border:1px solid var(--b1);background:var(--surf2)">
+        <div style="font-weight:700;color:var(--t0)">${row.label}</div>
+        <div style="color:var(--t2);margin-top:2px">${row.sub}</div>
+      </td>
+      ${matrix[ri].map((z,ci)=>`<td style="padding:8px;border:1px solid var(--b1);background:${zBgs[z]}">
+        <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:${zColors[z]};margin-bottom:3px">${z.toUpperCase()}</div>
+        <div style="font-size:8px;color:${zColors[z]}88;line-height:1.4">${notes[ri][ci]}</div>
+      </td>`).join('')}
+    </tr>`).join('')}
+  </table></div>
+  <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">
+    <span style="font-size:8px;color:#34d399">■ PARALLEL / SHIFTING — highest development yield</span>
+    <span style="font-size:8px;color:#f59e0b">■ ECHO — moderate (appropriate for new-to-mode)</span>
+    <span style="font-size:8px;color:#f87171">■ REMATCH — de-escalation, not development</span>
+    <span style="font-size:8px;color:#a78bfa">■ RADICAL — developmental when correctly triggered</span>
+  </div>`;
+
+  document.getElementById('spectrum-matrix-wrap').innerHTML=h;
+
+  document.getElementById('zone-defs').innerHTML=ZONE_DEFS.map(z=>`
+    <div class="card" style="border-color:${z.color}35">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:6px;color:${z.color}">${z.name}</div>
+      <div style="font-size:9px;color:var(--t2);margin-bottom:3px"><strong style="color:var(--t1)">When:</strong> ${z.when}</div>
+      <div style="font-size:9px;color:var(--t2);margin-bottom:3px"><strong style="color:var(--t1)">What changes:</strong> ${z.what}</div>
+      <div style="font-size:9px;color:var(--t2)"><strong style="color:var(--t1)">Development:</strong> ${z.dev}</div>
+    </div>`).join('');
+}
+
+// ── OVERLAY GATE ──────────────────────────────────────────────────────────────
+
+function drawOverlayCanvas(){
+  const c=document.getElementById('overlay-canvas');
+  if(!c)return;
+  const ctx=c.getContext('2d');
+  const W=c.width,H=c.height;
+  ctx.clearRect(0,0,W,H);
+  const PAD={l:52,r:16,t:16,b:48};
+  const IW=W-PAD.l-PAD.r,IH=H-PAD.t-PAD.b;
+  const xT=PAD.l+(6/30)*IW;
+  const yT=PAD.t+(1-300/999)*IH;
+
+  // Quadrant fills
+  const fills=[
+    {x:xT,y:PAD.t,w:IW-(xT-PAD.l),h:yT-PAD.t,color:'rgba(34,197,94,0.10)'},     // eligible
+    {x:PAD.l,y:PAD.t,w:xT-PAD.l,h:yT-PAD.t,color:'rgba(245,158,11,0.08)'},       // marginal
+    {x:xT,y:yT,w:IW-(xT-PAD.l),h:IH-(yT-PAD.t),color:'rgba(239,68,68,0.07)'},    // struggling
+    {x:PAD.l,y:yT,w:xT-PAD.l,h:IH-(yT-PAD.t),color:'rgba(239,68,68,0.07)'},      // no heuristics
+  ];
+  fills.forEach(f=>{ctx.fillStyle=f.color;ctx.fillRect(f.x,f.y,f.w,f.h)});
+
+  // Grid
+  ctx.strokeStyle='#1e1e1e';ctx.lineWidth=1;
+  for(let s=0;s<=30;s+=5){const x=PAD.l+(s/30)*IW;ctx.beginPath();ctx.moveTo(x,PAD.t);ctx.lineTo(x,PAD.t+IH);ctx.stroke()}
+  for(let e=0;e<=999;e+=200){const y=PAD.t+(1-e/999)*IH;ctx.beginPath();ctx.moveTo(PAD.l,y);ctx.lineTo(PAD.l+IW,y);ctx.stroke()}
+
+  // Threshold lines
+  ctx.strokeStyle='#444';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+  ctx.beginPath();ctx.moveTo(xT,PAD.t);ctx.lineTo(xT,PAD.t+IH);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(PAD.l,yT);ctx.lineTo(PAD.l+IW,yT);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Axis
+  ctx.strokeStyle='#333';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(PAD.l,PAD.t);ctx.lineTo(PAD.l,PAD.t+IH);ctx.lineTo(PAD.l+IW,PAD.t+IH);ctx.stroke();
+
+  // Labels
+  ctx.fillStyle='#555';ctx.font='8px Arial';ctx.textAlign='center';ctx.textBaseline='top';
+  [0,5,10,15,20,25,30].forEach(s=>{ctx.fillText(s,PAD.l+(s/30)*IW,PAD.t+IH+5)});
+  ctx.textAlign='right';ctx.textBaseline='middle';
+  [0,200,400,600,800,999].forEach(e=>{ctx.fillText(e,PAD.l-4,PAD.t+(1-e/999)*IH)});
+  ctx.textAlign='center';ctx.textBaseline='top';
+  ctx.fillText('mode_sessions',PAD.l+IW/2,PAD.t+IH+20);
+  ctx.save();ctx.translate(12,PAD.t+IH/2);ctx.rotate(-Math.PI/2);ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('mode strength (lower elo = stronger)',0,0);ctx.restore();
+  ctx.fillText('6',xT,PAD.t+IH+5);ctx.textAlign='right';ctx.fillText('300',PAD.l-4,yT);
+
+  // Quadrant labels
+  ctx.font='bold 9px Arial';ctx.textAlign='center';
+  const qLabels=[
+    {x:PAD.l+(IW-(xT-PAD.l))/2+(xT-PAD.l),y:PAD.t+12,t:'ELIGIBLE',c:'rgba(34,197,94,.7)'},
+    {x:PAD.l+(IW-(xT-PAD.l))/2+(xT-PAD.l),y:PAD.t+24,t:'P(INV)=0.25',c:'rgba(34,197,94,.5)'},
+    {x:PAD.l+(xT-PAD.l)/2,y:PAD.t+12,t:'MARGINAL',c:'rgba(245,158,11,.7)'},
+    {x:PAD.l+(xT-PAD.l)/2,y:PAD.t+24,t:'P(INV)=0.10',c:'rgba(245,158,11,.5)'},
+    {x:PAD.l+(IW-(xT-PAD.l))/2+(xT-PAD.l),y:yT+(IH-(yT-PAD.t))*0.35,t:'NOT ELIGIBLE',c:'rgba(239,68,68,.5)'},
+    {x:PAD.l+(IW-(xT-PAD.l))/2+(xT-PAD.l),y:yT+(IH-(yT-PAD.t))*0.35+14,t:'(struggling)',c:'rgba(239,68,68,.35)'},
+    {x:PAD.l+(xT-PAD.l)/2,y:yT+(IH-(yT-PAD.t))*0.35,t:'NOT ELIGIBLE',c:'rgba(239,68,68,.5)'},
+    {x:PAD.l+(xT-PAD.l)/2,y:yT+(IH-(yT-PAD.t))*0.35+14,t:'(no heuristics)',c:'rgba(239,68,68,.35)'},
+  ];
+  qLabels.forEach(q=>{ctx.fillStyle=q.c;ctx.textBaseline='top';ctx.fillText(q.t,q.x,q.y)});
+
+  // Mode dots
+  for(const m of MODES){
+    const x=PAD.l+(Math.min(sessVals[m.id],30)/30)*IW;
+    const y=PAD.t+(1-Math.min(eloVals[m.id],999)/999)*IH;
+    const eligible=eloVals[m.id]<300&&sessVals[m.id]>=6;
+    const marginal=eloVals[m.id]<300&&sessVals[m.id]>=3&&sessVals[m.id]<6;
+    ctx.beginPath();ctx.arc(x,y,7,0,Math.PI*2);
+    ctx.fillStyle=m.color;ctx.fill();
+    ctx.strokeStyle=eligible?'#22c55e':marginal?'#f59e0b':'#ef4444';
+    ctx.lineWidth=eligible?2.5:1.5;ctx.stroke();
+    ctx.fillStyle='#000';ctx.font='bold 7px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(m.id.toUpperCase(),x,y);
+  }
+}
+
+function updateOverlayDisplay(){
+  drawOverlayCanvas();
+  const el=document.getElementById('per-mode-overlay');
+  if(!el)return;
+  el.innerHTML=MODES.map(m=>{
+    const eligible=eloVals[m.id]<300&&sessVals[m.id]>=6;
+    const marginal=eloVals[m.id]<300&&sessVals[m.id]>=3&&sessVals[m.id]<6;
+    const status=eligible?'ELIGIBLE':marginal?'MARGINAL':'NOT ELIGIBLE';
+    const sc=eligible?'var(--ok)':marginal?'var(--warn)':'var(--bad)';
+    return`<div style="border:1px solid ${m.color}30;padding:10px;text-align:center;background:var(--surf)">
+      <div style="color:${m.color};font-size:16px;margin-bottom:3px">${m.icon}</div>
+      <div style="color:${m.color};font-size:8px;font-weight:700;letter-spacing:1px;margin-bottom:5px">${m.name}</div>
+      <div style="font-size:8px;color:var(--t2);margin-bottom:1px">Elo <strong style="color:${m.color}">${String(eloVals[m.id]).padStart(3,'0')}</strong></div>
+      <div style="font-size:8px;color:var(--t2);margin-bottom:5px">${sessVals[m.id]} sessions</div>
+      <div style="font-size:8px;font-weight:700;letter-spacing:1px;color:${sc}">${status}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+
+function showTab(name,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  el.classList.add('active');
+  if(name==='overlay')drawOverlayCanvas();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+
+window.addEventListener('DOMContentLoaded',()=>{
+  initModeCards();
+  initPipeline();
+  initEngine();
+  initDepth();
+  initSpectrumMatrix();
+  updateOverlayDisplay();
+});
+</script>
+</body>
+</html>

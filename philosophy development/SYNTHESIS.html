@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Synthesis — The Complete Philosophy</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.6;max-width:960px;margin:0 auto;padding:20px}
+nav{position:sticky;top:0;background:#fff;border-bottom:2px solid #000;padding:8px 0;margin-bottom:24px;display:flex;gap:0;overflow-x:auto;z-index:100}
+.nl{padding:8px 12px;font-size:9px;letter-spacing:1px;font-weight:700;text-transform:uppercase;color:#888;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-2px}
+.nl:hover{color:#000}.nl.active{color:#000;border-bottom-color:#000}
+section{margin-bottom:40px;scroll-margin-top:50px}
+h1{font-size:11px;letter-spacing:3px;font-weight:700;text-transform:uppercase;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:16px}
+h2{font-size:10px;letter-spacing:2px;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;padding-bottom:4px;margin-bottom:10px;margin-top:18px}
+h3{font-size:10px;font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:1px;color:#333}
+p{margin-bottom:10px;font-size:11px;line-height:1.8;color:#222}
+ul,ol{margin-left:18px;margin-bottom:10px}
+li{font-size:11px;line-height:1.8;color:#222;margin-bottom:2px}
+.inset{background:#f0f0f0;border-left:3px solid #000;padding:10px 12px;font-size:11px;line-height:1.8;margin:10px 0}
+.warn{background:#f8f8f8;border:1px dashed #000;padding:10px 12px;font-size:11px;line-height:1.8;margin:10px 0}
+.dk{background:#000;color:#fff;padding:14px 16px;margin:12px 0;font-size:11px;line-height:1.8}
+.dk strong{color:#fff}.dk em{color:#aaa}
+table{width:100%;border-collapse:collapse;font-size:11px;margin:10px 0}
+th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 8px;border-bottom:2px solid #000;text-align:left;background:#f0f0f0}
+td{padding:5px 8px;border-bottom:1px solid #eee;vertical-align:top}
+tr:hover td{background:#fafafa}
+.stage{display:flex;gap:0;margin:12px 0;overflow-x:auto}
+.stage-node{flex:1;min-width:100px;border:1px solid #ccc;padding:10px;text-align:center;background:#fff;font-size:9px;position:relative}
+.stage-node:not(:last-child)::after{content:'→';position:absolute;right:-8px;top:50%;transform:translateY(-50%);font-size:12px;color:#888;z-index:1}
+.stage-node.peak{border-color:#000;border-width:2px;background:#000;color:#fff}
+.stage-node .sn{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:4px}
+.stage-node.peak .sn{color:#888}
+.stage-node .sl{font-size:10px;font-weight:700;margin-bottom:3px}
+.num{font-size:40px;font-weight:700;opacity:.08;float:right;line-height:1;margin-left:8px}
+/* earned color */
+.c-qty{color:#d97706}.c-spt{color:#2563eb}.c-frt{color:#059669}
+.c-dst{color:#dc2626}.c-wrm{color:#7c3aed}.c-inv{color:#0891b2}
+.c-gain{color:#15803d}.c-bad{color:#dc2626}.c-warn{color:#92400e}
+sep{display:block;border-top:1px solid #ddd;margin:16px 0}
+code{font-family:'Courier New',monospace;font-size:10px;background:#f0f0f0;padding:1px 4px}
+pre{font-family:'Courier New',monospace;font-size:10px;background:#f0f0f0;border:1px solid #ddd;padding:10px 12px;line-height:1.8;overflow-x:auto;margin:8px 0;white-space:pre-wrap}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nl active" onclick="scrollTo('alignment')">Alignment</div>
+  <div class="nl" onclick="scrollTo('medium')">The Medium</div>
+  <div class="nl" onclick="scrollTo('singularity')">Singularity</div>
+  <div class="nl" onclick="scrollTo('design-challenge')">Design Challenge</div>
+  <div class="nl" onclick="scrollTo('tiers')">Audiences</div>
+  <div class="nl" onclick="scrollTo('multigame')">Multi-Game</div>
+  <div class="nl" onclick="scrollTo('synthesis')">Synthesis</div>
+  <div class="nl" onclick="scrollTo('unwritten')">Unwritten Insights</div>
+</nav>
+
+<!-- ═══════════════════════════════════ PHILOSOPHICAL ALIGNMENT -->
+<section id="alignment">
+<h1>I. Philosophical Alignment — What This System Is For</h1>
+
+<div class="dk">
+The system is not for making students better at Constellation. <em>Never.</em> A student who has been fully developed by this system should not necessarily win more games than a student who optimized for Constellation directly. They should be better at everything else — clearer strategic thinking, faster adaptation to novel constraints, higher tolerance for uncertainty, more precise modeling of systems they have not seen before. Constellation is the medium. Not the point.
+</div>
+
+<p>This distinction sounds obvious until you realize how many ways the system can drift toward making students better at the game. Elo going up feels like the right signal. Win rates improving feels like success. The terminal saying "new personal record" feels motivating. All of these are proxies for the real objective — and all of them can be gamed by optimizing for Constellation mechanics rather than genuine cognitive development.</p>
+
+<p>The precise objective is this: <strong>develop students into cognitive agents who can navigate any complex system they have not encountered before, faster and more accurately than they could before training.</strong> The game is chosen because it provides a rich enough cognitive landscape to develop these skills — not because the skills are specifically about the game.</p>
+
+<h2>What the system explicitly is not optimizing for</h2>
+<table>
+<tr><th>What it might look like</th><th>Why it is not the objective</th></tr>
+<tr><td>Higher Constellation win rates</td><td>Game-specific optimization, not cognitive development</td></tr>
+<tr><td>Memorizing effective opening moves</td><td>Procedural memory, not adaptive reasoning</td></tr>
+<tr><td>Better bot performance</td><td>Bots are calibrated training tools, not benchmarks</td></tr>
+<tr><td>Higher scores on any single mode</td><td>Mode-specific adaptation, not cross-domain flexibility</td></tr>
+<tr><td>Faster completion of challenges</td><td>Speed is a proxy that can be achieved through memorization</td></tr>
+</table>
+
+<h2>What the system is optimizing for</h2>
+<table>
+<tr><th>Objective</th><th>How Constellation develops it</th><th>Transfer target</th></tr>
+<tr><td>Rapid spatial reasoning</td><td>SPATIAL mode — Euclidean optimization under constraint</td><td>Engineering, design, navigation, chess</td></tr>
+<tr><td>Systemic network thinking</td><td>FORTRESS mode — Dijkstra graph construction</td><td>Infrastructure, organizational design, logistics</td></tr>
+<tr><td>Inhibitory control + opponent modeling</td><td>DESTRUCTION mode — strategic denial, not self-optimization</td><td>Negotiation, competitive strategy, resource allocation</td></tr>
+<tr><td>Goal-directed search under noise</td><td>WORMHOLE mode — single objective, ignore all distractions</td><td>Research, debugging, problem decomposition</td></tr>
+<tr><td>Cognitive flexibility + reversal learning</td><td>INVERSION mode — abandon working strategies on signal</td><td>Pivoting, updating beliefs, scientific thinking</td></tr>
+<tr><td>Resource optimization under pressure</td><td>QUANTITY mode — volume decisions under move scarcity</td><td>Project management, time allocation, triage</td></tr>
+</table>
+
+<p>The game should be used until these transfers are observable — then considered complete. The system has no attachment to the students continuing to play Constellation. Its attachment is to the students having developed these capacities.</p>
+</section>
+
+<!-- ═══════════════════════════════════ THE MEDIUM -->
+<section id="medium">
+<h1>II. The Game as Transparent Medium</h1>
+
+<div class="inset">
+The multiplier system is not a scoring mechanic. It is the philosophical core of why this game is the right tool. Four numbers — M_count, M_distance, M_hq, M_destruction — reconfigure the entire cognitive landscape of the session without changing a single rule of play. The same map, the same moves, the same stars, the same opponents. But QUANTITY (M_count=500) and FORTRESS (M_hq=500, M_dest=−200) are genuinely different cognitive tasks, not different strategies within the same game. This is the game being maximally transparent: the mechanics are constant; the meaning is variable. The student who understands this has understood something important about how systems work.
+</div>
+
+<h2>The entropic flexibility principle</h2>
+<p>The game achieves maximum reusability not by having many rules but by having few rules with variable parameters. One game, infinite configurations. The same insight should govern how the game is extended into new territories:</p>
+
+<ul>
+<li><strong>New star types</strong> expand the game's cognitive territory without changing its structure. A star type that interacts with the distance formula creates new SPATIAL territory. A star type that creates temporary alliances creates FORTRESS/DESTRUCTION territory. The game can grow without becoming a different game.</li>
+<li><strong>New maps</strong> create novel surface-level novelty while preserving the underlying cognitive targets. A map with a wormhole cluster near the center creates different WORMHOLE strategy than one with wormholes in the corners — same mode, genuinely different cognitive challenge.</li>
+<li><strong>New multiplier configurations</strong> are the richest territory. Negative multipliers (INVERSION), tied multipliers, and composite multipliers (e.g., M_count + M_distance combined) create cognitive territory that has not yet been fully explored.</li>
+<li><strong>Map generation parameters</strong> (star density, cluster frequency, wormhole placement) are free variables the system has barely touched. A procedurally generated map seeded by the student's current profile could produce a map specifically designed to challenge their known weaknesses.</li>
+</ul>
+
+<h2>When the game becomes opaque</h2>
+<p>The game fails as a medium when students begin optimizing for the game rather than through it. Signs of this:</p>
+<ul>
+<li>Students discussing "opening moves" the way chess players discuss openings — fixed procedural sequences they apply regardless of mode</li>
+<li>Students who perform well in QUANTITY but refuse to engage with WORMHOLE because they "don't understand wormholes" — mode-aversion as a risk management strategy</li>
+<li>Students who have learned to recognize INVERSION from contextual cues before the session starts and pre-plan for it, reducing it to a known quantity</li>
+<li>Students optimizing for Elo rather than for genuine play — for example, deliberately losing to get easier sessions</li>
+</ul>
+
+<p>All of these are failure modes where the medium has become opaque — the student is playing the system rather than being developed by it. INVERSION mode exists specifically to prevent the first three. The fourth requires design decisions outside the game: Elo manipulation should produce worse sessions, not better ones.</p>
+
+<div class="warn">
+<strong>The terminal's second game is the system's defense against opacity.</strong> The student who is trying to game the system must engage with the question "what is the terminal actually measuring?" To answer this, they must understand the cognitive targets. To understand the cognitive targets, they must develop genuine strategic depth. The attempt to game the system <em>is</em> the development process — as long as the terminal remains non-prescriptive enough that gaming it requires genuine understanding.
+</div>
+</section>
+
+<!-- ═══════════════════════════════════ SINGULARITY -->
+<section id="singularity">
+<h1>III. The Singularity Trajectory</h1>
+
+<p>The singularity point is not a metaphor. It is a specific state: <strong>the student's cognitive model of the system is as accurate as the system's model of the student.</strong> At this point, the student can design better challenges for themselves than the system can. The system has been internalized. The teacher has been made redundant. This is the pedagogical objective.</p>
+
+<div class="stage">
+  <div class="stage-node">
+    <div class="sn">Stage 1</div>
+    <div class="sl">Consumer</div>
+    <div>Sessions 1–6. System designs. Student plays. No visibility.</div>
+  </div>
+  <div class="stage-node">
+    <div class="sn">Stage 2</div>
+    <div class="sl">Observer</div>
+    <div>Sessions 7–15. Terminal observations begin to feel specific. Student notices patterns in what is said.</div>
+  </div>
+  <div class="stage-node">
+    <div class="sn">Stage 3</div>
+    <div class="sl">Theorist</div>
+    <div>Sessions 15–25. Student theorizes about what the system is tracking. Connects observations to play patterns.</div>
+  </div>
+  <div class="stage-node">
+    <div class="sn">Stage 4</div>
+    <div class="sl">Predictor</div>
+    <div>Sessions 25–40. Student can predict terminal output before reading it. Internal model matches system model.</div>
+  </div>
+  <div class="stage-node">
+    <div class="sn">Stage 5</div>
+    <div class="sl">Designer</div>
+    <div>Sessions 40+. Student given template interface. Designs challenges that target specific cognitive skills.</div>
+  </div>
+  <div class="stage-node">
+    <div class="sn">Stage 6</div>
+    <div class="sl">Teacher</div>
+    <div>Student designs sessions for other students. Must model the other student's cognitive state.</div>
+  </div>
+  <div class="stage-node peak">
+    <div class="sn">Singularity</div>
+    <div class="sl">Architect</div>
+    <div>Student generates the system's challenges. Has internalized the philosophy. System is obsolete for this student.</div>
+  </div>
+</div>
+
+<p>This trajectory is not linear and not guaranteed. Some students will remain in Stage 2 for many sessions — they receive observations without connecting them to their play. The system should detect this: a student whose play patterns show no change after consistent behavioral observations is stuck between Consumer and Observer. The response is not more observations — it is a different kind of signal. The system should occasionally make a prediction about the student's next move and let the student see if it was right. This breaks the passive observation loop.</p>
+
+<h2>The singularity as obsolescence</h2>
+<p>A system that has been fully internalized is obsolete. This is the correct endpoint. The student no longer needs the meta-system to tell them what cognitive territory to explore — they know their own profile, they know what they need, they design their own challenges. The system's success is measured by how fast it makes itself unnecessary for each student.</p>
+
+<p>This is why the multi-game architecture matters: when a student reaches Stage 5 in Constellation, they may need to be migrated to a new game to reset to Stage 1 with a different cognitive landscape. The system maintains the student's cross-game cognitive profile and carries their knowledge of the philosophy forward into the new game, but the game itself provides fresh surface-level novelty to re-engage the development cycle.</p>
+</section>
+
+<!-- ═══════════════════════════════════ DESIGN CHALLENGE -->
+<section id="design-challenge">
+<h1>IV. The Design Challenge System</h1>
+
+<p>The design challenge is not a reward for completing enough sessions. It is a developmental tool in its own right — and in many ways the most cognitively demanding thing the system offers. To design a valid challenge, the student must simultaneously:</p>
+<ul>
+<li>Understand what each multiplier does to the game's cognitive landscape</li>
+<li>Specify a single cognitive target and demonstrate they know what "single" means here (no confounding)</li>
+<li>Distinguish free axes (difficulty levers) from locked axes (cognitive constraints)</li>
+<li>Define a success criterion that generates clean signal</li>
+<li>Predict what behavioral patterns a student who successfully completes this challenge will demonstrate</li>
+</ul>
+
+<p>This is a higher-order version of every cognitive skill the game develops. The student who can design a valid DESTRUCTION challenge has demonstrated a deeper understanding of what DESTRUCTION mode develops than any player who merely excels at it.</p>
+
+<h2>The minimal design challenge interface</h2>
+<pre>
+DESIGN A CHALLENGE
+
+Cognitive target:     [ one sentence — what cognitive skill does this develop? ]
+Success criterion:    [ what must be true at session end for the student to have succeeded? ]
+Multiplier config:    M_count: ___  M_dist: ___  M_hq: ___  M_dest: ___
+Locked axes:          [ these cannot be modified to change difficulty ]
+Free axes:            [ these scale difficulty without changing the cognitive target ]
+Signal to capture:    [ what behavioral data indicates the student engaged with the target? ]
+
+Validation question:  Can a player succeed at this challenge using a strategy that does NOT
+                      engage with your stated cognitive target? If yes: redesign.
+</pre>
+
+<p>The validation question at the bottom is the entire design philosophy in one sentence. A challenge that can be passed by a strategy that ignores the cognitive target is not a challenge — it is a performance. The student who understands this has understood the system.</p>
+
+<h2>Design challenges by stage</h2>
+<table>
+<tr><th>Stage</th><th>Challenge type</th><th>Example</th></tr>
+<tr><td>Stage 4</td><td>Configure a known mode template for a specific difficulty level</td><td>"Set up a SPATIAL session that would be appropriate for a player with Elo 600 in SPATIAL"</td></tr>
+<tr><td>Stage 4–5</td><td>Create a new template within an existing mode</td><td>"Design a FORTRESS challenge that specifically trains HQ timing, not network distance"</td></tr>
+<tr><td>Stage 5</td><td>Identify and plug a cognitive gap in the existing template library</td><td>"The current DESTRUCTION templates all reward active destruction. Design one that rewards restraint — knowing when not to destroy"</td></tr>
+<tr><td>Stage 5–6</td><td>Design a challenge for a specific other student's profile</td><td>"Design a challenge for a student with high QTY Elo, low SPT Elo, and a pattern of same-direction movement in spatial sessions"</td></tr>
+<tr><td>Singularity</td><td>Design a new cognitive mode</td><td>"Propose a 7th cognitive mode that is genuinely orthogonal to the existing 6. Specify its multiplier config, templates, and behavioral signals"</td></tr>
+</table>
+
+<h2>What makes a design challenge good or bad</h2>
+<div class="dk">
+<strong>Good:</strong> "Design a WORMHOLE challenge where the decoy wormholes look identical to the real one — the only distinguishing information is which surrounding stars are claimable."<br>
+<em>This isolates exactly one cognitive skill: discriminative pattern recognition under ambiguity. The student who designs this has understood why DECOY is more developmental than THE GATEWAY.</em><br><br>
+<strong>Bad:</strong> "Design a really hard SPATIAL challenge."<br>
+<em>Difficulty is not a cognitive target. "Hard" is not a specification. This produces a challenge that is unpleasant, not one that trains a specific skill. The student who accepts this framing has not yet internalized the locked/free axis distinction.</em>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════ AUDIENCES -->
+<section id="tiers">
+<h1>V. Multi-Audience Architecture</h1>
+
+<p>The system serves three populations simultaneously: teenagers (primary), younger students (secondary), and gifted learners (cross-age). These are not just different difficulty levels — they require different philosophical approaches to what development means.</p>
+
+<h2>Teens (13–17) — Primary Audience</h2>
+<p>The current philosophy is calibrated for this group. Key properties:</p>
+<ul>
+<li>Competitive motivation: rank among peers is a genuine signal and a genuine driver</li>
+<li>Productive discomfort tolerance: teens can tolerate not knowing, as long as the system feels intelligent rather than arbitrary</li>
+<li>The surveillance aesthetic in the terminal is <em>engaging</em> for this group — it feels like being taken seriously by a system that is watching carefully</li>
+<li>INVERSION mode is appropriate once mode mastery is established — teens have the metacognitive capacity to reflect on their own strategy failure</li>
+<li>Design challenges are accessible — teens have the abstract reasoning required to think about cognitive targets</li>
+</ul>
+
+<h2>Younger Students (10–12)</h2>
+<p>Key modifications required, not a different system:</p>
+<ul>
+<li><strong>INVERSION: suppress until session 20+.</strong> Younger students build heuristics more slowly and need them to be more stable before they can be productively challenged. INVERSION applied to a fragile model produces confusion and disengagement, not cognitive flexibility.</li>
+<li><strong>WORMHOLE first.</strong> The instant-win condition of WORMHOLE is the most motivating mode for this age group — clear, satisfying, binary. Start there. It builds the goal-directed search skill that makes other modes more accessible.</li>
+<li><strong>Terminal language: observational but warmer.</strong> "The system has been watching longer than this session" is productive intrigue for a 15-year-old; it is slightly threatening to a 10-year-old. The same observation rendered as "Your approach in the last three rounds was different from the first three. The system noticed." achieves the same information content with a warmer register.</li>
+<li><strong>Collaborative staircase as default, not exception.</strong> Younger students develop faster in collaborative contexts. The competitive track should be available but the collaborative track should be the initial default.</li>
+<li><strong>Flow zone: widen to 25–65th percentile.</strong> Motivational tolerance for repeated loss is lower at this age. The system should err toward slightly-too-easy to maintain engagement while still generating development signal.</li>
+</ul>
+
+<h2>Gifted Students (Detection + Acceleration)</h2>
+<p>Gifted students are not simply students who perform better. They exhibit a specific profile:</p>
+<ul>
+<li>Elo velocity significantly above cohort mean in sessions 1–5 (2+ standard deviations)</li>
+<li>Strategy adaptation <em>within</em> sessions — they adjust mid-game, not just between games</li>
+<li>Performance on high-constraint templates (MISER, PATIENCE, DECOY) early, when most students need low-constraint templates first</li>
+<li>Meta-game awareness — behavioral signals suggesting they are modeling the system, not just playing the game</li>
+<li>Rapid INVERSION adaptation — strategy_shift_speed signal is exceptionally fast in INV mode</li>
+</ul>
+
+<div class="warn">
+<strong>Critical insight:</strong> Gifted students do not need accelerated success. They need accelerated <em>failure</em>. A gifted student who has never encountered genuine cognitive failure has not developed the uncertainty tolerance that INVERSION trains. The system should detect giftedness and then specifically engineer calibrated failure experiences — not accidental failure from overly hard sessions, but deliberate INVERSION overlays applied earlier, deliberately opaque terminal messages, and design challenges given at Stage 3 rather than Stage 5. The gift is not protection from difficulty; it is the capacity to metabolize difficulty faster.
+</div>
+
+<h2>The Concurrent Group Architecture</h2>
+<p>A single classroom session may contain teens, younger students, and gifted learners simultaneously. The system must handle this through team composition, not session splitting:</p>
+
+<table>
+<tr><th>Group composition</th><th>System response</th></tr>
+<tr><td>All same age, similar Elo</td><td>Standard competitive session. Full system as designed.</td></tr>
+<tr><td>Mixed age, wide Elo range</td><td>Collaborative staircase with individually scaled targets. No competitive rank. Each student plays toward their own ceiling.</td></tr>
+<tr><td>Gifted student + peers</td><td>Gifted student receives additional constraint (reduced moves, INVERSION overlay). Peers receive standard config. Same session, differentiated challenge.</td></tr>
+<tr><td>Younger students + older students</td><td>Mixed mode: older students on competitive track, younger on collaborative. Composite session type.</td></tr>
+<tr><td>All gifted</td><td>Accelerate to Stage 4–5 challenges faster. Increase RADICAL frequency. INVERSION becomes standard, not overlay.</td></tr>
+</table>
+
+<p>The key mechanism is the <strong>asymmetric session</strong>: same map, same mode, different constraints per team or per player. The gifted student gets 8 moves per round while peers get 15. The younger student has a personal target of 100 stars while the competitive students play for rank. The same session generates different developmental experiences for different students simultaneously.</p>
+</section>
+
+<!-- ═══════════════════════════════════ MULTI-GAME -->
+<section id="multigame">
+<h1>VI. Multi-Game Framework</h1>
+
+<p>Constellation maps one region of cognitive space. Centauri maps an adjacent but distinct region. Future games will map others. The system's job is to maintain a unified cognitive profile across all games — so that a student's SPATIAL development in Constellation informs how the system configures spatial challenges in Centauri, and vice versa.</p>
+
+<h2>What each game maps</h2>
+<table>
+<tr><th>Game</th><th>Cognitive territory</th><th>What Constellation doesn't develop</th></tr>
+<tr><td>Constellation</td><td>Discrete spatial reasoning, network construction, goal-directed search, reversal learning, inhibitory control</td><td>Real-time physics, continuous motion, team coordination under simultaneous action</td></tr>
+<tr><td>Centauri</td><td>Gravitational physics intuition, real-time orbital reasoning, hex territory under fuel constraints, team coordination</td><td>Constellation's wormhole pattern recognition, discrete move budgeting</td></tr>
+<tr><td>Future game</td><td>To be specified — should target cognitive territory not accessible in either above</td><td>—</td></tr>
+</table>
+
+<h2>The plugin philosophy</h2>
+<p>A new game earns inclusion in the system by satisfying the <strong>plugin test</strong>: can it specify three or more non-overlapping difficulty axes that each independently scale challenge without changing the cognitive target? If the game's difficulty and cognitive target are entangled in its design, it cannot plug in cleanly. This is a design filter, not just a technical requirement — it ensures that only games with sufficient cognitive structure join the system.</p>
+
+<h2>Cross-game cognitive profile</h2>
+<p>The student's cognitive profile is maintained across games as a unified space. When a student moves from Constellation to Centauri:</p>
+<ul>
+<li>Their Constellation SPATIAL Elo informs their starting calibration for Centauri spatial challenges</li>
+<li>Their INVERSION adaptation speed carries over — reversal learning is a general skill</li>
+<li>Their design challenges history carries over — a student at Stage 5 in Constellation enters Centauri at Stage 3, not Stage 1</li>
+<li>Their terminal message profile adapts to the new game's signal vocabulary but maintains the same emotional register</li>
+</ul>
+
+<p>The key architectural principle: <strong>cognitive skills are game-agnostic; implementations are game-specific.</strong> Mode Elo is cross-game. Template selection is game-specific. The student's position in the singularity trajectory is cross-game.</p>
+
+<h2>The rotation architecture</h2>
+<p>With multiple games available, the Latin hypercube guarantee extends:</p>
+<ul>
+<li>Within a game: all modes covered before any mode repeats</li>
+<li>Across games: the system can prescribe game rotation to target cognitive territory not accessible in the current game</li>
+<li>At singularity in one game: the student migrates to a new game to reset the surface novelty while carrying forward all cognitive development</li>
+</ul>
+</section>
+
+<!-- ═══════════════════════════════════ SYNTHESIS -->
+<section id="synthesis">
+<h1>VII. The Synthesis — The Most Elegant Answer</h1>
+
+<div class="dk">
+<strong>The multiplier is the philosophy.</strong><br><br>
+<em>The game achieves maximum reusability through four numbers that reconfigure its entire cognitive landscape without changing a rule. The meta-system should achieve the same elegance: one principle that reconfigures the entire development experience without changing the architecture. That principle is: maximize expected information gain about the student's cognitive model per session. Every other decision — mode selection, template, difficulty, spectrum zone, overlay — is a derived consequence of this one operation applied to the current state.</em><br><br>
+<em>The multiplier and the information gain principle are structurally identical. Both take a fixed system (the game, the meta-system) and parameterize it so that infinite configurations are possible within the same structure. Both achieve maximum novelty with minimum complexity. This is not a coincidence — it is what makes the game the right tool for this system and the system the right architecture for this game.</em>
+</div>
+
+<h2>The unified principle across all scales</h2>
+<table>
+<tr><th>Scale</th><th>The same principle applied</th></tr>
+<tr><td>Game mechanics</td><td>Four multipliers configure infinite cognitive landscapes within one rule system</td></tr>
+<tr><td>Session selection</td><td>argmax E[KL(posterior ‖ prior)] selects the maximally informative next session</td></tr>
+<tr><td>Variable selection</td><td>Include V iff I(accuracy; V | existing) > ε — same mutual information criterion</td></tr>
+<tr><td>Parameter tuning</td><td>θ* = argmax E[ΔElo_velocity | θ] — same optimization over outcomes</td></tr>
+<tr><td>Design challenges</td><td>Can a player pass this challenge without engaging the stated cognitive target? — same isolation principle as locked axes</td></tr>
+<tr><td>Multi-game expansion</td><td>Add game iff it maps cognitive territory not accessible in existing games — same marginal information criterion</td></tr>
+</table>
+
+<p>A system is philosophically beautiful when the same principle operates at every scale. This one does. The multiplier insight generates the information gain principle generates the variable selection criterion generates the design challenge validation question. They are all the same question: <em>does this add information that was not already here?</em></p>
+
+<h2>The balance across all objectives</h2>
+<table>
+<tr><th>Objective</th><th>Role in the synthesis</th><th>Priority</th></tr>
+<tr><td>Cognitive development across 6 dimensions</td><td>Structural backbone — the architecture is built around this</td><td>Defining</td></tr>
+<tr><td>Engagement and motivation</td><td>Hard constraint — below minimum engagement, nothing else matters</td><td>Necessary condition</td></tr>
+<tr><td>Meta-community and social belonging</td><td>Long-term product — the terminal language, shared vocabulary, persistent narrative</td><td>Emergent outcome</td></tr>
+<tr><td>Teacher legibility</td><td>Delivery mechanism — teacher sees the signal; student experiences the story</td><td>Operational requirement</td></tr>
+<tr><td>Student as architect (singularity)</td><td>Endpoint — the system succeeds when it makes itself unnecessary</td><td>Terminal objective</td></tr>
+</table>
+</section>
+
+<!-- ═══════════════════════════════════ UNWRITTEN INSIGHTS -->
+<section id="unwritten">
+<h1>VIII. Insights Not Yet Written — The Complete Record</h1>
+
+<h2>On the game</h2>
+<ol>
+<li><strong>The multiplier IS the curriculum.</strong> This was not fully appreciated until reading the game. The fact that M_count=500 and M_hq=500 create genuinely different cognitive games — not different strategies within one game — means the curriculum is embedded in the game's architecture. The meta-system does not impose a curriculum on the game; it reveals the curriculum the game already contains.</li>
+<li><strong>Blackhole chains are a destruction mechanism that requires spatial planning.</strong> A student who can consistently set up blackhole chains is demonstrating both DESTRUCTION and SPATIAL reasoning simultaneously. This is a cross-mode signal that the current system treats as purely DST. It should be recognized as a composite signal.</li>
+<li><strong>Wormhole mode has a binary outcome that makes it uniquely useful for younger students and uniquely poor for signal extraction at low difficulty.</strong> When the wormhole activates, the session ends. There is almost no partial signal — you either committed to the path or you didn't. This makes WORMHOLE sessions very high-stakes for signal purity but very clear for motivational purposes. Use it early with young students for motivation; use it later with advanced students for goal-directed pressure.</li>
+<li><strong>Bot archetypes are not just opponents — they are cognitive mirrors.</strong> EINSTEIN pursues wormholes regardless of score; playing against EINSTEIN reveals whether the student notices and adapts to a single-minded opponent. LORENZ is chaotic; playing against LORENZ reveals whether the student can maintain strategy in the presence of noise. Each bot is a test of a specific cognitive skill, independently of the mode.</li>
+</ol>
+
+<h2>On development</h2>
+<ol start="5">
+<li><strong>Gifted students need calibrated failure, not accelerated success.</strong> The system should detect giftedness and respond by engineering productive failure earlier, not just making sessions harder. A gifted student who has only ever won has not developed uncertainty tolerance. INVERSION should be introduced to gifted students at session 3, not session 6.</li>
+<li><strong>The collaborative staircase deserves its own complete philosophy.</strong> It is not a lesser mode or an accommodation for weaker students. A classroom session where every student is playing toward their own ceiling simultaneously — with different targets, different modes, no competitive rank — is a pedagogically distinct experience. The system should develop it as a first-class track, not an exception.</li>
+<li><strong>The within-session learning signal may be more important than the between-session signal.</strong> A student who adjusts their strategy between round 3 and round 8 of a session has demonstrated faster in-context adaptation than one who only adjusts between sessions. This signal exists in the data (round-by-round behavioral changes) and is currently unmeasured. It is the finest-grained evidence of active cognitive updating.</li>
+<li><strong>The system's ultimate success is its own obsolescence.</strong> A system that has been fully internalized by a student has no further utility for that student. Measuring the rate at which students make the system redundant is a better metric than Elo improvement. The singularity point — where the student's self-model matches the system's model — is the only terminal objective worth having.</li>
+</ol>
+
+<h2>On the terminal and community</h2>
+<ol start="9">
+<li><strong>The terminal is a second game being played simultaneously with Constellation.</strong> The first game is Constellation (claim stars, score points). The second game is "what is the system measuring and why?" The student who is playing the second game is developing the most transferable skill: the capacity to model the relationship between behavior and outcome in a system they do not fully understand. This is the skill that transfers to everything.</li>
+<li><strong>Show spectrum zone symbols to admins; let students discover the vocabulary.</strong> RADICAL, ECHO, PARALLEL — these are discoverable by students who compare terminal messages over time. Giving them the vocabulary removes the emergent layer. The community that forms around the process of reverse-engineering the system's language is more valuable than the vocabulary itself.</li>
+<li><strong>Terminal messages should be false enough to be interesting.</strong> The terminal currently says what it actually observed. But occasionally it should make an inference that is plausible but not confirmed — "A pattern that began in session 7 has continued" when no such pattern has been confirmed, but the behavioral data is consistent with it. This is not deception; it is the system behaving like an intelligent observer who makes probabilistic inferences. It creates more interesting community discussion than confirmed observations alone.</li>
+<li><strong>The meta-community is a knowledge system.</strong> When students compare terminal messages and develop theories about what the system is tracking, they are collectively doing cognitive science — forming and testing hypotheses about a system they cannot directly observe. This distributed knowledge should eventually feed back into the system: student-contributed observations about what the terminal said that turned out to be accurate should update the system's confidence in its own signal models.</li>
+</ol>
+
+<h2>On the system's own design</h2>
+<ol start="13">
+<li><strong>Every hardcoded parameter is a hypothesis.</strong> The 0.85 difficulty coefficient, the 6-session window, the P=0.25 overlay probability — each of these is the system's best current guess at the optimal value. They should be treated as hypotheses, recorded alongside the outcomes they produce, and updated when the evidence accumulates. A system that treats its own parameters as permanent is not learning from itself.</li>
+<li><strong>The system should apply its own philosophical principles to its own design.</strong> Include variable V iff it improves session selection accuracy. Include parameter θ iff changing it improves developmental outcomes. This recursive self-application is what makes the system philosophically complete — it uses the same criterion at every level.</li>
+<li><strong>The terminal language register should vary by age tier, not just by outcome.</strong> Same observation, different register. For younger students: "You switched your approach halfway through. The system noticed." For teens: "Strategy shift detected between rounds 4 and 7. The system has noted this." For gifted: "Round 4 signal: prior model abandoned. Adaptation speed recorded." Same information. Three different relationships between student and system.</li>
+<li><strong>Map generation should eventually be student-profile-driven.</strong> A procedurally generated map where wormhole placement is calibrated to the student's WORMHOLE development stage, where star density matches their QUANTITY difficulty target, and where cluster distribution challenges their FORTRESS network building — this is a map designed specifically to develop this student's specific gaps. It is the next major frontier of the game's reusability.</li>
+<li><strong>The game's greatest flexibility is in dimensions it has not used yet.</strong> Bot composition per team (not just per session), asymmetric move budgets, private multipliers (player sees different labels than the actual config), timed multiplier reveals mid-session, collaborative team scoring against a shared target — these are all configurations within the existing rule system that have not been explored. The system has more entropic space than the current 6 modes suggest.</li>
+<li><strong>The design challenge is the most demanding cognitive task in the system — harder than any session.</strong> Designing a valid challenge requires understanding the locked/free axis distinction, the signal purity requirement, the ZPD of the target student, and the cognitive transfer mechanism. A student who can design a valid challenge has demonstrated everything the game develops, plus the metacognitive layer on top. This should be the terminal credential, not session count or Elo.</li>
+</ol>
+
+<h2>The one thing this document cannot contain</h2>
+<p>The system described here is complete in principle and incomplete in fact. Every parameter marked [ASSERTED] in the formal specification is a hypothesis that real student data will either confirm or refute. The philosophy is sound; the calibration is not yet verified. The only way to know whether 0.85 is the right coefficient, whether 14 days is the right half-life, whether P=0.25 is the right overlay probability — is to run the system, instrument the outcomes, and let the data correct the hypotheses. The philosophy generates the right questions. Only the students can provide the answers.</p>
+</section>
+
+<script>
+function scrollTo(id){
+  document.getElementById(id).scrollIntoView({behavior:'smooth'});
+  document.querySelectorAll('.nl').forEach(n=>n.classList.remove('active'));
+  event.target.classList.add('active');
+}
+window.addEventListener('scroll',()=>{
+  const sections=document.querySelectorAll('section');
+  const links=document.querySelectorAll('.nl');
+  let current='';
+  sections.forEach(s=>{if(s.getBoundingClientRect().top<80)current=s.id});
+  links.forEach((l,i)=>{
+    const ids=['alignment','medium','singularity','design-challenge','tiers','multigame','synthesis','unwritten'];
+    l.classList.toggle('active',ids[i]===current);
+  });
+});
+</script>
+</body>
+</html>

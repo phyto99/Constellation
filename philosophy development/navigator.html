@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Constellation — Philosophy Navigator</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0a;color:#f0f0f0;font-family:Arial,sans-serif;font-size:12px;min-height:100vh}
+header{border-bottom:1px solid #1e1e1e;padding:20px 28px;display:flex;align-items:baseline;gap:16px}
+.h-logo{font-size:11px;letter-spacing:3px;font-weight:700;text-transform:uppercase;color:#f0f0f0}
+.h-sub{font-size:9px;letter-spacing:1px;color:#444;text-transform:uppercase}
+.main{padding:28px;max-width:1100px;margin:0 auto}
+.era-label{font-size:8px;letter-spacing:3px;font-weight:700;text-transform:uppercase;color:#333;margin-bottom:10px;margin-top:24px}
+.doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;margin-bottom:4px}
+.doc-card{border:1px solid #1a1a1a;padding:14px 16px;background:#111;cursor:pointer;transition:border-color .15s;text-decoration:none;display:block;position:relative}
+.doc-card:hover{border-color:#333}
+.doc-card.featured{border-color:#252525}
+.doc-card.featured:hover{border-color:#555}
+.doc-card.new{border-left:2px solid #22c55e}
+.doc-card.amber{border-left:2px solid #d97706}
+.doc-card.archive{border-left:2px solid #333;opacity:.7}
+.doc-title{font-size:10px;font-weight:700;letter-spacing:.5px;color:#f0f0f0;margin-bottom:4px}
+.doc-sub{font-size:9px;color:#555;line-height:1.5;margin-bottom:8px}
+.doc-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tag{font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:1px 6px;border:1px solid;font-weight:700}
+.tag-solid{border-color:#333;color:#666}
+.tag-green{border-color:#15803d;color:#22c55e}
+.tag-amber{border-color:#92400e;color:#d97706}
+.tag-red{border-color:#7f1d1d;color:#ef4444}
+.tag-purple{border-color:#4c1d95;color:#a78bfa}
+.tag-new{border-color:#15803d;color:#22c55e;background:#0a1f0a}
+.acc{font-size:8px;color:#333;margin-left:auto}
+.separator{border:none;border-top:1px solid #141414;margin:20px 0}
+.status-bar{border-top:1px solid #141414;padding:14px 28px;display:flex;gap:20px;align-items:center;position:fixed;bottom:0;left:0;right:0;background:#0a0a0a}
+.status-item{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:#333;display:flex;align-items:center;gap:6px}
+.status-dot{width:6px;height:6px;border-radius:50%}
+.open-q{border:1px solid #1a1a1a;padding:12px 14px;background:#0d0d0d;margin-top:24px}
+.open-q h3{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#333;margin-bottom:10px}
+.q-row{display:flex;align-items:baseline;gap:10px;padding:5px 0;border-bottom:1px solid #141414}
+.q-row:last-child{border-bottom:none}
+.q-num{font-size:9px;font-weight:700;width:20px;flex-shrink:0}
+.q-text{font-size:10px;color:#888;flex:1}
+.q-pri{font-size:8px;letter-spacing:1px;text-transform:uppercase;font-weight:700}
+</style>
+</head>
+<body>
+<header>
+  <span class="h-logo">Constellation</span>
+  <span class="h-sub">Philosophy Development</span>
+</header>
+
+<div class="main">
+
+  <div class="era-label">Core System — New Architecture</div>
+  <div class="doc-grid">
+    <a href="bayesian.html" class="doc-card featured new" style="border-color:#22c55e22;border-left-width:2px">
+      <div class="doc-title">Bayesian Architecture</div>
+      <div class="doc-sub">The mathematically perfect system. Posterior over cognitive state, BOED session selection, all manual parameters replaced by inference. The objectively correct foundation.</div>
+      <div class="doc-meta">
+        <span class="tag tag-new">NEW</span>
+        <span class="tag tag-green">CANONICAL</span>
+        <span class="acc">100%</span>
+      </div>
+    </a>
+    <a href="system-map.html" class="doc-card featured">
+      <div class="doc-title">System Map — Open Questions</div>
+      <div class="doc-sub">Orbital confidence diagram. All 8 open questions (Q1–Q8). BT bridge architecture. Build order. Confidence levels: confirmed / amber / known problems.</div>
+      <div class="doc-meta">
+        <span class="tag tag-green">CURRENT</span>
+        <span class="tag tag-amber">Q1–Q8 OPEN</span>
+        <span class="acc">95%</span>
+      </div>
+    </a>
+    <a href="SYNTHESIS.html" class="doc-card featured">
+      <div class="doc-title">Synthesis — Complete Philosophy</div>
+      <div class="doc-sub">The full written philosophy. Never about winning the game. Singularity trajectory. Design challenge system. Multi-audience architecture. 18 unwritten insights.</div>
+      <div class="doc-meta">
+        <span class="tag tag-green">CURRENT</span>
+        <span class="acc">95%</span>
+      </div>
+    </a>
+  </div>
+
+  <div class="era-label">Student Experience</div>
+  <div class="doc-grid">
+    <a href="alpha-system.html" class="doc-card new">
+      <div class="doc-title">Alpha System</div>
+      <div class="doc-sub">Zone names in terminal (ECHO / PARALLEL / SHIFTING / RADICAL / REMATCH). Live previews. Detective framework. Alpha application form. Mystery calibration — 3 layers.</div>
+      <div class="doc-meta">
+        <span class="tag tag-new">NEW</span>
+        <span class="tag tag-green">READY TO BUILD</span>
+        <span class="acc">95%</span>
+      </div>
+    </a>
+    <a href="system-complete.html" class="doc-card">
+      <div class="doc-title">System Complete</div>
+      <div class="doc-sub">Variable audit scatter. 3-layer diagram. Information gain curves. Mutual information loop animation. Terminal demo with live message generation. Message library.</div>
+      <div class="doc-meta">
+        <span class="tag tag-green">CURRENT</span>
+        <span class="acc">92%</span>
+      </div>
+    </a>
+  </div>
+
+  <div class="era-label">Architecture Development — Era 1</div>
+  <div class="doc-grid">
+    <a href="perfect-system.html" class="doc-card amber">
+      <div class="doc-title">Perfect System</div>
+      <div class="doc-sub">Variable audit. 3-layer architecture. Minimum sufficient state. Self-similarity diagram. First formal specification. Superseded by Bayesian Architecture for the math, still valid for the variable logic.</div>
+      <div class="doc-meta">
+        <span class="tag tag-amber">SUPERSEDED (math)</span>
+        <span class="acc">90%</span>
+      </div>
+    </a>
+    <a href="entropy-architecture.html" class="doc-card amber">
+      <div class="doc-title">Entropy Architecture</div>
+      <div class="doc-sub">Mutual information loop. Information gain curve per mode. Derivation table. Self-similarity. Philosophically complete. Variable set superseded.</div>
+      <div class="doc-meta">
+        <span class="tag tag-amber">SUPERSEDED (variables)</span>
+        <span class="acc">90%</span>
+      </div>
+    </a>
+    <a href="development-diagram.html" class="doc-card amber">
+      <div class="doc-title">Development Diagram</div>
+      <div class="doc-sub">Interactive priority engine. Template depth ranking. Spectrum matrix. Overlay gate. First visual synthesis of the meta-system.</div>
+      <div class="doc-meta">
+        <span class="tag tag-amber">SUPERSEDED</span>
+        <span class="acc">85%</span>
+      </div>
+    </a>
+  </div>
+
+  <div class="era-label">Original Game Documents — Archive (Do Not Modify)</div>
+  <div class="doc-grid">
+    <a href="challenge-meta.html" class="doc-card archive">
+      <div class="doc-title">Challenge Meta-System</div>
+      <div class="doc-sub">The original challenge compiler. 14 templates, similarity spectrum, session generator, codename vocabulary, loading sequence, game plugin interface. Implemented.</div>
+      <div class="doc-meta">
+        <span class="tag tag-solid">ARCHIVE</span>
+        <span class="tag tag-green">IMPLEMENTED</span>
+        <span class="acc">100%</span>
+      </div>
+    </a>
+    <a href="system-viz.html" class="doc-card archive">
+      <div class="doc-title">Entropy Framework v2</div>
+      <div class="doc-sub">6 cognitive modes. Player profile. Latin hypercube. Scoring formula. Centauri mechanics. Bot archetypes. Session validity. Team composer. Implemented.</div>
+      <div class="doc-meta">
+        <span class="tag tag-solid">ARCHIVE</span>
+        <span class="tag tag-green">IMPLEMENTED</span>
+        <span class="acc">100%</span>
+      </div>
+    </a>
+    <a href="DESIGN_PHILOSOPHY.md" class="doc-card archive">
+      <div class="doc-title">Design Philosophy</div>
+      <div class="doc-sub">The original written philosophy. Why B&W. Why dense. Earned exceptions. The only question worth asking. Timeless — no updates needed.</div>
+      <div class="doc-meta">
+        <span class="tag tag-solid">ARCHIVE</span>
+        <span class="tag tag-green">CANONICAL</span>
+        <span class="acc">100%</span>
+      </div>
+    </a>
+  </div>
+
+  <div class="open-q">
+    <h3>Open Questions — Resolve in Order</h3>
+    <div class="q-row">
+      <span class="q-num" style="color:#ef4444">Q1</span>
+      <span class="q-text">Elo measures game performance, not cognitive skill. Needs transfer_elo from BT integration.</span>
+      <span class="q-pri" style="color:#ef4444">P0</span>
+    </div>
+    <div class="q-row">
+      <span class="q-num" style="color:#ef4444">Q2</span>
+      <span class="q-text">Announced INVERSION measures wrong skill. Silent INVERSION sessions needed.</span>
+      <span class="q-pri" style="color:#ef4444">P0</span>
+    </div>
+    <div class="q-row">
+      <span class="q-num" style="color:#d97706">Q3</span>
+      <span class="q-text">Modes not cognitively orthogonal. Covariance model replaces independence assumption.</span>
+      <span class="q-pri" style="color:#d97706">P1</span>
+    </div>
+    <div class="q-row">
+      <span class="q-num" style="color:#d97706">Q4</span>
+      <span class="q-text">Forgetting curve wrong domain. 14-day half-life likely 30–60 days for strategic skills.</span>
+      <span class="q-pri" style="color:#d97706">P1</span>
+    </div>
+    <div class="q-row">
+      <span class="q-num" style="color:#6366f1">Q5</span>
+      <span class="q-text">Social dimension entirely absent. Teacher tags as partial solution.</span>
+      <span class="q-pri" style="color:#6366f1">P2</span>
+    </div>
+    <div class="q-row">
+      <span class="q-num" style="color:#6366f1">Q6</span>
+      <span class="q-text">All parameters asserted. Bayesian posterior replaces every hardcoded number.</span>
+      <span class="q-pri" style="color:#6366f1">P2 → Bayesian</span>
+    </div>
+    <div class="q-row">
+      <span class="q-num" style="color:#d97706">Q7</span>
+      <span class="q-text">Gifted detection threshold guessed. Gifted need calibrated failure, not accelerated success.</span>
+      <span class="q-pri" style="color:#d97706">P1</span>
+    </div>
+    <div class="q-row">
+      <span class="q-num" style="color:#a78bfa">Q8</span>
+      <span class="q-text">brain_metrics excluded until BT validated. BT integration transforms this to CORE.</span>
+      <span class="q-pri" style="color:#a78bfa">P0 (BT)</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="status-bar">
+  <div class="status-item"><div class="status-dot" style="background:#22c55e"></div>Implemented</div>
+  <div class="status-item"><div class="status-dot" style="background:#d97706"></div>Asserted — needs calibration</div>
+  <div class="status-item"><div class="status-dot" style="background:#ef4444"></div>Known problem</div>
+  <div class="status-item"><div class="status-dot" style="background:#a78bfa"></div>BT bridge</div>
+  <div class="status-item" style="margin-left:auto;color:#222">localhost:8080</div>
+</div>
+
+</body>
+</html>

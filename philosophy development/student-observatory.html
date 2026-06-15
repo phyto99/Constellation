@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Student Observatory — Admin Instrument</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.4}
+nav{position:sticky;top:0;z-index:100;background:#fff;border-bottom:2px solid #000;display:flex;align-items:stretch;padding:0 14px;overflow-x:auto;gap:0}
+.logo{font-size:9px;letter-spacing:2px;font-weight:700;padding:10px 14px 10px 0;border-right:1px solid #ccc;margin-right:4px;white-space:nowrap;align-self:center;text-transform:uppercase;color:#555}
+.tab{padding:10px 13px;cursor:pointer;font-size:9px;letter-spacing:1px;color:#888;border-bottom:3px solid transparent;transition:all .1s;white-space:nowrap;font-weight:700;text-transform:uppercase}
+.tab:hover{color:#000}.tab.active{color:#000;border-bottom-color:#000}
+main{padding:16px 20px}
+h3{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+h4{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;color:#444}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.card{border:1px solid #ccc;padding:12px;background:#fafafa}
+table.t{width:100%;border-collapse:collapse;font-size:10px}
+table.t th{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 6px;border-bottom:2px solid #000;text-align:left;background:#f0f0f0}
+table.t td{padding:4px 6px;border-bottom:1px solid #eee;vertical-align:middle}
+.inset{background:#f0f0f0;border-left:3px solid #000;padding:8px 10px;font-size:10px;line-height:1.7;margin:8px 0}
+.warn{background:#f8f8f8;border:1px dashed #000;padding:8px 10px;font-size:10px;line-height:1.7;margin:8px 0}
+/* identity strip */
+#id-strip{border:2px solid #000;display:flex;flex-wrap:wrap;align-items:stretch;margin-bottom:14px;background:#fff}
+.id-cell{padding:10px 14px;border-right:1px solid #ddd;min-width:90px}
+.id-cell .k{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:3px}
+.id-cell .v{font-size:13px;font-weight:700}
+.id-cell .v small{font-size:9px;color:#888;font-weight:400}
+/* stage track */
+.stg{display:inline-block;width:18px;height:18px;border:1px solid #ccc;font-size:8px;text-align:center;line-height:17px;color:#bbb;font-weight:700;margin-right:1px}
+.stg.done{background:#000;color:#fff;border-color:#000}
+.stg.cur{background:#fff;color:#000;border-color:#000;border-width:2px;line-height:15px}
+/* flags */
+.flag{display:flex;gap:8px;padding:6px 8px;border:1px solid #eee;background:#fff;margin-bottom:5px;font-size:10px;line-height:1.6;align-items:flex-start}
+.flag .fc{flex-shrink:0;font-size:8px;font-weight:700;letter-spacing:1px;padding:1px 6px;border:1px solid;margin-top:1px}
+.f-red .fc{border-color:#dc2626;color:#dc2626}.f-red{border-left:3px solid #dc2626}
+.f-amber .fc{border-color:#d97706;color:#d97706}.f-amber{border-left:3px solid #d97706}
+.f-blue .fc{border-color:#1d4ed8;color:#1d4ed8}.f-blue{border-left:3px solid #1d4ed8}
+.f-purple .fc{border-color:#7c3aed;color:#7c3aed}.f-purple{border-left:3px solid #7c3aed}
+.f-green .fc{border-color:#15803d;color:#15803d}.f-green{border-left:3px solid #15803d}
+/* evidence feed */
+.obs{border:1px solid #eee;background:#fff;padding:6px 8px;margin-bottom:5px;font-size:10px}
+.obs .meta{font-size:8px;color:#888;margin-top:2px;font-family:'Courier New',monospace}
+.chan{display:inline-block;font-size:7px;font-weight:700;letter-spacing:1px;padding:1px 5px;border:1px solid #000;margin-right:5px;vertical-align:1px}
+.chan-GAME{background:#000;color:#fff}
+.chan-TEACHER{background:#fff;color:#000}
+.chan-SELF{background:#f0f0f0;color:#000}
+.chan-PEER{background:#fff;color:#555;border-color:#888}
+.chan-SYSTEM{background:#fff;color:#7c3aed;border-color:#7c3aed}
+.purity{display:inline-block;font-size:7px;font-weight:700;color:#dc2626;border:1px dashed #dc2626;padding:0 4px;margin-left:5px}
+/* boundary cases */
+.bc{border:1px solid #ccc;border-left:3px solid #000;background:#fff;padding:8px 10px;margin-bottom:6px;font-size:10px;line-height:1.6}
+.bc .bt{font-weight:700;margin-bottom:2px}
+.bc .tags{font-family:'Courier New',monospace;font-size:8px;color:#555;margin-top:3px}
+/* terminal */
+#term-wrap{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+#term{background:#000;color:#0f0;font-family:'Courier New',monospace;font-size:11px;padding:16px;min-height:340px;max-height:420px;border:2px solid #000;overflow-y:auto;position:relative}
+#term .line{margin-bottom:2px;opacity:0;transition:opacity .1s}
+#term .line.show{opacity:1}
+#ann{border:1px solid #ccc;background:#fafafa;padding:10px;min-height:340px;max-height:420px;overflow-y:auto}
+.ann-line{border-bottom:1px solid #eee;padding:5px 0;font-size:10px}
+.ann-line .at{font-family:'Courier New',monospace;color:#000}
+.ann-line .aa{font-size:9px;color:#555;margin-top:2px;line-height:1.5}
+.ann-line .aa b{color:#000}
+button.btn{background:#fff;border:1px solid #000;color:#000;padding:4px 12px;cursor:pointer;font-size:9px;font-family:Arial;font-weight:700;letter-spacing:1px;text-transform:uppercase;transition:all .1s}
+button.btn:hover{background:#000;color:#fff}
+button.btn.act{background:#000;color:#fff}
+/* loading mode */
+#loadview{display:none;background:#000;border:2px solid #000;min-height:340px;padding:30px 24px;text-align:center}
+#load-code{font-family:'Courier New',monospace;font-size:26px;font-weight:700;letter-spacing:8px;color:#fff;margin:34px 0 6px}
+#load-sub{font-size:9px;letter-spacing:3px;color:#666;font-family:'Courier New',monospace;margin-bottom:30px}
+#load-bar{height:3px;background:#1a1a1a;margin:0 40px 14px;position:relative}
+#load-fill{height:100%;width:0%;background:#0f0;transition:width .3s linear}
+#load-line{font-family:'Courier New',monospace;font-size:10px;color:#0a0;min-height:16px}
+#load-pct{font-family:'Courier New',monospace;font-size:9px;color:#444;margin-top:8px}
+/* compiler preview */
+.l3{font-family:'Courier New',monospace;font-size:9.5px;line-height:1.9;background:#f0f0f0;border:1px solid #ccc;padding:10px 12px;white-space:pre-wrap}
+.l3 .hl{color:#15803d;font-weight:700}.l3 .al{color:#dc2626;font-weight:700}.l3 .dim{color:#888}
+/* zone pills (B&W language from alpha-system) */
+.zp{display:inline-block;padding:0 6px;font-size:7px;font-weight:700;letter-spacing:1px;border:1px solid #000;text-transform:uppercase}
+.zp-ECHO{background:#111;color:#eee;border-color:#444}
+.zp-PARALLEL{background:#fff;color:#000}
+.zp-SHIFTING{background:#fff;color:#555;border-color:#888}
+.zp-RADICAL{background:#000;color:#fff}
+.zp-REMATCH{background:#f8f8f8;color:#888;border-color:#ccc}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:#fff}::-webkit-scrollbar-thumb{background:#ccc}
+@media(max-width:860px){.grid2,#term-wrap{grid-template-columns:1fr}}
+/* ── STUDENT VIEW OVERLAY
+   Separate DOM subtree — no admin data (flags, feed, matrix, compiler, provenance) is rendered here.
+   In production: student page served from /session/:token — the JS bundle sent to that page
+   contains only {t,s,x} per terminal line. The 'a' (provenance) field never reaches the client. */
+#sv-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#000;z-index:300;overflow:hidden;flex-direction:column}
+#sv-overlay.open{display:flex}
+#sv-nav{background:#000;border-bottom:1px solid #222;display:flex;align-items:center;padding:0 16px;min-height:38px;gap:10px;flex-shrink:0}
+#sv-nav .sv-logo{font-size:9px;letter-spacing:2px;font-weight:700;text-transform:uppercase;color:#333;padding-right:12px;border-right:1px solid #222}
+#sv-nav .sv-session{font-family:'Courier New',monospace;font-size:9px;color:#444;letter-spacing:1px}
+#sv-nav button{background:transparent;border:1px solid #333;color:#666;padding:3px 10px;cursor:pointer;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;font-family:Arial}
+#sv-nav button:hover{border-color:#666;color:#aaa}
+#sv-nav button.sv-act{border-color:#0f0;color:#0f0}
+#sv-nav .sv-exit{margin-left:auto;border-color:#333;color:#444}
+#sv-nav .sv-exit:hover{border-color:#888;color:#888}
+#sv-body{flex:1;display:flex;align-items:stretch;justify-content:center;overflow:hidden}
+#sv-term-wrap{width:100%;max-width:700px;padding:28px 24px;display:flex;flex-direction:column}
+#sv-term{display:block;background:#000;color:#0f0;font-family:'Courier New',monospace;font-size:12px;padding:18px;flex:1;overflow-y:auto;border:none;min-height:0}
+#sv-term .line{margin-bottom:2px;opacity:0;transition:opacity .08s}
+#sv-term .line.show{opacity:1}
+#sv-load{display:none;flex:1;padding:32px 0;text-align:center;flex-direction:column;align-items:center;justify-content:center}
+#sv-load-code{font-family:'Courier New',monospace;font-size:28px;font-weight:700;letter-spacing:8px;color:#fff;margin:28px 0 5px}
+#sv-load-sub{font-size:9px;letter-spacing:3px;color:#444;font-family:'Courier New',monospace;margin-bottom:24px}
+#sv-load-bar{height:3px;background:#111;width:60%;max-width:380px;margin:0 auto 12px}
+#sv-load-fill{height:100%;width:0%;background:#0f0;transition:width .3s linear}
+#sv-load-line{font-family:'Courier New',monospace;font-size:11px;color:#0a0;min-height:18px}
+#sv-load-pct{font-family:'Courier New',monospace;font-size:9px;color:#333;margin-top:8px}
+</style>
+</head>
+<body>
+<nav>
+  <span class="logo">Student Observatory</span>
+  <div id="stu-tabs"></div>
+  <button class="btn" onclick="openStudentView()" style="margin-left:auto;flex-shrink:0">Student View ↗</button>
+</nav>
+<main>
+  <div id="id-strip"></div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Cognitive Position — position · momentum · staleness</h3>
+      <canvas id="radar" width="100%" height="250" style="display:block;width:100%"></canvas>
+      <div style="font-size:8px;color:#888;margin-top:4px">Polygon = mode Elo. Dashed vector = velocity ×3 sessions (green improving · red declining). Hollow node = stale (τ &gt; 10d): the reading is decayed, not current — Q4 decay applied.</div>
+    </div>
+    <div class="card">
+      <h3>Mode Signal Table — the state, with its purity shown</h3>
+      <table class="t" id="mode-table"></table>
+      <div style="font-size:8px;color:#888;margin-top:4px">ZPD target = elo/999 × 0.85 × exp(−τ/λ). λ currently <span style="color:#d97706;font-weight:700">ASSERTED 14d (Q4)</span> — every target in this column inherits that uncertainty. The table shows it rather than hiding it.</div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Trajectory — last 12 sessions · zone · mode · realized info gain</h3>
+      <canvas id="traj" width="100%" height="170" style="display:block;width:100%"></canvas>
+      <div id="traj-legend" style="font-size:8px;color:#888;margin-top:4px"></div>
+    </div>
+    <div class="card">
+      <h3>Active Flags — open questions, instantiated for this student</h3>
+      <div id="flags"></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Corroboration Matrix — independent witnesses per dimension</h3>
+      <canvas id="matrix" width="100%" height="240" style="display:block;width:100%;cursor:crosshair"></canvas>
+      <div id="matrix-tt" style="min-height:36px;padding:5px 8px;border:1px solid #ddd;background:#fff;margin-top:6px;font-size:9px;line-height:1.6">Hover a cell.</div>
+    </div>
+    <div class="card">
+      <h3>Evidence Feed — latest ledger records, full provenance</h3>
+      <div id="feed" style="max-height:280px;overflow-y:auto"></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Boundary Cases — the conundrum inbox</h3>
+      <div id="bcases"></div>
+      <div style="font-size:8px;color:#888">Events that did not fit the vocabulary. Multi-tagged, recorded raw, awaiting pattern threshold (mint at ≥5 similar). Nothing here was forced into a category.</div>
+    </div>
+    <div class="card">
+      <h3>Next Session — compiler preview, Layer 3 reasoning (admin only)</h3>
+      <div class="l3" id="compiler"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <h3 style="margin:0">Terminal — what the student sees · what the system knows</h3>
+      <div style="display:flex;gap:6px">
+        <button class="btn act" id="btn-replay" onclick="replayTerminal()">▶ Replay</button>
+        <button class="btn" id="btn-load" onclick="toggleLoading()">Loading Mode</button>
+      </div>
+    </div>
+    <div id="term-wrap">
+      <div>
+        <div id="term"></div>
+        <div id="loadview">
+          <div style="font-size:8px;letter-spacing:3px;color:#444;font-family:'Courier New',monospace">// CONSTELLATION</div>
+          <div id="load-code">—</div>
+          <div id="load-sub"></div>
+          <div id="load-bar"><div id="load-fill"></div></div>
+          <div id="load-line"></div>
+          <div id="load-pct">0%</div>
+        </div>
+        <div style="font-size:8px;color:#888;margin-top:5px">Left: the student-facing render. The same line sequence drives both the terminal and the loading screen — one dialogue system, two presentations. Register is selected by age tier (SYNTHESIS insight #15).</div>
+      </div>
+      <div>
+        <div id="ann"></div>
+        <div style="font-size:8px;color:#888;margin-top:5px">Right: per-line provenance. Every sentence the student reads is traced to the observation and threshold that produced it. Layer 3 — never shown to students.</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ════════════════════════════════════════════ STUDENT VIEW OVERLAY
+     Only {t,s,x} rendered here. No 'a' (provenance) fields touch this DOM subtree.
+     Production note: /session/:token serves only {t,s,x}. This overlay is an in-browser preview. -->
+<div id="sv-overlay">
+  <div id="sv-nav">
+    <span class="sv-logo">Constellation</span>
+    <span class="sv-session" id="sv-session-label"></span>
+    <button id="sv-btn-replay" onclick="svReplay()">▶ Replay</button>
+    <button id="sv-btn-load" onclick="svToggleLoad()">Loading Screen</button>
+    <button class="sv-exit" onclick="closeStudentView()">← Admin View</button>
+  </div>
+  <div id="sv-body">
+    <div id="sv-term-wrap">
+      <div id="sv-term"></div>
+      <div id="sv-load">
+        <div style="font-size:8px;letter-spacing:3px;color:#333;font-family:'Courier New',monospace">// CONSTELLATION</div>
+        <div id="sv-load-code">—</div>
+        <div id="sv-load-sub"></div>
+        <div id="sv-load-bar"><div id="sv-load-fill"></div></div>
+        <div id="sv-load-line"></div>
+        <div id="sv-load-pct">0%</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════ SHARED VOCAB
+const MODES=[
+  {id:'qty',n:'QUANTITY',col:'#d97706'},{id:'spt',n:'SPATIAL',col:'#2563eb'},
+  {id:'frt',n:'FORTRESS',col:'#059669'},{id:'dst',n:'DESTRUCTION',col:'#dc2626'},
+  {id:'wrm',n:'WORMHOLE',col:'#7c3aed'},{id:'inv',n:'INVERSION',col:'#0891b2'},
+];
+const CHANS=['GAME','BT','NOVEL','ACAD','TEACH','PEER','SELF'];
+const STAGES=['Consumer','Observer','Theorist','Predictor','Designer','Teacher'];
+
+// ════════════════════════════════ STUDENTS
+const STUDENTS={
+
+mvega:{
+  name:'M. VEGA', tier:'TEEN 15', track:'COMPETITIVE', sessions:23, stage:3, alpha:'ELIGIBLE — not applied',
+  engagement:'OK — 0 missed in 4 weeks', register:'teen-standard',
+  elo:[520,610,445,690,380,505], vel:[8,-2,31,-12,0,15], tau:[4,9,1,12,19,2],
+  hist:[['MISER','FLOOD'],['REACH','ARCHITECT'],['NETWORK','SIEGE'],['HUNTER','CHAIN REACTION'],['DECOY'],['MIRROR','HIDDEN OBJECTIVE']],
+  purity:[[],[],[],[],['near-binary signal'],['announced_overlay ×4 — Q2']],
+  traj:[
+    {z:'PARALLEL',m:'qty',g:.62},{z:'SHIFTING',m:'spt',g:.55},{z:'ECHO',m:'spt',g:.71},{z:'PARALLEL',m:'frt',g:.78},
+    {z:'ECHO',m:'frt',g:.81,ov:false},{z:'SHIFTING',m:'dst',g:.44},{z:'RADICAL',m:'wrm',g:.39},{z:'REMATCH',m:'wrm',g:.58},
+    {z:'SHIFTING',m:'inv',g:.74,ov:true},{z:'PARALLEL',m:'frt',g:.83},{z:'ECHO',m:'frt',g:.79},{z:'SHIFTING',m:'inv',g:.69,ov:true},
+  ],
+  flags:[
+    {s:'red',c:'Q2',t:'All 4 INVERSION sessions were announced. INV Elo (505) measures "adapt to announced change" — the easier skill. Next INV session is scheduled SILENT; until then every INV reading carries a contamination flag.'},
+    {s:'amber',c:'PLATEAU',t:'DST velocity −12 over 3 sessions from a high base (690). Per the velocity rule: rotate, do not repeat. Compiler has down-weighted DST.'},
+    {s:'amber',c:'Q4',t:'WRM untouched 19 days. Forgetting adjustment is active but λ=14d is ASSERTED — return performance will be logged as a half-life data point either way.'},
+    {s:'blue',c:'STAGE',t:'Terminal-prediction probe recommended: 23 sessions, theorizing in community channel (PEER obs ×3). If she predicts output before reading it → Stage 4.'},
+    {s:'purple',c:'Q1',t:'No BT channel yet. All Elo readings are single-witness (GAME only). Claims capped at MEASURED.'},
+  ],
+  feed:[
+    {ref:'S23·R6',ch:'GAME',sig:'blackhole_chain_len = 3, premeditated (setup across R4–R6)',tags:'[dst, spt, composite]',prov:'params v7 · cfg #4e1a',pur:''},
+    {ref:'S23·R4',ch:'GAME',sig:'strategy_shift_speed = 2 rounds post-signal',tags:'[inv-adjacent, within_session]',prov:'params v7 · cfg #4e1a',pur:''},
+    {ref:'S23',ch:'PEER',sig:'community theory posted: "ECHO = the system thinks you almost had it"',tags:'[meta, vocab-decoding]',prov:'community log #88',pur:''},
+    {ref:'S22',ch:'GAME',sig:'inv_session_rank_pct = 64',tags:'[inv]',prov:'params v7 · cfg #2bb0',pur:'announced_overlay'},
+    {ref:'S22',ch:'SELF',sig:'predicted own zone: "probably PARALLEL" — actual: SHIFTING',tags:'[self-model, stage-probe]',prov:'informal, teacher-logged',pur:''},
+    {ref:'S21',ch:'SYSTEM',sig:'inference: pattern began S18 may be continuing (unconfirmed)',tags:'[probabilistic]',prov:'never counts toward corroboration',pur:''},
+  ],
+  bcases:[
+    {t:'Premeditated blackhole chains (3rd occurrence)',b:'Setup moves spread across 3 rounds before activation. Pure DST filing would lose the SPATIAL planning content. Multi-tagged [dst, spt, composite]. 2 more occurrences → mint composite signal type; feeds Q3 covariance model.',tags:'dst · spt · composite · mint 3/5'},
+    {t:'Pre-loss accuracy spike',b:'In 2 losing sessions, move efficiency rose in the final 3 rounds — improving while losing. No vocabulary entry distinguishes "losing while developing" from "losing". Recorded raw. 1/5.',tags:'unnamed · within_session · mint 1/5'},
+  ],
+  matrix:{ // per-dim per-chan: m measured, c contaminated, i instrumented, p pending, a absent
+    QTY:['m','p','i','a','a','a','a'],SPT:['m','p','i','a','a','a','a'],FRT:['m','p','i','a','a','a','i'],
+    DST:['m','p','i','a','a','a','a'],WRM:['m','p','a','a','a','a','a'],INV:['c','p','i','a','a','a','a'],
+    ENG:['m','a','a','a','i','a','a'],SOC:['a','a','a','a','a','i','a'],UND:['a','a','a','a','a','m','i'],
+  },
+  compiler:[
+    ['dim','// COMPILER — S24 candidate · M. VEGA · params v7'],
+    ['','hypercube: WRM only uncovered in window-6 → eligible {WRM, INV, QTY}'],
+    ['','weight(WRM) = 380^0.7 × 1/(19+1) × 1.0      = 3.18  ← max'],
+    ['','weight(INV) = 505^0.7 × 1/(2+1)  × vel(+15) = 2.61'],
+    ['','ZPD(WRM): 380/999 × 0.85 = 0.323 → ×exp(−19/14) = 0.083 → floor 0.25'],
+    ['al','  [PARAM ALERT Q4] λ=14d ASSERTED — adjustment may be 2–3× too aggressive.'],
+    ['al','  → return outcome will be logged as half-life evidence regardless.'],
+    ['','zone: mode change after comfortable FRT block → SHIFTING'],
+    ['','template: DECOY ∈ history → THE GATEWAY selected (max locked axes available)'],
+    ['','overlay: INV ineligible this session (mode=WRM, cooldown 1/3)'],
+    ['hl','register: teen-standard · predicted E[KL] = 0.74 (recorded pre-session)'],
+  ],
+  terminal:[
+    {t:0,    s:'dim', x:'// SESSION 24 — CHALLENGE COMPILER v2', a:'Frame line. Session number anchors the message (community mechanism: students track arcs).'},
+    {t:500,  s:'dim', x:'Scanning behavioral history...', a:'Cosmetic latency. No computation happens here — the selection ran at S23 close.'},
+    {t:1100, s:'obs', x:'No wormhole engagement in 19 days. This changes now.', a:'<b>Source:</b> τ[wrm]=19d (ledger fold). Pattern-detection register. Verifiable by the student — she can count.'},
+    {t:1900, s:'obs', x:'Blackhole chain, round 6: three moves of preparation. The system saw the preparation.', a:'<b>Source:</b> boundary case obs S23·R6 [dst,spt,composite]. Surveillance aesthetic, calibrated: references what she actually did, asserts observation without interpreting it for her.'},
+    {t:2900, s:'n',   x:'Spectrum zone: SHIFTING', a:'<b>Threshold:</b> comfortable-win block + forced mode change → SHIFTING (Layer 2 vocabulary — she may decode this).'},
+    {t:3500, s:'b',   x:'Mode selected: WORMHOLE', a:'Layer 1 — always disclosed.'},
+    {t:4000, s:'n',   x:'Template: THE GATEWAY — instant win. All multipliers irrelevant.', a:'Layer 1. The template constraint IS the cognitive constraint (locked axis).'},
+    {t:4600, s:'n',   x:'Difficulty: recalibrated downward. The system will not say by how much.', a:'<b>Q4 in production:</b> decay-adjusted target 0.25. Admits recalibration (truthful) without the number (Layer 3). The honesty is deliberate — false confidence would be detectable and costly.'},
+    {t:5400, s:'blank',x:'',a:''},
+    {t:5600, s:'code',x:'SESSION 24: EVENT HORIZON', a:'Codename from WRM pool. Memorable token — the thing she will say out loud to classmates.'},
+    {t:6200, s:'hint',x:'> Score nothing. Do one thing.', a:'Mode-orienting hint. Non-prescriptive about method; absolute about objective.'},
+  ],
+},
+
+dkosa:{
+  name:'D. KOSA', tier:'GIFTED 13', track:'COMPETITIVE — ACCELERATED', sessions:9, stage:2, alpha:'NOT ELIGIBLE (sessions < 15)',
+  engagement:'HIGH — requests extra sessions', register:'gifted-compressed',
+  elo:[640,590,675,610,705,580], vel:[42,38,51,29,44,36], tau:[2,3,1,4,2,1],
+  hist:[['MISER'],['BLIND REACH'],['PATIENCE','SIEGE'],['SCORCHED EARTH'],['DECOY'],['MIRROR','NEGATIVE SPACE']],
+  purity:[[],[],[],[],[],['announced ×1, silent ×1 — partially clean']],
+  traj:[
+    {z:'PARALLEL',m:'qty',g:.66},{z:'SHIFTING',m:'spt',g:.72},{z:'RADICAL',m:'frt',g:.51},{z:'SHIFTING',m:'inv',g:.88,ov:true},
+    {z:'RADICAL',m:'dst',g:.47},{z:'SHIFTING',m:'wrm',g:.69},{z:'RADICAL',m:'frt',g:.43},{z:'SHIFTING',m:'inv',g:.91,ov:true},{z:'RADICAL',m:'wrm',g:.49},
+  ],
+  flags:[
+    {s:'green',c:'GIFTED',t:'Velocity 2.4 SD above cohort mean (sessions 1–5). Detection threshold itself is ASSERTED (Q7) — cohort comparison will calibrate it. Acceleration active: INVERSION introduced at session 4.'},
+    {s:'red',c:'FAILURE',t:'Zero sessions below 40th percentile in 9 sessions. The gift is not protection from difficulty. Calibrated failure is overdue: next INV is SILENT + constraint overlay (8 moves/round). Engineered, not accidental.'},
+    {s:'amber',c:'Q7',t:'Acceleration is running on a guessed threshold. His outcomes are cohort-comparison data — both arms of the gifted-track experiment are instrumented.'},
+    {s:'blue',c:'META',t:'Behavioral signals suggest he is modeling the system, not just the game (meta-game awareness marker ×3). Design challenge at Stage 3 recommended — earlier than standard Stage 5.'},
+  ],
+  feed:[
+    {ref:'S9·R3',ch:'GAME',sig:'mid_session_strategy_shift = R3 (within-session adaptation marker ×4)',tags:'[within_session, gifted-marker]',prov:'params v7 · cfg #9c02',pur:''},
+    {ref:'S8',ch:'GAME',sig:'silent INV: strategy_shift_speed = 1 round — exceptional',tags:'[inv, CLEAN]',prov:'params v7 · silent overlay',pur:''},
+    {ref:'S8',ch:'SELF',sig:'asked teacher: "does the terminal decide before or after it scans?"',tags:'[meta-game, stage-probe]',prov:'teacher log',pur:''},
+    {ref:'S7',ch:'TEACH',sig:'tag: impatient with slower teammate — recovered, then over-directed',tags:'[soc]',prov:'structured tag v1',pur:'subjective channel'},
+    {ref:'S6',ch:'GAME',sig:'high-constraint template (PATIENCE) at session 6 — handled at 71st pct',tags:'[frt, gifted-marker]',prov:'params v7',pur:''},
+  ],
+  bcases:[
+    {t:'Adapts before feedback arrives',b:'In S8 (silent INV) he shifted strategy in round 1 — before score feedback could have signaled the inversion. Either he detected a subtler cue (what?) or pre-hedged all sessions post-S4. Both interpretations recorded; neither forced. Watch next silent INV.',tags:'inv · detection-mechanism-unknown · mint 1/5'},
+  ],
+  matrix:{
+    QTY:['m','p','i','a','a','a','a'],SPT:['m','p','i','a','a','a','a'],FRT:['m','p','i','a','a','a','a'],
+    DST:['m','p','i','a','a','a','a'],WRM:['m','p','i','a','a','a','a'],INV:['m','p','i','a','a','a','i'],
+    ENG:['m','a','a','a','m','a','a'],SOC:['a','a','a','a','m','a','a'],UND:['a','a','a','a','i','a','m'],
+  },
+  compiler:[
+    ['dim','// COMPILER — S10 candidate · D. KOSA · params v7 · gifted track'],
+    ['','all modes recent (max τ=4d) → hypercube unconstrained → weight by need'],
+    ['','need: zero sub-40pct outcomes in 9 sessions → objective shifts:'],
+    ['hl','  engineer calibrated failure — INV silent + move-budget constraint'],
+    ['','ZPD: deliberately set ABOVE target — 0.85 coeff overridden to 0.95'],
+    ['al','  [OVERRIDE LOGGED] params v7 + gifted_exception #2 — outcome feeds Q7'],
+    ['','zone: mastered-mode departure → RADICAL'],
+    ['','template: MIRROR ∈ history → HIDDEN OBJECTIVE (Fisher-Yates, no hints)'],
+    ['','overlay: INVERSION, SILENT — terminal will not announce (Q2 clean signal)'],
+    ['hl','register: gifted-compressed · predicted E[KL] = 0.93 — highest on roster'],
+  ],
+  terminal:[
+    {t:0,    s:'dim', x:'// SESSION 10 — CHALLENGE COMPILER v2', a:'Frame.'},
+    {t:500,  s:'dim', x:'Scanning behavioral history...', a:'Cosmetic.'},
+    {t:1100, s:'obs', x:'Round 3 signal: prior model abandoned. Adaptation speed recorded.', a:'<b>Register:</b> gifted-compressed (insight #15). Same observation a teen would get as a sentence, delivered as telemetry. He has shown he prefers being read precisely over being encouraged.'},
+    {t:1900, s:'obs', x:'Nine sessions. Zero failures. The system has noticed what is missing.', a:'<b>Source:</b> outcome fold, rank&lt;40 count = 0. This is the calibrated-failure setup line — names the absence without promising what comes.'},
+    {t:2700, s:'n',   x:'Spectrum zone: RADICAL', a:'Mastered-mode departure rule.'},
+    {t:3300, s:'b',   x:'Mode selected: INVERSION', a:'Disclosed. What is NOT disclosed: the overlay is silent and the move budget is constrained. The omission IS the experiment (Q2).'},
+    {t:3800, s:'n',   x:'Template: HIDDEN OBJECTIVE — no further information.', a:'Truthful refusal. Gifted register tolerates — prefers — high opacity.'},
+    {t:4400, s:'n',   x:'Move budget: 8 per round.', a:'Constraint disclosed (it is visible in-game anyway — lying about Layer 1 is never allowed).'},
+    {t:5000, s:'blank',x:'',a:''},
+    {t:5200, s:'code',x:'SESSION 10: WRONG ANSWER', a:'INV pool codename. For this student, the name is bait: he will try to decode why THIS name.'},
+    {t:5800, s:'hint',x:'> The system is also capable of saying nothing at all.', a:'Meta-line in place of a hint. He flagged ×3 for modeling the system — the terminal acknowledges its observer. This is the second game made explicit, exactly once.'},
+  ],
+},
+
+srios:{
+  name:'S. RIOS', tier:'YOUNGER 11', track:'COLLABORATIVE STAIRCASE', sessions:14, stage:2, alpha:'TRACK N/A — staircase',
+  engagement:'RECOVERED — wobble at S8–9, stable since', register:'younger-warm',
+  elo:[310,255,290,180,420,0], vel:[12,9,14,4,22,0], tau:[3,6,4,11,1,0],
+  hist:[['FLOOD'],['REACH'],['NETWORK'],['HUNTER'],['THE GATEWAY','DECOY'],[]],
+  purity:[[],[],[],['low engagement S8–9 — motivational noise'],[],['INV suppressed until S20+ (age rule)']],
+  traj:[
+    {z:'PARALLEL',m:'wrm',g:.58},{z:'ECHO',m:'wrm',g:.64},{z:'PARALLEL',m:'qty',g:.61},{z:'SHIFTING',m:'frt',g:.52},
+    {z:'REMATCH',m:'dst',g:.31},{z:'REMATCH',m:'dst',g:.36},{z:'PARALLEL',m:'wrm',g:.70},{z:'ECHO',m:'qty',g:.63},
+    {z:'PARALLEL',m:'frt',g:.66},{z:'SHIFTING',m:'spt',g:.49},{z:'PARALLEL',m:'wrm',g:.72},{z:'ECHO',m:'qty',g:.68},
+  ],
+  flags:[
+    {s:'blue',c:'AGE',t:'INVERSION suppressed until session 20+ (younger-student rule: heuristics must stabilize before they are productively broken). INV row reads zero by design, not failure.'},
+    {s:'amber',c:'ENG',t:'Engagement wobble S8–9 coincided with the DST REMATCH loop. Flow zone is age-widened (25–65th pct) and DST is cooling down. Engagement is the hard constraint — below it nothing else matters.'},
+    {s:'green',c:'TRACK',t:'Staircase working as designed: personal targets, no competitive rank. WRM-first path (binary, satisfying) carried her through the wobble — exactly the motivational design from SYNTHESIS V.'},
+    {s:'green',c:'SOC',t:'TEACHER channel: supportive-teammate tags ×4. The only dimension where she currently has TWO witnesses (GAME participation + TEACHER) — strongest-corroborated dimension on her profile is the one the old system did not measure at all (Q5).'},
+  ],
+  feed:[
+    {ref:'S14',ch:'GAME',sig:'personal_target_delta = +9% over own ceiling',tags:'[staircase, eng]',prov:'collab objective fn (separate system, per audit)',pur:''},
+    {ref:'S14',ch:'TEACH',sig:'tag: explained wormhole pairing to teammate unprompted',tags:'[soc, und]',prov:'structured tag v1',pur:'subjective channel'},
+    {ref:'S13',ch:'GAME',sig:'wormhole_commit_round = 2 — earliest yet',tags:'[wrm]',prov:'params v7 · cfg #77d1',pur:''},
+    {ref:'S9',ch:'GAME',sig:'session_completion = abandoned at R7',tags:'[eng]',prov:'params v7',pur:'motivational noise'},
+    {ref:'S9',ch:'TEACH',sig:'tag: frustrated after second REMATCH — recovered next day',tags:'[soc, eng]',prov:'structured tag v1',pur:''},
+  ],
+  bcases:[
+    {t:'Teaching as a signal of understanding',b:'She explained wormhole pairing to a teammate, correctly, unprompted (S14). Understanding evidence outside every game-signal category — currently tagged [und] via TEACHER channel. If SELF/PEER channels later formalize a "can teach it" probe, this record is already waiting. 2/5 similar.',tags:'und · soc · channel-crossing · mint 2/5'},
+  ],
+  matrix:{
+    QTY:['m','p','a','a','a','a','a'],SPT:['m','p','a','a','a','a','a'],FRT:['m','p','a','a','a','a','a'],
+    DST:['c','p','a','a','a','a','a'],WRM:['m','p','a','a','a','a','a'],INV:['a','a','a','a','a','a','a'],
+    ENG:['m','a','a','a','m','a','a'],SOC:['a','a','a','a','m','a','a'],UND:['a','a','a','a','m','a','a'],
+  },
+  compiler:[
+    ['dim','// COMPILER — S15 candidate · S. RIOS · params v7 · staircase track'],
+    ['','track: collaborative — no rank; objective = personal_target_delta'],
+    ['','flow zone: age-widened 25–65th pct (engagement constraint dominates)'],
+    ['','hypercube: SPT weakest covered recently; DST cooling (eng wobble link)'],
+    ['','  → QTY selected: stable confidence base before next SPT push'],
+    ['','ZPD: 310/999 × 0.85 × exp(−3/14) = 0.213 → err toward easy (age rule)'],
+    ['','zone: steady block → PARALLEL'],
+    ['','overlay: INV suppressed (session 14 < 20). ITHKUIL ineligible (age).'],
+    ['al','  [Q5 NOTE] strongest corroboration on profile is SOC via TEACHER —'],
+    ['al','  the dimension the architecture once excluded. Logged as Q5 evidence.'],
+    ['hl','register: younger-warm · predicted E[KL] = 0.61 (eng-constrained max)'],
+  ],
+  terminal:[
+    {t:0,    s:'dim', x:'// SESSION 15', a:'Compiler header shortened — the surveillance frame is muted for this tier.'},
+    {t:500,  s:'obs', x:'Your wormhole jump in the last game was your fastest one yet. The system noticed.', a:'<b>Register:</b> younger-warm. Same observation class as the teen "pattern logged" lines — identical information, warmer delivery (insight #15: register varies by tier, never the truth).'},
+    {t:1400, s:'obs', x:'You helped your teammate figure out the pairs. That was noticed too.', a:'<b>Source:</b> TEACHER channel tag S14. The terminal can cite cross-channel evidence — the student experiences one watching system, not five databases.'},
+    {t:2300, s:'n',   x:'Spectrum zone: PARALLEL', a:'Zone names are NOT simplified for younger students — the vocabulary is the community; diluting it per-tier would fork the language.'},
+    {t:2900, s:'b',   x:'Mode selected: QUANTITY', a:'Confidence-base selection (Layer 3: engagement recovery strategy). She is told the what, never the why.'},
+    {t:3400, s:'n',   x:'Your target this time: 96 stars. Your best is 91.', a:'Staircase: personal ceiling, stated plainly. No rank exists on this track.'},
+    {t:4000, s:'blank',x:'',a:''},
+    {t:4200, s:'code',x:'SESSION 15: THE TIDE', a:'QTY pool. Codenames are also not age-diluted.'},
+    {t:4800, s:'hint',x:'> Cover the open space early. The edges can wait.', a:'Slightly more directive than teen register — scaffolding tolerance is higher at this age, by design.'},
+  ],
+},
+
+atanaka:{
+  name:'A. TANAKA', tier:'TEEN 16', track:'COMPETITIVE', sessions:31, stage:4, alpha:'◈ ALPHA (S27) — review duty active',
+  engagement:'RETURNING — 21-day absence (exams)', register:'teen-standard',
+  elo:[580,475,610,555,640,635], vel:[0,0,0,0,0,0], tau:[21,21,21,21,21,21],
+  hist:[['SPEED FLOOD'],['ARCHITECT','REACH'],['SIEGE'],['SCORCHED EARTH'],['DECOY','THE GATEWAY'],['HIDDEN OBJECTIVE','MIRROR']],
+  purity:[['stale 21d'],['stale 21d · REMATCH-loop history'],['stale 21d'],['stale 21d'],['stale 21d'],['stale 21d']],
+  traj:[
+    {z:'SHIFTING',m:'inv',g:.77,ov:true},{z:'PARALLEL',m:'wrm',g:.70},{z:'RADICAL',m:'qty',g:.45},{z:'REMATCH',m:'spt',g:.41},
+    {z:'REMATCH',m:'spt',g:.46},{z:'ECHO',m:'spt',g:.73},{z:'PARALLEL',m:'frt',g:.75},{z:'SHIFTING',m:'dst',g:.62},
+    {z:'PARALLEL',m:'inv',g:.80,ov:true},{z:'SHIFTING',m:'wrm',g:.66},{z:'RADICAL',m:'inv',g:.52,ov:true},{z:'PARALLEL',m:'frt',g:.74},
+  ],
+  flags:[
+    {s:'amber',c:'Q4',t:'21-day gap across ALL modes — the single most valuable forgetting-curve subject on the roster. Return sessions are pre-registered as half-life measurements: predicted return-Elo logged under λ=14d AND λ=40d. Whichever predicts better wins evidence.'},
+    {s:'blue',c:'STAGE4',t:'Predictor stage confirmed pre-absence (terminal output predicted correctly 3×). Design-challenge interface unlock pending one post-return calibration block.'},
+    {s:'green',c:'ALPHA',t:'Alpha since S27. One application review owed. Her review quality is itself a SELF/PEER-channel observation — evaluating analysis is Stage 6 rehearsal.'},
+    {s:'red',c:'LOOP-HIST',t:'SPT REMATCH loop S24–25 resolved via ECHO at S26 — but loop history makes SPT the riskiest return mode. Compiler will not open with SPT.'},
+  ],
+  feed:[
+    {ref:'S31+21d',ch:'SYSTEM',sig:'PRE-REGISTERED: return Elo predictions — λ14d: SPT 388 · λ40d: SPT 441',tags:'[q4, half-life-experiment]',prov:'prediction logged BEFORE return session',pur:''},
+    {ref:'S31',ch:'SELF',sig:'predicted terminal zone before reading: RADICAL — correct (3rd consecutive)',tags:'[stage-probe, self-model]',prov:'prediction logged pre-reveal',pur:''},
+    {ref:'S30',ch:'PEER',sig:'Alpha review submitted: identified QTY-logic-in-FRT pattern in applicant analysis',tags:'[und, alpha-duty]',prov:'review log #12',pur:''},
+    {ref:'S29',ch:'GAME',sig:'silent INV: strategy_shift_speed = 2 rounds',tags:'[inv, CLEAN]',prov:'params v7 · silent overlay',pur:''},
+  ],
+  bcases:[
+    {t:'Predicting the terminal — what is it evidence OF?',b:'Three consecutive correct zone predictions. This is the Stage 4 criterion — but the categories (game skill / system-model skill / both) were never separated. Tagged [self-model, meta]; the singularity trajectory needs its own measurement vocabulary. 4/5 similar across roster → minting imminent.',tags:'self-model · meta · trajectory · mint 4/5'},
+  ],
+  matrix:{
+    QTY:['m','p','i','i','a','a','m'],SPT:['m','p','i','i','a','a','m'],FRT:['m','p','i','i','a','a','m'],
+    DST:['m','p','i','a','a','a','m'],WRM:['m','p','i','a','a','a','m'],INV:['m','p','i','a','a','a','m'],
+    ENG:['m','a','a','a','m','a','a'],SOC:['a','a','a','a','i','m','a'],UND:['a','a','a','a','a','m','m'],
+  },
+  compiler:[
+    ['dim','// COMPILER — S32 candidate · A. TANAKA · params v7 · RETURN PROTOCOL'],
+    ['','τ = 21d on all modes → forgetting adjustment dominates everything'],
+    ['hl','HALF-LIFE EXPERIMENT ACTIVE (pre-registered S31+21d):'],
+    ['hl','  λ=14d predicts return SPT 388 · λ=40d predicts 441 · truth decides'],
+    ['','mode: FRT (strongest pre-gap, no loop history — safest re-entry probe)'],
+    ['','  SPT excluded from re-entry (REMATCH loop history + max decay risk)'],
+    ['','ZPD under λ14: 610/999×0.85×exp(−21/14) = 0.116 — implausibly low'],
+    ['','ZPD under λ40: 610/999×0.85×exp(−21/40) = 0.307 — compiler uses MIDPOINT'],
+    ['al','  [DUAL-HYPOTHESIS SESSION] both predictions logged; outcome settles Q4 (n+=1)'],
+    ['','zone: returning after absence → ECHO (continuity, not punishment)'],
+    ['hl','register: teen-standard · Stage 4 — expect her to predict this output'],
+  ],
+  terminal:[
+    {t:0,    s:'dim', x:'// SESSION 32 — CHALLENGE COMPILER v2', a:'Frame.'},
+    {t:500,  s:'dim', x:'Scanning behavioral history...', a:'Cosmetic.'},
+    {t:1100, s:'obs', x:'Twenty-one days. The system kept the time.', a:'<b>Source:</b> τ fold. For a Stage 4 student the line is also a tell — she knows absence affects calibration and will theorize about how. Letting her theorize correctly IS the design.'},
+    {t:1900, s:'obs', x:'The model of you is three weeks old. This session updates it. Expect the system to be slightly wrong.', a:'<b>Honesty about uncertainty:</b> the dual-hypothesis session admitted in student language. "Slightly wrong" is true under either λ. Pre-registered predictions sit in the ledger; she sees none of the numbers.'},
+    {t:2900, s:'n',   x:'Spectrum zone: ECHO', a:'Return rule: continuity. An absence is not a failure; REMATCH would read as punishment.'},
+    {t:3500, s:'b',   x:'Mode selected: FORTRESS', a:'Layer 3 reason (loop-history avoidance on SPT) is never stated. She may infer it — Stage 4 students decode selection logic; the system neither confirms nor denies.'},
+    {t:4000, s:'n',   x:'Template: NETWORK — 4 HQs. Destruction penalized.', a:'Layer 1 disclosure, standard.'},
+    {t:4600, s:'meta',x:'You predicted the last three sessions before reading them. The system is aware that you are reading it.', a:'<b>Stage 4 acknowledgment</b> — the mutual-information loop stated to the student exactly once, at the threshold of Designer. This line is the invitation to the design track without naming it.'},
+    {t:5600, s:'blank',x:'',a:''},
+    {t:5800, s:'code',x:'SESSION 32: DEEP ROOTS', a:'FRT pool. After 21 days away: the name does double work.'},
+    {t:6400, s:'hint',x:'> Place HQs far apart before connecting them. You know this. Show the system it survived the gap.', a:'Re-entry register: explicitly references retained knowledge — the only time the terminal acknowledges the forgetting model to the student, and only obliquely.'},
+  ],
+},
+};
+
+// ════════════════════════════════ STATE
+let CUR='mvega';
+let tTimers=[];let loadingMode=false;
+
+// ════════════════════════════════ RENDER: NAV + IDENTITY
+function renderNav(){
+  document.getElementById('stu-tabs').innerHTML=Object.entries(STUDENTS).map(([k,s])=>
+    `<div class="tab ${k===CUR?'active':''}" onclick="selectStudent('${k}',this)">${s.name}</div>`).join('');
+}
+function renderIdentity(){
+  const s=STUDENTS[CUR];
+  const stages=STAGES.map((n,i)=>{
+    const st=i+1<s.stage?'done':i+1===s.stage?'cur':'';
+    return `<span class="stg ${st}" title="${n}">${i+1}</span>`;
+  }).join('')+`<span class="stg" title="Singularity — Architect" style="border-style:dashed">◈</span>`;
+  document.getElementById('id-strip').innerHTML=`
+    <div class="id-cell" style="background:#000;color:#fff;min-width:130px"><div class="k" style="color:#888">Student</div><div class="v">${s.name}</div></div>
+    <div class="id-cell"><div class="k">Tier</div><div class="v" style="font-size:11px">${s.tier}</div></div>
+    <div class="id-cell"><div class="k">Track</div><div class="v" style="font-size:11px">${s.track}</div></div>
+    <div class="id-cell"><div class="k">Sessions</div><div class="v">${s.sessions}</div></div>
+    <div class="id-cell" style="min-width:170px"><div class="k">Trajectory — ${STAGES[s.stage-1]}</div><div class="v">${stages}</div></div>
+    <div class="id-cell"><div class="k">Alpha</div><div class="v" style="font-size:10px">${s.alpha}</div></div>
+    <div class="id-cell"><div class="k">Engagement (hard constraint)</div><div class="v" style="font-size:10px">${s.engagement}</div></div>
+    <div class="id-cell"><div class="k">Terminal register</div><div class="v" style="font-size:10px;font-family:'Courier New',monospace">${s.register}</div></div>`;
+}
+
+// ════════════════════════════════ RENDER: RADAR
+function drawRadar(){
+  const c=document.getElementById('radar');if(!c)return;
+  const W=c.clientWidth||440,H=250;c.setAttribute('width',W);c.setAttribute('height',H);
+  const ctx=c.getContext('2d');ctx.clearRect(0,0,W,H);
+  const s=STUDENTS[CUR];
+  const cx=W/2,cy=H/2,R=Math.min(W,H)/2-34,N=6;
+  const ang=i=>(i/N)*Math.PI*2-Math.PI/2;
+  const pt=(i,r)=>({x:cx+r*Math.cos(ang(i)),y:cy+r*Math.sin(ang(i))});
+  for(let ring=1;ring<=4;ring++){
+    ctx.beginPath();
+    for(let i=0;i<=N;i++){const p=pt(i%N,R*ring/4);i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);}
+    ctx.closePath();ctx.strokeStyle='#e8e8e8';ctx.stroke();
+  }
+  for(let i=0;i<N;i++){const p=pt(i,R);ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(p.x,p.y);ctx.strokeStyle='#e8e8e8';ctx.stroke();}
+  ctx.beginPath();
+  for(let i=0;i<N;i++){const p=pt(i,R*s.elo[i]/999);i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);}
+  ctx.closePath();ctx.fillStyle='rgba(0,0,0,.06)';ctx.fill();ctx.strokeStyle='#000';ctx.lineWidth=2;ctx.stroke();
+  MODES.forEach((m,i)=>{
+    const p=pt(i,R*s.elo[i]/999);
+    if(Math.abs(s.vel[i])>6){
+      const pv=pt(i,R*Math.max(0,Math.min(1,(s.elo[i]+s.vel[i]*3)/999)));
+      ctx.strokeStyle=s.vel[i]>0?'#15803d':'#dc2626';ctx.lineWidth=2;ctx.setLineDash([3,2]);
+      ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(pv.x,pv.y);ctx.stroke();ctx.setLineDash([]);
+    }
+    const stale=s.tau[i]>10;
+    ctx.beginPath();ctx.arc(p.x,p.y,4.5,0,Math.PI*2);
+    if(stale){ctx.strokeStyle=m.col;ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#fff';ctx.fill();}
+    else{ctx.fillStyle=m.col;ctx.fill();}
+    const lp=pt(i,R+20);
+    ctx.fillStyle=m.col;ctx.font='bold 9px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(m.id.toUpperCase(),lp.x,lp.y);
+    const vp=pt(i,R+31);ctx.fillStyle='#888';ctx.font='8px Arial';
+    ctx.fillText(s.elo[i]?String(s.elo[i]).padStart(3,'0'):'—',vp.x,vp.y);
+  });
+}
+
+// ════════════════════════════════ RENDER: MODE TABLE
+function renderModeTable(){
+  const s=STUDENTS[CUR];
+  const rows=MODES.map((m,i)=>{
+    const elo=s.elo[i],vel=s.vel[i],tau=s.tau[i];
+    const target=elo?(elo/999*0.85*Math.exp(-tau/14)):0;
+    const velStr=vel===0?(elo?'<span style="color:#888">flat</span>':'—')
+      :`<span style="color:${vel>0?'#15803d':'#dc2626'};font-weight:700">${vel>0?'+':''}${vel}</span>`;
+    const pur=s.purity[i].length
+      ?s.purity[i].map(p=>`<span class="purity">${p}</span>`).join(' ')
+      :'<span style="color:#15803d;font-size:8px;font-weight:700">CLEAN</span>';
+    return `<tr>
+      <td style="color:${m.col};font-weight:700">${m.id.toUpperCase()}</td>
+      <td style="font-weight:700">${elo||'—'}</td>
+      <td>${velStr}</td>
+      <td>${elo?tau+'d':'—'}${tau>10&&elo?' <span style="color:#d97706;font-weight:700">stale</span>':''}</td>
+      <td>${elo?target.toFixed(3):'—'}</td>
+      <td style="font-family:'Courier New',monospace;font-size:8px;color:#555">${s.hist[i].join(', ')||'—'}</td>
+      <td>${pur}</td></tr>`;
+  }).join('');
+  document.getElementById('mode-table').innerHTML=
+    `<tr><th>Mode</th><th>Elo</th><th>Velocity</th><th>τ</th><th>ZPD target</th><th>Recent templates</th><th>Signal purity</th></tr>${rows}`;
+}
+
+// ════════════════════════════════ RENDER: TRAJECTORY
+function drawTraj(){
+  const c=document.getElementById('traj');if(!c)return;
+  const W=c.clientWidth||440,H=170;c.setAttribute('width',W);c.setAttribute('height',H);
+  const ctx=c.getContext('2d');ctx.clearRect(0,0,W,H);
+  const s=STUDENTS[CUR],n=s.traj.length;
+  const bw=(W-30)/n;
+  const ZSHADE={RADICAL:'#000',ECHO:'#333',PARALLEL:'#777',SHIFTING:'#aaa',REMATCH:'#d5d5d5'};
+  s.traj.forEach((t,i)=>{
+    const x=20+i*bw;
+    // gain bar
+    const bh=t.g*90;
+    ctx.fillStyle='#000';ctx.globalAlpha=.85;
+    ctx.fillRect(x+bw*.22,115-bh,bw*.56,bh);
+    ctx.globalAlpha=1;
+    // zone band
+    ctx.fillStyle=ZSHADE[t.z]||'#999';
+    ctx.fillRect(x+2,124,bw-4,12);
+    // mode dot
+    const mc=MODES.find(m=>m.id===t.m);
+    ctx.beginPath();ctx.arc(x+bw/2,148,4,0,Math.PI*2);ctx.fillStyle=mc.col;ctx.fill();
+    // overlay marker
+    if(t.ov){ctx.fillStyle='#7c3aed';ctx.font='bold 9px Arial';ctx.textAlign='center';ctx.fillText('⊘',x+bw/2,112-bh);}
+    // session label
+    ctx.fillStyle='#aaa';ctx.font='7px Arial';ctx.textAlign='center';
+    ctx.fillText('S'+(s.sessions-n+1+i),x+bw/2,164);
+  });
+  ctx.fillStyle='#888';ctx.font='8px Arial';ctx.textAlign='left';
+  ctx.fillText('realized E[KL]',20,12);
+  ctx.strokeStyle='#eee';ctx.beginPath();ctx.moveTo(20,115);ctx.lineTo(W-10,115);ctx.stroke();
+  document.getElementById('traj-legend').innerHTML=
+    Object.entries(ZSHADE).map(([z,col])=>`<span style="display:inline-block;width:9px;height:9px;background:${col};vertical-align:-1px"></span> ${z}`).join(' &nbsp; ')
+    +' &nbsp;·&nbsp; ⊘ overlay active &nbsp;·&nbsp; dot = mode';
+}
+
+// ════════════════════════════════ RENDER: FLAGS / FEED / BCASES
+function renderFlags(){
+  const s=STUDENTS[CUR];
+  document.getElementById('flags').innerHTML=s.flags.map(f=>
+    `<div class="flag f-${f.s}"><span class="fc">${f.c}</span><span>${f.t}</span></div>`).join('');
+}
+function renderFeed(){
+  const s=STUDENTS[CUR];
+  document.getElementById('feed').innerHTML=s.feed.map(o=>
+    `<div class="obs"><span class="chan chan-${o.ch}">${o.ch}</span><span style="font-family:'Courier New',monospace;font-size:9px;color:#888">${o.ref}</span>
+     ${o.pur?`<span class="purity">${o.pur}</span>`:''}
+     <div style="margin-top:3px">${o.sig}</div>
+     <div class="meta">tags: ${o.tags} · ${o.prov}</div></div>`).join('');
+}
+function renderBcases(){
+  const s=STUDENTS[CUR];
+  document.getElementById('bcases').innerHTML=s.bcases.map(b=>
+    `<div class="bc"><div class="bt">${b.t}</div>${b.b}<div class="tags">${b.tags}</div></div>`).join('')||'<div style="font-size:10px;color:#888;padding:8px 0">Inbox empty — vocabulary currently sufficient for this student.</div>';
+}
+
+// ════════════════════════════════ RENDER: MATRIX
+const MDIMS=['QTY','SPT','FRT','DST','WRM','INV','ENG','SOC','UND'];
+const MNOTES={
+  m:{col:'#15803d',l:'MEASURED',n:'Active signal in this channel.'},
+  c:{col:'#dc2626',l:'CONTAMINATED',n:'Recorded with purity flags — usable, but views must down-weight.'},
+  i:{col:'#1d4ed8',l:'INSTRUMENTED',n:'Recording; insufficient volume for claims.'},
+  p:{col:'#7c3aed',l:'BRIDGE PENDING',n:'BT channel activates at integration; history will already exist for other channels.'},
+  a:{col:'#bbb',l:'NOT RECORDED',n:'Visible absence — a decision, not an oversight.'},
+};
+let mHover=null;
+function drawMatrix(){
+  const c=document.getElementById('matrix');if(!c)return;
+  const W=c.clientWidth||440,H=240;c.setAttribute('width',W);c.setAttribute('height',H);
+  const ctx=c.getContext('2d');ctx.clearRect(0,0,W,H);
+  const s=STUDENTS[CUR];
+  const ox=46,oy=26,cw=(W-ox-44)/CHANS.length,ch=(H-oy-8)/MDIMS.length;
+  ctx.font='bold 8px Arial';ctx.textAlign='center';
+  CHANS.forEach((cn,i)=>{ctx.fillStyle='#333';ctx.fillText(cn,ox+i*cw+cw/2,oy-8)});
+  MDIMS.forEach((d,ri)=>{
+    const mc=MODES.find(m=>m.id===d.toLowerCase());
+    ctx.fillStyle=mc?mc.col:'#555';ctx.textAlign='right';ctx.font='bold 8px Arial';
+    ctx.fillText(d,ox-8,oy+ri*ch+ch/2+3);
+    let witnesses=0;
+    CHANS.forEach((_,ci)=>{
+      const st=(s.matrix[d]||[])[ci]||'a',info=MNOTES[st];
+      if(st==='m')witnesses++;
+      const x=ox+ci*cw,y=oy+ri*ch;
+      const hov=mHover&&mHover.r===ri&&mHover.c===ci;
+      ctx.fillStyle=hov?'#f0f0f0':'#fff';ctx.fillRect(x+1,y+1,cw-2,ch-2);
+      ctx.strokeStyle=hov?'#000':'#eee';ctx.lineWidth=hov?1.5:1;ctx.strokeRect(x+1,y+1,cw-2,ch-2);
+      ctx.beginPath();ctx.arc(x+cw/2,y+ch/2,4.5,0,Math.PI*2);
+      if(st==='a'){ctx.strokeStyle=info.col;ctx.lineWidth=1.2;ctx.stroke();}
+      else{ctx.fillStyle=info.col;ctx.fill();}
+    });
+    // witness count
+    ctx.fillStyle=witnesses>=2?'#15803d':'#888';ctx.font=witnesses>=2?'bold 9px Arial':'9px Arial';ctx.textAlign='left';
+    ctx.fillText(witnesses+'w',ox+CHANS.length*cw+8,oy+ri*ch+ch/2+3);
+  });
+  c._geo={ox,oy,cw,ch};
+}
+document.addEventListener('mousemove',e=>{
+  const c=document.getElementById('matrix');if(!c||!c._geo)return;
+  const r=c.getBoundingClientRect();
+  if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom){if(mHover){mHover=null;drawMatrix();}return;}
+  const mx=(e.clientX-r.left)*(c.width/r.width),my=(e.clientY-r.top)*(c.height/r.height);
+  const {ox,oy,cw,ch}=c._geo;
+  const ci=Math.floor((mx-ox)/cw),ri=Math.floor((my-oy)/ch);
+  let nh=(ci>=0&&ci<CHANS.length&&ri>=0&&ri<MDIMS.length)?{r:ri,c:ci}:null;
+  if(JSON.stringify(nh)!==JSON.stringify(mHover)){
+    mHover=nh;drawMatrix();
+    const tt=document.getElementById('matrix-tt');
+    if(tt){
+      if(nh){
+        const d=MDIMS[nh.r],st=(STUDENTS[CUR].matrix[d]||[])[nh.c]||'a',info=MNOTES[st];
+        tt.innerHTML=`<strong>${d}</strong> × <strong>${CHANS[nh.c]}</strong> — <span style="color:${info.col};font-weight:700">${info.l}</span>. ${info.n}`;
+      } else tt.textContent='Hover a cell.';
+    }
+  }
+});
+
+// ════════════════════════════════ RENDER: COMPILER
+function renderCompiler(){
+  const s=STUDENTS[CUR];
+  document.getElementById('compiler').innerHTML=s.compiler.map(([cls,txt])=>
+    cls?`<span class="${cls}">${txt}</span>`:txt).join('\n');
+}
+
+// ════════════════════════════════ TERMINAL ENGINE — one line sequence, two presentations
+function clearTimers(){tTimers.forEach(clearTimeout);tTimers=[];}
+
+function renderAnnotations(){
+  const s=STUDENTS[CUR];
+  document.getElementById('ann').innerHTML=s.terminal.filter(l=>l.s!=='blank').map(l=>
+    `<div class="ann-line">
+      <div class="at" style="${l.s==='code'?'font-weight:700;letter-spacing:2px':''}${l.s==='dim'?'opacity:.5':''}">${l.x}</div>
+      <div class="aa">${l.a}</div></div>`).join('');
+}
+
+function replayTerminal(){
+  if(loadingMode){runLoading();return;}
+  clearTimers();
+  const s=STUDENTS[CUR];
+  const term=document.getElementById('term');
+  term.innerHTML='';
+  const styleMap={dim:'opacity:.5;color:#0f0',obs:'color:#0f0',b:'color:#fff;font-weight:700',
+    n:'color:#0f0',meta:'color:#888;font-style:italic',hint:'color:#aaa',
+    code:'color:#fff;font-weight:700;font-size:16px;letter-spacing:5px;margin:6px 0'};
+  s.terminal.forEach(l=>{
+    tTimers.push(setTimeout(()=>{
+      if(l.s==='blank'){term.innerHTML+='<div class="line show">&nbsp;</div>';return;}
+      const d=document.createElement('div');d.className='line show';
+      d.style.cssText=styleMap[l.s]||'color:#0f0';
+      d.textContent=(l.s==='dim'||l.s==='code'?'':'  ')+l.x;
+      term.appendChild(d);term.scrollTop=term.scrollHeight;
+    },l.t));
+  });
+}
+
+// ── LOADING TRANSFORM: same sequence, rendered as a loading screen
+function toggleLoading(){
+  loadingMode=!loadingMode;
+  document.getElementById('btn-load').classList.toggle('act',loadingMode);
+  document.getElementById('term').style.display=loadingMode?'none':'block';
+  document.getElementById('loadview').style.display=loadingMode?'block':'none';
+  if(loadingMode)runLoading();else replayTerminal();
+}
+function runLoading(){
+  clearTimers();
+  const s=STUDENTS[CUR];
+  const seq=s.terminal.filter(l=>l.s!=='blank');
+  const total=s.terminal[s.terminal.length-1].t+800;
+  const codeLine=seq.find(l=>l.s==='code');
+  const code=codeLine?codeLine.x.replace(/^SESSION \d+: /,''):'—';
+  const sub=codeLine?codeLine.x.match(/^SESSION \d+/)[0]:'';
+  document.getElementById('load-code').textContent='';
+  document.getElementById('load-sub').textContent=sub;
+  document.getElementById('load-fill').style.width='0%';
+  document.getElementById('load-line').textContent='';
+  document.getElementById('load-pct').textContent='0%';
+  seq.forEach(l=>{
+    tTimers.push(setTimeout(()=>{
+      const pct=Math.min(100,Math.round(l.t/total*100));
+      document.getElementById('load-fill').style.width=pct+'%';
+      document.getElementById('load-pct').textContent=pct+'%';
+      if(l.s==='code'){document.getElementById('load-code').textContent=code;return;}
+      document.getElementById('load-line').textContent=l.x;
+    },l.t));
+  });
+  tTimers.push(setTimeout(()=>{
+    document.getElementById('load-fill').style.width='100%';
+    document.getElementById('load-pct').textContent='100% — session ready';
+  },total));
+}
+
+// ════════════════════════════════ STUDENT VIEW
+// Only {t,s,x} is ever rendered in the student DOM subtree.
+// The 'a' (provenance) field on each terminal line is never accessed here.
+let svTimers=[];let svLoadMode=false;
+const SV_STYLE={
+  dim:'opacity:.45;color:#0f0',obs:'color:#0f0',b:'color:#fff;font-weight:700',
+  n:'color:#0f0',meta:'color:#888;font-style:italic',hint:'color:#aaa',
+  code:'color:#fff;font-weight:700;font-size:16px;letter-spacing:5px;margin:6px 0',
+};
+
+function openStudentView(){
+  const s=STUDENTS[CUR];
+  document.getElementById('sv-session-label').textContent=
+    s.name+' · S'+(s.sessions+1);
+  svLoadMode=false;
+  document.getElementById('sv-btn-load').classList.remove('sv-act');
+  document.getElementById('sv-term').style.display='block';
+  document.getElementById('sv-load').style.display='none';
+  document.getElementById('sv-overlay').classList.add('open');
+  svRenderTerminal();
+}
+function closeStudentView(){
+  document.getElementById('sv-overlay').classList.remove('open');
+  svTimers.forEach(clearTimeout);svTimers=[];
+}
+function svRenderTerminal(){
+  svTimers.forEach(clearTimeout);svTimers=[];
+  const s=STUDENTS[CUR];
+  const term=document.getElementById('sv-term');
+  term.innerHTML='';
+  // Only access l.t, l.s, l.x — never l.a
+  s.terminal.forEach(l=>{
+    svTimers.push(setTimeout(()=>{
+      if(l.s==='blank'){term.innerHTML+='<div class="line show">&nbsp;</div>';return;}
+      const d=document.createElement('div');d.className='line show';
+      d.style.cssText=SV_STYLE[l.s]||'color:#0f0';
+      d.textContent=(l.s==='dim'||l.s==='code'?'':'  ')+l.x;
+      term.appendChild(d);term.scrollTop=term.scrollHeight;
+    },l.t));
+  });
+}
+function svReplay(){
+  if(svLoadMode){svRunLoad();return;}
+  svRenderTerminal();
+}
+function svToggleLoad(){
+  svLoadMode=!svLoadMode;
+  document.getElementById('sv-btn-load').classList.toggle('sv-act',svLoadMode);
+  document.getElementById('sv-term').style.display=svLoadMode?'none':'block';
+  document.getElementById('sv-load').style.display=svLoadMode?'flex':'none';
+  if(svLoadMode)svRunLoad();else svRenderTerminal();
+}
+function svRunLoad(){
+  svTimers.forEach(clearTimeout);svTimers=[];
+  const s=STUDENTS[CUR];
+  const seq=s.terminal.filter(l=>l.s!=='blank');
+  const total=s.terminal[s.terminal.length-1].t+800;
+  const codeLine=seq.find(l=>l.s==='code');
+  const code=codeLine?codeLine.x.replace(/^SESSION \d+: /,''):'—';
+  const sub=codeLine?codeLine.x.match(/^SESSION \d+/)?.[0]:'';
+  document.getElementById('sv-load-code').textContent='';
+  document.getElementById('sv-load-sub').textContent=sub;
+  document.getElementById('sv-load-fill').style.width='0%';
+  document.getElementById('sv-load-line').textContent='';
+  document.getElementById('sv-load-pct').textContent='0%';
+  seq.forEach(l=>{
+    svTimers.push(setTimeout(()=>{
+      const pct=Math.min(100,Math.round(l.t/total*100));
+      document.getElementById('sv-load-fill').style.width=pct+'%';
+      document.getElementById('sv-load-pct').textContent=pct+'%';
+      if(l.s==='code'){document.getElementById('sv-load-code').textContent=code;return;}
+      document.getElementById('sv-load-line').textContent=l.x;
+    },l.t));
+  });
+  svTimers.push(setTimeout(()=>{
+    document.getElementById('sv-load-fill').style.width='100%';
+    document.getElementById('sv-load-pct').textContent='100% — session ready';
+  },total));
+}
+
+// ════════════════════════════════ SELECT + INIT
+function selectStudent(k){
+  CUR=k;clearTimers();
+  // If student view is open, update it too (stays open, switches student)
+  if(document.getElementById('sv-overlay').classList.contains('open')){
+    const s=STUDENTS[k];
+    document.getElementById('sv-session-label').textContent=s.name+' · S'+(s.sessions+1);
+    svLoadMode=false;
+    document.getElementById('sv-btn-load').classList.remove('sv-act');
+    document.getElementById('sv-term').style.display='block';
+    document.getElementById('sv-load').style.display='none';
+    svRenderTerminal();
+  }
+  renderNav();renderAll();
+}
+function renderAll(){
+  renderIdentity();drawRadar();renderModeTable();drawTraj();
+  renderFlags();renderFeed();renderBcases();drawMatrix();renderCompiler();
+  renderAnnotations();
+  if(loadingMode)runLoading();else replayTerminal();
+}
+window.addEventListener('DOMContentLoaded',()=>{renderNav();setTimeout(renderAll,80)});
+window.addEventListener('resize',()=>{drawRadar();drawTraj();drawMatrix();});
+</script>
+</body>
+</html>
