@@ -75,6 +75,20 @@ table.mt tr:hover td{background:#f8f8f8}
 .ns-val{font-family:'Courier New',monospace;font-size:10px}
 .ns-card{border:2px solid #000;padding:10px 12px;background:#000;color:#fff;margin-bottom:10px}
 .ns-card-lbl{font-size:7px;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:6px}
+/* Reaction Library */
+.rxn-row{display:grid;grid-template-columns:32px 38px 60px 60px 60px 1fr;gap:0;border-bottom:1px solid #f0f0f0;align-items:center;font-size:9px;padding:3px 4px;cursor:default}
+.rxn-row:hover{background:#f8f8f8}
+.rxn-row.rxn-hd{font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;border-bottom:2px solid #000;padding:4px;background:#f0f0f0}
+.rxn-miss{color:#dc2626;font-weight:700}.rxn-ok{color:#15803d;font-weight:700}.rxn-med{color:#d97706;font-weight:700}
+.rxn-bar-wrap{height:6px;background:#f0f0f0;position:relative}
+.rxn-bar{position:absolute;top:0;left:0;height:100%;background:#ddd}
+.rxn-bar-actual{position:absolute;top:0;height:100%;background:#000;width:2px}
+/* Calibration canvas */
+#calib-canvas{display:block}
+.calib-stat{display:flex;gap:12px;padding:6px 0;flex-wrap:wrap}
+.calib-stat-item{font-size:9px;flex:1;min-width:80px}
+.calib-stat-lbl{font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888}
+.calib-stat-val{font-size:13px;font-weight:700;font-family:'Courier New',monospace}
 /* Utils */
 ::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-track{background:#fff}::-webkit-scrollbar-thumb{background:#ddd}
 </style>
@@ -140,6 +154,8 @@ table.mt tr:hover td{background:#f8f8f8}
       <div class="t-btn active" onclick="setRightTab('formula',this)">Formulas</div>
       <div class="t-btn" onclick="setRightTab('prov',this)">Provenance</div>
       <div class="t-btn" onclick="setRightTab('next',this)">Next Session</div>
+      <div class="t-btn" onclick="setRightTab('reaction',this)">Reaction Lib</div>
+      <div class="t-btn" onclick="setRightTab('calibration',this)">Calibration</div>
     </div>
     <div class="r-scroll" id="right-formula">
       <div style="font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:8px">Every formula in this view is temporary. Every parameter is a hypothesis.</div>
@@ -188,6 +204,29 @@ table.mt tr:hover td{background:#f8f8f8}
     </div>
     <div class="r-scroll" id="right-next" style="display:none">
       <div id="next-content"></div>
+    </div>
+    <div class="r-scroll" id="right-reaction" style="display:none">
+      <div style="font-size:8px;color:#888;line-height:1.7;margin-bottom:6px">
+        Every session: <strong>predicted</strong> rank_pct (from Elo formula before session) vs <strong>actual</strong> rank_pct (from Layer 0 record). The system predicted this — did it happen?<br>
+        <span style="color:#d97706;font-weight:700">ASSERTED</span> prediction formula: E = 1/(1+10^((R_bot−R_student)/400)). Phase 3 replaces with fitted model.
+      </div>
+      <div id="reaction-summary" style="display:flex;gap:10px;margin-bottom:8px;flex-wrap:wrap"></div>
+      <div class="rxn-row rxn-hd">
+        <span>#</span><span>Mode</span><span>Pred</span><span>Actual</span><span>Δ</span><span>Surprise bar</span>
+      </div>
+      <div id="reaction-rows"></div>
+    </div>
+    <div class="r-scroll" id="right-calibration" style="display:none">
+      <div style="font-size:8px;color:#888;line-height:1.7;margin-bottom:6px">
+        Calibration scatter: predicted rank_pct (x) vs actual rank_pct (y). Perfect calibration = diagonal.<br>
+        <span style="font-weight:700">Above diagonal</span>: system underestimated student (outcome better than expected).<br>
+        <span style="font-weight:700">Below diagonal</span>: system overestimated (outcome worse than expected).
+      </div>
+      <div class="calib-stat" id="calib-stats"></div>
+      <canvas id="calib-canvas" width="240" height="220" style="width:100%;max-width:280px;display:block;margin:0 auto"></canvas>
+      <div style="margin-top:8px;font-size:8px;color:#888;padding:4px 0;border-top:1px solid #eee">
+        Points colored by mode · Diagonal = perfect calibration · Size encodes |Δ| magnitude
+      </div>
     </div>
   </div>
 </div>
@@ -336,6 +375,9 @@ function selectStudent(id){
   renderModeTable();
   drawRadar();
   renderNext();
+  // Refresh self-grading views if currently visible
+  if(document.getElementById('right-reaction').style.display!=='none') renderReaction();
+  if(document.getElementById('right-calibration').style.display!=='none') renderCalibration();
 }
 
 // ── Mode table
@@ -580,13 +622,150 @@ function renderNext(){
     </div>`;
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// REACTION LIBRARY — predicted vs actual per session
+// ═══════════════════════════════════════════════════════════════════
+
+// Compute running Elo predictions for each session.
+// Returns array of {id, t, mode, predicted, actual, delta, n, elo_before}
+function computeSessionPredictions(sid) {
+  const sessions = OBS_RAW.filter(o => o.s === sid).sort((a,b) => a.t - b.t);
+  const modeElo = {QTY:500, SPT:500, FRT:500, DST:500, WRM:500, INV:500};
+  const modeN   = {QTY:0,   SPT:0,   FRT:0,   DST:0,   WRM:0,   INV:0};
+  const R_BOT = 520;
+  const Kf = n => n <= 5 ? 40 : n <= 20 ? 20 : 10;
+  return sessions.map(obs => {
+    const mode = assignMode(obs.c);
+    const elo_before = modeElo[mode];
+    const n_before = modeN[mode];
+    const E = 1 / (1 + Math.pow(10, (R_BOT - elo_before) / 400));
+    const S = obs.o;
+    const delta = parseFloat((S - E).toFixed(3));
+    const k = Kf(n_before + 1);
+    modeElo[mode] = elo_before + k * delta;
+    modeN[mode]++;
+    return { id:obs.id, t:obs.t, mode, predicted:parseFloat(E.toFixed(3)),
+             actual:S, delta, n:n_before+1, elo_before:Math.round(elo_before) };
+  });
+}
+
+function renderReaction() {
+  const preds = computeSessionPredictions(currentStudent);
+  const mae = preds.length ? (preds.reduce((s,p)=>s+Math.abs(p.delta),0)/preds.length).toFixed(3) : '—';
+  const overconf = preds.filter(p=>p.delta<-0.15).length; // actual < predicted
+  const underconf = preds.filter(p=>p.delta>0.15).length; // actual > predicted
+  const verdict = Math.abs(overconf-underconf) <= 1 ? 'CALIBRATED' : overconf > underconf ? 'OVERESTIMATES' : 'UNDERESTIMATES';
+  const vc = verdict==='CALIBRATED' ? '#15803d' : '#dc2626';
+
+  document.getElementById('reaction-summary').innerHTML = `
+    <div class="calib-stat-item"><div class="calib-stat-lbl">Sessions</div><div class="calib-stat-val">${preds.length}</div></div>
+    <div class="calib-stat-item"><div class="calib-stat-lbl">MAE</div><div class="calib-stat-val">${mae}</div></div>
+    <div class="calib-stat-item"><div class="calib-stat-lbl">Verdict</div><div class="calib-stat-val" style="color:${vc};font-size:10px">${verdict}</div></div>
+    <div style="font-size:8px;color:#888;align-self:flex-end;padding-bottom:2px">MAE = mean |predicted − actual| · 0.00 = perfect · &gt;0.10 = refutation threshold</div>`;
+
+  const rows = [...preds].reverse(); // newest first
+  document.getElementById('reaction-rows').innerHTML = rows.map((p,i) => {
+    const d2 = new Date(p.t*1000);
+    const dt = d2.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+    const ac = Math.abs(p.delta);
+    const cls = ac > 0.25 ? 'rxn-miss' : ac > 0.10 ? 'rxn-med' : 'rxn-ok';
+    const sign = p.delta >= 0 ? '+' : '';
+    const barPred = Math.round(p.predicted * 100);
+    const barActual = Math.round(p.actual * 100);
+    return `<div class="rxn-row" title="${dt} · n=${p.n} · elo_before=${p.elo_before}">
+      <span style="color:#bbb">${preds.length - i}</span>
+      <span style="color:${MODE_COLORS[p.mode]};font-weight:700">${p.mode}</span>
+      <span>${(p.predicted*100).toFixed(0)}%</span>
+      <span>${(p.actual*100).toFixed(0)}%</span>
+      <span class="${cls}">${sign}${(p.delta*100).toFixed(0)}%</span>
+      <div class="rxn-bar-wrap">
+        <div class="rxn-bar" style="width:${barPred}%"></div>
+        <div class="rxn-bar-actual" style="left:${barActual}%"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CALIBRATION CURVE — scatter: predicted vs actual, per student
+// ═══════════════════════════════════════════════════════════════════
+function renderCalibration() {
+  const preds = computeSessionPredictions(currentStudent);
+  if (!preds.length) return;
+
+  const mae  = (preds.reduce((s,p)=>s+Math.abs(p.delta),0)/preds.length).toFixed(3);
+  const bias = (preds.reduce((s,p)=>s+p.delta,0)/preds.length).toFixed(3);
+  const n_over  = preds.filter(p=>p.delta>0.10).length;
+  const n_under = preds.filter(p=>p.delta<-0.10).length;
+  const verdict = Math.abs(n_over-n_under) <= 1 ? 'CALIBRATED' : n_over > n_under ? 'SYSTEM UNDERESTIMATES' : 'SYSTEM OVERESTIMATES';
+  const vc = verdict === 'CALIBRATED' ? '#15803d' : '#dc2626';
+
+  document.getElementById('calib-stats').innerHTML = `
+    <div class="calib-stat-item"><div class="calib-stat-lbl">Sessions</div><div class="calib-stat-val">${preds.length}</div></div>
+    <div class="calib-stat-item"><div class="calib-stat-lbl">MAE</div><div class="calib-stat-val">${mae}</div></div>
+    <div class="calib-stat-item"><div class="calib-stat-lbl">Bias</div><div class="calib-stat-val" style="color:${parseFloat(bias)>0?'#15803d':'#dc2626'}">${parseFloat(bias)>=0?'+':''}${bias}</div></div>
+    <div class="calib-stat-item"><div class="calib-stat-lbl">System</div><div class="calib-stat-val" style="color:${vc};font-size:9px">${verdict}</div></div>`;
+
+  const cv = document.getElementById('calib-canvas');
+  if (!cv) return;
+  const W = cv.offsetWidth || 240, H = 220;
+  cv.setAttribute('width', W); cv.setAttribute('height', H);
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  const PAD = 32, IW = W - PAD*2, IH = H - PAD*2;
+
+  // Grid
+  ctx.strokeStyle = '#f0f0f0'; ctx.lineWidth = 1;
+  [0,0.25,0.5,0.75,1.0].forEach(v => {
+    const x = PAD + v*IW, y = PAD + (1-v)*IH;
+    ctx.beginPath(); ctx.moveTo(x,PAD); ctx.lineTo(x,PAD+IH); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(PAD,y); ctx.lineTo(PAD+IW,y); ctx.stroke();
+    ctx.fillStyle='#ccc'; ctx.font='7px Arial'; ctx.textAlign='center';
+    ctx.fillText((v*100).toFixed(0)+'%', x, PAD+IH+10);
+    if(v>0){ctx.textAlign='right'; ctx.fillText((v*100).toFixed(0)+'%', PAD-3, y+3);}
+  });
+
+  // Diagonal — perfect calibration
+  ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(PAD, PAD+IH); ctx.lineTo(PAD+IW, PAD); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ±0.10 band
+  ctx.fillStyle = 'rgba(0,0,0,0.04)';
+  ctx.beginPath();
+  ctx.moveTo(PAD, PAD+IH+0.10*IH); ctx.lineTo(PAD+IW, PAD+0.10*IH); ctx.lineTo(PAD+IW,PAD-0.10*IH); ctx.lineTo(PAD,PAD+IH-0.10*IH); ctx.closePath(); ctx.fill();
+
+  // Points
+  preds.forEach(p => {
+    const x = PAD + p.predicted * IW;
+    const y = PAD + (1 - p.actual) * IH;
+    const r = 3.5 + Math.abs(p.delta) * 6;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+    ctx.fillStyle = MODE_COLORS[p.mode] + 'cc'; ctx.fill();
+    ctx.strokeStyle = MODE_COLORS[p.mode]; ctx.lineWidth = 1; ctx.stroke();
+  });
+
+  // Axis labels
+  ctx.fillStyle='#555'; ctx.font='7px Arial'; ctx.textAlign='center';
+  ctx.fillText('predicted rank_pct →', PAD + IW/2, H-2);
+  ctx.save(); ctx.translate(10, PAD + IH/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('actual rank_pct →', 0, 0); ctx.restore();
+
+  // Refutation note
+  ctx.fillStyle='#d97706'; ctx.font='7px Arial'; ctx.textAlign='left';
+  ctx.fillText('shaded band = ±0.10 tolerance (ASSERTED refutation threshold)', PAD, H-2);
+}
+
 // ── Tab control
 function setRightTab(name,el){
   document.querySelectorAll('.t-btn').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
-  ['formula','prov','next'].forEach(n=>{
+  ['formula','prov','next','reaction','calibration'].forEach(n=>{
     document.getElementById('right-'+n).style.display=n===name?'':'none';
   });
+  if(name==='reaction') renderReaction();
+  if(name==='calibration') renderCalibration();
 }
 
 // ── Init
