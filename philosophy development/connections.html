@@ -188,11 +188,29 @@ body{background:var(--bg);color:var(--text);font-family:Arial,sans-serif;font-si
 .profile-tier{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#7c3aed}
 .profile-id{font-size:9px;color:#2a2a2a;margin-top:2px}
 
+/* hover tooltip for hex badges */
+.hex-tooltip{
+  position:absolute;bottom:68px;left:50%;transform:translateX(-50%) translateY(4px);
+  background:#1a1a1a;border:1px solid var(--border2);
+  padding:6px 10px;white-space:nowrap;z-index:60;
+  opacity:0;transition:opacity 140ms,transform 140ms;pointer-events:none;
+  border-radius:4px;
+}
+@media(hover:hover){.badge-wrap:hover .hex-tooltip{opacity:1;transform:translateX(-50%) translateY(0)}}
+.ht-name{font-size:10px;font-weight:700;color:var(--text);margin-bottom:2px}
+.ht-desc{font-size:9px;color:var(--dim);line-height:1.5;max-width:180px;white-space:normal}
+.ht-stat{font-size:9px;margin-top:4px}
+
 /* mobile */
 @media(max-width:600px){
   .header,.main{padding-left:16px;padding-right:16px}
-  .expand-panel,.hex-panel{width:calc(100vw - 32px);position:fixed;left:16px !important;right:16px !important;top:auto;bottom:80px;transform:translateY(6px) scale(.98)}
-  .expand-panel.open,.hex-panel.open{transform:translateY(0) scale(1)}
+  .expand-panel{width:min(280px,calc(100vw - 32px))}
+  .hex-panel{
+    width:min(260px,calc(100vw - 40px));
+    left:auto !important;right:0;
+    transform:translateX(0) translateY(-6px) scale(.98);
+  }
+  .hex-panel.open{transform:translateX(0) translateY(0) scale(1)}
   .expand-panel::before,.hex-panel::before{display:none}
 }
 </style>
@@ -376,6 +394,11 @@ body{background:var(--bg);color:var(--text);font-family:Arial,sans-serif;font-si
           <line x1="19" y1="12" x2="22" y2="12" stroke="#d97706" stroke-width="1.5"/>
         </svg>
       </div>
+      <div class="hex-tooltip">
+        <div class="ht-name">Observer</div>
+        <div class="ht-desc">The Ledger has enough sessions to form a preliminary model.</div>
+        <div class="ht-stat" style="color:#d97706">12 sessions · earned 2026-04-22</div>
+      </div>
       <div class="hex-panel" id="hex-panel-observer">
         <div class="ep-head">
           <div style="display:flex;justify-content:space-between;align-items:center">
@@ -403,6 +426,11 @@ body{background:var(--bg);color:var(--text);font-family:Arial,sans-serif;font-si
           <circle cx="12" cy="17" r="1" fill="#dc2626"/>
         </svg>
       </div>
+      <div class="hex-tooltip">
+        <div class="ht-name">RADICAL Pioneer</div>
+        <div class="ht-desc">Received RADICAL zone 3+ times. System learned the most from these sessions.</div>
+        <div class="ht-stat" style="color:#dc2626">4 RADICAL sessions · 1 of 47 players</div>
+      </div>
       <div class="hex-panel" id="hex-panel-radical">
         <div class="ep-head">
           <div style="display:flex;justify-content:space-between;align-items:center">
@@ -428,6 +456,11 @@ body{background:var(--bg);color:var(--text);font-family:Arial,sans-serif;font-si
           <path d="M8 14h8M10 17h4" stroke="#7c3aed" stroke-width="1" stroke-linecap="round"/>
           <circle cx="12" cy="10" r="1.5" fill="#a78bfa"/>
         </svg>
+      </div>
+      <div class="hex-tooltip">
+        <div class="ht-name">Alpha Track</div>
+        <div class="ht-desc">Application under review. Phase 2 of 5.</div>
+        <div class="ht-stat" style="color:#a78bfa">Pending · submitted 2026-06-01</div>
       </div>
       <div class="hex-panel" id="hex-panel-alpha">
         <div class="ep-head">
@@ -456,6 +489,11 @@ body{background:var(--bg);color:var(--text);font-family:Arial,sans-serif;font-si
           <path d="M12 8l4 4-4 4-4-4z" fill="#444"/>
         </svg>
       </div>
+      <div class="hex-tooltip">
+        <div class="ht-name">INVERSION Operator</div>
+        <div class="ht-desc">Requires INV mode Elo &gt; 600. Runs silently.</div>
+        <div class="ht-stat" style="color:#333">Not yet earned</div>
+      </div>
       <div class="hex-panel" id="hex-panel-inv">
         <div class="ep-head">
           <div style="display:flex;justify-content:space-between;align-items:center">
@@ -480,6 +518,10 @@ body{background:var(--bg);color:var(--text);font-family:Arial,sans-serif;font-si
           <circle cx="12" cy="12" r="8.5" fill="none" stroke="#2a2a2a" stroke-width=".5"/>
           <path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3M6.2 6.2l2.1 2.1M15.7 15.7l2.1 2.1M6.2 17.8l2.1-2.1M15.7 8.3l2.1-2.1" stroke="#2a2a2a" stroke-width=".75" stroke-linecap="round"/>
         </svg>
+      </div>
+      <div class="hex-tooltip" style="border-color:#1e1e1e">
+        <div class="ht-name" style="color:#2a2a2a">?</div>
+        <div class="ht-desc" style="color:#1e1e1e">Condition not disclosed.</div>
       </div>
       <div class="hex-panel" id="hex-panel-singularity">
         <div class="ep-head">
