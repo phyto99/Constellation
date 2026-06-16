@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Constellation — System Roadmap</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0a;--fg:#e8e8e8;--dim:#555;--faint:#222;--border:#333;
+  --p-1:#666; --0:#d97706; --1:#2563eb; --2:#059669; --3:#7c3aed; --S:#e11d48;
+  --p-1b:#1a1a1a; --0b:#1c1100; --1b:#0a1628; --2b:#001a0e; --3b:#0f0820; --Sb:#1a0008;
+}
+body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;font-size:10px;line-height:1.5;min-height:100vh;overflow-x:hidden}
+
+/* ── HEADER ── */
+.top{padding:24px 28px 16px;border-bottom:1px solid var(--border)}
+.principle{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+.eq{font-size:22px;font-weight:700;letter-spacing:1px;color:#fff;margin-bottom:4px}
+.eq span{color:var(--3)}
+.subtitle{font-size:9px;color:var(--dim);letter-spacing:1px}
+
+/* ── PHASE HEADER BAR ── */
+.phase-bar{display:grid;grid-template-columns:180px repeat(5,1fr);border-bottom:2px solid var(--border);font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.ph-label{padding:10px 12px;color:var(--dim);border-right:1px solid var(--border);display:flex;align-items:center;font-size:7px}
+.ph{padding:10px 12px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:3px}
+.ph-name{font-size:9px;font-weight:700;letter-spacing:2px}
+.ph-tag{font-size:7px;font-weight:400;letter-spacing:1px;opacity:.7}
+.ph-status{font-size:7px;font-weight:700;letter-spacing:1px;padding:1px 5px;display:inline-block;margin-top:2px}
+
+/* ── TRACK GRID ── */
+.track-grid{display:grid;grid-template-columns:180px repeat(5,1fr)}
+.track-label{padding:10px 12px;border-right:1px solid var(--border);border-bottom:1px solid var(--faint);display:flex;align-items:flex-start;padding-top:12px}
+.tl-text{font-size:7px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--dim);writing-mode:horizontal-tb;line-height:1.4}
+.cell{padding:10px 12px;border-right:1px solid var(--border);border-bottom:1px solid var(--faint);position:relative}
+.cell:last-child{border-right:none}
+
+/* ── CELL CONTENT ── */
+.item{margin-bottom:7px;padding:5px 7px;border-left:2px solid var(--border);background:var(--faint);font-size:9px;line-height:1.6}
+.item:last-child{margin-bottom:0}
+.item.done{border-left-color:var(--p-1);background:var(--p-1b)}
+.item.active{border-left-color:var(--0);background:var(--0b)}
+.item.p1{border-left-color:var(--1);background:var(--1b)}
+.item.p2{border-left-color:var(--2);background:var(--2b)}
+.item.p3{border-left-color:var(--3);background:var(--3b)}
+.item.singularity{border-left-color:var(--S);background:var(--Sb)}
+.item.dormant{border-left-color:#333;background:#111;opacity:.6}
+.item-title{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px}
+.item-body{color:#aaa;font-size:8px;line-height:1.6}
+.item-body strong{color:#ddd}
+.tag{display:inline-block;font-size:6px;font-weight:700;letter-spacing:1px;padding:0 4px;border:1px solid;text-transform:uppercase;margin-bottom:3px}
+.tag.done{border-color:var(--p-1);color:var(--p-1)}
+.tag.active{border-color:var(--0);color:var(--0)}
+.tag.asserted{border-color:#555;color:#555}
+.tag.fitted{border-color:var(--3);color:var(--3)}
+.tag.dormant{border-color:#333;color:#333}
+.tag.live{border-color:var(--2);color:var(--2)}
+.tag.unlock{border-color:var(--S);color:var(--S)}
+
+/* ── ASSERTED CONSTANTS TABLE ── */
+.constants{padding:20px 28px;border-top:1px solid var(--border)}
+.section-hd{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--dim);margin-bottom:12px}
+.const-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.const-card{border:1px solid var(--border);padding:8px 10px;background:var(--faint)}
+.const-name{font-size:8px;font-weight:700;letter-spacing:1px;color:#aaa;margin-bottom:2px}
+.const-val{font-size:14px;font-weight:700;color:#fff;font-family:'Courier New',monospace}
+.const-refute{font-size:7px;color:#555;margin-top:3px;line-height:1.5}
+.const-phase{font-size:6px;font-weight:700;letter-spacing:1px;padding:1px 4px;border:1px solid var(--3);color:var(--3);margin-top:4px;display:inline-block}
+
+/* ── OPEN QUESTIONS ── */
+.questions{padding:20px 28px;border-top:1px solid var(--border)}
+.q-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
+.q-card{border:1px solid var(--border);padding:8px 10px;background:var(--faint)}
+.q-id{font-size:18px;font-weight:700;opacity:.15;float:right;line-height:1}
+.q-priority{font-size:6px;font-weight:700;letter-spacing:1px;padding:1px 4px;border:1px solid;margin-bottom:4px;display:inline-block}
+.q-text{font-size:9px;color:#ddd;line-height:1.6;margin-bottom:4px}
+.q-resolve{font-size:7px;color:#555;font-style:italic}
+.q-resolved{font-size:7px;font-weight:700;letter-spacing:1px;color:var(--p-1);border:1px solid var(--p-1);padding:1px 4px;display:inline-block}
+
+/* ── INFORMATION GAIN CANVAS ── */
+.gain-section{padding:20px 28px;border-top:1px solid var(--border)}
+.gain-wrap{position:relative}
+#gain-canvas{display:block;width:100%;height:160px}
+
+/* ── LINKS ── */
+.links{padding:20px 28px;border-top:1px solid var(--border)}
+.link-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px}
+.link-card{display:flex;align-items:baseline;gap:10px;padding:8px 10px;border:1px solid var(--border);background:var(--faint);text-decoration:none;color:inherit;cursor:pointer}
+.link-card:hover{border-color:#fff}
+.link-phase{font-size:7px;font-weight:700;letter-spacing:1px;padding:1px 5px;flex-shrink:0}
+.link-name{font-size:9px;font-weight:700;letter-spacing:1px;color:#ddd}
+.link-desc{font-size:8px;color:var(--dim);margin-top:1px}
+.link-url{font-size:7px;color:#555;margin-top:2px;font-family:'Courier New',monospace}
+
+::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-track{background:#000}::-webkit-scrollbar-thumb{background:#333}
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<div class="top">
+  <div class="principle">The One Principle</div>
+  <div class="eq"><span>argmax</span> E[KL(posterior ‖ prior)]</div>
+  <div class="subtitle">maximize expected information gain about the student's cognitive model per session — every architectural decision derives from this</div>
+</div>
+
+<!-- ── PHASE HEADER BAR ── -->
+<div class="phase-bar">
+  <div class="ph-label">PHASE</div>
+  <div class="ph" style="border-top:3px solid var(--p-1)">
+    <div class="ph-name" style="color:var(--p-1)">−1</div>
+    <div class="ph-tag">The Ledger</div>
+    <div class="ph-status tag done">COMPLETE</div>
+  </div>
+  <div class="ph" style="border-top:3px solid var(--0)">
+    <div class="ph-name" style="color:var(--0)">0</div>
+    <div class="ph-tag">Silent Infrastructure</div>
+    <div class="ph-status tag active">ACTIVE</div>
+  </div>
+  <div class="ph" style="border-top:3px solid var(--1)">
+    <div class="ph-name" style="color:var(--1)">1</div>
+    <div class="ph-tag">Terminal Delivery</div>
+    <div class="ph-status" style="font-size:7px;color:var(--dim);padding-top:3px">next</div>
+  </div>
+  <div class="ph" style="border-top:3px solid var(--2)">
+    <div class="ph-name" style="color:var(--2)">2</div>
+    <div class="ph-tag">BT Bridge</div>
+    <div class="ph-status" style="font-size:7px;color:var(--dim);padding-top:3px">requires hardware</div>
+  </div>
+  <div class="ph" style="border-top:3px solid var(--3)">
+    <div class="ph-name" style="color:var(--3)">3</div>
+    <div class="ph-tag">Learned Parameters</div>
+    <div class="ph-status" style="font-size:7px;color:var(--dim);padding-top:3px">requires data</div>
+  </div>
+  <div class="ph" style="border-top:3px solid var(--S);border-right:none">
+    <div class="ph-name" style="color:var(--S)">∞</div>
+    <div class="ph-tag">Singularity</div>
+    <div class="ph-status" style="font-size:7px;color:var(--dim);padding-top:3px">terminal objective</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- TRACK 1: WHAT THE SYSTEM KNOWS ABOUT THE STUDENT                  -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="track-grid">
+  <div class="track-label"><div class="tl-text">Student Model<br>Precision</div></div>
+
+  <div class="cell">
+    <div class="item done">
+      <div class="tag done">DONE</div>
+      <div class="item-title">Raw observations only</div>
+      <div class="item-body">Student ID, config_vector, outcome, rank_pct. <strong>No interpretation stored.</strong> The Ledger has no opinion about what happened.</div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item active">
+      <div class="tag active">ACTIVE</div>
+      <div class="item-title">Running Elo per mode</div>
+      <div class="item-body">6 independent Elo tracks. Velocity. ZPD target. Forgetting decay. <strong>All parameters ASSERTED.</strong> Self-grading via Reaction Library.</div>
+    </div>
+    <div class="item active">
+      <div class="tag active">ACTIVE</div>
+      <div class="item-title">Compiler prediction</div>
+      <div class="item-body">expected_rank_pct stored at session time. Retroactive calibration becomes possible.</div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item p1">
+      <div class="tag" style="border-color:var(--1);color:var(--1)">PHASE 1</div>
+      <div class="item-title">Template history</div>
+      <div class="item-body">Which templates the student has seen. Similarity spectrum (REMATCH→RADICAL) becomes a scheduling variable. Prevents over-repetition.</div>
+    </div>
+    <div class="item p1">
+      <div class="tag" style="border-color:var(--1);color:var(--1)">PHASE 1</div>
+      <div class="item-title">Social dimension</div>
+      <div class="item-body">Team composition tags. Whether student performed differently in solo vs collaborative sessions. Currently absent — excluded, not forgotten.</div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item p2">
+      <div class="tag live">PHASE 2 UNLOCK</div>
+      <div class="item-title">transfer_elo[mode]</div>
+      <div class="item-body">BT cognitive scores mapped to Constellation modes. The student model gains a second dimension: <strong>game skill AND cognitive transfer.</strong> Gap signal activates.</div>
+    </div>
+    <div class="item p2">
+      <div class="tag live">PHASE 2</div>
+      <div class="item-title">brain_metrics upgrade</div>
+      <div class="item-body">Currently EXCLUDED. Becomes CORE when BT validated. Working memory, processing speed, inhibition — direct cognitive measurement rather than game proxy.</div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item p3">
+      <div class="tag fitted">PHASE 3</div>
+      <div class="item-title">Continuous skill surface</div>
+      <div class="item-body">Mode boundaries dissolve. Student has a position in 12-dimensional config space with continuous skill estimates, not 6 discrete Elo values.</div>
+    </div>
+    <div class="item p3">
+      <div class="tag fitted">PHASE 3</div>
+      <div class="item-title">Covariance model</div>
+      <div class="item-body">Mode non-orthogonality quantified. QTY and FRT correlate — a student who improves in one improves in the other. Currently treated as independent. (Q3)</div>
+    </div>
+  </div>
+
+  <div class="cell" style="border-right:none">
+    <div class="item singularity">
+      <div class="tag unlock">SINGULARITY</div>
+      <div class="item-title">Student models themselves</div>
+      <div class="item-body">Student understands the system well enough to specify their own config vector. The compiler is no longer needed for them. <strong>System obsolescence for that student.</strong></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- TRACK 2: THE GAP SIGNAL                                           -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="track-grid">
+  <div class="track-label"><div class="tl-text">Gap Signal<br>game−cognitive</div></div>
+
+  <div class="cell">
+    <div class="item done">
+      <div class="tag done">DONE</div>
+      <div class="item-title">Not yet measurable</div>
+      <div class="item-body">No BT data. Gap signal field exists in schema. Weight reserved: <strong>w_gap = 0.20 [ASSERTED].</strong></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item dormant">
+      <div class="tag dormant">DORMANT</div>
+      <div class="item-title">Formula wired, data absent</div>
+      <div class="item-body">gap = game_elo[m] − transfer_elo[m]. Transfer Elo panel in Observatory accepts manual override for testing. Score is 0 when transfer_elo not provided.</div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item p1">
+      <div class="tag" style="border-color:var(--1);color:var(--1)">PHASE 1</div>
+      <div class="item-title">BT bridge architecture</div>
+      <div class="item-body">Design the dimension mapping before BT is live. Which BT metrics map to which Constellation modes? This is a philosophical decision, not a technical one.</div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item p2">
+      <div class="tag live">PHASE 2 — MOST DIAGNOSTIC</div>
+      <div class="item-title">Gap signal activates</div>
+      <div class="item-body"><strong>Positive gap</strong>: game skill ahead of cognitive transfer → student has learned the game but not transferred the skill. Most important intervention signal. <strong>Negative gap</strong>: cognitive capacity ahead of game performance → difficulty calibration is wrong.</div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item p3">
+      <div class="tag fitted">PHASE 3</div>
+      <div class="item-title">w_gap fitted from data</div>
+      <div class="item-body">The 0.20 weight is ASSERTED. Phase 3 measures how much gap predicts future learning rate. The weight becomes the empirical answer.</div>
+    </div>
+  </div>
+
+  <div class="cell" style="border-right:none">
+    <div class="item singularity">
+      <div class="tag unlock">SINGULARITY</div>
+      <div class="item-title">Gap = 0 is the goal</div>
+      <div class="item-body">Perfect cognitive transfer: every game improvement becomes a real-world cognitive gain. Gap approaching zero is not a calibration failure — it's success.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- TRACK 3: WHAT THE STUDENT EXPERIENCES                             -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="track-grid">
+  <div class="track-label"><div class="tl-text">Student<br>Experience</div></div>
+
+  <div class="cell">
+    <div class="item done">
+      <div class="tag done">DONE</div>
+      <div class="item-title">Opaque game</div>
+      <div class="item-body">Student plays. Nothing is communicated about what the system is doing or why. The meta-layer is invisible.</div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item active">
+      <div class="tag active">ACTIVE</div>
+      <div class="item-title">Silent optimization</div>
+      <div class="item-body">Compiler selects sessions. Student experiences better-calibrated difficulty. Nothing is explained. <strong>Hawthorne effect eliminated by silence.</strong></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item p1">
+      <div class="tag" style="border-color:var(--1);color:var(--1)">PHASE 1 — CORE UNLOCK</div>
+      <div class="item-title">Terminal delivery</div>
+      <div class="item-body">Zone names appear before sessions: <strong>ECHO · RADICAL · PARALLEL · SHIFTING · REMATCH.</strong> The system speaks to the student about their trajectory — in its own language, not in educational jargon.</div>
+    </div>
+    <div class="item p1">
+      <div class="tag" style="border-color:var(--1);color:var(--1)">PHASE 1</div>
+      <div class="item-title">Alpha track</div>
+      <div class="item-body">Application system for advanced students. Detective framework. The student starts reasoning about the system's reasoning.</div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item p2">
+      <div class="tag live">PHASE 2</div>
+      <div class="item-title">BT results visible</div>
+      <div class="item-body">Student sees their cognitive transfer data alongside game performance. The gap becomes legible: "your spatial game skill is ahead of your spatial transfer score."</div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item p3">
+      <div class="tag fitted">PHASE 3</div>
+      <div class="item-title">Collaborative staircase</div>
+      <div class="item-body">Student begins co-designing their session parameters. System shows its reasoning; student can accept, adjust, or challenge. Transparency as pedagogy.</div>
+    </div>
+  </div>
+
+  <div class="cell" style="border-right:none">
+    <div class="item singularity">
+      <div class="tag unlock">SINGULARITY</div>
+      <div class="item-title">Student as architect</div>
+      <div class="item-body">Student designs their own config vectors from first principles. They understand the cognitive model well enough to direct their own development. <strong>The system has taught itself into irrelevance for this student.</strong></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- TRACK 4: WHAT THE TEACHER SEES                                    -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="track-grid">
+  <div class="track-label"><div class="tl-text">Teacher<br>Interface</div></div>
+
+  <div class="cell">
+    <div class="item done">
+      <div class="tag done">DONE</div>
+      <div class="item-title">Admin panel (game config)</div>
+      <div class="item-body">Teacher controls game settings. No cognitive signal. Session history not visible.</div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item active">
+      <div class="tag active">ACTIVE</div>
+      <div class="item-title">Observatory</div>
+      <div class="item-body">Student list. Mode Elo table. Radar. Compiler suggestion. Reaction Library. Calibration scatter. Merge UI. Integrity check. <strong>First real-time cognitive signal.</strong></div>
+    </div>
+    <div class="item active">
+      <div class="tag active">ACTIVE</div>
+      <div class="item-title">Compiler dispatch</div>
+      <div class="item-body">Teacher triggers compiler for a student via presence message. Config auto-applied. Annotated with expected_rank_pct and mode rationale.</div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item p1">
+      <div class="tag" style="border-color:var(--1);color:var(--1)">PHASE 1</div>
+      <div class="item-title">Per-student terminal preview</div>
+      <div class="item-body">Teacher sees exactly what zone message the student will receive before they see it. The dual-view panel from student-observatory.html implemented live.</div>
+    </div>
+    <div class="item p1">
+      <div class="tag" style="border-color:var(--1);color:var(--1)">PHASE 1</div>
+      <div class="item-title">Boundary case inbox</div>
+      <div class="item-body">Students near mode boundaries flagged. Teacher reviews and tags: confirm, reclassify, or escalate. Evidence feed with provenance.</div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item p2">
+      <div class="tag live">PHASE 2</div>
+      <div class="item-title">Gap alert dashboard</div>
+      <div class="item-body">Students with large positive gaps (game ahead of transfer) flagged for intervention. The most actionable signal the system produces.</div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item p3">
+      <div class="tag fitted">PHASE 3</div>
+      <div class="item-title">Parameter confidence intervals</div>
+      <div class="item-body">Every ASSERTED constant shown with posterior ± CI from real data. Teacher sees when a constant has been refuted and what value replaced it.</div>
+    </div>
+  </div>
+
+  <div class="cell" style="border-right:none">
+    <div class="item singularity">
+      <div class="tag unlock">SINGULARITY</div>
+      <div class="item-title">Teacher as evidence curator</div>
+      <div class="item-body">Most students self-direct. Teacher role shifts to: tagging edge cases, managing social dimension, reviewing boundary cases, curating the Alpha track.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- TRACK 5: PARAMETER STATUS                                         -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="track-grid">
+  <div class="track-label"><div class="tl-text">Parameter<br>Confidence</div></div>
+
+  <div class="cell">
+    <div class="item done">
+      <div class="tag asserted">ALL ASSERTED</div>
+      <div class="item-title">No fitted parameters</div>
+      <div class="item-body">Every constant is a prior guess. The system is a hypothesis, not a measurement.</div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item active">
+      <div class="tag asserted">ALL ASSERTED</div>
+      <div class="item-title">Recording begins</div>
+      <div class="item-body">Data accumulates. Parameters remain ASSERTED but refutation conditions are pre-registered. The Reaction Library tracks calibration drift.</div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item p1">
+      <div class="tag asserted">ASSERTED</div>
+      <div class="item-title">First empirical signals</div>
+      <div class="item-body">After ~50 sessions: forgetting τ measurable (session gap vs Elo drop). After ~200: K thresholds testable. Not yet fitted — just the first data to refute with.</div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item p2">
+      <div class="tag live">PARTIALLY LIVE</div>
+      <div class="item-title">BT validates Elo scale</div>
+      <div class="item-body">Does Elo actually predict cognitive outcomes? BT transfer scores provide the first external ground truth. The elo_scale=400 ASSERTION becomes testable against real cognitive data.</div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item p3">
+      <div class="tag fitted">ALL FITTED</div>
+      <div class="item-title">Assertions replaced</div>
+      <div class="item-body">K∈{40,20,10} → fitted K(n) curve. τ=14d → measured. zpd_coeff=0.85 → calibrated. w_deficit/w_staleness/w_gap → learned from outcome prediction. <strong>The system becomes self-describing.</strong></div>
+    </div>
+  </div>
+
+  <div class="cell" style="border-right:none">
+    <div class="item singularity">
+      <div class="tag unlock">SINGULARITY</div>
+      <div class="item-title">Parameters as teacher knowledge</div>
+      <div class="item-body">Fitted constants are published: "this is what we measured about how students learn Constellation." The parameters become the research output.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- TRACK 6: ARCHITECTURAL MILESTONE                                   -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="track-grid" style="border-bottom:2px solid var(--border)">
+  <div class="track-label"><div class="tl-text">Architectural<br>Milestone</div></div>
+
+  <div class="cell">
+    <div class="item done">
+      <div class="item-title" style="font-size:10px;color:#fff">JSONL Ledger live</div>
+      <div class="item-body">append-only · non-segmenting · config_hash join key · student registry · alias resolution · integrity check</div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item active">
+      <div class="item-title" style="font-size:10px;color:#fff">Compiler pipeline live</div>
+      <div class="item-body">Ledger → state → mode selection → config vector → expected_rank_pct · Observatory reads real data · silent_inv eliminates Hawthorne</div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item p1">
+      <div class="item-title" style="font-size:10px;color:var(--1)">The medium becomes transparent</div>
+      <div class="item-body">Student receives language about their own trajectory. The game is explicitly a tool; the meta-layer is the product. <strong>Philosophical unlock: the student now participates in their own model.</strong></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item p2">
+      <div class="item-title" style="font-size:10px;color:var(--2)">Two-dimensional student model</div>
+      <div class="item-body">game_elo[6] AND transfer_elo[6]. The gap signal is the richest data the system has ever produced. <strong>Philosophical unlock: cognitive development becomes directly measurable, not proxied.</strong></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="item p3">
+      <div class="item-title" style="font-size:10px;color:var(--3)">System becomes evidence</div>
+      <div class="item-body">Every ASSERTED prior replaced by a posterior. The system is no longer a hypothesis — it is a measurement apparatus with known precision. <strong>Philosophical unlock: the system can now justify its own recommendations.</strong></div>
+    </div>
+  </div>
+
+  <div class="cell" style="border-right:none">
+    <div class="item singularity">
+      <div class="item-title" style="font-size:10px;color:var(--S)">System obsolescence</div>
+      <div class="item-body">A student who has traversed the full system no longer needs it. They are their own compiler. <strong>This is not a failure condition. This is the definition of success.</strong></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── ASSERTED CONSTANTS ── -->
+<div class="constants">
+  <div class="section-hd">ASSERTED CONSTANTS — all scheduled for Phase 3 replacement</div>
+  <div class="const-grid">
+    <div class="const-card">
+      <div class="const-name">K_high</div>
+      <div class="const-val">40</div>
+      <div class="const-refute">Refutation: if |predicted − actual| &gt; 0.15 systematically for n ≤ 5 sessions, K is miscalibrated</div>
+      <div class="const-phase">→ Phase 3: fit K(n) as a curve</div>
+    </div>
+    <div class="const-card">
+      <div class="const-name">K_mid · K_low</div>
+      <div class="const-val">20 · 10</div>
+      <div class="const-refute">Thresholds at n=5 and n=20 are arbitrary. The actual learning curve shape is unknown until measured.</div>
+      <div class="const-phase">→ Phase 3: fit threshold crossover points</div>
+    </div>
+    <div class="const-card">
+      <div class="const-name">elo_scale</div>
+      <div class="const-val">400</div>
+      <div class="const-refute">Logistic scale factor. Refutation: if calibration scatter shows systematic S-curve curvature, scale is wrong.</div>
+      <div class="const-phase">→ Phase 2: BT transfer scores validate scale</div>
+    </div>
+    <div class="const-card">
+      <div class="const-name">r_bot</div>
+      <div class="const-val">520</div>
+      <div class="const-refute">Bot Elo baseline. Refutation: if bot consistently ranks 1st or last across all sessions, baseline is wrong. Stored in every record for this reason.</div>
+      <div class="const-phase">→ Phase 1: empirical measurement from session outcomes</div>
+    </div>
+    <div class="const-card">
+      <div class="const-name">zpd_coeff</div>
+      <div class="const-val">0.85</div>
+      <div class="const-refute">ZPD target = 0.85 × elo × decay. Refutation: if students at zpd_target show &lt;50% win rate, ZPD is too aggressive; if &gt;70%, too conservative.</div>
+      <div class="const-phase">→ Phase 3: fit against engagement retention</div>
+    </div>
+    <div class="const-card">
+      <div class="const-name">forgetting_τ</div>
+      <div class="const-val">14d</div>
+      <div class="const-refute">Half-life of skill decay. Refutation: if Elo drop after session gap &gt;14d doesn't match exp(−Δt/14), τ is wrong. Q4 specifically.</div>
+      <div class="const-phase">→ Phase 1: measurable after 60+ days of data</div>
+    </div>
+    <div class="const-card">
+      <div class="const-name">w_deficit</div>
+      <div class="const-val">0.50</div>
+      <div class="const-refute">Priority weight: mode with lowest Elo. Refutation: if selecting highest-deficit mode doesn't produce faster overall Elo growth than alternatives.</div>
+      <div class="const-phase">→ Phase 3: fit weight triplet jointly</div>
+    </div>
+    <div class="const-card">
+      <div class="const-name">w_staleness</div>
+      <div class="const-val">0.30</div>
+      <div class="const-refute">Priority weight: modes not seen recently. Refutation: if staleness-driven selection correlates with Elo drops (not gains), staleness is a noise signal.</div>
+      <div class="const-phase">→ Phase 3: fit weight triplet jointly</div>
+    </div>
+    <div class="const-card">
+      <div class="const-name">w_gap</div>
+      <div class="const-val">0.20</div>
+      <div class="const-refute">Priority weight: BT gap signal. Currently always 0 (no BT data). Dormant until Phase 2. Weight itself must be fitted when gap data exists.</div>
+      <div class="const-phase">→ Phase 2: activate · Phase 3: fit</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── OPEN QUESTIONS ── -->
+<div class="questions">
+  <div class="section-hd">OPEN QUESTIONS — pre-registered in system-map.html</div>
+  <div class="q-grid">
+    <div class="q-card">
+      <div class="q-id">Q1</div>
+      <div class="q-priority" style="border-color:#dc2626;color:#dc2626">P0</div>
+      <div class="q-text">Elo measures game performance, not cognitive skill. High Elo could mean memorized strategy, not transferred cognition.</div>
+      <div class="q-resolve">Resolves Phase 2 → BT integration gives transfer_elo as independent measurement</div>
+    </div>
+    <div class="q-card">
+      <div class="q-id">Q2</div>
+      <div class="q-priority" style="border-color:var(--p-1);color:var(--p-1)">P0</div>
+      <div class="q-text">Announced INVERSION = wrong signal. Students behave differently when they know the rules are inverted (Hawthorne effect).</div>
+      <div class="q-resolved">RESOLVED — silent_inv flag · Phase 0</div>
+    </div>
+    <div class="q-card">
+      <div class="q-id">Q3</div>
+      <div class="q-priority" style="border-color:#d97706;color:#d97706">P1</div>
+      <div class="q-text">Mode non-orthogonality. QTY and FRT share spatial components. Student improvements may transfer across modes — currently treated as independent.</div>
+      <div class="q-resolve">Resolves Phase 3 → covariance model fitted from cross-mode Elo correlations in Ledger</div>
+    </div>
+    <div class="q-card">
+      <div class="q-id">Q4</div>
+      <div class="q-priority" style="border-color:#d97706;color:#d97706">P1</div>
+      <div class="q-text">Forgetting curve domain unknown. τ=14d is asserted. Real forgetting in spatial strategy games may differ from standard cognitive forgetting curves.</div>
+      <div class="q-resolve">Resolves Phase 1→2 → measurable after 60+ days of session gap data in Ledger</div>
+    </div>
+    <div class="q-card">
+      <div class="q-id">Q5</div>
+      <div class="q-priority" style="border-color:#555;color:#555">P2</div>
+      <div class="q-text">Social dimension absent. Whether a student performs differently in team compositions is untracked. Collaboration dynamics are invisible to the model.</div>
+      <div class="q-resolve">Resolves Phase 1 → teacher team-composition tags; or accept as known limitation</div>
+    </div>
+    <div class="q-card">
+      <div class="q-id">Q6</div>
+      <div class="q-priority" style="border-color:#555;color:#555">P2</div>
+      <div class="q-text">All parameters asserted. The system cannot justify any of its constants from evidence. It operates on priors it cannot yet defend.</div>
+      <div class="q-resolve">Resolves Phase 3 → every constant replaced with posterior from Ledger data</div>
+    </div>
+    <div class="q-card">
+      <div class="q-id">Q7</div>
+      <div class="q-priority" style="border-color:#d97706;color:#d97706">P1</div>
+      <div class="q-text">Gifted track incomplete. The Alpha application system is designed but not implemented. High-trajectory students have no accelerated path currently.</div>
+      <div class="q-resolve">Resolves Phase 1 → Alpha system implementation · detective framework · student-observatory.html</div>
+    </div>
+    <div class="q-card">
+      <div class="q-id">Q8</div>
+      <div class="q-priority" style="border-color:#dc2626;color:#dc2626">P0 when BT</div>
+      <div class="q-text">brain_metrics excluded. Direct cognitive measurement (working memory, inhibition, processing speed) currently absent. Game outcome is the only signal.</div>
+      <div class="q-resolve">Resolves Phase 2 → BT integration: brain_metrics becomes a core Ledger field</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── INFORMATION GAIN CURVE ── -->
+<div class="gain-section">
+  <div class="section-hd">PROJECTED INFORMATION GAIN TRAJECTORY — qualitative</div>
+  <div class="gain-wrap">
+    <canvas id="gain-canvas"></canvas>
+  </div>
+</div>
+
+<!-- ── LINKS ── -->
+<div class="links">
+  <div class="section-hd">DOCUMENTS — open in browser at localhost:2567</div>
+  <div class="link-grid">
+
+    <a class="link-card" href="layer-0-ledger.html" target="_blank">
+      <span class="link-phase tag done">LAYER 0</span>
+      <div>
+        <div class="link-name">Layer 0 — The Ledger</div>
+        <div class="link-desc">Live feed · Config space scatter · Inspector · Permanence axioms</div>
+        <div class="link-url">layer-0-ledger.html</div>
+      </div>
+    </a>
+
+    <a class="link-card" href="layer-1-approximation.html" target="_blank">
+      <span class="link-phase tag active">LAYER 1</span>
+      <div>
+        <div class="link-name">Layer 1 — Current Approximation</div>
+        <div class="link-desc">Mode Elo · Radar · Formulas · Provenance · Reaction Library · Calibration</div>
+        <div class="link-url">layer-1-approximation.html</div>
+      </div>
+    </a>
+
+    <a class="link-card" href="observatory.html" target="_blank">
+      <span class="link-phase tag active">LIVE</span>
+      <div>
+        <div class="link-name">Observatory — Admin Live View</div>
+        <div class="link-desc">Reads real JSONL · Compiler · Sessions · Calibration · Merge · Health</div>
+        <div class="link-url">observatory.html</div>
+      </div>
+    </a>
+
+    <a class="link-card" href="configuration-architecture.html" target="_blank">
+      <span class="link-phase tag active">IMPL</span>
+      <div>
+        <div class="link-name">Configuration Architecture</div>
+        <div class="link-desc">Every setting as cognitive lever · Compiler pipeline · Student Model tab</div>
+        <div class="link-url">configuration-architecture.html</div>
+      </div>
+    </a>
+
+    <a class="link-card" href="evidence-engine.html" target="_blank">
+      <span class="link-phase" style="border-color:#555;color:#555;font-size:6px;font-weight:700;letter-spacing:1px;padding:1px 4px;border:1px solid">ERA 3</span>
+      <div>
+        <div class="link-name">Evidence Engine</div>
+        <div class="link-desc">Evidence axiom · Ledger vs State · Reaction Library doctrine · Parameter Registry</div>
+        <div class="link-url">evidence-engine.html</div>
+      </div>
+    </a>
+
+    <a class="link-card" href="student-observatory.html" target="_blank">
+      <span class="link-phase" style="border-color:#555;color:#555;font-size:6px;font-weight:700;letter-spacing:1px;padding:1px 4px;border:1px solid">ERA 3</span>
+      <div>
+        <div class="link-name">Student Observatory (prototype)</div>
+        <div class="link-desc">Simulated data · Corroboration matrix · Evidence feed · Terminal preview</div>
+        <div class="link-url">student-observatory.html</div>
+      </div>
+    </a>
+
+    <a class="link-card" href="system-map.html" target="_blank">
+      <span class="link-phase" style="border-color:#555;color:#555;font-size:6px;font-weight:700;letter-spacing:1px;padding:1px 4px;border:1px solid">ERA 2</span>
+      <div>
+        <div class="link-name">System Map — Open Questions</div>
+        <div class="link-desc">Orbital confidence diagram · Q1–Q8 · Build order · BT bridge architecture</div>
+        <div class="link-url">system-map.html</div>
+      </div>
+    </a>
+
+    <a class="link-card" href="SYNTHESIS.html" target="_blank">
+      <span class="link-phase" style="border-color:#555;color:#555;font-size:6px;font-weight:700;letter-spacing:1px;padding:1px 4px;border:1px solid">ERA 2</span>
+      <div>
+        <div class="link-name">SYNTHESIS — Complete Philosophy</div>
+        <div class="link-desc">Alignment · Transparent medium · Singularity trajectory · 18 unwritten insights</div>
+        <div class="link-url">SYNTHESIS.html</div>
+      </div>
+    </a>
+
+    <a class="link-card" href="INDEX.md" target="_blank">
+      <span class="link-phase" style="border-color:var(--dim);color:var(--dim);font-size:6px;font-weight:700;letter-spacing:1px;padding:1px 4px;border:1px solid">INDEX</span>
+      <div>
+        <div class="link-name">INDEX.md — Living Document Index</div>
+        <div class="link-desc">All documents · Era by Era · Accuracy ratings · What supersedes what</div>
+        <div class="link-url">INDEX.md</div>
+      </div>
+    </a>
+
+  </div>
+</div>
+
+<script>
+// ── Information Gain Canvas
+const cv = document.getElementById('gain-canvas');
+function drawGain() {
+  const W = cv.parentElement.clientWidth; const H = 160;
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  const PAD = {l:60,r:20,t:20,b:32};
+  const IW = W-PAD.l-PAD.r, IH = H-PAD.t-PAD.b;
+
+  // Phase boundaries (x fractions)
+  const phases = [
+    {x:0,    label:'−1', col:'#666'},
+    {x:0.12, label:'0',  col:'#d97706'},
+    {x:0.28, label:'1',  col:'#2563eb'},
+    {x:0.52, label:'2',  col:'#059669'},
+    {x:0.72, label:'3',  col:'#7c3aed'},
+    {x:0.90, label:'∞',  col:'#e11d48'},
+  ];
+
+  // Draw phase column backgrounds
+  for (let i=0; i<phases.length; i++) {
+    const x0 = PAD.l + phases[i].x * IW;
+    const x1 = i < phases.length-1 ? PAD.l + phases[i+1].x * IW : PAD.l+IW;
+    ctx.fillStyle = phases[i].col + '11';
+    ctx.fillRect(x0, PAD.t, x1-x0, IH);
+    // Phase label
+    ctx.fillStyle = phases[i].col;
+    ctx.font = 'bold 9px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('PHASE '+phases[i].label, (x0+Math.min(x1,PAD.l+IW))/2, PAD.t+IH+20);
+    // Vertical line
+    if (i>0) {
+      ctx.strokeStyle = phases[i].col+'55'; ctx.lineWidth=1;
+      ctx.setLineDash([3,3]);
+      ctx.beginPath(); ctx.moveTo(x0,PAD.t); ctx.lineTo(x0,PAD.t+IH); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  // Y axis
+  ctx.strokeStyle='#333'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(PAD.l,PAD.t); ctx.lineTo(PAD.l,PAD.t+IH); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(PAD.l,PAD.t+IH); ctx.lineTo(PAD.l+IW,PAD.t+IH); ctx.stroke();
+  ctx.fillStyle='#555'; ctx.font='7px Courier New'; ctx.textAlign='right';
+  ctx.fillText('E[KL] per session',PAD.l-4,PAD.t+IH/2+3);
+  ctx.fillText('LOW',PAD.l-4,PAD.t+IH);
+  ctx.fillText('HIGH',PAD.l-4,PAD.t+8);
+
+  // Draw the gain curves
+  // Curve 1: game_elo only (blue)
+  // Curve 2: +BT gap signal (green, starts Phase 2)
+  // Curve 3: +fitted params (purple, starts Phase 3)
+
+  function curve(pts, col, dash=[]) {
+    ctx.beginPath(); ctx.strokeStyle=col; ctx.lineWidth=2; ctx.setLineDash(dash);
+    pts.forEach(([fx,fy],i)=>{
+      const x=PAD.l+fx*IW, y=PAD.t+(1-fy)*IH;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  // game_elo track — logarithmic growth
+  const gameElo = [
+    [0,0.05],[0.12,0.08],[0.28,0.18],[0.52,0.32],[0.72,0.42],[0.90,0.50],[1.0,0.52]
+  ];
+  curve(gameElo,'#2563eb88',[4,3]);
+
+  // +BT gap — activates at phase 2
+  const withBT = [
+    [0,0.05],[0.12,0.08],[0.28,0.18],[0.52,0.32],[0.52,0.32],[0.60,0.54],[0.72,0.65],[0.90,0.74],[1.0,0.77]
+  ];
+  curve(withBT,'#059669bb',[]);
+
+  // +fitted — activates phase 3
+  const fitted = [
+    [0.72,0.65],[0.80,0.78],[0.90,0.87],[0.95,0.92],[1.0,0.95]
+  ];
+  curve(fitted,'#7c3aedcc',[]);
+
+  // Asymptote near singularity
+  ctx.strokeStyle='#e11d48aa'; ctx.lineWidth=1; ctx.setLineDash([2,4]);
+  ctx.beginPath(); ctx.moveTo(PAD.l+0.88*IW,PAD.t+0.04*IH); ctx.lineTo(PAD.l+IW,PAD.t+0.04*IH); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Event markers
+  const events = [
+    {x:0.12,y:0.08,col:'#d97706',label:'Ledger live'},
+    {x:0.28,y:0.18,col:'#2563eb',label:'Terminal delivery'},
+    {x:0.52,y:0.32,col:'#059669',label:'BT activates'},
+    {x:0.60,y:0.54,col:'#059669',label:'Gap signal'},
+    {x:0.72,y:0.65,col:'#7c3aed',label:'Params fitted'},
+    {x:0.90,y:0.87,col:'#e11d48',label:'Singularity →'},
+  ];
+  events.forEach(ev=>{
+    const x=PAD.l+ev.x*IW, y=PAD.t+(1-ev.y)*IH;
+    ctx.fillStyle=ev.col; ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#0a0a0a'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle=ev.col; ctx.font='bold 7px Courier New'; ctx.textAlign='left';
+    ctx.fillText(ev.label, x+7, y+3);
+  });
+
+  // Legend
+  const legends = [
+    {col:'#2563eb88',dash:[4,3],label:'game Elo only'},
+    {col:'#059669bb',dash:[],label:'+ BT gap signal'},
+    {col:'#7c3aedcc',dash:[],label:'+ fitted parameters'},
+  ];
+  legends.forEach((l,i)=>{
+    const lx=PAD.l+(0.02+i*0.2)*IW, ly=PAD.t+8;
+    ctx.strokeStyle=l.col; ctx.lineWidth=2; ctx.setLineDash(l.dash);
+    ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx+20,ly); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#888'; ctx.font='7px Courier New'; ctx.textAlign='left';
+    ctx.fillText(l.label,lx+24,ly+3);
+  });
+}
+drawGain();
+window.addEventListener('resize', drawGain);
+</script>
+</body>
+</html>
