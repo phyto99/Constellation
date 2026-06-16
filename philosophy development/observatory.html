@@ -76,6 +76,7 @@ table.mt tr:hover td{background:#f8f8f8}
   <span class="hd-sub">— Live Ledger View — reading from /ledger/*.jsonl</span>
   <span class="hd-live" id="live-badge">LIVE</span>
   <span class="hd-warn">APPROXIMATION — every value has a refutation condition</span>
+  <span id="health-badge" style="font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #ddd;color:#888;padding:2px 8px;cursor:pointer" title="Ledger integrity" onclick="checkHealth()">HEALTH ↻</span>
   <a class="hd-link" href="layer-1-approximation.html" target="_blank">← Mock prototype</a>
   <a class="hd-link" href="layer-0-ledger.html" target="_blank">Layer 0 →</a>
 </header>
@@ -130,8 +131,22 @@ table.mt tr:hover td{background:#f8f8f8}
       <div class="t-btn active" onclick="setTab('compiler',this)">Compiler</div>
       <div class="t-btn" onclick="setTab('sessions',this)">Sessions</div>
       <div class="t-btn" onclick="setTab('calibration',this)">Calibration</div>
+      <div class="t-btn" onclick="setTab('admin',this)">Admin</div>
     </div>
     <div class="r-scroll" id="pane-compiler">
+      <!-- Transfer Elo override (Gap signal — active when BT available) -->
+      <div id="xfer-panel" style="background:#f8f8f8;border:1px dashed #ccc;padding:8px 10px;margin-bottom:8px;display:none">
+        <div style="font-size:7px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#888;margin-bottom:6px">BT Transfer Elo override <span style="color:#d97706;border:1px solid #d97706;padding:0 3px">ASSERTED w_gap=0.20</span></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:6px">
+          ${['QTY','SPT','FRT','DST','WRM','INV'].map(m=>`
+          <div><div style="font-size:7px;color:#888;margin-bottom:2px">${m}</div>
+          <input id="xfer-${m}" type="number" min="0" max="1000" placeholder="—"
+            style="width:100%;font-size:9px;border:1px solid #ddd;padding:2px 4px;font-family:'Courier New',monospace"
+            onchange="recompile()"></div>`).join('')}
+        </div>
+        <div style="font-size:8px;color:#888;line-height:1.6">Gap signal = game_elo − transfer_elo per mode. Positive = game ahead of cognitive transfer. Active in Phase 2.</div>
+      </div>
+      <button onclick="toggleXfer(this)" style="font-size:7px;border:1px solid #ddd;padding:2px 8px;cursor:pointer;background:#fff;width:100%;margin-bottom:8px;text-align:left;letter-spacing:1px">▸ BT TRANSFER ELO (Gap Signal Override)</button>
       <div id="compiler-content"><div class="loading">Select a student</div></div>
     </div>
     <div class="r-scroll" id="pane-sessions" style="display:none">
@@ -142,6 +157,23 @@ table.mt tr:hover td{background:#f8f8f8}
       <div style="font-size:8px;color:#888;margin-bottom:6px">Predicted rank_pct (Elo formula) vs actual rank_pct per session. Diagonal = perfect calibration.</div>
       <div id="calib-stats" style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap"></div>
       <canvas id="calib-canvas" width="260" height="240" style="display:block;width:100%;max-width:280px;margin:0 auto"></canvas>
+    </div>
+    <div class="r-scroll" id="pane-admin" style="display:none">
+      <div style="font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:8px">Ledger Integrity</div>
+      <div id="health-panel">
+        <button onclick="checkHealth()" style="font-size:8px;border:1px solid #000;padding:3px 10px;cursor:pointer;background:#000;color:#fff;width:100%;margin-bottom:8px">Run Integrity Check</button>
+        <div id="health-result" style="font-size:9px;color:#888;font-style:italic">Not checked yet.</div>
+      </div>
+      <div style="margin-top:16px;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:8px">Merge Students <span style="color:#888;font-weight:400;text-transform:none;letter-spacing:0">— for name changes or duplicate IDs</span></div>
+      <div style="font-size:8px;color:#888;margin-bottom:8px;line-height:1.6">Append-only: records a merge event in the Ledger and updates the alias map. All secondary's sessions will be read under the primary ID going forward. Cannot be undone (but the original records remain in the Ledger).</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div><div style="font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:2px">Primary ID (keep)</div>
+        <input id="merge-primary" type="text" placeholder="student_id to keep" style="width:100%;font-size:9px;border:1px solid #ddd;padding:3px 6px;font-family:'Courier New',monospace"></div>
+        <div><div style="font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:2px">Secondary ID (absorb)</div>
+        <input id="merge-secondary" type="text" placeholder="student_id to merge into primary" style="width:100%;font-size:9px;border:1px solid #ddd;padding:3px 6px;font-family:'Courier New',monospace"></div>
+        <button onclick="mergeStudents()" style="font-size:8px;border:1px solid #dc2626;color:#dc2626;padding:4px 10px;cursor:pointer;background:#fff;width:100%;font-weight:700;letter-spacing:1px">MERGE (irreversible)</button>
+        <div id="merge-result" style="font-size:9px;color:#888;font-style:italic"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -471,9 +503,86 @@ function renderCalibration(sessions) {
 function setTab(name,el) {
   document.querySelectorAll('.t-btn').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
-  ['compiler','sessions','calibration'].forEach(n=>{
+  ['compiler','sessions','calibration','admin'].forEach(n=>{
     document.getElementById('pane-'+n).style.display=n===name?'':'none';
   });
+}
+
+// ── Transfer Elo panel (Gap signal override for BT testing)
+function toggleXfer(btn) {
+  const p = document.getElementById('xfer-panel');
+  const open = p.style.display !== 'none';
+  p.style.display = open ? 'none' : 'block';
+  btn.textContent = (open ? '▸' : '▾') + ' BT TRANSFER ELO (Gap Signal Override)';
+  if (!open) recompile();
+}
+
+function getTransferElo() {
+  const obj = {};
+  let any = false;
+  MODES.forEach(m => {
+    const v = document.getElementById('xfer-'+m)?.value;
+    if (v && !isNaN(v)) { obj[m] = parseFloat(v); any = true; }
+  });
+  return any ? obj : null;
+}
+
+function recompile() {
+  if (!currentStudent) return;
+  const te = getTransferElo();
+  const url = `/api/compiler/${encodeURIComponent(currentStudent)}` +
+    (te ? `?transferElo=${encodeURIComponent(JSON.stringify(te))}` : '');
+  apiFetch(url).then(comp => { currentCompiler = comp; renderCompiler(comp); }).catch(()=>{});
+}
+
+// ── Ledger health check
+async function checkHealth() {
+  const badge = document.getElementById('health-badge');
+  const result = document.getElementById('health-result');
+  badge.textContent = '…';
+  try {
+    const h = await apiFetch('/api/ledger/health');
+    const ok = h.invalid === 0;
+    badge.textContent = ok ? `HEALTHY · ${h.valid} records` : `${h.invalid} CORRUPTED`;
+    badge.style.borderColor = ok ? '#15803d' : '#dc2626';
+    badge.style.color = ok ? '#15803d' : '#dc2626';
+    result.innerHTML = h.files.map(f =>
+      `<div style="font-family:'Courier New',monospace;margin-bottom:3px">
+        <span style="color:${f.invalid>0?'#dc2626':'#15803d'}">${f.invalid>0?'✗':'✓'}</span>
+        ${f.file}: ${f.valid} valid${f.invalid?' · <span style="color:#dc2626">'+f.invalid+' corrupted</span>':''}
+      </div>`
+    ).join('') + (h.files.length===0?'<div style="color:#888;font-style:italic">No .jsonl files yet.</div>':'');
+  } catch(err) {
+    badge.textContent = 'OFFLINE';
+    badge.style.borderColor = '#dc2626';
+    badge.style.color = '#dc2626';
+    if (result) result.textContent = err.message;
+  }
+}
+
+// ── Merge students
+async function mergeStudents() {
+  const primary = document.getElementById('merge-primary').value.trim();
+  const secondary = document.getElementById('merge-secondary').value.trim();
+  const resultEl = document.getElementById('merge-result');
+  if (!primary || !secondary) { resultEl.textContent = 'Both fields required.'; return; }
+  if (!confirm(`Merge "${secondary}" → "${primary}"?\n\nThis cannot be undone (the original records remain).`)) return;
+  try {
+    const r = await fetch('/api/ledger/students/merge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ primary, secondary })
+    });
+    const data = await r.json();
+    if (!r.ok) { resultEl.style.color='#dc2626'; resultEl.textContent = data.error; return; }
+    resultEl.style.color='#15803d';
+    resultEl.textContent = `Merged. ${data.alias_count} alias(es) active. Refreshing…`;
+    document.getElementById('merge-primary').value = '';
+    document.getElementById('merge-secondary').value = '';
+    setTimeout(refresh, 800);
+  } catch(err) {
+    resultEl.style.color='#dc2626'; resultEl.textContent = err.message;
+  }
 }
 
 // ── Init
