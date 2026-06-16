@@ -8,6 +8,7 @@ const basicAuth = require('express-basic-auth');
 const { monitor } = require('@colyseus/monitor');
 const fs = require('fs');
 const ledger = require('./ledger');
+const compiler = require('./compiler');
 const axios = require('axios');
 const { StarSchema, TeamSchema, GameStateSchema } = require('./game-schema');
 const WebSocket = require('ws');
@@ -296,6 +297,47 @@ app.get('/api/deployment-info', (req, res) => {
     res.json({ deployedAt: SERVER_START_TIME.toISOString() });
 });
 
+// ─── Observatory API ──────────────────────────────────────────────────────────
+// Layer 0 → Layer 1 pipeline served live from JSONL ledger files.
+
+app.get('/api/ledger/students', (req, res) => {
+    try {
+        res.json(compiler.listStudents());
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/ledger/sessions/:studentId', (req, res) => {
+    try {
+        const sessions = compiler.readStudentSessions(decodeURIComponent(req.params.studentId));
+        res.json(sessions);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/ledger/state/:studentId', (req, res) => {
+    try {
+        const sid = decodeURIComponent(req.params.studentId);
+        const sessions = compiler.readStudentSessions(sid);
+        const state = compiler.computeState(sessions);
+        res.json({ student_id: sid, state, session_count: sessions.length });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/compiler/:studentId', (req, res) => {
+    try {
+        const sid = decodeURIComponent(req.params.studentId);
+        const transferElo = req.query.transferElo ? JSON.parse(req.query.transferElo) : null;
+        res.json(compiler.compile(sid, transferElo));
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Schema definitions
 class Player extends Schema {
     constructor() {
@@ -375,6 +417,11 @@ class ConstellationRoom extends Room {
             sessionNumber: this.sessionNumber, // Add session number to config
             // Allow players to select their own team from the game client
             allowPlayerTeamSelection: options.allowPlayerTeamSelection !== undefined ? options.allowPlayerTeamSelection : false,
+            // Ledger: whether the INVERSION config was announced to students.
+            // Silent INVERSION (invAnnounced=false) is a cleaner signal — Phase 0.
+            invAnnounced: options.invAnnounced !== undefined ? options.invAnnounced : false,
+            // Compiler output stored here when compiler generated the config
+            _compiler: options._compiler || null,
             // Dynamic team colors - synced from admin panel to all clients
             teamColors: options.teamColors || [
                 { color: 0x00FFFF, name: 'cyan', displayName: 'Cyan' },
@@ -451,6 +498,23 @@ class ConstellationRoom extends Room {
                             this.setMetadata({ ...this.metadata, gameState: 'playing' });
                             this.updateAdminRoom();
                         }
+                    } else if (msg.type === 'compiler_request') {
+                        // Compiler: read Ledger for student, return suggested config
+                        const studentId = msg.studentId;
+                        if (studentId) {
+                            try {
+                                const result = compiler.compile(studentId, msg.transferElo || null);
+                                this.presence.publish(`compiler_response_${this.roomId}`, result);
+                                console.log(`🧠 Compiler: generated config for ${studentId} → mode ${result.mode}`);
+                            } catch (err) {
+                                console.error('[compiler] request error:', err);
+                            }
+                        }
+                    } else if (msg.type === 'inv_announce') {
+                        // Mark session as having the INVERSION announced to students.
+                        // Call this BEFORE start_game for contaminated (announced) sessions.
+                        this.gameConfig.invAnnounced = true;
+                        console.log(`📣 INV announced for room ${this.roomId} — session marked as contaminated`);
                     } else if (msg.type === 'force_dispose') {
                         // lock and disconnect all clients, the room will auto-dispose
                         this.locked = true;
@@ -2136,7 +2200,12 @@ class ConstellationRoom extends Room {
             const cv = ledger.extractConfigVector(this.gameConfig);
             const ch = ledger.configHash(cv);
             const now = Date.now();
+            const nowS = Math.floor(now / 1000);
             const duration = Math.round((now - this.sessionStartTime) / 1000);
+
+            // Detect silent INVERSION: any negative multiplier used without announcement
+            const mode = compiler.assignMode(cv);
+            const silent_inv = (mode === 'INV') && !this.gameConfig.invAnnounced;
 
             const starsByTeam = {};
             this.state.game.stars.forEach(s => {
@@ -2168,17 +2237,26 @@ class ConstellationRoom extends Room {
                     ? parseFloat((1 - (rank - 1) / (teamCount - 1)).toFixed(2))
                     : (team === winningTeam ? 1.0 : 0.0);
 
+                // Stable student ID: explicit UUID preferred, name-hash fallback
+                const studentIdConfirmed = !!(player.studentId);
+                const studentId = player.studentId || ledger.nameToId(player.name);
+
                 const obs = {
-                    id: `${this.roomId}_${sessionId}_${now}`,
-                    t: now,
+                    id: `${this.roomId}_${sessionId}_${nowS}`,
+                    t: nowS,
                     type: 'session',
                     layer: 0,
                     channel: 'GAME',
-                    student_id: player.studentId || player.name,
+                    student_id: studentId,
+                    student_id_confirmed: studentIdConfirmed,
+                    student_name: player.name,
                     session_id: this.roomId,
                     session_number: this.gameConfig.sessionNumber,
                     config_hash: ch,
                     config_vector: cv,
+                    config_map_filename: this.gameConfig.customMapFilename || null,
+                    silent_inv,
+                    compiler_generated: !!(this.gameConfig._compiler),
                     outcome: {
                         win_condition: winCondition,
                         winning_team: winningTeam,
@@ -2193,14 +2271,16 @@ class ConstellationRoom extends Room {
                         move_log: this.moveLog[sessionId] || [],
                         hq_placement_round: (this.hqPlacementRounds || {})[team] ?? null,
                         steals_used_by_team: (this.stealsUsed || {})[team] || 0,
-                        session_duration_s: duration
+                        session_duration_s: duration,
+                        r_bot: ledger.R_BOT_DEFAULT,
+                        compiler_expected_rank_pct: this.gameConfig._compiler?.expected_rank_pct ?? null,
                     },
                     params_version: ledger.PARAMS_VERSION
                 };
                 ledger.append(obs);
             });
 
-            console.log(`📋 Ledger: session ${this.roomId} (${winCondition}, team ${winningTeam}) written`);
+            console.log(`📋 Ledger: session ${this.roomId} (${winCondition}, team ${winningTeam}, mode ${mode}${silent_inv ? ' SILENT_INV' : ''}) written`);
         } catch (err) {
             console.error('[ledger] _writeSessionObservations error:', err);
         }

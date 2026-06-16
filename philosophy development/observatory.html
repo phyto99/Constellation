@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Observatory — Live Ledger View</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:11px;line-height:1.5;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{border-bottom:2px solid #000;padding:8px 14px;display:flex;align-items:baseline;gap:16px;flex-shrink:0}
+.hd-title{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888}
+.hd-sub{font-size:9px;color:#bbb;letter-spacing:1px}
+.hd-live{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #15803d;color:#15803d;padding:2px 8px;background:#f0fdf4}
+.hd-warn{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #d97706;color:#d97706;padding:2px 8px;background:#fef3c7}
+.hd-link{margin-left:auto;font-size:9px;letter-spacing:1px;color:#888;text-decoration:none;border:1px solid #ddd;padding:3px 9px;cursor:pointer}
+.hd-link:hover{border-color:#000;color:#000}
+/* Layout */
+.main{flex:1;display:grid;grid-template-columns:220px 1fr 300px;min-height:0;overflow:hidden}
+/* Student list */
+.student-list{border-right:1px solid #ddd;display:flex;flex-direction:column;overflow:hidden}
+.panel-hd{padding:7px 10px;border-bottom:1px solid #ddd;font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#555;background:#fafafa;flex-shrink:0;display:flex;align-items:center;gap:6px}
+.list-scroll{flex:1;overflow-y:auto}
+.stu-row{padding:8px 10px;cursor:pointer;border-bottom:1px solid #f5f5f5;transition:background .1s}
+.stu-row:hover{background:#f8f8f8}
+.stu-row.active{background:#000;color:#fff}
+.stu-row.active .stu-meta{color:#888}
+.stu-name{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.stu-meta{font-size:8px;color:#888;margin-top:1px}
+.stu-badge{display:inline-block;font-size:7px;font-weight:700;letter-spacing:1px;padding:1px 5px;border:1px solid #ccc;text-transform:uppercase;margin-top:2px}
+.stu-unconfirmed{border-color:#d97706;color:#d97706}
+/* Center: mode table + radar */
+.center-panel{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid #ddd}
+.mode-scroll{flex:1;overflow-y:auto}
+table.mt{width:100%;border-collapse:collapse;font-size:10px}
+table.mt th{font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 6px;border-bottom:2px solid #000;background:#f0f0f0;text-align:right;white-space:nowrap}
+table.mt th:first-child{text-align:left}
+table.mt td{padding:5px 6px;border-bottom:1px solid #f0f0f0;text-align:right;vertical-align:middle}
+table.mt td:first-child{text-align:left;font-weight:700;letter-spacing:1px;font-size:9px}
+table.mt tr:hover td{background:#f8f8f8}
+.asserted{display:inline-block;font-size:7px;font-weight:700;color:#d97706;border:1px solid #d97706;padding:0 3px;letter-spacing:0.5px}
+.vel-pos{color:#15803d;font-weight:700}.vel-neg{color:#dc2626;font-weight:700}.vel-zero{color:#888}
+.gap-alert{color:#dc2626;font-weight:700}
+/* Radar */
+.radar-wrap{padding:12px;display:flex;flex-direction:column;align-items:center;border-top:1px solid #ddd;flex-shrink:0}
+/* Right panel: compiler + sessions */
+.right-panel{display:flex;flex-direction:column;overflow:hidden}
+.tab-bar{display:flex;border-bottom:1px solid #ddd;flex-shrink:0}
+.t-btn{padding:6px 10px;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;color:#888;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.t-btn:hover{color:#000}.t-btn.active{color:#000;border-bottom-color:#000}
+.r-scroll{flex:1;overflow-y:auto;padding:10px 12px}
+/* Compiler card */
+.comp-card{border:2px solid #000;padding:10px 12px;background:#000;color:#fff;margin-bottom:10px}
+.comp-lbl{font-size:7px;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:4px}
+.comp-mode{font-size:20px;font-weight:700;letter-spacing:2px;margin-bottom:6px}
+.comp-field{margin-bottom:5px}
+.comp-field-lbl{font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888}
+.comp-field-val{font-family:'Courier New',monospace;font-size:10px;color:#fff}
+.comp-scores{font-size:9px;line-height:1.8}
+/* Sessions feed */
+.sess-row{padding:6px 4px;border-bottom:1px solid #f0f0f0;cursor:default;display:grid;grid-template-columns:26px 32px 50px 50px 1fr;gap:3px;align-items:center;font-size:9px}
+.sess-row:hover{background:#f8f8f8}
+.sess-row.hd{font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;border-bottom:2px solid #000;background:#f0f0f0;padding:4px}
+.sess-inv{border-left:3px solid #0891b2}
+.sess-confirmed{opacity:1}.sess-unconfirmed{opacity:0.7}
+/* Error / loading */
+.loading{padding:20px;font-size:9px;color:#888;font-style:italic}
+.err-box{background:#fff0f0;border:1px solid #dc2626;padding:8px;font-size:9px;color:#dc2626;margin:8px 0}
+/* no-data state */
+.no-data{padding:16px 10px;font-size:9px;color:#888;line-height:1.8;border:1px dashed #ddd;margin:8px}
+::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-track{background:#fff}::-webkit-scrollbar-thumb{background:#ddd}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="hd-title">Observatory</span>
+  <span class="hd-sub">— Live Ledger View — reading from /ledger/*.jsonl</span>
+  <span class="hd-live" id="live-badge">LIVE</span>
+  <span class="hd-warn">APPROXIMATION — every value has a refutation condition</span>
+  <a class="hd-link" href="layer-1-approximation.html" target="_blank">← Mock prototype</a>
+  <a class="hd-link" href="layer-0-ledger.html" target="_blank">Layer 0 →</a>
+</header>
+
+<div class="main">
+  <!-- ── STUDENT LIST ── -->
+  <div class="student-list">
+    <div class="panel-hd">
+      Students
+      <span id="student-count" style="margin-left:auto;font-size:8px;color:#bbb"></span>
+      <button onclick="refresh()" style="font-size:7px;padding:1px 5px;cursor:pointer;border:1px solid #ddd;background:#fff;margin-left:4px">↺</button>
+    </div>
+    <div class="list-scroll" id="student-list">
+      <div class="loading">Loading from server…</div>
+    </div>
+  </div>
+
+  <!-- ── CENTER: MODE TABLE + RADAR ── -->
+  <div class="center-panel">
+    <div class="panel-hd">State — Layer 1 view over Layer 0 <span class="asserted" style="margin-left:8px">ASSERTED formulas</span></div>
+    <div class="mode-scroll">
+      <table class="mt">
+        <thead>
+          <tr>
+            <th>MODE</th>
+            <th>game_elo <span class="asserted">ASSERTED K</span></th>
+            <th>velocity</th>
+            <th>zpd_target</th>
+            <th>n</th>
+            <th>since (d)</th>
+            <th>decay</th>
+          </tr>
+        </thead>
+        <tbody id="mode-tbody">
+          <tr><td colspan="7" class="loading">Select a student</td></tr>
+        </tbody>
+      </table>
+      <div id="gap-alert-row"></div>
+      <div style="padding:8px 6px;font-size:8px;color:#888;border-top:1px solid #eee;line-height:1.7">
+        <strong style="color:#d97706">ASSERTED</strong>: K∈{40,20,10} · scale=400 · zpd=0.85×elo×decay · τ=14d · mode=argmax(cv[0:4])
+      </div>
+    </div>
+    <div class="radar-wrap">
+      <canvas id="radar-canvas" width="200" height="200"></canvas>
+      <div style="font-size:8px;color:#888;margin-top:4px;text-align:center">game_elo radar · all values ASSERTED</div>
+    </div>
+  </div>
+
+  <!-- ── RIGHT: COMPILER + SESSIONS ── -->
+  <div class="right-panel">
+    <div class="tab-bar">
+      <div class="t-btn active" onclick="setTab('compiler',this)">Compiler</div>
+      <div class="t-btn" onclick="setTab('sessions',this)">Sessions</div>
+      <div class="t-btn" onclick="setTab('calibration',this)">Calibration</div>
+    </div>
+    <div class="r-scroll" id="pane-compiler">
+      <div id="compiler-content"><div class="loading">Select a student</div></div>
+    </div>
+    <div class="r-scroll" id="pane-sessions" style="display:none">
+      <div class="sess-row hd"><span>#</span><span>Mode</span><span>Outcome</span><span>Δ</span><span>Date · flags</span></div>
+      <div id="sessions-content"><div class="loading">Select a student</div></div>
+    </div>
+    <div class="r-scroll" id="pane-calibration" style="display:none">
+      <div style="font-size:8px;color:#888;margin-bottom:6px">Predicted rank_pct (Elo formula) vs actual rank_pct per session. Diagonal = perfect calibration.</div>
+      <div id="calib-stats" style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap"></div>
+      <canvas id="calib-canvas" width="260" height="240" style="display:block;width:100%;max-width:280px;margin:0 auto"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+const MODES = ['QTY','SPT','FRT','DST','WRM','INV'];
+const MODE_COLORS = {QTY:'#d97706',SPT:'#2563eb',FRT:'#059669',DST:'#dc2626',WRM:'#7c3aed',INV:'#0891b2'};
+const BASE = ''; // same origin as server
+
+let currentStudent = null;
+let currentSessions = [];
+let currentState = null;
+let currentCompiler = null;
+
+// ── API helpers
+async function apiFetch(url) {
+  const r = await fetch(BASE + url);
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+  return r.json();
+}
+
+// ── Bootstrap
+async function refresh() {
+  document.getElementById('live-badge').textContent = '…';
+  try {
+    const students = await apiFetch('/api/ledger/students');
+    renderStudentList(students);
+    document.getElementById('student-count').textContent = students.length + ' students';
+    document.getElementById('live-badge').textContent = 'LIVE';
+    if (currentStudent) loadStudent(currentStudent);
+  } catch (err) {
+    document.getElementById('student-list').innerHTML =
+      `<div class="err-box">Cannot reach server API.<br>${err.message}<br><br>Start the server: <code>node server.js</code> from /root/constellation</div>`;
+    document.getElementById('live-badge').textContent = 'OFFLINE';
+    document.getElementById('live-badge').style.borderColor = '#dc2626';
+    document.getElementById('live-badge').style.color = '#dc2626';
+  }
+}
+
+// ── Student list
+function renderStudentList(students) {
+  const el = document.getElementById('student-list');
+  if (!students.length) {
+    el.innerHTML = `<div class="no-data">No sessions in Ledger yet.<br><br>
+      Run a game session and the server will write to /ledger/YYYY-MM-DD.jsonl.<br><br>
+      Until then, use the <a href="layer-1-approximation.html">mock prototype</a> for development.</div>`;
+    return;
+  }
+  el.innerHTML = students.map(s => {
+    const dt = s.last_t ? new Date(s.last_t*1000).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '—';
+    const badgeCls = s.student_id_confirmed ? '' : ' stu-unconfirmed';
+    return `<div class="stu-row${s.student_id === currentStudent ? ' active' : ''}" onclick="loadStudent('${s.student_id.replace(/'/g,"\\'")}')">
+      <div class="stu-name">${s.student_id.replace('name:','').slice(0,16)}</div>
+      <div class="stu-meta">${s.sessions} sessions · last ${dt}</div>
+      <span class="stu-badge${badgeCls}">${s.student_id_confirmed ? 'ID CONFIRMED' : 'NAME HASH'}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Load student data
+async function loadStudent(sid) {
+  currentStudent = sid;
+
+  // Re-render list to show active
+  const rows = document.querySelectorAll('.stu-row');
+  rows.forEach(r => {
+    r.classList.toggle('active', r.onclick && r.onclick.toString().includes(sid.slice(0,10)));
+  });
+
+  document.getElementById('mode-tbody').innerHTML = '<tr><td colspan="7" class="loading">Loading…</td></tr>';
+  document.getElementById('compiler-content').innerHTML = '<div class="loading">Loading…</div>';
+  document.getElementById('sessions-content').innerHTML = '<div class="loading">Loading…</div>';
+
+  try {
+    const [stateData, sessions, comp] = await Promise.all([
+      apiFetch(`/api/ledger/state/${encodeURIComponent(sid)}`),
+      apiFetch(`/api/ledger/sessions/${encodeURIComponent(sid)}`),
+      apiFetch(`/api/compiler/${encodeURIComponent(sid)}`),
+    ]);
+    currentState = stateData.state;
+    currentSessions = sessions;
+    currentCompiler = comp;
+    renderModeTable(currentState);
+    drawRadar(currentState);
+    renderCompiler(comp);
+    renderSessions(sessions);
+    renderCalibration(sessions);
+  } catch (err) {
+    document.getElementById('mode-tbody').innerHTML = `<tr><td colspan="7" class="err-box">${err.message}</td></tr>`;
+  }
+}
+
+// ── Mode table
+function renderModeTable(state) {
+  const tbody = document.getElementById('mode-tbody');
+  tbody.innerHTML = MODES.map(m => {
+    const d = state[m];
+    if (!d || d.n === 0) {
+      return `<tr><td style="color:${MODE_COLORS[m]}">${m}</td><td colspan="6" style="color:#ccc;font-style:italic">no sessions</td></tr>`;
+    }
+    const velStr = d.velocity == null ? '—'
+      : d.velocity > 0 ? `<span class="vel-pos">+${d.velocity}</span>`
+      : d.velocity < 0 ? `<span class="vel-neg">${d.velocity}</span>`
+      : `<span class="vel-zero">0</span>`;
+    const sinceStr = d.since_days != null
+      ? (d.since_days > 14 ? `<span style="color:#d97706">${d.since_days}d</span>` : `${d.since_days}d`)
+      : '—';
+    return `<tr>
+      <td style="color:${MODE_COLORS[m]}">${m}</td>
+      <td><strong>${d.elo}</strong></td>
+      <td>${velStr}</td>
+      <td>${d.zpd_target}</td>
+      <td>${d.n}</td>
+      <td>${sinceStr}</td>
+      <td>${d.decay.toFixed(2)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Radar
+function drawRadar(state) {
+  const cv = document.getElementById('radar-canvas');
+  const ctx = cv.getContext('2d');
+  const W=200,H=200,cx=100,cy=100,R=76;
+  ctx.clearRect(0,0,W,H);
+  const angles = MODES.map((_,i) => -Math.PI/2 + i*2*Math.PI/6);
+  const maxElo = 1000;
+
+  [0.25,0.5,0.75,1].forEach(r => {
+    ctx.strokeStyle = r===1?'#bbb':'#eee'; ctx.lineWidth = r===1?1.5:1;
+    ctx.beginPath();
+    angles.forEach((a,i) => {
+      const x=cx+Math.cos(a)*R*r, y=cy+Math.sin(a)*R*r;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.closePath(); ctx.stroke();
+    if(r<1){ctx.fillStyle='#ccc';ctx.font='7px Arial';ctx.textAlign='center';ctx.fillText((r*1000|0),cx,cy-R*r-2);}
+  });
+  angles.forEach(a=>{ctx.strokeStyle='#eee';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(a)*R,cy+Math.sin(a)*R);ctx.stroke();});
+
+  ctx.beginPath();
+  let first=true;
+  MODES.forEach((m,i)=>{
+    const d=state[m]; if(!d||!d.elo)return;
+    const r=(d.elo/maxElo)*R;
+    const x=cx+Math.cos(angles[i])*r, y=cy+Math.sin(angles[i])*r;
+    first?ctx.moveTo(x,y):ctx.lineTo(x,y); first=false;
+  });
+  ctx.closePath(); ctx.strokeStyle='#000'; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle='rgba(0,0,0,0.07)'; ctx.fill();
+
+  MODES.forEach((m,i)=>{
+    const d=state[m]; if(!d||!d.elo)return;
+    const r=(d.elo/maxElo)*R;
+    const x=cx+Math.cos(angles[i])*r, y=cy+Math.sin(angles[i])*r;
+    ctx.fillStyle=MODE_COLORS[m]; ctx.strokeStyle='#fff'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    const lx=cx+Math.cos(angles[i])*(R+13), ly=cy+Math.sin(angles[i])*(R+13)+3;
+    ctx.fillStyle=MODE_COLORS[m]; ctx.font='bold 8px Arial'; ctx.textAlign='center';
+    ctx.fillText(m,lx,ly);
+  });
+}
+
+// ── Compiler pane
+function renderCompiler(comp) {
+  const el = document.getElementById('compiler-content');
+  const cv = comp.config_vector;
+  const modeColor = MODE_COLORS[comp.mode] || '#000';
+  const scores = comp.mode_scores || {};
+
+  el.innerHTML = `
+    <div class="comp-card">
+      <div class="comp-lbl">Compiler output — argmax E[KL] <span class="asserted" style="color:#f0a60a;border-color:#f0a60a">ASSERTED weights</span></div>
+      <div class="comp-mode" style="color:${modeColor}">${comp.mode}</div>
+      <div class="comp-field"><div class="comp-field-lbl">config_hash</div><div class="comp-field-val" style="font-size:9px;color:#888">${comp.config_hash}</div></div>
+      <div class="comp-field"><div class="comp-field-lbl">expected_rank_pct <span class="asserted" style="color:#f0a60a;border-color:#f0a60a">ASSERTED r_bot=${comp.r_bot}</span></div><div class="comp-field-val">${(comp.expected_rank_pct*100).toFixed(1)}%</div></div>
+      <div class="comp-field"><div class="comp-field-lbl">config_vector</div><div class="comp-field-val" style="font-size:8px">[${cv.join(', ')}]</div></div>
+    </div>
+    <div style="font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:6px">Mode Priority Scores <span class="asserted">ASSERTED</span></div>
+    <div class="comp-scores">${MODES.map(m=>{
+      const sc = scores[m];
+      if(!sc) return '';
+      const isChosen = m === comp.mode;
+      const bar = Math.round(sc.score*100/0.8);
+      return `<div style="margin-bottom:4px;${isChosen?'font-weight:700':''}">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="color:${MODE_COLORS[m]};width:28px;font-weight:700">${m}</span>
+          <div style="flex:1;height:8px;background:#f0f0f0;position:relative">
+            <div style="position:absolute;top:0;left:0;height:100%;width:${Math.min(100,Math.max(0,bar))}%;background:${isChosen?MODE_COLORS[m]:'#ddd'}"></div>
+          </div>
+          <span style="font-size:8px;color:#888;width:36px;text-align:right">${sc.score.toFixed(3)}</span>
+          ${isChosen?'<span style="font-size:7px;color:#15803d;font-weight:700">← chosen</span>':''}
+        </div>
+      </div>`;
+    }).join('')}</div>
+    <div style="margin-top:10px;font-size:9px;line-height:1.7;color:#555;border-top:1px solid #eee;padding-top:8px">
+      Based on <strong>${comp.session_count}</strong> sessions in Ledger.<br>
+      <span style="color:#d97706">All weights and formulas ASSERTED.</span> Phase 3 fits these from data.<br>
+      Send <code>compiler_request</code> presence message with <code>studentId</code> to trigger from admin panel.
+    </div>`;
+}
+
+// ── Sessions feed
+function renderSessions(sessions) {
+  const el = document.getElementById('sessions-content');
+  if (!sessions.length) {
+    el.innerHTML = '<div class="loading">No sessions yet</div>';
+    return;
+  }
+  // Compute predictions for calibration deltas
+  const preds = computePredictions(sessions);
+  const predMap = Object.fromEntries(preds.map(p=>[p.id,p]));
+
+  el.innerHTML = [...sessions].reverse().map((s,i)=>{
+    const n = sessions.length - i;
+    const mode = assignMode(s.config_vector);
+    const p = predMap[s.id];
+    const delta = p ? (s.outcome?.rank_pct - p.predicted) : null;
+    const deltaStr = delta==null?'—':(delta>=0?`<span style="color:#15803d">+${(delta*100).toFixed(0)}%</span>`:`<span style="color:#dc2626">${(delta*100).toFixed(0)}%</span>`);
+    const dt = new Date(s.t*1000).toLocaleDateString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    const flags = [
+      s.silent_inv ? '<span style="color:#0891b2;font-weight:700">SILENT_INV</span>' : '',
+      !s.student_id_confirmed ? '<span style="color:#d97706">name-hash</span>' : '',
+      s.compiler_generated ? '<span style="color:#15803d">compiler</span>' : '',
+    ].filter(Boolean).join(' · ');
+    const outcome = s.outcome?.rank_pct;
+    const oc = outcome>=0.65?'#15803d':outcome>=0.4?'#888':'#dc2626';
+    const cls = s.silent_inv ? ' sess-inv' : '';
+    return `<div class="sess-row${cls}" title="session_id: ${s.session_id}">
+      <span style="color:#bbb">${n}</span>
+      <span style="color:${MODE_COLORS[mode]};font-weight:700">${mode||'?'}</span>
+      <span style="color:${oc}">${outcome!=null?(outcome*100).toFixed(0)+'%':'—'}</span>
+      <span>${deltaStr}</span>
+      <span style="font-size:8px;color:#888">${dt}${flags?' · '+flags:''}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Mode assignment (mirrors compiler.js — Layer 1 view)
+function assignMode(cv) {
+  if (!cv) return null;
+  if (cv[0]<0||cv[1]<0||cv[2]<0||cv[3]<0) return 'INV';
+  const mults=[cv[0],cv[1],cv[2],cv[3]];
+  if(mults.reduce((a,b)=>a+b,0)<20) return 'WRM';
+  return ['QTY','SPT','FRT','DST'][mults.indexOf(Math.max(...mults))];
+}
+
+// ── Running Elo predictions (for calibration)
+function computePredictions(sessions) {
+  const modeElo={QTY:500,SPT:500,FRT:500,DST:500,WRM:500,INV:500};
+  const modeN={QTY:0,SPT:0,FRT:0,DST:0,WRM:0,INV:0};
+  const Kf=n=>n<=5?40:n<=20?20:10;
+  return sessions.sort((a,b)=>a.t-b.t).map(obs=>{
+    const mode=assignMode(obs.config_vector);
+    if(!mode) return null;
+    const elo=modeElo[mode];
+    const R=obs.signals?.r_bot??520;
+    const E=1/(1+Math.pow(10,(R-elo)/400));
+    const S=obs.outcome?.rank_pct??0.5;
+    modeElo[mode]=elo+Kf(modeN[mode]+1)*(S-E);
+    modeN[mode]++;
+    return {id:obs.id||obs.session_id,mode,predicted:parseFloat(E.toFixed(3)),actual:S,delta:parseFloat((S-E).toFixed(3))};
+  }).filter(Boolean);
+}
+
+// ── Calibration scatter
+function renderCalibration(sessions) {
+  if (!sessions.length) return;
+  const preds = computePredictions(sessions);
+  if (!preds.length) return;
+
+  const mae=(preds.reduce((s,p)=>s+Math.abs(p.delta),0)/preds.length).toFixed(3);
+  const bias=(preds.reduce((s,p)=>s+p.delta,0)/preds.length).toFixed(3);
+  const n_over=preds.filter(p=>p.delta>0.10).length;
+  const n_under=preds.filter(p=>p.delta<-0.10).length;
+  const verdict=Math.abs(n_over-n_under)<=1?'CALIBRATED':n_over>n_under?'UNDERESTIMATES':'OVERESTIMATES';
+  const vc=verdict==='CALIBRATED'?'#15803d':'#dc2626';
+
+  document.getElementById('calib-stats').innerHTML=`
+    <div><div style="font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888">Sessions</div><div style="font-size:13px;font-weight:700;font-family:monospace">${preds.length}</div></div>
+    <div><div style="font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888">MAE</div><div style="font-size:13px;font-weight:700;font-family:monospace">${mae}</div></div>
+    <div><div style="font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888">Bias</div><div style="font-size:13px;font-weight:700;font-family:monospace;color:${parseFloat(bias)>=0?'#15803d':'#dc2626'}">${parseFloat(bias)>=0?'+':''}${bias}</div></div>
+    <div><div style="font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888">System</div><div style="font-size:10px;font-weight:700;color:${vc}">${verdict}</div></div>`;
+
+  const cv=document.getElementById('calib-canvas');
+  const W=cv.offsetWidth||260,H=240;
+  cv.setAttribute('width',W); cv.setAttribute('height',H);
+  const ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  const PAD=28,IW=W-PAD*2,IH=H-PAD*2;
+
+  // Grid
+  [0,0.25,0.5,0.75,1].forEach(v=>{
+    ctx.strokeStyle='#f0f0f0';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(PAD+v*IW,PAD);ctx.lineTo(PAD+v*IW,PAD+IH);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(PAD,PAD+(1-v)*IH);ctx.lineTo(PAD+IW,PAD+(1-v)*IH);ctx.stroke();
+    ctx.fillStyle='#ccc';ctx.font='7px Arial';ctx.textAlign='center';
+    ctx.fillText((v*100|0)+'%',PAD+v*IW,PAD+IH+10);
+    if(v>0){ctx.textAlign='right';ctx.fillText((v*100|0)+'%',PAD-3,PAD+(1-v)*IH+3);}
+  });
+
+  // ±0.10 band
+  ctx.fillStyle='rgba(0,0,0,0.04)';
+  ctx.beginPath();
+  ctx.moveTo(PAD,PAD+IH+0.10*IH);ctx.lineTo(PAD+IW,PAD+0.10*IH);ctx.lineTo(PAD+IW,PAD-0.10*IH);ctx.lineTo(PAD,PAD+IH-0.10*IH);
+  ctx.closePath();ctx.fill();
+
+  // Diagonal
+  ctx.strokeStyle='#000';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(PAD,PAD+IH);ctx.lineTo(PAD+IW,PAD);ctx.stroke();ctx.setLineDash([]);
+
+  // Points
+  preds.forEach(p=>{
+    const x=PAD+p.predicted*IW, y=PAD+(1-p.actual)*IH;
+    const r=3+Math.abs(p.delta)*7;
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle=(MODE_COLORS[p.mode]||'#888')+'bb';ctx.fill();
+    ctx.strokeStyle=MODE_COLORS[p.mode]||'#888';ctx.lineWidth=1;ctx.stroke();
+  });
+
+  ctx.fillStyle='#555';ctx.font='7px Arial';ctx.textAlign='center';
+  ctx.fillText('predicted rank_pct →',PAD+IW/2,H-2);
+  ctx.save();ctx.translate(10,PAD+IH/2);ctx.rotate(-Math.PI/2);ctx.fillText('actual rank_pct →',0,0);ctx.restore();
+}
+
+// ── Tab switching
+function setTab(name,el) {
+  document.querySelectorAll('.t-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  ['compiler','sessions','calibration'].forEach(n=>{
+    document.getElementById('pane-'+n).style.display=n===name?'':'none';
+  });
+}
+
+// ── Init
+document.addEventListener('DOMContentLoaded', refresh);
+</script>
+</body>
+</html>
