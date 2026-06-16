@@ -10,32 +10,32 @@
   --p-1:#666; --0:#d97706; --1:#2563eb; --2:#059669; --3:#7c3aed; --S:#e11d48;
   --p-1b:#1a1a1a; --0b:#1c1100; --1b:#0a1628; --2b:#001a0e; --3b:#0f0820; --Sb:#1a0008;
 }
-body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;font-size:10px;line-height:1.5;min-height:100vh;overflow-x:hidden}
+body{background:var(--bg);color:var(--fg);font-family:Arial,sans-serif;font-size:11px;line-height:1.6;min-height:100vh;overflow-x:hidden}
 
 /* ── HEADER ── */
 .top{padding:24px 28px 16px;border-bottom:1px solid var(--border)}
 .principle{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
 .eq{font-size:22px;font-weight:700;letter-spacing:1px;color:#fff;margin-bottom:4px}
 .eq span{color:var(--3)}
-.subtitle{font-size:9px;color:var(--dim);letter-spacing:1px}
+.subtitle{font-size:12px;color:var(--dim);letter-spacing:0}
 
 /* ── PHASE HEADER BAR ── */
-.phase-bar{display:grid;grid-template-columns:180px repeat(5,1fr);border-bottom:2px solid var(--border);font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
-.ph-label{padding:10px 12px;color:var(--dim);border-right:1px solid var(--border);display:flex;align-items:center;font-size:7px}
-.ph{padding:10px 12px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:3px}
-.ph-name{font-size:9px;font-weight:700;letter-spacing:2px}
-.ph-tag{font-size:7px;font-weight:400;letter-spacing:1px;opacity:.7}
-.ph-status{font-size:7px;font-weight:700;letter-spacing:1px;padding:1px 5px;display:inline-block;margin-top:2px}
+.phase-bar{display:grid;grid-template-columns:160px repeat(5,1fr);border-bottom:2px solid var(--border)}
+.ph-label{padding:10px 12px;color:var(--dim);border-right:1px solid var(--border);display:flex;align-items:center;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.ph{padding:10px 12px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:4px}
+.ph-name{font-size:16px;font-weight:700;letter-spacing:1px}
+.ph-tag{font-size:10px;font-weight:400;opacity:.7}
+.ph-status{font-size:9px;font-weight:700;padding:2px 7px;display:inline-block;margin-top:2px}
 
 /* ── TRACK GRID ── */
-.track-grid{display:grid;grid-template-columns:180px repeat(5,1fr)}
-.track-label{padding:10px 12px;border-right:1px solid var(--border);border-bottom:1px solid var(--faint);display:flex;align-items:flex-start;padding-top:12px}
-.tl-text{font-size:7px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--dim);writing-mode:horizontal-tb;line-height:1.4}
+.track-grid{display:grid;grid-template-columns:160px repeat(5,1fr)}
+.track-label{padding:10px 12px;border-right:1px solid var(--border);border-bottom:1px solid var(--faint);display:flex;align-items:flex-start;padding-top:14px}
+.tl-text{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);line-height:1.5}
 .cell{padding:10px 12px;border-right:1px solid var(--border);border-bottom:1px solid var(--faint);position:relative}
 .cell:last-child{border-right:none}
 
 /* ── CELL CONTENT ── */
-.item{margin-bottom:7px;padding:5px 7px;border-left:2px solid var(--border);background:var(--faint);font-size:9px;line-height:1.6}
+.item{margin-bottom:8px;padding:7px 9px;border-left:2px solid var(--border);background:var(--faint);font-size:11px;line-height:1.6}
 .item:last-child{margin-bottom:0}
 .item.done{border-left-color:var(--p-1);background:var(--p-1b)}
 .item.active{border-left-color:var(--0);background:var(--0b)}
@@ -44,10 +44,10 @@ body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;fo
 .item.p3{border-left-color:var(--3);background:var(--3b)}
 .item.singularity{border-left-color:var(--S);background:var(--Sb)}
 .item.dormant{border-left-color:#333;background:#111;opacity:.6}
-.item-title{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px}
-.item-body{color:#aaa;font-size:8px;line-height:1.6}
+.item-title{font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:3px}
+.item-body{color:#aaa;font-size:10px;line-height:1.7}
 .item-body strong{color:#ddd}
-.tag{display:inline-block;font-size:6px;font-weight:700;letter-spacing:1px;padding:0 4px;border:1px solid;text-transform:uppercase;margin-bottom:3px}
+.tag{display:inline-block;font-size:9px;font-weight:700;letter-spacing:0.5px;padding:1px 6px;border:1px solid;text-transform:uppercase;margin-bottom:4px}
 .tag.done{border-color:var(--p-1);color:var(--p-1)}
 .tag.active{border-color:var(--0);color:var(--0)}
 .tag.asserted{border-color:#555;color:#555}
@@ -57,39 +57,39 @@ body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;fo
 .tag.unlock{border-color:var(--S);color:var(--S)}
 
 /* ── ASSERTED CONSTANTS TABLE ── */
-.constants{padding:20px 28px;border-top:1px solid var(--border)}
-.section-hd{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--dim);margin-bottom:12px}
-.const-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
-.const-card{border:1px solid var(--border);padding:8px 10px;background:var(--faint)}
-.const-name{font-size:8px;font-weight:700;letter-spacing:1px;color:#aaa;margin-bottom:2px}
-.const-val{font-size:14px;font-weight:700;color:#fff;font-family:'Courier New',monospace}
-.const-refute{font-size:7px;color:#555;margin-top:3px;line-height:1.5}
-.const-phase{font-size:6px;font-weight:700;letter-spacing:1px;padding:1px 4px;border:1px solid var(--3);color:var(--3);margin-top:4px;display:inline-block}
+.constants{padding:24px 28px;border-top:1px solid var(--border)}
+.section-hd{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:14px}
+.const-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.const-card{border:1px solid var(--border);padding:10px 12px;background:var(--faint)}
+.const-name{font-size:10px;font-weight:700;letter-spacing:1px;color:#aaa;margin-bottom:3px}
+.const-val{font-size:18px;font-weight:700;color:#fff}
+.const-refute{font-size:10px;color:#666;margin-top:5px;line-height:1.6}
+.const-phase{font-size:9px;font-weight:700;letter-spacing:0.5px;padding:2px 6px;border:1px solid var(--3);color:var(--3);margin-top:6px;display:inline-block}
 
 /* ── OPEN QUESTIONS ── */
-.questions{padding:20px 28px;border-top:1px solid var(--border)}
-.q-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
-.q-card{border:1px solid var(--border);padding:8px 10px;background:var(--faint)}
-.q-id{font-size:18px;font-weight:700;opacity:.15;float:right;line-height:1}
-.q-priority{font-size:6px;font-weight:700;letter-spacing:1px;padding:1px 4px;border:1px solid;margin-bottom:4px;display:inline-block}
-.q-text{font-size:9px;color:#ddd;line-height:1.6;margin-bottom:4px}
-.q-resolve{font-size:7px;color:#555;font-style:italic}
-.q-resolved{font-size:7px;font-weight:700;letter-spacing:1px;color:var(--p-1);border:1px solid var(--p-1);padding:1px 4px;display:inline-block}
+.questions{padding:24px 28px;border-top:1px solid var(--border)}
+.q-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.q-card{border:1px solid var(--border);padding:10px 12px;background:var(--faint)}
+.q-id{font-size:22px;font-weight:700;opacity:.12;float:right;line-height:1}
+.q-priority{font-size:9px;font-weight:700;letter-spacing:0.5px;padding:2px 6px;border:1px solid;margin-bottom:6px;display:inline-block}
+.q-text{font-size:11px;color:#ddd;line-height:1.7;margin-bottom:5px}
+.q-resolve{font-size:10px;color:#666;font-style:italic}
+.q-resolved{font-size:9px;font-weight:700;letter-spacing:0.5px;color:var(--p-1);border:1px solid var(--p-1);padding:2px 6px;display:inline-block}
 
 /* ── INFORMATION GAIN CANVAS ── */
-.gain-section{padding:20px 28px;border-top:1px solid var(--border)}
+.gain-section{padding:24px 28px;border-top:1px solid var(--border)}
 .gain-wrap{position:relative}
-#gain-canvas{display:block;width:100%;height:160px}
+#gain-canvas{display:block;width:100%;height:180px}
 
 /* ── LINKS ── */
-.links{padding:20px 28px;border-top:1px solid var(--border)}
-.link-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px}
-.link-card{display:flex;align-items:baseline;gap:10px;padding:8px 10px;border:1px solid var(--border);background:var(--faint);text-decoration:none;color:inherit;cursor:pointer}
+.links{padding:24px 28px;border-top:1px solid var(--border)}
+.link-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px}
+.link-card{display:flex;align-items:flex-start;gap:12px;padding:10px 12px;border:1px solid var(--border);background:var(--faint);text-decoration:none;color:inherit;cursor:pointer}
 .link-card:hover{border-color:#fff}
-.link-phase{font-size:7px;font-weight:700;letter-spacing:1px;padding:1px 5px;flex-shrink:0}
-.link-name{font-size:9px;font-weight:700;letter-spacing:1px;color:#ddd}
-.link-desc{font-size:8px;color:var(--dim);margin-top:1px}
-.link-url{font-size:7px;color:#555;margin-top:2px;font-family:'Courier New',monospace}
+.link-phase{font-size:9px;font-weight:700;letter-spacing:0.5px;padding:2px 6px;flex-shrink:0;margin-top:1px}
+.link-name{font-size:11px;font-weight:700;color:#ddd}
+.link-desc{font-size:10px;color:var(--dim);margin-top:2px;line-height:1.5}
+.link-url{font-size:9px;color:#444;margin-top:3px}
 
 ::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-track{background:#000}::-webkit-scrollbar-thumb{background:#333}
 </style>
@@ -119,22 +119,22 @@ body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;fo
   <div class="ph" style="border-top:3px solid var(--1)">
     <div class="ph-name" style="color:var(--1)">1</div>
     <div class="ph-tag">Terminal Delivery</div>
-    <div class="ph-status" style="font-size:7px;color:var(--dim);padding-top:3px">next</div>
+    <div class="ph-status" style="font-size:10px;color:var(--dim);padding-top:3px">next</div>
   </div>
   <div class="ph" style="border-top:3px solid var(--2)">
     <div class="ph-name" style="color:var(--2)">2</div>
     <div class="ph-tag">BT Bridge</div>
-    <div class="ph-status" style="font-size:7px;color:var(--dim);padding-top:3px">requires hardware</div>
+    <div class="ph-status" style="font-size:10px;color:var(--dim);padding-top:3px">requires hardware</div>
   </div>
   <div class="ph" style="border-top:3px solid var(--3)">
     <div class="ph-name" style="color:var(--3)">3</div>
     <div class="ph-tag">Learned Parameters</div>
-    <div class="ph-status" style="font-size:7px;color:var(--dim);padding-top:3px">requires data</div>
+    <div class="ph-status" style="font-size:10px;color:var(--dim);padding-top:3px">requires data</div>
   </div>
   <div class="ph" style="border-top:3px solid var(--S);border-right:none">
     <div class="ph-name" style="color:var(--S)">∞</div>
     <div class="ph-tag">Singularity</div>
-    <div class="ph-status" style="font-size:7px;color:var(--dim);padding-top:3px">terminal objective</div>
+    <div class="ph-status" style="font-size:10px;color:var(--dim);padding-top:3px">terminal objective</div>
   </div>
 </div>
 
@@ -456,42 +456,42 @@ body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;fo
 
   <div class="cell">
     <div class="item done">
-      <div class="item-title" style="font-size:10px;color:#fff">JSONL Ledger live</div>
+      <div class="item-title" style="font-size:12px;color:#fff">JSONL Ledger live</div>
       <div class="item-body">append-only · non-segmenting · config_hash join key · student registry · alias resolution · integrity check</div>
     </div>
   </div>
 
   <div class="cell">
     <div class="item active">
-      <div class="item-title" style="font-size:10px;color:#fff">Compiler pipeline live</div>
+      <div class="item-title" style="font-size:12px;color:#fff">Compiler pipeline live</div>
       <div class="item-body">Ledger → state → mode selection → config vector → expected_rank_pct · Observatory reads real data · silent_inv eliminates Hawthorne</div>
     </div>
   </div>
 
   <div class="cell">
     <div class="item p1">
-      <div class="item-title" style="font-size:10px;color:var(--1)">The medium becomes transparent</div>
+      <div class="item-title" style="font-size:12px;color:var(--1)">The medium becomes transparent</div>
       <div class="item-body">Student receives language about their own trajectory. The game is explicitly a tool; the meta-layer is the product. <strong>Philosophical unlock: the student now participates in their own model.</strong></div>
     </div>
   </div>
 
   <div class="cell">
     <div class="item p2">
-      <div class="item-title" style="font-size:10px;color:var(--2)">Two-dimensional student model</div>
+      <div class="item-title" style="font-size:12px;color:var(--2)">Two-dimensional student model</div>
       <div class="item-body">game_elo[6] AND transfer_elo[6]. The gap signal is the richest data the system has ever produced. <strong>Philosophical unlock: cognitive development becomes directly measurable, not proxied.</strong></div>
     </div>
   </div>
 
   <div class="cell">
     <div class="item p3">
-      <div class="item-title" style="font-size:10px;color:var(--3)">System becomes evidence</div>
+      <div class="item-title" style="font-size:12px;color:var(--3)">System becomes evidence</div>
       <div class="item-body">Every ASSERTED prior replaced by a posterior. The system is no longer a hypothesis — it is a measurement apparatus with known precision. <strong>Philosophical unlock: the system can now justify its own recommendations.</strong></div>
     </div>
   </div>
 
   <div class="cell" style="border-right:none">
     <div class="item singularity">
-      <div class="item-title" style="font-size:10px;color:var(--S)">System obsolescence</div>
+      <div class="item-title" style="font-size:12px;color:var(--S)">System obsolescence</div>
       <div class="item-body">A student who has traversed the full system no longer needs it. They are their own compiler. <strong>This is not a failure condition. This is the definition of success.</strong></div>
     </div>
   </div>
@@ -663,7 +663,7 @@ body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;fo
     </a>
 
     <a class="link-card" href="evidence-engine.html" target="_blank">
-      <span class="link-phase" style="border-color:#555;color:#555;font-size:6px;font-weight:700;letter-spacing:1px;padding:1px 4px;border:1px solid">ERA 3</span>
+      <span class="link-phase" style="border-color:#555;color:#555;font-size:9px;font-weight:700;letter-spacing:0.5px;padding:2px 6px;border:1px solid">ERA 3</span>
       <div>
         <div class="link-name">Evidence Engine</div>
         <div class="link-desc">Evidence axiom · Ledger vs State · Reaction Library doctrine · Parameter Registry</div>
@@ -672,7 +672,7 @@ body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;fo
     </a>
 
     <a class="link-card" href="student-observatory.html" target="_blank">
-      <span class="link-phase" style="border-color:#555;color:#555;font-size:6px;font-weight:700;letter-spacing:1px;padding:1px 4px;border:1px solid">ERA 3</span>
+      <span class="link-phase" style="border-color:#555;color:#555;font-size:9px;font-weight:700;letter-spacing:0.5px;padding:2px 6px;border:1px solid">ERA 3</span>
       <div>
         <div class="link-name">Student Observatory (prototype)</div>
         <div class="link-desc">Simulated data · Corroboration matrix · Evidence feed · Terminal preview</div>
@@ -681,7 +681,7 @@ body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;fo
     </a>
 
     <a class="link-card" href="system-map.html" target="_blank">
-      <span class="link-phase" style="border-color:#555;color:#555;font-size:6px;font-weight:700;letter-spacing:1px;padding:1px 4px;border:1px solid">ERA 2</span>
+      <span class="link-phase" style="border-color:#555;color:#555;font-size:9px;font-weight:700;letter-spacing:0.5px;padding:2px 6px;border:1px solid">ERA 2</span>
       <div>
         <div class="link-name">System Map — Open Questions</div>
         <div class="link-desc">Orbital confidence diagram · Q1–Q8 · Build order · BT bridge architecture</div>
@@ -690,7 +690,7 @@ body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;fo
     </a>
 
     <a class="link-card" href="SYNTHESIS.html" target="_blank">
-      <span class="link-phase" style="border-color:#555;color:#555;font-size:6px;font-weight:700;letter-spacing:1px;padding:1px 4px;border:1px solid">ERA 2</span>
+      <span class="link-phase" style="border-color:#555;color:#555;font-size:9px;font-weight:700;letter-spacing:0.5px;padding:2px 6px;border:1px solid">ERA 2</span>
       <div>
         <div class="link-name">SYNTHESIS — Complete Philosophy</div>
         <div class="link-desc">Alignment · Transparent medium · Singularity trajectory · 18 unwritten insights</div>
@@ -699,7 +699,7 @@ body{background:var(--bg);color:var(--fg);font-family:'Courier New',monospace;fo
     </a>
 
     <a class="link-card" href="INDEX.md" target="_blank">
-      <span class="link-phase" style="border-color:var(--dim);color:var(--dim);font-size:6px;font-weight:700;letter-spacing:1px;padding:1px 4px;border:1px solid">INDEX</span>
+      <span class="link-phase" style="border-color:var(--dim);color:var(--dim);font-size:9px;font-weight:700;letter-spacing:0.5px;padding:2px 6px;border:1px solid">INDEX</span>
       <div>
         <div class="link-name">INDEX.md — Living Document Index</div>
         <div class="link-desc">All documents · Era by Era · Accuracy ratings · What supersedes what</div>
@@ -740,7 +740,7 @@ function drawGain() {
     ctx.fillRect(x0, PAD.t, x1-x0, IH);
     // Phase label
     ctx.fillStyle = phases[i].col;
-    ctx.font = 'bold 9px Courier New';
+    ctx.font = 'bold 11px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('PHASE '+phases[i].label, (x0+Math.min(x1,PAD.l+IW))/2, PAD.t+IH+20);
     // Vertical line
@@ -756,7 +756,7 @@ function drawGain() {
   ctx.strokeStyle='#333'; ctx.lineWidth=1;
   ctx.beginPath(); ctx.moveTo(PAD.l,PAD.t); ctx.lineTo(PAD.l,PAD.t+IH); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(PAD.l,PAD.t+IH); ctx.lineTo(PAD.l+IW,PAD.t+IH); ctx.stroke();
-  ctx.fillStyle='#555'; ctx.font='7px Courier New'; ctx.textAlign='right';
+  ctx.fillStyle='#555'; ctx.font='11px Arial'; ctx.textAlign='right';
   ctx.fillText('E[KL] per session',PAD.l-4,PAD.t+IH/2+3);
   ctx.fillText('LOW',PAD.l-4,PAD.t+IH);
   ctx.fillText('HIGH',PAD.l-4,PAD.t+8);
@@ -811,7 +811,7 @@ function drawGain() {
     const x=PAD.l+ev.x*IW, y=PAD.t+(1-ev.y)*IH;
     ctx.fillStyle=ev.col; ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fill();
     ctx.strokeStyle='#0a0a0a'; ctx.lineWidth=1.5; ctx.stroke();
-    ctx.fillStyle=ev.col; ctx.font='bold 7px Courier New'; ctx.textAlign='left';
+    ctx.fillStyle=ev.col; ctx.font='bold 11px Arial'; ctx.textAlign='left';
     ctx.fillText(ev.label, x+7, y+3);
   });
 
@@ -826,7 +826,7 @@ function drawGain() {
     ctx.strokeStyle=l.col; ctx.lineWidth=2; ctx.setLineDash(l.dash);
     ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx+20,ly); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle='#888'; ctx.font='7px Courier New'; ctx.textAlign='left';
+    ctx.fillStyle='#888'; ctx.font='11px Arial'; ctx.textAlign='left';
     ctx.fillText(l.label,lx+24,ly+3);
   });
 }
