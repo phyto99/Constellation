@@ -7,6 +7,10 @@ const LEDGER_DIR = path.join(__dirname, 'ledger');
 const PARAMS_VERSION = 'v0.1.0';
 const R_BOT_DEFAULT = 520; // [ASSERTED] baseline bot Elo — store in every record so it can be refuted
 
+// Persistent files inside LEDGER_DIR (not JSONL — JSON, writable)
+const REGISTRY_PATH = path.join(LEDGER_DIR, '_students.json'); // name → { id, created_at }
+const ALIASES_PATH  = path.join(LEDGER_DIR, '_aliases.json');  // secondaryId → primaryId
+
 const BOT_TYPE_IDX = {
     HAL: 0, CAESAR: 1, ATHENA: 2, ROBIN: 3, 'ROBIN HOOD': 3,
     EINSTEIN: 4, LORENZ: 5, CUSTOM: 6, random: 7, greedy: 8
@@ -75,7 +79,109 @@ function append(record) {
     }
 }
 
+// ─── Student Registry ─────────────────────────────────────────────────────────
+// Maps student name → stable UUID. Written on first encounter.
+// Guarantees every student gets a confirmed ID from their very first session,
+// so name-hash fallbacks are only used if the server fails to write the registry.
+
+function readRegistry() {
+    try { return JSON.parse(fs.readFileSync(REGISTRY_PATH, 'utf8')); }
+    catch { return {}; }
+}
+
+function writeRegistry(reg) {
+    ensureDir();
+    fs.writeFileSync(REGISTRY_PATH, JSON.stringify(reg, null, 2), 'utf8');
+}
+
+function resolveStudentId(name) {
+    if (!name || !name.trim()) return { id: nameToId(''), confirmed: false };
+    const trimmed = name.trim();
+    ensureDir();
+    const reg = readRegistry();
+    if (reg[trimmed]) {
+        return { id: reg[trimmed].id, confirmed: true };
+    }
+    // First encounter — assign and persist a stable UUID
+    const id = crypto.randomUUID();
+    reg[trimmed] = { id, created_at: Math.floor(Date.now() / 1000) };
+    writeRegistry(reg);
+    return { id, confirmed: true };
+}
+
+// ─── Alias Resolution ─────────────────────────────────────────────────────────
+// Used when a teacher merges two student records (e.g. name change).
+// Append-only: merge is recorded in the Ledger; _aliases.json maps secondary → primary.
+
+function readAliases() {
+    try { return JSON.parse(fs.readFileSync(ALIASES_PATH, 'utf8')); }
+    catch { return {}; }
+}
+
+function resolveAlias(id) {
+    const aliases = readAliases();
+    return aliases[id] || id;
+}
+
+function mergeStudents(primaryId, secondaryId) {
+    // Record merge event in the Ledger (immutable evidence trail)
+    append({ type: 'merge', primary: primaryId, secondary: secondaryId, t: Math.floor(Date.now() / 1000) });
+    const aliases = readAliases();
+    aliases[secondaryId] = primaryId;
+    // Transitive resolution: anything pointing to secondaryId now points to primaryId
+    for (const [k, v] of Object.entries(aliases)) {
+        if (v === secondaryId) aliases[k] = primaryId;
+    }
+    ensureDir();
+    fs.writeFileSync(ALIASES_PATH, JSON.stringify(aliases, null, 2), 'utf8');
+    return { primary: primaryId, secondary: secondaryId, alias_count: Object.keys(aliases).length };
+}
+
+// ─── Integrity Verification ───────────────────────────────────────────────────
+function verify() {
+    if (!fs.existsSync(LEDGER_DIR)) return { files: [], total: 0, valid: 0, invalid: 0 };
+    const files = fs.readdirSync(LEDGER_DIR).filter(f => f.endsWith('.jsonl')).sort();
+    let total = 0, valid = 0, invalid = 0;
+    const fileResults = files.map(file => {
+        const lines = fs.readFileSync(path.join(LEDGER_DIR, file), 'utf8').split('\n');
+        let fv = 0, fi = 0;
+        for (const l of lines) {
+            if (!l.trim()) continue;
+            try { JSON.parse(l); fv++; } catch { fi++; }
+        }
+        total += fv + fi; valid += fv; invalid += fi;
+        return { file, total: fv + fi, valid: fv, invalid: fi };
+    });
+    return { files: fileResults, total, valid, invalid };
+}
+
+// ─── Raw Record Access ────────────────────────────────────────────────────────
+// Returns session-type records newest-first, up to limit.
+function rawRecords(limit = 200, dateFilter = null) {
+    if (!fs.existsSync(LEDGER_DIR)) return [];
+    const files = fs.readdirSync(LEDGER_DIR)
+        .filter(f => f.endsWith('.jsonl') && (!dateFilter || f.startsWith(dateFilter)))
+        .sort().reverse();
+    const records = [];
+    for (const file of files) {
+        const lines = fs.readFileSync(path.join(LEDGER_DIR, file), 'utf8')
+            .split('\n').filter(l => l.trim()).reverse();
+        for (const line of lines) {
+            try {
+                const obs = JSON.parse(line);
+                if (obs.type === 'session') {
+                    records.push(obs);
+                    if (records.length >= limit) return records;
+                }
+            } catch { }
+        }
+    }
+    return records;
+}
+
 module.exports = {
     append, configHash, extractConfigVector, mapIndex, nameToId,
+    resolveStudentId, readAliases, resolveAlias, mergeStudents,
+    verify, rawRecords,
     PARAMS_VERSION, R_BOT_DEFAULT, LEDGER_DIR
 };

@@ -1,7 +1,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { configHash, nameToId, LEDGER_DIR, R_BOT_DEFAULT, PARAMS_VERSION } = require('./ledger');
+const { configHash, nameToId, LEDGER_DIR, R_BOT_DEFAULT, PARAMS_VERSION, readAliases } = require('./ledger');
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const MODES = ['QTY', 'SPT', 'FRT', 'DST', 'WRM', 'INV'];
@@ -35,8 +35,23 @@ function assignMode(cv) {
 }
 
 // ─── Ledger reading ───────────────────────────────────────────────────────────
+
+// Build the full set of IDs that belong to one student (primary + all aliases).
+function idSet(studentId) {
+    const aliases = readAliases();
+    // Resolve studentId to its primary (in case it's itself an alias)
+    const primary = aliases[studentId] || studentId;
+    const set = new Set([studentId, primary]);
+    // Collect all secondaries that point to this primary
+    for (const [secondary, target] of Object.entries(aliases)) {
+        if (target === primary) set.add(secondary);
+    }
+    return set;
+}
+
 function readStudentSessions(studentId) {
     if (!fs.existsSync(LEDGER_DIR)) return [];
+    const ids = idSet(studentId);
     const files = fs.readdirSync(LEDGER_DIR)
         .filter(f => f.endsWith('.jsonl'))
         .sort(); // ascending date → chronological order
@@ -47,7 +62,7 @@ function readStudentSessions(studentId) {
         for (const line of lines) {
             try {
                 const obs = JSON.parse(line);
-                if (obs.student_id === studentId && obs.type === 'session') {
+                if (ids.has(obs.student_id) && obs.type === 'session') {
                     sessions.push(obs);
                 }
             } catch { /* malformed line — skip, never corrupt */ }
@@ -58,6 +73,7 @@ function readStudentSessions(studentId) {
 
 function listStudents() {
     if (!fs.existsSync(LEDGER_DIR)) return [];
+    const aliases = readAliases();
     const files = fs.readdirSync(LEDGER_DIR)
         .filter(f => f.endsWith('.jsonl'))
         .sort();
@@ -69,19 +85,22 @@ function listStudents() {
             try {
                 const obs = JSON.parse(line);
                 if (!obs.student_id || obs.type !== 'session') continue;
-                const cur = map.get(obs.student_id) || {
-                    student_id: obs.student_id,
+                // Resolve to primary ID before aggregating
+                const primary = aliases[obs.student_id] || obs.student_id;
+                const cur = map.get(primary) || {
+                    student_id: primary,
                     student_id_confirmed: obs.student_id_confirmed ?? false,
                     student_name: null,
                     sessions: 0, last_t: 0, wins: 0
                 };
                 cur.sessions++;
+                if (obs.student_id_confirmed) cur.student_id_confirmed = true;
                 if (obs.t > cur.last_t) {
                     cur.last_t = obs.t;
                     if (obs.student_name) cur.student_name = obs.student_name;
                 }
                 if (obs.outcome?.rank === 1) cur.wins++;
-                map.set(obs.student_id, cur);
+                map.set(primary, cur);
             } catch { }
         }
     }

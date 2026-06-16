@@ -338,6 +338,35 @@ app.get('/api/compiler/:studentId', (req, res) => {
     }
 });
 
+// Raw record feed — Layer 0 viewer (layer-0-ledger.html)
+app.get('/api/ledger/raw', (req, res) => {
+    try {
+        const limit = Math.min(parseInt(req.query.limit || 200), 1000);
+        const date = req.query.date || null;
+        res.json(ledger.rawRecords(limit, date));
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Ledger integrity check
+app.get('/api/ledger/health', (req, res) => {
+    try { res.json(ledger.verify()); }
+    catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Merge two student IDs (append-only: records a merge event + updates alias map)
+app.post('/api/ledger/students/merge', (req, res) => {
+    try {
+        const { primary, secondary } = req.body;
+        if (!primary || !secondary) return res.status(400).json({ error: 'primary and secondary required' });
+        if (primary === secondary) return res.status(400).json({ error: 'cannot merge a student with themselves' });
+        res.json(ledger.mergeStudents(primary, secondary));
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Schema definitions
 class Player extends Schema {
     constructor() {
@@ -1671,7 +1700,15 @@ class ConstellationRoom extends Room {
         const player = new Player();
         player.id = client.sessionId;
         player.name = options.name || `Player ${client.sessionId.substring(0, 6)}`;
-        player.studentId = options.studentId || '';
+        // Resolve stable student ID via registry (guaranteed confirmed UUID from first session)
+        if (options.studentId) {
+            player.studentId = options.studentId;
+            player._studentIdConfirmed = true;
+        } else {
+            const resolved = ledger.resolveStudentId(player.name);
+            player.studentId = resolved.id;
+            player._studentIdConfirmed = resolved.confirmed;
+        }
         player.team = null; // Unassigned - player must select team or admin assigns them
         player.ready = false;
         player.connected = true;
@@ -2237,8 +2274,8 @@ class ConstellationRoom extends Room {
                     ? parseFloat((1 - (rank - 1) / (teamCount - 1)).toFixed(2))
                     : (team === winningTeam ? 1.0 : 0.0);
 
-                // Stable student ID: explicit UUID preferred, name-hash fallback
-                const studentIdConfirmed = !!(player.studentId);
+                // Stable student ID from registry — always set in onJoin
+                const studentIdConfirmed = player._studentIdConfirmed ?? !!(player.studentId);
                 const studentId = player.studentId || ledger.nameToId(player.name);
 
                 const obs = {
