@@ -67,6 +67,20 @@ table.mt tr:hover td{background:#f8f8f8}
 /* no-data state */
 .no-data{padding:16px 10px;font-size:9px;color:#888;line-height:1.8;border:1px dashed #ddd;margin:8px}
 ::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-track{background:#fff}::-webkit-scrollbar-thumb{background:#ddd}
+@media (max-width:768px){
+  body{height:auto;overflow:auto}
+  header{flex-wrap:wrap;gap:6px;padding:8px 10px}
+  .hd-link{margin-left:0}
+  .hd-warn{display:none}
+  .main{display:block;overflow:visible;min-height:0}
+  .student-list,.center-panel,.right-panel{height:auto;overflow:visible;border-right:none;border-bottom:2px solid #ddd;min-height:0}
+  .list-scroll,.mode-scroll,.r-scroll{overflow:visible;flex:none;max-height:none}
+  .radar-wrap{border-top:1px solid #ddd}
+  #radar-canvas{width:100%;max-width:280px;height:auto}
+  .tab-bar{overflow-x:auto}
+  .t-btn{white-space:nowrap;padding:6px 8px;font-size:9px}
+  .comp-card{word-break:break-word}
+}
 </style>
 </head>
 <body>

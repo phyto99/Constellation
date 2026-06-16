@@ -91,6 +91,20 @@ table.mt tr:hover td{background:#f8f8f8}
 .calib-stat-val{font-size:13px;font-weight:700;font-family:'Courier New',monospace}
 /* Utils */
 ::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-track{background:#fff}::-webkit-scrollbar-thumb{background:#ddd}
+@media (max-width:768px){
+  body{height:auto;overflow:auto}
+  header{flex-wrap:wrap;gap:6px;padding:8px 10px}
+  .hd-link{margin-left:0}
+  .main{display:block;overflow:visible;min-height:0}
+  .mode-panel,.radar-panel,.right-panel{height:auto;overflow:visible;border-right:none;border-bottom:2px solid #ddd;min-height:0}
+  .mode-scroll,.r-scroll{overflow:visible;flex:none;max-height:none}
+  #radar-canvas{max-width:100%;height:auto !important;width:100% !important}
+  .radar-legend{width:100%}
+  .radar-panel{min-height:280px}
+  .tab-bar{overflow-x:auto}
+  .t-btn{white-space:nowrap;font-size:9px;padding:6px 8px}
+  table.mt{font-size:9px}
+}
 </style>
 </head>
 <body>

@@ -78,6 +78,19 @@ header{border-bottom:2px solid #000;padding:8px 14px;display:flex;align-items:ba
 .tab-btn.active{color:#000;border-bottom-color:#000}
 .outcome-chip{display:inline-block;width:32px;text-align:center;font-size:8px;font-weight:700;padding:1px 0;margin-top:3px;border:1px solid #000}
 ::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-track{background:#fff}::-webkit-scrollbar-thumb{background:#ddd}
+@media (max-width:768px){
+  body{height:auto;overflow:auto}
+  header{flex-wrap:wrap;gap:6px;padding:8px 10px}
+  .hd-link{margin-left:0}
+  .axiom-bar{font-size:9px;padding:4px 10px}
+  .main{display:block;overflow:visible;min-height:0}
+  .feed-panel,.scatter-panel,.inspector-panel{height:auto;overflow:visible;border-right:none;border-bottom:2px solid #ddd;min-height:0}
+  .feed-scroll,.inspector-scroll{overflow:visible;flex:none;max-height:none}
+  .scatter-wrap{height:260px;min-height:260px;flex:none}
+  #scatter-canvas{max-width:100%}
+  .controls{flex-wrap:wrap;gap:6px}
+  .tab-bar{overflow-x:auto}
+}
 </style>
 </head>
 <body>
