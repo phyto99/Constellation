@@ -3,6 +3,31 @@ const fs = require('fs');
 const path = require('path');
 const { configHash, nameToId, LEDGER_DIR, R_BOT_DEFAULT, PARAMS_VERSION, readAliases } = require('./ledger');
 
+// ─── Topology registry ────────────────────────────────────────────────────────
+const TOPOLOGY_PATH = path.join(__dirname, 'maps', 'topology.json');
+let _topology = null;
+function loadTopology() {
+    if (_topology) return _topology;
+    try {
+        _topology = JSON.parse(fs.readFileSync(TOPOLOGY_PATH, 'utf8'));
+    } catch {
+        _topology = {}; // graceful fallback — no map selection if file missing
+    }
+    return _topology;
+}
+
+// ─── Bot profiles ─────────────────────────────────────────────────────────────
+// Phase 1: aggression lever is the only real-time control (0–10, client-side AI).
+// Phase 2: richer behavioral profiles via client-side strategy directives.
+const BOT_PROFILES = {
+    TURTLER:      { aggression: 2,  description: 'Passive — student sets the pace. Clean baseline signal.' },
+    STANDARD:     { aggression: 5,  description: 'Baseline — default calibration opponent.' },
+    CONTESTER:    { aggression: 6,  description: 'Targets student\'s developing zone — forces variation.' },
+    ACCELERANT:   { aggression: 8,  description: 'Aggressive early expansion — tests tempo under pressure.' },
+    MIRROR:       { aggression: 5,  description: 'Matches student\'s typical pace — Phase 2: copies dominant strategy.' },
+    THEORETICIAN: { aggression: 5,  description: 'Optimal play for this map/mode — Phase 2: script-driven.' },
+};
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 const MODES = ['QTY', 'SPT', 'FRT', 'DST', 'WRM', 'INV'];
 const BASE_ELO = 500;
@@ -177,6 +202,88 @@ function selectMode(state, transferElo) {
     return { mode: best, scores };
 }
 
+// ─── Map selection ────────────────────────────────────────────────────────────
+// Picks the highest mode-affinity map that hasn't been used recently.
+function selectMap(mode, recentMapFilenames) {
+    const topology = loadTopology();
+    const entries  = Object.entries(topology);
+    if (entries.length === 0) return null;
+
+    const modeKey = mode.toLowerCase(); // 'QTY' → 'qty'
+    const recentSet = new Set((recentMapFilenames || []).slice(-3)); // avoid last 3
+
+    let best = null, bestScore = -Infinity;
+    for (const [filename, topo] of entries) {
+        const affinity = topo.mode_affinity?.[modeKey] ?? 0.5;
+        const recencyPenalty = recentSet.has(filename) ? 0.4 : 0;
+        const score = affinity - recencyPenalty;
+        if (score > bestScore) { bestScore = score; best = filename; }
+    }
+    return best;
+}
+
+// ─── Zone assignment ──────────────────────────────────────────────────────────
+// Describes the relationship between the student and this session.
+// Does NOT label the cognitive mode — labels the challenge relationship.
+function assignZone(sessions, selectedMode, state) {
+    if (sessions.length === 0) return 'ECHO'; // first session: calibration, use neutral name
+
+    const last = sessions[sessions.length - 1];
+    const lastMode = assignMode(last.config_vector);
+    const lastRankPct = last.outcome?.rank_pct ?? 0.5;
+    const lastT = last.t;
+    const nowS = Date.now() / 1000;
+    const sinceLastMode = state[selectedMode].since_days;
+
+    // REMATCH: decisive loss on most recent session of the selected mode
+    const modeSessionsDesc = sessions
+        .filter(s => assignMode(s.config_vector) === selectedMode)
+        .sort((a, b) => b.t - a.t);
+    if (modeSessionsDesc.length > 0 && modeSessionsDesc[0].outcome?.rank_pct < 0.35) {
+        return 'REMATCH';
+    }
+
+    // RADICAL: very stale mode (>21 days) or first session ever in this mode
+    if (sinceLastMode === null || sinceLastMode > 21) return 'RADICAL';
+
+    // RADICAL: mode was just selected due to a large deficit (low Elo relative to max)
+    if (state[selectedMode].elo < 450 && selectedMode !== lastMode) return 'RADICAL';
+
+    // SHIFTING: mode changed from last session
+    if (lastMode !== selectedMode) return 'SHIFTING';
+
+    // PARALLEL: same mode, Elo developing (5+ sessions in mode, decent performance)
+    if (state[selectedMode].n >= 5 && lastRankPct >= 0.45) return 'PARALLEL';
+
+    // Default: ECHO — consolidation in familiar territory
+    return 'ECHO';
+}
+
+// ─── Bot profile selection ────────────────────────────────────────────────────
+function selectBotProfile(sessions, state, zone, sessionCount) {
+    // Zero or very few sessions: TURTLER — let student explore, clean baseline
+    if (sessionCount < 3) return 'TURTLER';
+
+    // REMATCH: student was overwhelmed — reduce pressure
+    if (zone === 'REMATCH') return 'TURTLER';
+
+    // RADICAL: student being stretched into new territory — MIRROR shows them
+    // their own strategy applied to unfamiliar mode
+    if (zone === 'RADICAL') return 'MIRROR';
+
+    // SHIFTING: new mode, new territory — CONTESTER forces adaptation
+    if (zone === 'SHIFTING') return 'CONTESTER';
+
+    // PARALLEL: same mode but pushing ceiling — ACCELERANT tests tempo
+    if (zone === 'PARALLEL') return 'ACCELERANT';
+
+    // High session count: graduate to THEORETICIAN for ceiling measurement
+    if (sessionCount >= 20) return 'THEORETICIAN';
+
+    // Default ECHO: familiar territory, standard opponent
+    return 'STANDARD';
+}
+
 // ─── Config vector construction ───────────────────────────────────────────────
 // All multiplier values are [ASSERTED]. Phase 3 fits these from Ledger data.
 const MODE_DEFAULTS = {
@@ -202,9 +309,9 @@ function buildConfigVector(mode, state, gc_overrides) {
     const cv = [
         mults[0], mults[1], mults[2], mults[3],
         moves, rl, rounds, steals, hq_cnt,
-        0,  // map_idx — teacher selects map
-        0,  // bot_type — HAL default [ASSERTED]
-        50, // bot_aggression×100 — 0.50 default [ASSERTED]
+        0,  // map_idx — legacy (map selected by filename, not index)
+        0,  // bot_type — HAL [ASSERTED]
+        50, // bot_aggression×100 — overridden by toGameConfig from bot profile
     ];
     return cv;
 }
@@ -220,9 +327,22 @@ function compile(studentId, transferElo) {
     const mElo     = state[mode].elo;
     const E        = 1 / (1 + Math.pow(10, (R - mElo) / ASSERTED.elo_scale));
 
+    // Map selection — picks highest mode-affinity map avoiding last 3 played
+    const recentMaps = sessions.slice(-10)
+        .map(s => s.config_map_filename)
+        .filter(Boolean);
+    const map_filename = selectMap(mode, recentMaps);
+
+    // Zone and bot profile
+    const zone        = assignZone(sessions, mode, state);
+    const bot_profile = selectBotProfile(sessions, state, zone, sessions.length);
+
     return {
         student_id:           studentId,
         mode,
+        zone,
+        map_filename,
+        bot_profile,
         config_vector:        cv,
         config_hash:          ch,
         expected_rank_pct:    parseFloat(E.toFixed(3)),
@@ -239,8 +359,10 @@ function compile(studentId, transferElo) {
 // ─── gameConfig bridge ────────────────────────────────────────────────────────
 // Translate compiler output → Colyseus gameConfig fields
 function toGameConfig(compilerResult, existingConfig) {
-    const cv = compilerResult.config_vector;
-    return {
+    const cv      = compilerResult.config_vector;
+    const profile = BOT_PROFILES[compilerResult.bot_profile] || BOT_PROFILES.STANDARD;
+
+    const base = {
         ...existingConfig,
         multipliers: {
             count:       cv[0],
@@ -253,17 +375,35 @@ function toGameConfig(compilerResult, existingConfig) {
         rounds:        cv[6],
         steals:        cv[7],
         headquarters:  cv[8],
-        _compiler:     {
+        // Bot: one HAL bot per session, aggression from profile
+        aiBots: [{
+            type:       'HAL',
+            aggression: profile.aggression,
+            teamIndex:  1, // bot is always team 1 (student team 0)
+        }],
+        _compiler: {
             mode:               compilerResult.mode,
+            zone:               compilerResult.zone,
+            bot_profile:        compilerResult.bot_profile,
+            map_filename:       compilerResult.map_filename,
             config_hash:        compilerResult.config_hash,
             expected_rank_pct:  compilerResult.expected_rank_pct,
             r_bot:              compilerResult.r_bot,
             params_version:     compilerResult.params_version,
         },
     };
+
+    // Set the map if compiler selected one (can be overridden by teacher post-hoc)
+    if (compilerResult.map_filename && !existingConfig?.customMapFilename) {
+        base.customMapFilename = compilerResult.map_filename;
+    }
+
+    return base;
 }
 
 module.exports = {
     compile, computeState, readStudentSessions, listStudents,
-    assignMode, selectMode, buildConfigVector, toGameConfig, MODES, ASSERTED,
+    assignMode, selectMode, assignZone, selectMap, selectBotProfile,
+    buildConfigVector, toGameConfig,
+    loadTopology, BOT_PROFILES, MODES, ASSERTED,
 };

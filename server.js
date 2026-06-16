@@ -241,6 +241,12 @@ async function fetchAirtableRecords() {
     }
 }
 
+// Topology registry — must be before /api/maps/:filename to avoid route shadowing
+app.get('/api/maps/topology', (req, res) => {
+    try { res.json(compiler.loadTopology()); }
+    catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.get('/api/maps', async (req, res) => {
     try {
         // Read all JSON files from the maps folder
@@ -356,6 +362,39 @@ app.get('/api/ledger/health', (req, res) => {
 });
 
 // Merge two student IDs (append-only: records a merge event + updates alias map)
+// Apply compiler config to a specific room (presence-based push)
+// Loads map file, publishes config_apply event to the room
+app.post('/api/rooms/:roomId/apply-compiler', (req, res) => {
+    try {
+        const { studentId, transferElo } = req.body;
+        if (!studentId) return res.status(400).json({ error: 'studentId required' });
+        const result = compiler.compile(studentId, transferElo || null);
+        const gc     = compiler.toGameConfig(result, {});
+
+        // If a map was selected, load its JSON so the client can receive it
+        let mapJson = null;
+        if (gc.customMapFilename) {
+            const mapPath = path.join(MAPS_FOLDER, gc.customMapFilename);
+            if (fs.existsSync(mapPath)) {
+                mapJson = JSON.parse(fs.readFileSync(mapPath, 'utf8'));
+            }
+        }
+
+        // Publish to room via presence — room handles 'compiler_apply' subscription
+        const payload = { ...gc, mapJson, compiler: result };
+        presence.publish(`compiler_apply_${req.params.roomId}`, payload);
+
+        res.json({
+            ok: true,
+            mode:        result.mode,
+            zone:        result.zone,
+            bot_profile: result.bot_profile,
+            map_filename: result.map_filename,
+            config_hash: result.config_hash,
+        });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.post('/api/ledger/students/merge', (req, res) => {
     try {
         const { primary, secondary } = req.body;
@@ -472,6 +511,31 @@ class ConstellationRoom extends Room {
             clients: 0,
             sessionNumber: this.sessionNumber
         });
+
+        // Listen for compiler-apply pushes from HTTP API
+        if (this.presence) {
+            this.presence.subscribe(`compiler_apply_${this.roomId}`, (payload) => {
+                if (this.state.gameState !== 'waiting') return;
+                try {
+                    // Apply multipliers + game params
+                    if (payload.multipliers) this.gameConfig.multipliers = { ...this.gameConfig.multipliers, ...payload.multipliers };
+                    if (payload.moves !== undefined)       this.gameConfig.moves       = payload.moves;
+                    if (payload.roundLength !== undefined) this.gameConfig.roundLength = payload.roundLength;
+                    if (payload.rounds !== undefined)      this.gameConfig.rounds      = payload.rounds;
+                    if (payload.steals !== undefined)      this.gameConfig.steals      = payload.steals;
+                    if (payload.headquarters !== undefined) this.gameConfig.headquarters = payload.headquarters;
+                    if (payload.aiBots)                   this.gameConfig.aiBots      = payload.aiBots;
+                    if (payload._compiler)                this.gameConfig._compiler   = payload._compiler;
+                    // Load map
+                    if (payload.mapJson) {
+                        this.gameConfig.customMap         = payload.mapJson;
+                        this.gameConfig.customMapFilename = payload.customMapFilename || null;
+                    }
+                    this.updateAdminRoom();
+                    console.log(`🧠 Compiler applied to room ${this.roomId}: mode=${payload._compiler?.mode} zone=${payload._compiler?.zone} map=${payload.customMapFilename}`);
+                } catch (e) { console.error('[compiler_apply] error:', e); }
+            });
+        }
 
         // Listen for admin presence commands so the admin UI doesn't need to join game rooms
         if (this.presence) {
@@ -2311,6 +2375,8 @@ class ConstellationRoom extends Room {
                         session_duration_s: duration,
                         r_bot: ledger.R_BOT_DEFAULT,
                         compiler_expected_rank_pct: this.gameConfig._compiler?.expected_rank_pct ?? null,
+                        compiler_zone:              this.gameConfig._compiler?.zone              ?? null,
+                        compiler_bot_profile:       this.gameConfig._compiler?.bot_profile       ?? null,
                     },
                     params_version: ledger.PARAMS_VERSION
                 };

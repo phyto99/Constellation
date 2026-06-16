@@ -352,16 +352,29 @@ function drawRadar(state) {
 }
 
 // ── Compiler pane
+const ZONE_COLORS = { ECHO:'#888', PARALLEL:'#2563eb', SHIFTING:'#d97706', RADICAL:'#dc2626', REMATCH:'#059669' };
+const BOT_COLORS  = { TURTLER:'#888', STANDARD:'#555', CONTESTER:'#d97706', ACCELERANT:'#dc2626', MIRROR:'#7c3aed', THEORETICIAN:'#059669' };
+
 function renderCompiler(comp) {
   const el = document.getElementById('compiler-content');
   const cv = comp.config_vector;
   const modeColor = MODE_COLORS[comp.mode] || '#000';
+  const zoneColor = ZONE_COLORS[comp.zone] || '#888';
+  const botColor  = BOT_COLORS[comp.bot_profile] || '#555';
   const scores = comp.mode_scores || {};
 
   el.innerHTML = `
     <div class="comp-card">
       <div class="comp-lbl">Compiler output — argmax E[KL] <span class="asserted" style="color:#f0a60a;border-color:#f0a60a">ASSERTED weights</span></div>
-      <div class="comp-mode" style="color:${modeColor}">${comp.mode}</div>
+      <div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px">
+        <div class="comp-mode" style="color:${modeColor};margin:0">${comp.mode}</div>
+        <div style="font-size:12px;font-weight:700;letter-spacing:2px;color:${zoneColor}">${comp.zone || '—'}</div>
+      </div>
+      <div class="comp-field"><div class="comp-field-lbl">map</div><div class="comp-field-val" style="font-size:10px">${comp.map_filename || 'none'}</div></div>
+      <div class="comp-field">
+        <div class="comp-field-lbl">bot profile</div>
+        <div class="comp-field-val" style="color:${botColor};font-weight:700">${comp.bot_profile || 'STANDARD'}</div>
+      </div>
       <div class="comp-field"><div class="comp-field-lbl">config_hash</div><div class="comp-field-val" style="font-size:9px;color:#888">${comp.config_hash}</div></div>
       <div class="comp-field"><div class="comp-field-lbl">expected_rank_pct <span class="asserted" style="color:#f0a60a;border-color:#f0a60a">ASSERTED r_bot=${comp.r_bot}</span></div><div class="comp-field-val">${(comp.expected_rank_pct*100).toFixed(1)}%</div></div>
       <div class="comp-field"><div class="comp-field-lbl">config_vector</div><div class="comp-field-val" style="font-size:8px">[${cv.join(', ')}]</div></div>
@@ -383,11 +396,39 @@ function renderCompiler(comp) {
         </div>
       </div>`;
     }).join('')}</div>
+    <div style="margin-top:10px">
+      <div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:6px">Push to Room</div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input id="push-room-id" type="text" placeholder="Room ID (e.g. AbCd12)" style="flex:1;border:1px solid #ddd;padding:4px 8px;font-size:10px;font-family:monospace">
+        <button onclick="pushCompilerToRoom()" style="border:1px solid #000;background:#000;color:#fff;padding:4px 10px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer">APPLY</button>
+      </div>
+      <div id="push-result" style="font-size:9px;margin-top:4px;color:#888"></div>
+    </div>
     <div style="margin-top:10px;font-size:9px;line-height:1.7;color:#555;border-top:1px solid #eee;padding-top:8px">
       Based on <strong>${comp.session_count}</strong> sessions in Ledger.<br>
-      <span style="color:#d97706">All weights and formulas ASSERTED.</span> Phase 3 fits these from data.<br>
-      Send <code>compiler_request</code> presence message with <code>studentId</code> to trigger from admin panel.
+      <span style="color:#d97706">All weights and formulas ASSERTED.</span> Phase 3 fits these from data.
     </div>`;
+}
+
+async function pushCompilerToRoom() {
+  if (!currentStudent || !currentCompiler) return;
+  const roomId = document.getElementById('push-room-id').value.trim();
+  const result = document.getElementById('push-result');
+  if (!roomId) { result.textContent = 'Enter a room ID.'; return; }
+  result.textContent = 'Applying…';
+  try {
+    const r = await fetch(`/api/rooms/${encodeURIComponent(roomId)}/apply-compiler`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentId: currentStudent })
+    });
+    const data = await r.json();
+    if (!r.ok) { result.style.color='#dc2626'; result.textContent = data.error; return; }
+    result.style.color = '#15803d';
+    result.textContent = `Applied: mode=${data.mode} zone=${data.zone} bot=${data.bot_profile} map=${data.map_filename || 'none'}`;
+  } catch(err) {
+    result.style.color='#dc2626'; result.textContent = err.message;
+  }
 }
 
 // ── Sessions feed
