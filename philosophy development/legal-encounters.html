@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Legal Encounters — Constellation</title>
+<style>
+/* Strictly monochrome. Hierarchy through weight, border, spacing — not color. */
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.6}
+
+/* ── HEADER ── */
+header{border-bottom:2px solid #000;padding:18px 28px 12px;position:sticky;top:0;background:#fff;z-index:100}
+.hd-label{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:3px}
+.hd-title{font-size:16px;font-weight:700;margin-bottom:4px}
+.hd-sub{font-size:10px;color:#666;max-width:680px;line-height:1.6}
+nav{display:flex;gap:0;overflow-x:auto;border-top:1px solid #eee;margin-top:10px}
+.tab{padding:7px 0;margin-right:20px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.tab:hover{color:#000}.tab.active{color:#000;border-bottom-color:#000}
+.content{max-width:900px;margin:0 auto;padding:32px 28px 80px}
+.panel{display:none}.panel.active{display:block}
+
+/* ── TYPE ── */
+h1{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;border-bottom:2px solid #000;padding-bottom:5px;margin-bottom:18px}
+h2{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #ddd;padding-bottom:3px;margin:20px 0 10px;color:#444}
+p{font-size:11px;line-height:1.85;color:#222;margin-bottom:10px;max-width:640px}
+.sep{border:none;border-top:1px solid #eee;margin:28px 0}
+
+/* ── BLOCKS ── */
+.inset{background:#f2f2f2;border-left:3px solid #000;padding:10px 14px;font-size:11px;line-height:1.8;margin:12px 0;max-width:660px}
+.warn{border:1px dashed #666;padding:10px 14px;font-size:11px;line-height:1.8;margin:12px 0;max-width:660px;background:#fafafa}
+
+/* ── TERMINAL (monochrome) ── */
+.terminal{background:#0a0a0a;color:#d0d0d0;font-family:'Courier New',monospace;font-size:11px;line-height:1.9;padding:18px 22px;margin:12px 0;max-width:640px}
+.t-dim{color:#3a3a3a}
+.t-white{color:#fff;font-weight:700}
+.t-mid{color:#888}
+.t-cursor::after{content:'█';animation:cur 1.2s step-end infinite}
+@keyframes cur{0%,100%{opacity:1}50%{opacity:0}}
+.t-line{display:block;margin-bottom:1px}
+.t-rule{border:none;border-top:1px solid #222;margin:10px 0}
+
+/* ── LAYER TABS ── */
+.layer-nav{display:flex;gap:0;border:1px solid #ddd;margin:14px 0}
+.layer-tab{flex:1;padding:8px;text-align:center;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;color:#888;border-right:1px solid #ddd;background:#f9f9f9}
+.layer-tab:last-child{border-right:none}
+.layer-tab:hover{color:#000;background:#f0f0f0}
+.layer-tab.active{color:#000;background:#fff;border-bottom:2px solid #000}
+.layer-panel{display:none;padding:16px;border:1px solid #ddd;border-top:none}.layer-panel.active{display:block}
+
+/* ── ENCOUNTER SHELL ── */
+.encounter{border:1px solid #ddd;max-width:560px;margin:14px auto}
+.enc-header{background:#000;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center}
+.enc-logo{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase}
+.enc-badge{font-size:8px;padding:1px 7px;border:1px solid #444;color:#888;letter-spacing:1px;text-transform:uppercase}
+.enc-body{padding:22px 20px}
+.enc-step-label{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#aaa;margin-bottom:8px}
+.enc-title{font-size:15px;font-weight:700;line-height:1.3;margin-bottom:10px}
+.enc-text{font-size:11px;color:#333;line-height:1.85;margin-bottom:16px}
+.enc-expand{border:1px solid #ddd;margin-bottom:6px;cursor:pointer}
+.enc-expand-hd{padding:8px 12px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;background:#f9f9f9;user-select:none}
+.enc-expand-hd:hover{background:#f0f0f0}
+.enc-expand-bd{display:none;padding:10px 12px;font-size:10px;color:#333;line-height:1.75;border-top:1px solid #eee}
+.enc-expand-bd.open{display:block}
+.enc-confirm-row{display:flex;gap:8px;align-items:flex-start;margin:14px 0 10px}
+.enc-confirm-row input[type=checkbox]{margin-top:2px;width:auto;flex-shrink:0;accent-color:#000}
+.enc-confirm-label{font-size:10px;color:#333;line-height:1.6}
+.enc-btn{display:block;width:100%;background:#000;color:#fff;border:none;padding:10px;font-family:Arial,sans-serif;font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;cursor:pointer;margin-top:8px}
+.enc-btn:disabled{opacity:.25;cursor:default}
+.enc-btn-ghost{background:#fff;color:#000;border:1px solid #000;margin-top:6px}
+.enc-footer{border-top:1px solid #eee;padding:8px 20px;font-size:9px;color:#aaa;line-height:1.5}
+
+/* ── DESIGNED MOMENT ── */
+.designed-moment{border:2px solid #000;max-width:560px;margin:14px auto;display:none}
+.dm-header{background:#000;color:#fff;padding:8px 16px;font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase}
+.dm-terminal{background:#0a0a0a;color:#d0d0d0;font-family:'Courier New',monospace;font-size:11px;line-height:2;padding:16px 20px}
+.dm-footer{padding:10px 16px;font-size:9px;color:#888;border-top:1px solid #eee}
+
+/* ── RESULT VARIANTS ── */
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #ddd;margin:14px 0}
+.result-card{padding:14px 16px;border-right:1px solid #ddd;border-bottom:1px solid #ddd}
+.result-card:nth-child(2n){border-right:none}
+.result-card:nth-last-child(-n+2){border-bottom:none}
+.result-card.draw{grid-column:1/-1;border-right:none}
+.result-tag{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #eee}
+.result-heading{font-size:11px;font-weight:700;margin-bottom:6px}
+.result-body{font-size:10px;color:#555;line-height:1.7}
+.result-layer3{font-size:9px;color:#888;border-top:1px solid #f0f0f0;margin-top:8px;padding-top:6px;font-style:italic}
+
+/* ── LEDGER DISPLAY ── */
+.ledger-row{display:flex;gap:0;border-bottom:1px solid #f0f0f0;padding:5px 0;font-size:10px}
+.ledger-row:last-child{border-bottom:none}
+.ledger-key{width:180px;color:#888;flex-shrink:0;font-size:9px;text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+.ledger-val{color:#111;flex:1}
+.ledger-asserted{font-size:8px;color:#aaa;border:1px solid #ccc;padding:0 4px;margin-left:6px;letter-spacing:.5px;vertical-align:middle;text-transform:uppercase;font-weight:700}
+
+/* ── DELETION ── */
+.del-record{border:1px solid #eee;padding:10px 14px;margin-bottom:6px;cursor:pointer;transition:border-color .15s}
+.del-record:hover{border-color:#000}
+.del-record-hd{display:flex;justify-content:space-between;font-size:10px;font-weight:700}
+.del-record-bd{display:none;font-size:9px;color:#666;margin-top:6px;line-height:1.7;border-top:1px solid #f0f0f0;padding-top:6px}
+.del-count{font-size:28px;font-weight:700;line-height:1;margin-bottom:4px}
+.del-count-label{font-size:8px;color:#888;text-transform:uppercase;letter-spacing:1px}
+
+/* ── PARENT INVESTIGATION ── */
+.inv-phase{border-left:3px solid #000;padding:10px 14px;margin-bottom:10px;background:#fafafa}
+.inv-phase-label{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:4px}
+.inv-phase-q{font-size:11px;font-weight:700;margin-bottom:4px}
+.inv-phase-body{font-size:10px;color:#444;line-height:1.7}
+.inv-evidence{border:1px solid #ddd;padding:12px 14px;margin:8px 0;cursor:pointer}
+.inv-evidence-hd{font-size:10px;font-weight:700;display:flex;justify-content:space-between}
+.inv-evidence-bd{display:none;font-size:10px;color:#444;line-height:1.7;margin-top:6px;border-top:1px solid #f0f0f0;padding-top:6px}
+
+/* ── GRADUATION ── */
+.grad-box{border:2px solid #000;padding:16px 18px;max-width:560px;margin:14px 0}
+.grad-label{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;border-bottom:1px solid #000;padding-bottom:4px}
+
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:11px}
+th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 10px;border-bottom:2px solid #000;text-align:left;background:#f5f5f5}
+td{padding:7px 10px;border-bottom:1px solid #eee;vertical-align:top;line-height:1.7}
+
+@media(max-width:680px){
+  header{padding:14px 14px 10px;position:relative}
+  .content{padding:20px 14px 40px}
+  .result-grid{grid-template-columns:1fr}
+  .result-card{border-right:none}
+  .result-card.draw{grid-column:auto}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd-label">Constellation — Legal Encounters</div>
+  <div class="hd-title">Consent as Cognitive Encounter</div>
+  <div class="hd-sub">Legal disclosure derived from the LILA design philosophy. The data collection and the necessary opacity are not concessions — they are the system. This document explains both.</div>
+  <nav>
+    <div class="tab active" onclick="show('necessity',this)">Why This Exists</div>
+    <div class="tab" onclick="show('shortform',this)">Short Form ↗</div>
+    <div class="tab" onclick="show('principle',this)">Design Principle</div>
+    <div class="tab" onclick="show('firstcontact',this)">First Contact</div>
+    <div class="tab" onclick="show('ledger',this)">The Ledger</div>
+    <div class="tab" onclick="show('erasure',this)">Erasure</div>
+    <div class="tab" onclick="show('investigation',this)">Parent Investigation</div>
+    <div class="tab" onclick="show('results',this)">Result Variants</div>
+    <div class="tab" onclick="show('graduation',this)">Graduation</div>
+  </nav>
+</header>
+
+<div class="content">
+
+<!-- ═══════════════════════ WHY THIS EXISTS -->
+<div id="panel-necessity" class="panel active">
+<h1>Why This Exists — The Philosophical Necessity of the Data and the Mystery</h1>
+
+<div class="terminal" style="max-width:700px;margin-bottom:20px">
+  <span class="t-dim t-line">// the honest version</span>
+  <span class="t-line" style="margin-top:8px">The data collection is not a legal requirement layered on top of a game.</span>
+  <span class="t-line">It is the system. Without it, there is no system — only a game.</span>
+  <span class="t-line" style="margin-top:8px">The opacity is not a commercial convenience.</span>
+  <span class="t-line">It is the mechanism that makes the development work.</span>
+  <span class="t-line" style="margin-top:8px">Both are explained here. Completely.</span>
+</div>
+
+<h2>I. Why the Recording Is the System, Not Incidental to It</h2>
+
+<p>The One Principle of this system is: <strong>maximize expected information gain about the student's cognitive model per session.</strong> Written formally: <em>argmax E[KL(posterior ‖ prior)]</em>.</p>
+
+<p>That principle requires two things to exist. A prior — what the system currently believes about a student's cognitive profile. And a posterior — what the system believes after observing the session. The gap between them is the information gain. The session that maximizes that gap is the right next session for this student.</p>
+
+<div class="inset" style="max-width:700px">
+The ledger is the prior. Without the ledger, there is no prior. Without the prior, there is no posterior. Without the posterior-prior gap, the system cannot compute which session will teach this student the most. The system becomes a random session generator — one that ignores everything it has already learned about this student and starts over every time. The data collection is not a feature of the system. It is the implementation of the One Principle. Removing it removes the system.
+</div>
+
+<p>This is structurally different from why other systems collect data. Social media collects behavioral data to maximize time on platform — an objective that is directly opposed to the user's long-term interest. The ledger exists to maximize the rate at which the student develops past needing the system. The objective the data serves is the student's cognitive development — nothing else. When the student no longer needs the system, the system has succeeded. Social media calls that failure.</p>
+
+<div style="border:1px solid #ddd;max-width:700px;margin:16px 0">
+  <div style="background:#000;color:#fff;padding:8px 14px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase">The Structural Difference</div>
+  <table style="margin:0">
+    <tr><th style="width:50%">Social media data collection</th><th>Constellation ledger</th></tr>
+    <tr>
+      <td>Collects to maximize engagement and time on platform</td>
+      <td>Collects to maximize rate of cognitive development</td>
+    </tr>
+    <tr>
+      <td>Goal is permanent dependency</td>
+      <td>Goal is obsolescence — when you've internalized the model, you don't need the system</td>
+    </tr>
+    <tr>
+      <td>Data serves the platform's interest</td>
+      <td>Data serves the student's development — and is progressively given back to the student as they earn understanding of it</td>
+    </tr>
+    <tr>
+      <td>Algorithm hidden because disclosure would reveal manipulation</td>
+      <td>Algorithm partially withheld because full disclosure would collapse the development mechanism (explained below)</td>
+    </tr>
+    <tr>
+      <td>More data → more engagement → more revenue</td>
+      <td>More data → more accurate model → faster development → system becomes unnecessary sooner</td>
+    </tr>
+    <tr>
+      <td>You are the product</td>
+      <td>The model is yours. You receive it progressively. At the highest tier you see every session that produced every estimate.</td>
+    </tr>
+  </table>
+</div>
+
+<h2>II. Why the Mystery Is Load-Bearing</h2>
+
+<p>The system withholds one thing: the specific formula — the weights, the Elo constants, the threshold values, the exact algorithm that maps behavioral signals to cognitive estimates. This is the only opacity in the system. Everything else is disclosed or disclosed progressively. The reason for this specific opacity is not commercial. It is developmental.</p>
+
+<div class="inset" style="max-width:700px">
+<strong>The second game.</strong> The terminal gives students observations after every session. The observations are specific and true — but they never say "this is what we are measuring" or "this is how the formula works." Students begin to notice patterns. They compare terminal messages with classmates. They form theories about what the system is tracking. They test those theories against the next session's output. This process — abductive reasoning applied to an opaque system — is itself a cognitive development exercise. The student who has reverse-engineered the system's measurement framework has demonstrated exactly the kind of abstract analytical thinking the system is designed to develop.
+</div>
+
+<p>If the formula were disclosed, the second game would not exist. A student could simply read the formula, verify that their behavior matched it, and confirm or disconfirm the model. That is a very different cognitive task — and a far less demanding one — than constructing a working model of the system from observations alone. The opacity creates a specific kind of productive uncertainty. That uncertainty is what the system develops.</p>
+
+<p>This is different from social media opacity in a precise way: social media hides its algorithm because disclosure would reveal that it is optimizing against the user's interests. Constellation partially withholds its algorithm because full disclosure would eliminate the mechanism that makes the development work. The reasons are opposite. The first is self-protective. The second is self-defeating — explaining it loses the effect it produces, and this document is explaining it anyway, because that is what honesty requires.</p>
+
+<div class="warn" style="max-width:700px">
+<strong>The opacity has a limit.</strong> The system is opaque about the formula. It is not opaque about anything else. The existence of the model, the categories of data it uses, the six dimensions it estimates, the confidence intervals it maintains, the refutation conditions on every parameter, the fact that all parameters are currently ASSERTED and will be replaced by measured values — all of that is disclosed. The formula is the only exception, and the reason for the exception is stated here plainly. That is the maximum transparency the system can offer without destroying what makes it work.
+</div>
+
+<h2>III. Why Mystery and Trust Are Not Opposites</h2>
+
+<p>Trust is not produced by complete information. It is produced by accurate information about what the system is doing and why. A system that discloses everything about its mechanics but pursues objectives that conflict with the user's interest is not trustworthy. A system that withholds one thing for a stated reason that serves the user's interest is.</p>
+
+<p>The students who have played Constellation longest trust the system most — not because they have more information about the formula, but because the observations the terminal gives them have turned out to be accurate over time. The model's predictions about what mode they should develop next have, when tested, been right more often than their own predictions. Trust was built through demonstrated accuracy, not through disclosure of the algorithm that produced it.</p>
+
+<p>The terminal's language is not designed to be soothing or encouraging. It is designed to be specific and true. "The system is not finished with this challenge. ECHO configuration active." — that is a statement of what the model computed. It is either right or wrong. Over enough sessions, students learn whether it tends to be right. That is the basis of trust: not disclosure of the mechanism, but track record of the output.</p>
+
+<div class="terminal" style="max-width:700px;margin-top:16px">
+  <span class="t-dim t-line">// the asymmetry between opacity and dishonesty</span>
+  <span class="t-line" style="margin-top:8px">The system does not tell you everything.</span>
+  <span class="t-line">It tells you everything except one thing.</span>
+  <span class="t-line">And it tells you exactly what that one thing is, and exactly why.</span>
+  <span class="t-line" style="margin-top:8px">That is not the same as hiding something.</span>
+  <span class="t-line" style="margin-top:8px t-dim">The formula is inside the system.</span>
+  <span class="t-line t-dim">Everything else is here.</span>
+</div>
+
+<h2>IV. Maximum Transparency — What This System Discloses and What It Does Not</h2>
+
+<div style="border:1px solid #ddd;max-width:700px;margin:14px 0">
+  <div style="background:#000;color:#fff;padding:8px 14px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase">Complete Transparency</div>
+  <div style="padding:14px 16px">
+    <div style="font-size:10px;line-height:1.85;color:#333;border-bottom:1px solid #f0f0f0;padding-bottom:10px;margin-bottom:10px">
+      <strong>That a cognitive model is built from gameplay.</strong> Stated on the first screen. No exceptions. You are told before you play session 1 that the system is constructing a model of how you think.
+    </div>
+    <div style="font-size:10px;line-height:1.85;color:#333;border-bottom:1px solid #f0f0f0;padding-bottom:10px;margin-bottom:10px">
+      <strong>What categories of data feed the model.</strong> The exact JSONL schema is in Layer 3 of this document. Every field. Every signal type. Every parameter.
+    </div>
+    <div style="font-size:10px;line-height:1.85;color:#333;border-bottom:1px solid #f0f0f0;padding-bottom:10px;margin-bottom:10px">
+      <strong>What the model estimates.</strong> Six cognitive dimensions. Named and explained. At the ALPHA tier, the student sees every estimate with its confidence interval and the specific sessions that produced it.
+    </div>
+    <div style="font-size:10px;line-height:1.85;color:#333;border-bottom:1px solid #f0f0f0;padding-bottom:10px;margin-bottom:10px">
+      <strong>That every parameter is currently ASSERTED and will be replaced.</strong> The system is honest that its model is a hypothesis. Every value has a refutation condition. Phase 3 of the build plan replaces every ASSERTED value with a measured one. This is in the Layer 3 disclosure.
+    </div>
+    <div style="font-size:10px;line-height:1.85;color:#333;border-bottom:1px solid #f0f0f0;padding-bottom:10px;margin-bottom:10px">
+      <strong>That the model will be given back to you.</strong> Progressively, as you advance. At the highest tier: full model, full provenance, full export. The data is not kept from you — it is revealed at the pace the development requires.
+    </div>
+    <div style="font-size:10px;line-height:1.85;color:#333;border-bottom:1px solid #f0f0f0;padding-bottom:10px;margin-bottom:10px">
+      <strong>Who sees it and who does not.</strong> Teacher. Administrator. You. No one else. No sale. No advertising use. No exceptions stated anywhere.
+    </div>
+    <div style="font-size:10px;line-height:1.85;color:#333">
+      <strong>Your right to delete it.</strong> Unconditional. Permanent. The system will lose everything it knows about you. If you rejoin, it starts empty. Stated at every tier, not buried.
+    </div>
+  </div>
+
+  <div style="background:#f2f2f2;border-top:2px solid #000;padding:8px 14px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase">The One Exception — With Its Reason</div>
+  <div style="padding:14px 16px">
+    <div style="font-size:10px;line-height:1.85;color:#333">
+      <strong>The specific formula.</strong> The weights, the Elo constants, the threshold values that determine session selection. These are inside the system. They are not disclosed here or anywhere in the product.<br><br>
+      <strong>The reason:</strong> The second game — figuring out what the system is measuring and why — is itself the most cognitively demanding exercise the system offers. A student who has reverse-engineered the system's measurement framework has demonstrated abstract analytical reasoning of a higher order than any session can produce directly. Disclosing the formula eliminates this exercise permanently. That is an honest developmental reason for a specific, bounded opacity. It is not self-protection. It is not commercial convenience. It is what the LILA framework calls a <em>structural necessity</em> — the opacity is not incentivized. It is required. Remove it and the second game cannot exist.<br><br>
+      <strong>The limit of this exception:</strong> The exception covers the formula. It does not cover the existence of a model, the categories of data it uses, what it estimates, who sees it, how long it is kept, or the right to delete it. Every one of those things is disclosed. The formula is the only exception and this is its complete explanation.
+    </div>
+  </div>
+</div>
+
+<h2>V. Why This Document Exists</h2>
+
+<p>Most privacy policies exist to satisfy a legal requirement. This document exists for a different reason: the system's philosophy requires it. A system whose purpose is cognitive development through honest encounters cannot conduct its consent process dishonestly. The consent encounter is the first interaction the student has with the system. If it is a wall — a checkbox designed to extract a signature without transmitting information — it contradicts what the system is for before the first session begins.</p>
+
+<p>The disclosures here are not reluctant. They are the same honesty the terminal applies to session results. The system saw something and is reporting it truthfully. In this case, what it saw is itself.</p>
+</div>
+
+
+<!-- ═══════════════════════ SHORT FORM -->
+<div id="panel-shortform" class="panel">
+<h1>Short Form — For Families Who Don't Need the Full Document</h1>
+
+<div class="inset" style="max-width:620px">This is the legally sufficient short-form disclosure. It contains everything required by COPPA, GDPR Article 12, and US state student privacy laws. The full document is at [url]/privacy for anyone who wants more. Both are valid. This one takes under a minute.</div>
+
+<div style="border:2px solid #000;max-width:520px;margin:16px 0">
+  <div style="background:#000;color:#fff;padding:10px 18px;font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase">Constellation — What You Need to Know</div>
+
+  <div style="padding:18px 20px">
+
+    <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #eee">
+      <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:5px">What it records</div>
+      <div style="font-size:11px;color:#333;line-height:1.8">Your game moves, session outcomes, and how your strategy changed during play. A code — not your name — represents you. Nothing outside the game.</div>
+    </div>
+
+    <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #eee">
+      <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:5px">Why</div>
+      <div style="font-size:11px;color:#333;line-height:1.8">To build a model of cognitive strengths and give your child better-calibrated sessions over time. Without the record, it's just a game. With it, it's an instrument.</div>
+    </div>
+
+    <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #eee">
+      <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:5px">Who sees it</div>
+      <div style="font-size:11px;color:#333;line-height:1.8">Teacher · Administrator · Your child (progressively, as they advance).<br><strong>Nobody else. Not sold. Not used for advertising. No exceptions.</strong></div>
+    </div>
+
+    <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #eee">
+      <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:5px">How long</div>
+      <div style="font-size:11px;color:#333;line-height:1.8">Duration of enrollment + 3 years. Or until you request deletion — whichever comes first.</div>
+    </div>
+
+    <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #eee">
+      <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:5px">What the algorithm does</div>
+      <div style="font-size:11px;color:#333;line-height:1.8">Selects the next session most likely to develop your child's thinking. The specific formula stays inside the system — not because it's secret, but because figuring out what it measures is itself part of what the system develops. That reason is stated openly.</div>
+    </div>
+
+    <div style="margin-bottom:18px">
+      <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:5px">Your rights</div>
+      <div style="font-size:11px;color:#333;line-height:1.8">
+        <strong>See it</strong> — request a full export any time.<br>
+        <strong>Delete it</strong> — permanent, removes everything, cannot be undone.<br>
+        <strong>EU/UK</strong> — object to processing, restrict processing, portable export.<br>
+        Contact: your program administrator or [contact address].
+      </div>
+    </div>
+
+    <div style="border:1px dashed #ccc;padding:10px 12px;font-size:10px;color:#555;line-height:1.7;margin-bottom:16px">
+      <strong>Minimum age: 13.</strong> Under 13 requires parental consent before the first session. EU/UK under 16 requires parental consent. If your school enrolled your child, the school has already authorized participation — ask your teacher for their data agreement on file.
+    </div>
+
+    <div style="font-size:9px;color:#aaa;line-height:1.6">Full policy: [url]/privacy · Questions: [contact] · This summary is legally sufficient but does not replace the full policy for formal purposes.</div>
+  </div>
+</div>
+
+<div class="sep"></div>
+<h2>On Legal Validity of Plain Language</h2>
+<p>This short form satisfies the legal requirements. Here is the precise basis:</p>
+<table style="max-width:700px">
+<tr><th>Requirement</th><th>Source</th><th>Met by</th></tr>
+<tr><td>"Clear and conspicuous" disclosure</td><td>FTC, COPPA</td><td>The short form. Direct sentences, no buried clauses.</td></tr>
+<tr><td>"Concise, transparent, intelligible, easily accessible, using clear and plain language"</td><td>GDPR Article 12</td><td>The short form satisfies this verbatim. Dense legalese fails this test more often than plain language does.</td></tr>
+<tr><td>What is collected, why, who receives it, retention, rights</td><td>GDPR Article 13/14, COPPA, CCPA</td><td>Each is a labeled section in the short form. All five categories present.</td></tr>
+<tr><td>Minimum age disclosure</td><td>COPPA</td><td>Stated clearly. Parental consent path named.</td></tr>
+<tr><td>Right to deletion, access, portability</td><td>GDPR, COPPA, US state laws</td><td>Named explicitly with contact instruction.</td></tr>
+</table>
+
+<div class="warn" style="max-width:700px">
+<strong>The one thing plain language cannot do:</strong> replace a signed School DPA or a submitted parental consent form. The short form is disclosure — what you tell people. The DPA and parental consent form are agreements — what you collect in writing. Both are necessary. Changing the language of the disclosure does not change the requirement to collect the agreement. They are separate legal acts.
+</div>
+
+<h2>Why Plain Language Is More Legally Robust, Not Less</h2>
+<p style="max-width:680px">Courts and regulators have increasingly ruled against dense legalese — not for it. The FTC has cited confusing consent language as a COPPA violation. The ICO (UK) has rejected privacy policies as non-compliant specifically because users could not understand them. The legal risk in this space runs toward opacity, not clarity. A parent or student who can read the short form and accurately describe what they agreed to has given better consent than one who clicked through three pages of clauses they did not read. That is what regulators want to see.</p>
+</div>
+
+
+<!-- ═══════════════════════ DESIGN PRINCIPLE -->
+<div id="panel-principle" class="panel">
+<h1>The Design Principle — Consent as Encounter</h1>
+
+<div class="inset">
+Most consent flows are walls. The user is asked to acknowledge something they did not read so they can access something they want. The wall extracts a checkbox without transmitting anything. It is compliance theater. It develops nothing and discloses nothing. This is the wrong design.
+</div>
+
+<p>Applied to legal consent, the LILA framework produces a different object: a <em>consent encounter</em>. A situation where understanding what the system is is the only viable path — because the system structures the flow so that skipping produces a different, honest outcome than engaging. Not punishment. Honest differentiation.</p>
+
+<h2>The Three Layers Applied to Consent</h2>
+<table>
+<tr><th>Layer</th><th>In game design</th><th>In consent design</th></tr>
+<tr>
+  <td style="font-weight:700">Layer 1</td>
+  <td>Rules, interface, basic feedback. Visible to all players.</td>
+  <td>What you must know to participate. The minimum. Stated plainly.</td>
+</tr>
+<tr>
+  <td style="font-weight:700">Layer 2</td>
+  <td>Patterns visible through sustained, attentive play. Never taught.</td>
+  <td>What careful reading reveals — the system's actual philosophy, why data is collected, what refutation conditions look like. Not hidden, but not summarized for you.</td>
+</tr>
+<tr>
+  <td style="font-weight:700">Layer 3</td>
+  <td>Visible only by examining the structure. Genuinely useful. Never decorative.</td>
+  <td>What examining the technical structure reveals — the ledger schema, the specific fields, the fact that parameters are ASSERTED and will be revised. Available to anyone who looks. Gives real understanding of what the system is doing at the implementation level.</td>
+</tr>
+</table>
+
+<h2>The Designed Moment</h2>
+<p>Fires once. Triggered by a specific action, not by time spent. Responds to what you actually did. In a consent encounter: the moment fires differently based on whether you examined the disclosure or skipped it. Not to punish skipping — to respond truthfully. "You confirmed without reading" is information. "You read everything before confirming" is different information. The system notices both.</p>
+
+<h2>Session Shape</h2>
+<table>
+<tr><th>LILA principle</th><th>Applied</th></tr>
+<tr><td><strong>Beginning</strong> — defined entry state, you know where you are</td><td>The encounter opens with the system stating exactly what it is. No mystery about the purpose of this screen.</td></tr>
+<tr><td><strong>Encounter</strong> — the game has its own agenda, it is not pretending</td><td>The consent encounter has its own agenda: full understanding. It does not pretend a checkbox is sufficient. It responds to engagement or disengagement.</td></tr>
+<tr><td><strong>Designed moment</strong> — fires once on specific action</td><td>Fires when the student or parent completes a specific choice — reading all sections, or confirming without reading. Fires once.</td></tr>
+<tr><td><strong>Ending</strong> — clean, no engineered hook, work for today is done</td><td>After confirmation: a single true statement about what just happened. No redirect to a next screen immediately. The work is done.</td></tr>
+</table>
+
+<div class="warn">
+<strong>What this is not:</strong> gamification of consent. There are no points, no badges, no "you read more than 80% of users." The designed moment is not a reward. It is an honest response to what the person actually did — the same response the system would give to a session result. True and specific, not encouraging.
+</div>
+</div>
+
+
+<!-- ═══════════════════════ FIRST CONTACT -->
+<div id="panel-firstcontact" class="panel">
+<h1>First Contact — Student Consent as Designed Encounter</h1>
+<p>The student's first session. Three expandable sections constitute Layer 2 — visible, never summarized, available to the attentive. The designed moment fires once based on how many sections were examined before confirming.</p>
+
+<div class="encounter" id="fc-encounter">
+  <div class="enc-header">
+    <span class="enc-logo">Constellation</span>
+    <span class="enc-badge">Session 1 · First Contact</span>
+  </div>
+  <div class="enc-body" id="fc-body">
+
+    <!-- Step 1: System Declaration -->
+    <div id="fc-step1">
+      <div class="enc-step-label">Layer 1 — What the system is</div>
+      <div class="enc-title">The system is watching.</div>
+      <div class="enc-text">
+        Not who you are. What you do.<br><br>
+        Constellation is a competitive multiplayer strategy game — one of the most variable in its class — and underneath it, a system that observes how you play, builds a model of your thinking across six cognitive dimensions, and uses that model to design better sessions.<br><br>
+        The game is exceptional on its own terms. The system underneath it makes it something more.
+      </div>
+
+      <!-- Layer 2 expandable sections -->
+      <div class="enc-expand" id="fc-e1" onclick="fcExpand(1)">
+        <div class="enc-expand-hd">
+          <span>What exactly does it record?</span>
+          <span id="fc-e1-icon">+</span>
+        </div>
+        <div class="enc-expand-bd" id="fc-e1-bd">
+          Each session: the configuration (mode, multipliers, map), your rank among all players, round-by-round results, and behavioral signals — how your strategy adapted during play, move timing, decision patterns. Not your name. Not your location. Not anything that exists outside the game. A code represents you in the ledger. The code is not your name.
+        </div>
+      </div>
+
+      <div class="enc-expand" id="fc-e2" onclick="fcExpand(2)">
+        <div class="enc-expand-hd">
+          <span>What model does it build?</span>
+          <span id="fc-e2-icon">+</span>
+        </div>
+        <div class="enc-expand-bd" id="fc-e2-bd">
+          Performance estimates across six cognitive dimensions: spatial reasoning, network construction, goal-directed search, inhibitory control, cognitive flexibility, resource optimization. Each estimate has a confidence interval and a refutation condition — if the data says otherwise, the model updates. The model is a current approximation. Every value in it will be revised. The formula that produces the estimates is inside the system. What the estimates are — that is yours to see as you advance.
+        </div>
+      </div>
+
+      <div class="enc-expand" id="fc-e3" onclick="fcExpand(3)">
+        <div class="enc-expand-hd">
+          <span>Who sees it and for how long?</span>
+          <span id="fc-e3-icon">+</span>
+        </div>
+        <div class="enc-expand-bd" id="fc-e3-bd">
+          Your teacher and the system administrator. You — progressively, as you advance through the program. Nobody else. The data is never sold, never used for advertising, never shared with any third party. Records are kept for the duration of your enrollment plus three years, or until you request deletion. You can request deletion at any time. Deletion is permanent.
+        </div>
+      </div>
+
+      <div class="enc-expand" id="fc-e4" onclick="fcExpand(4)">
+        <div class="enc-expand-hd">
+          <span>Why does the system need to record anything at all?</span>
+          <span id="fc-e4-icon">+</span>
+        </div>
+        <div class="enc-expand-bd" id="fc-e4-bd">
+          The system's purpose is to give you the session that will develop you most — right now, given what you already know and what you don't yet know. To do that, it needs to hold a model of your current cognitive state. The model is what allows the system to select your next challenge precisely rather than randomly.<br><br>
+          Without the recording, the system cannot distinguish you from any other player. It cannot give you better sessions over time. It becomes a game that doesn't know you — which means it cannot develop you.<br><br>
+          The recording is not a feature added on top of the game. It is what makes the game a development system rather than just a game.<br><br>
+          <strong>This is different from why other systems record your behavior.</strong> Social media records to keep you on the platform longer — against your interest. This system records to build a model it will give back to you progressively as you earn understanding of it. When you've fully internalized the model, the system has succeeded and you no longer need it. The recording serves your development. When your development is complete, so is the recording's purpose.
+        </div>
+      </div>
+
+      <div class="enc-confirm-row">
+        <input type="checkbox" id="fc-ack" onchange="fcCheckAck()">
+        <label class="enc-confirm-label" for="fc-ack">I understand the system records my gameplay and builds a cognitive model. I can request to see or delete it at any time.</label>
+      </div>
+
+      <button class="enc-btn" id="fc-confirm-btn" disabled onclick="fcConfirm()">Confirm and Begin</button>
+      <button class="enc-btn enc-btn-ghost" onclick="alert('Full privacy policy: [url]/privacy')">Read Full Privacy Policy</button>
+    </div>
+
+  </div>
+  <div class="enc-footer">
+    Minimum age 13 · <span id="fc-read-counter" style="color:#bbb">0 of 4 sections examined</span>
+  </div>
+</div>
+
+<!-- Designed Moment: Read All -->
+<div class="designed-moment" id="dm-readall">
+  <div class="dm-header">Designed Moment — Fires Once · Trigger: All Sections Read Before Confirming</div>
+  <div class="dm-terminal">
+    <span class="t-dim t-line">// first contact · confirmation received</span>
+    <span class="t-line" style="margin-top:8px">You read it.</span>
+    <span class="t-line">Most don't.</span>
+    <span class="t-line" style="margin-top:8px" class="t-mid">The system noted this.</span>
+    <span class="t-line" style="margin-top:8px"><span class="t-dim">Session 1 begins.</span> <span class="t-white">The model is empty.</span></span>
+    <span class="t-dim t-line" style="margin-top:4px">// what the system knows about you right now: nothing</span>
+    <span class="t-dim t-line">// what it will know after today: the first data point</span>
+  </div>
+  <div class="dm-footer">This message fires once, on the first session only, and only when all four disclosure sections were opened before confirming — including "Why does the system need to record this at all?"</div>
+</div>
+
+<!-- Designed Moment: Confirmed Without Reading -->
+<div class="designed-moment" id="dm-noread">
+  <div class="dm-header">Designed Moment — Fires Once · Trigger: Confirmed Without Opening Any Section</div>
+  <div class="dm-terminal">
+    <span class="t-dim t-line">// first contact · confirmation received</span>
+    <span class="t-line" style="margin-top:8px">You confirmed without reading.</span>
+    <span class="t-line">That is noted, not judged.</span>
+    <span class="t-line" style="margin-top:8px"><span class="t-dim">What you agreed to is available at any time.</span></span>
+    <span class="t-dim t-line">// [url]/privacy</span>
+    <span class="t-dim t-line" style="margin-top:8px">// the model is empty. session 1 begins.</span>
+  </div>
+  <div class="dm-footer">This message fires once, on the first session only, and only when zero disclosure sections were opened before confirming. It is not punishment — it is an honest statement of what happened.</div>
+</div>
+
+<!-- Designed Moment: Partial Read -->
+<div class="designed-moment" id="dm-partread">
+  <div class="dm-header">Designed Moment — Fires Once · Trigger: Some Sections Read</div>
+  <div class="dm-terminal">
+    <span class="t-dim t-line">// first contact · confirmation received</span>
+    <span class="t-line" style="margin-top:8px">You read part of it.</span>
+    <span class="t-line">The rest is at [url]/privacy whenever you want it.</span>
+    <span class="t-line" style="margin-top:8px"><span class="t-dim">Session 1 begins.</span> <span class="t-white">The model is empty.</span></span>
+  </div>
+  <div class="dm-footer">Fires when 1–3 sections were opened (but not all 4) before confirming.</div>
+</div>
+
+<div class="sep"></div>
+<p style="font-size:10px;color:#888;max-width:560px">Note: The designed moment fires once per student, first session only. The counter in the footer tracks how many sections have been examined — this is visible to the student so they know the system is noticing, without being told why it matters.</p>
+
+<h2>The Second Game</h2>
+<div class="inset" style="max-width:560px">The algorithm — what the system weighs, how the model is computed, which signals carry the most weight — does not appear in Layer 1 or Layer 2. It is inside the system. Layer 3 of the consent encounter is the structure itself: the JSONL ledger format, the field names, the ASSERTED markers on every parameter. Available to anyone who looks at the code. Genuinely useful to the person who looks. Never decorative.</div>
+</div>
+
+
+<!-- ═══════════════════════ THE LEDGER -->
+<div id="panel-ledger" class="panel">
+<h1>The Ledger — Privacy Policy as Three-Layer Document</h1>
+<p>Layer 1 is the minimum. Layer 2 is what reading reveals. Layer 3 is what examining the structure reveals — available to anyone who looks, genuinely useful, not decorative.</p>
+
+<div class="layer-nav">
+  <div class="layer-tab active" onclick="showLayer('l1',this)">Layer 1 — What You Need</div>
+  <div class="layer-tab" onclick="showLayer('l2',this)">Layer 2 — What Reading Reveals</div>
+  <div class="layer-tab" onclick="showLayer('l3',this)">Layer 3 — The Structure</div>
+</div>
+
+<!-- LAYER 1 -->
+<div id="layer-l1" class="layer-panel active">
+  <div style="max-width:640px">
+    <h2>What is recorded</h2>
+    <p>Each session: how the session was configured, how you performed, how your strategy evolved during play. A code represents you. Not your name.</p>
+    <h2>What is built from it</h2>
+    <p>A model of your cognitive performance across six dimensions. Used to design your next session. Updated every session. Every value has a condition under which it will be revised.</p>
+    <h2>Who sees it</h2>
+    <p>Your teacher. The administrator. You — progressively, as you advance. No one else. Not sold. Not shared.</p>
+    <h2>How long it is kept</h2>
+    <p>Duration of enrollment plus three years. Or until you request deletion. Deletion is permanent and removes both the records and the model.</p>
+    <h2>Your rights</h2>
+    <p>See it. Delete it. Export it. Correct your identifier. EU/UK users: object to processing, request restriction, portable export.</p>
+    <div class="inset" style="margin-top:16px">Minimum age: 13. Under 13 requires parental consent. EU/UK users under 16 require parental consent. Future data types require new explicit consent before collection begins.</div>
+  </div>
+</div>
+
+<!-- LAYER 2 -->
+<div id="layer-l2" class="layer-panel">
+  <div style="max-width:640px">
+    <h2>What "behavioral signals" actually means</h2>
+    <p>The ledger records more than outcome. It records the shape of how you played: how your decisions changed between round 1 and round 8, how fast you adapted when a strategy stopped working, how you distributed your attention across the board. These are the signals the model uses to distinguish game knowledge from cognitive development. A player who wins by memorizing opening sequences produces a different signal than one who adapts mid-session. The system is designed to measure the second thing, not the first.</p>
+
+    <h2>What the model actually is</h2>
+    <p>Six Elo values — one per cognitive dimension — each with a confidence interval that widens when sessions are sparse and narrows as data accumulates. Each value has a velocity measure (how fast it is changing) and a ZPD target (what the next session should aim for). Every parameter is marked ASSERTED: it is the system's current best guess, not a validated value. Phase 3 of the build plan replaces every ASSERTED parameter with a measured one. The model is honest about what it does not yet know.</p>
+
+    <h2>Why the algorithm is not disclosed</h2>
+    <p>The specific weights, the Elo formula's constants, the threshold values — these are inside the system and will not appear in this document. This is both a trade secret and a philosophical choice: the second game (figuring out what the system is measuring and why) is part of what the system develops. Disclosing the formula would collapse the second game without developing anything. You have the right to know the model exists, what categories of data it uses, and what it estimates. You do not have the right to the formula. These are legally distinct things.</p>
+
+    <h2>The append-only ledger and deletion</h2>
+    <p>The ledger is designed to be append-only — philosophically, observations are never destroyed, only added. But this design principle does not override the legal right to erasure. When deletion is requested: records are flagged immediately and excluded from all reads within 24 hours. Physical removal occurs within 30 days. Derived model values are deleted immediately. The append-only property is a performance and integrity principle; it does not mean data cannot be deleted.</p>
+
+    <h2>What "progressive disclosure" means for your rights</h2>
+    <p>At the BASELINE tier, you cannot see your model. At DEVELOPING, you see mode estimates and zone history. At ALPHA, you see the full model with confidence intervals and provenance — which raw sessions produced which estimates. This is intentional. Understanding the model is part of what the system develops. The right to access your data is unconditional — you can always request a full export. But the in-system view is progressive because the system earns your understanding of it over time.</p>
+  </div>
+</div>
+
+<!-- LAYER 3 -->
+<div id="layer-l3" class="layer-panel">
+  <div class="terminal" style="max-width:100%;margin-bottom:16px">
+    <span class="t-dim t-line">// Layer 3 — The Structure</span>
+    <span class="t-dim t-line">// This is what examining the implementation reveals.</span>
+    <span class="t-dim t-line">// Available to anyone who reads the code. Genuinely useful. Not decorative.</span>
+    <span class="t-line" style="margin-top:8px t-cursor"></span>
+  </div>
+
+  <h2>Layer 0 — The Ledger Schema (exact fields)</h2>
+  <div style="font-family:'Courier New',monospace;font-size:10px;background:#f2f2f2;padding:14px 16px;line-height:1.85;margin:10px 0;max-width:680px;border-left:3px solid #000">
+    <div class="t-dim">// Every observation in /ledger/*.jsonl contains exactly these fields.</div>
+    <div class="t-dim">// No mode label. No template label. No Elo delta. These are Layer 1 interpretations.</div>
+    <div class="t-dim">// Layer 0 records observations. It has no opinions.</div>
+    <div style="margin-top:10px">{</div>
+    <div style="margin-left:20px">
+      <div><span style="color:#000;font-weight:700">"session_id"</span>: "uuid-v4",</div>
+      <div><span style="color:#000;font-weight:700">"student_hash"</span>: "sha256-of-identifier",    <span style="color:#888">// not the student's name</span></div>
+      <div><span style="color:#000;font-weight:700">"timestamp"</span>: "ISO-8601",</div>
+      <div><span style="color:#000;font-weight:700">"config_hash"</span>: "sha256-of-config-vector",  <span style="color:#888">// join key to config</span></div>
+      <div><span style="color:#000;font-weight:700">"config_vector"</span>: {</div>
+      <div style="margin-left:20px">
+        <div>"M_count": int,   "M_dist": int,   "M_hq": int,   "M_dest": int,</div>
+        <div>"roundLength": int,   "rounds": int,   "steals": bool,</div>
+        <div>"map": "string",   "bots": ["archetype_tag"],</div>
+        <div>"overlay": "string|null",   "allowPlayerTeamSelection": bool</div>
+      </div>
+      <div>},</div>
+      <div><span style="color:#000;font-weight:700">"outcome"</span>: {</div>
+      <div style="margin-left:20px">
+        <div>"rank_pct": float,   <span style="color:#888">// 0–1, position among all players this session</span></div>
+        <div>"score": int,   "team_result": "win|loss|draw"</div>
+      </div>
+      <div>},</div>
+      <div><span style="color:#000;font-weight:700">"signals"</span>: {</div>
+      <div style="margin-left:20px">
+        <div>"round_trajectory": [int],      <span style="color:#888">// score per round</span></div>
+        <div>"strategy_shift_count": int,    <span style="color:#888">// ASSERTED: detected via behavioral heuristic</span></div>
+        <div>"tempo_delta": float,           <span style="color:#888">// ASSERTED: time-per-move variance</span></div>
+        <div>"archetype_tag": "string",      <span style="color:#888">// bot profile assigned to this session</span></div>
+      </div>
+      <div>},</div>
+      <div><span style="color:#000;font-weight:700">"compiler_zone"</span>: "ECHO|PARALLEL|SHIFTING|RADICAL|REMATCH",</div>
+      <div><span style="color:#000;font-weight:700">"compiler_bot_profile"</span>: "string",</div>
+      <div><span style="color:#000;font-weight:700">"silent_inv"</span>: bool    <span style="color:#888">// true = INVERSION not disclosed to student</span></div>
+    </div>
+    <div>}</div>
+  </div>
+
+  <h2>Layer 1 — What Is Derived (and What ASSERTED Means)</h2>
+  <div style="max-width:680px">
+    <div class="ledger-row" style="border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:4px">
+      <span class="ledger-key">Field</span>
+      <span class="ledger-val" style="font-weight:700;font-size:9px;letter-spacing:1px;text-transform:uppercase">Value · Refutation Condition</span>
+    </div>
+    <div class="ledger-row"><span class="ledger-key">game_elo[mode]</span><span class="ledger-val">Current performance estimate per mode. <span class="ledger-asserted">ASSERTED</span> Refuted if transfer_elo diverges systematically when BT available.</span></div>
+    <div class="ledger-row"><span class="ledger-key">elo_velocity</span><span class="ledger-val">Rate of change over last 6 sessions. <span class="ledger-asserted">ASSERTED</span> Window of 6 is a hypothesis. Refuted if longer window predicts better.</span></div>
+    <div class="ledger-row"><span class="ledger-key">zpd_target</span><span class="ledger-val">Target percentile for next session. 55th–70th. <span class="ledger-asserted">ASSERTED</span> Refuted if calibration data shows different range maximizes development.</span></div>
+    <div class="ledger-row"><span class="ledger-key">sessions_since_last[mode]</span><span class="ledger-val">Forgetting curve input. Used to prioritize decaying modes. <span class="ledger-asserted">ASSERTED</span> Half-life of 14 days is a hypothesis.</span></div>
+    <div class="ledger-row"><span class="ledger-key">compiler_zone</span><span class="ledger-val">ECHO / PARALLEL / SHIFTING / RADICAL / REMATCH. Determined by similarity score against session history.</span></div>
+    <div class="ledger-row"><span class="ledger-key">gap_signal</span><span class="ledger-val">game_elo[mode] − transfer_elo[mode]. Requires BT integration. Currently excluded. Will become the most diagnostic field when available.</span></div>
+  </div>
+
+  <div class="terminal" style="margin-top:16px">
+    <span class="t-dim t-line">// What examining the structure reveals:</span>
+    <span class="t-line" style="margin-top:8px">Every parameter is marked ASSERTED.</span>
+    <span class="t-line">ASSERTED = current best guess, not validated value.</span>
+    <span class="t-line">Phase 3 of the build plan replaces every ASSERTED with a measured value.</span>
+    <span class="t-line" style="margin-top:8px"><span style="color:#888">The system is honest about what it does not yet know.</span></span>
+    <span class="t-dim t-line" style="margin-top:8px">// This is not in the privacy policy.</span>
+    <span class="t-dim t-line">// It is in the structure. Available to anyone who looks.</span>
+  </div>
+</div>
+</div>
+
+
+<!-- ═══════════════════════ ERASURE -->
+<div id="panel-erasure" class="panel">
+<h1>Erasure — Deletion as Designed Moment</h1>
+<p>The deletion flow is a designed moment. Before the student confirms, the system shows exactly what exists. The moment fires differently based on whether the student examined the records or skipped to confirm.</p>
+
+<div class="encounter" id="del-encounter" style="max-width:580px">
+  <div class="enc-header" style="background:#111">
+    <span class="enc-logo">Constellation · Erasure</span>
+    <span class="enc-badge" style="border-color:#333;color:#666">Permanent Action</span>
+  </div>
+  <div class="enc-body">
+    <div class="enc-step-label">What will be erased</div>
+    <div class="enc-title" style="font-size:14px">The system has this on you. Click to examine what you are erasing.</div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0">
+      <div style="text-align:center;border:1px solid #ddd;padding:10px 6px">
+        <div class="del-count">38</div>
+        <div class="del-count-label">Sessions</div>
+      </div>
+      <div style="text-align:center;border:1px solid #ddd;padding:10px 6px">
+        <div class="del-count">6</div>
+        <div class="del-count-label">Mode Estimates</div>
+      </div>
+      <div style="text-align:center;border:1px solid #ddd;padding:10px 6px">
+        <div class="del-count">214d</div>
+        <div class="del-count-label">Duration</div>
+      </div>
+    </div>
+
+    <div class="del-record" id="dr1" onclick="delExpand(1)">
+      <div class="del-record-hd"><span>Ledger records (38 sessions)</span><span id="dr1-icon">+</span></div>
+      <div class="del-record-bd" id="dr1-bd">JSONL records in /ledger/student-7d4a1f.jsonl. Each record: session configuration, rank_pct, round trajectory, behavioral signals, zone assignment. First session: 2025-09-04. Last: 2026-06-12. These are the raw observations — the only ground truth in the system. Deleted within 24 hours of confirmation, physically removed within 30 days.</div>
+    </div>
+
+    <div class="del-record" id="dr2" onclick="delExpand(2)">
+      <div class="del-record-hd"><span>Cognitive model (Layer 1 state)</span><span id="dr2-icon">+</span></div>
+      <div class="del-record-bd" id="dr2-bd">Six mode Elo values with confidence intervals, velocity measures, ZPD targets, sessions_since_last counters. Zone trajectory history: 38 entries. Calibration record: predicted vs actual rank_pct for every session. Deleted immediately on confirmation — these are derived views, not stored separately from the intent to delete.</div>
+    </div>
+
+    <div class="del-record" id="dr3" onclick="delExpand(3)">
+      <div class="del-record-hd"><span>Student identifier mapping</span><span id="dr3-icon">+</span></div>
+      <div class="del-record-bd" id="dr3-bd">The link between your real identity and ledger hash:7d4a1f. After this is deleted, the hash is an orphan — even if a record fragment remained, it could not be attributed to you. Deleted immediately on confirmation.</div>
+    </div>
+
+    <div style="margin-top:16px;border:1px dashed #bbb;padding:10px 12px;font-size:10px;color:#666;line-height:1.65">
+      After deletion: the system has no memory of you. If you rejoin the program, the model begins empty. The 214 days of signal — gone.
+    </div>
+
+    <div class="enc-confirm-row" style="margin-top:14px">
+      <input type="checkbox" id="del-ack" onchange="delCheckAck()">
+      <label class="enc-confirm-label" for="del-ack">I understand this is permanent. The ledger, the model, and the identifier mapping will be deleted and cannot be recovered.</label>
+    </div>
+
+    <button class="enc-btn" id="del-confirm-btn" style="background:#111" disabled onclick="delConfirm()">Erase Everything</button>
+    <button class="enc-btn enc-btn-ghost" onclick="delCancel()">Cancel — Return</button>
+
+  </div>
+  <div class="enc-footer">
+    <span id="del-examined-label" style="color:#bbb">0 of 3 records examined</span>
+  </div>
+</div>
+
+<!-- DM: Examined All Before Deleting -->
+<div class="designed-moment" id="dm-del-examined" style="max-width:580px">
+  <div class="dm-header">Designed Moment · Trigger: All Records Examined Before Confirming Deletion</div>
+  <div class="dm-terminal">
+    <span class="t-dim t-line">// erasure · confirmation received</span>
+    <span class="t-line" style="margin-top:8px">You knew what you were erasing.</span>
+    <span class="t-line" style="margin-top:6px">Sessions in ledger: <span class="t-white">38</span> <span class="t-dim">— deleted</span></span>
+    <span class="t-line">Cognitive model: <span class="t-white">6 dimensions</span> <span class="t-dim">— deleted</span></span>
+    <span class="t-line">Identifier mapping: <span class="t-white">hash:7d4a1f</span> <span class="t-dim">— deleted</span></span>
+    <span class="t-rule"></span>
+    <span class="t-line" style="margin-top:4px">The system has no memory of you.</span>
+    <span class="t-dim t-line" style="margin-top:8px">// confirmation sent to [email]</span>
+    <span class="t-dim t-line">// reference: DEL-2026-0616-7d4a</span>
+  </div>
+  <div class="dm-footer">Fires when the student examined all three record categories before confirming. The system acknowledges that they knew what they were doing.</div>
+</div>
+
+<!-- DM: Deleted Without Examining -->
+<div class="designed-moment" id="dm-del-blind" style="max-width:580px">
+  <div class="dm-header">Designed Moment · Trigger: Confirmed Deletion Without Examining Any Record</div>
+  <div class="dm-terminal">
+    <span class="t-dim t-line">// erasure · confirmation received</span>
+    <span class="t-line" style="margin-top:8px">Deletion complete.</span>
+    <span class="t-line" style="margin-top:6px">38 sessions. 214 days. Gone.</span>
+    <span class="t-line" style="margin-top:6px" class="t-dim">The system had more on you than you looked at.</span>
+    <span class="t-rule"></span>
+    <span class="t-dim t-line">// confirmation sent to [email]</span>
+    <span class="t-dim t-line">// reference: DEL-2026-0616-7d4a</span>
+  </div>
+  <div class="dm-footer">Fires when deletion was confirmed without examining any record category. Not a punishment — a true statement about what happened.</div>
+</div>
+</div>
+
+
+<!-- ═══════════════════════ PARENT INVESTIGATION -->
+<div id="panel-investigation" class="panel">
+<h1>Parent Investigation — Consent as Abductive Reasoning</h1>
+<p>The parent is not asked to sign first and understand later. They are given evidence and asked to form a view. Five phases. The designed moment fires when they submit, based on how much evidence they examined.</p>
+
+<div class="warn">
+<strong>COGNITIVE MODE: INVESTIGATION</strong> — abductive reasoning, model construction under incomplete information. The parent's task is not verification against a known standard. It is forming an accurate model of what the system is from the evidence available. The consent is genuine only when the model is accurate.
+</div>
+
+<div style="max-width:640px">
+  <div class="inv-phase">
+    <div class="inv-phase-label">Phase 1 — The System Declaration</div>
+    <div class="inv-phase-q">What is Constellation?</div>
+    <div class="inv-phase-body">Constellation is a competitive multiplayer strategy game — one of the most configurationally variable and cognitively demanding in its class — and a cognitive development system built underneath it. The game is exceptional on its own terms. The system makes it something more: an instrument that observes how your child plays, builds a model of their cognitive profile, and uses that model to give them better sessions.</div>
+  </div>
+
+  <div class="inv-phase">
+    <div class="inv-phase-label">Phase 2 — The Evidence (examine what you need)</div>
+    <div class="inv-phase-q">What does the system actually collect? Examine the evidence.</div>
+
+    <div class="inv-evidence" id="inv-e1" onclick="invExpand(1)">
+      <div class="inv-evidence-hd"><span>Evidence A — What the ledger records</span><span id="inv-e1-icon">+</span></div>
+      <div class="inv-evidence-bd" id="inv-e1-bd">
+        Each session produces a record containing: the session configuration (mode, multiplier settings, map), your child's rank among all players in that session, round-by-round performance, and behavioral signals — how their strategy changed during play, decision timing, adaptation patterns. A code (a hash) represents your child in the ledger. The code is not their name. The ledger does not contain: name, school, location, device, IP address, or any information from outside the game.
+      </div>
+    </div>
+
+    <div class="inv-evidence" id="inv-e2" onclick="invExpand(2)">
+      <div class="inv-evidence-hd"><span>Evidence B — What model is built from it</span><span id="inv-e2-icon">+</span></div>
+      <div class="inv-evidence-bd" id="inv-e2-bd">
+        Six performance estimates — one per cognitive dimension: spatial reasoning, network construction, goal-directed search, inhibitory control, cognitive flexibility, resource optimization. Each estimate has a confidence interval (how certain the system is) and a refutation condition (what data would cause it to update). These estimates are ASSERTED — the system's current best approximation, not a validated measurement. Every parameter will be revised when sufficient data exists. The model is not a diagnosis. It is a working hypothesis the system holds about your child's cognitive profile, updated every session.
+      </div>
+    </div>
+
+    <div class="inv-evidence" id="inv-e3" onclick="invExpand(3)">
+      <div class="inv-evidence-hd"><span>Evidence C — Who sees it</span><span id="inv-e3-icon">+</span></div>
+      <div class="inv-evidence-bd" id="inv-e3-bd">
+        The program administrator and your child's teacher see the full model. Your child sees it progressively — at the BASELINE tier (early sessions), they see nothing. At DEVELOPING, they see performance estimates and zone history. At ALPHA, they see the full model with the underlying session records that produced each estimate. No third party sees any data. The data is never sold. It is never used for advertising, research outside this program, or any purpose other than operating and improving the program.
+      </div>
+    </div>
+
+    <div class="inv-evidence" id="inv-e4" onclick="invExpand(4)">
+      <div class="inv-evidence-hd"><span>Evidence D — Retention and your rights</span><span id="inv-e4-icon">+</span></div>
+      <div class="inv-evidence-bd" id="inv-e4-bd">
+        Records are kept for the duration of enrollment plus three years, unless you request deletion earlier. You can request: a full export of all records (delivered within 15 days), deletion of all records and the derived model (completed within 30 days, permanent), or information about what the system currently holds. Deletion cannot be undone. If your child rejoins the program after deletion, the system starts with no prior knowledge of them. Contact: your program administrator, or [contact address].
+      </div>
+    </div>
+  </div>
+
+  <div class="inv-phase">
+    <div class="inv-phase-label">Phase 3 — What the system does not disclose here</div>
+    <div class="inv-phase-q">What remains inside the system?</div>
+    <div class="inv-phase-body">The specific formula, the weights used in the Elo calculation, the threshold values that determine session selection — these are inside the system and not disclosed in this document. You have the right to know the model exists, what it uses, and what it estimates. You do not have the right to the formula. These are legally distinct things. The system is also honest that its parameters are hypotheses: every value is marked ASSERTED until real data replaces it.</div>
+  </div>
+
+  <div class="inv-phase">
+    <div class="inv-phase-label">Phase 4 — Your decision</div>
+    <div class="inv-phase-q">Based on the evidence you examined: do you authorize your child's participation?</div>
+    <div class="inv-phase-body" style="margin-bottom:12px">You are not being asked to trust the system blindly. You are being asked to form a view from real evidence and then decide. That is the difference between consent and compliance.</div>
+
+    <div style="margin-bottom:10px">
+      <label style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;color:#555">Your full name</label>
+      <input type="text" style="font-family:Arial;font-size:11px;border:1px solid #ccc;padding:6px 10px;width:100%;max-width:360px">
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;color:#555">Your email</label>
+      <input type="text" style="font-family:Arial;font-size:11px;border:1px solid #ccc;padding:6px 10px;width:100%;max-width:360px">
+    </div>
+
+    <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px">
+      <input type="checkbox" id="inv-ack1" style="accent-color:#000;margin-top:2px;flex-shrink:0">
+      <label for="inv-ack1" style="font-size:10px;color:#333;line-height:1.6">I understand the system records gameplay and builds a cognitive model of my child's performance. I authorize this.</label>
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px">
+      <input type="checkbox" id="inv-ack2" style="accent-color:#000;margin-top:2px;flex-shrink:0">
+      <label for="inv-ack2" style="font-size:10px;color:#333;line-height:1.6">I understand I can request export or deletion of all records at any time.</label>
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:14px">
+      <input type="checkbox" id="inv-ack3" style="accent-color:#000;margin-top:2px;flex-shrink:0">
+      <label for="inv-ack3" style="font-size:10px;color:#333;line-height:1.6">I confirm I am this child's parent or legal guardian.</label>
+    </div>
+
+    <button class="enc-btn" style="max-width:300px" onclick="invSubmit()" id="inv-submit-btn">Submit Consent</button>
+    <div style="font-size:9px;color:#aaa;margin-top:6px" id="inv-evidence-counter">Evidence examined: 0 of 4 sections</div>
+  </div>
+
+</div>
+
+<!-- DM: Parent Read All Evidence -->
+<div class="designed-moment" id="dm-inv-full" style="max-width:640px">
+  <div class="dm-header">Designed Moment · Trigger: All Four Evidence Categories Examined Before Submission</div>
+  <div class="dm-terminal">
+    <span class="t-dim t-line">// parental consent · received</span>
+    <span class="t-line" style="margin-top:8px">You examined all four evidence categories.</span>
+    <span class="t-line">Consent received on that basis.</span>
+    <span class="t-line" style="margin-top:8px" class="t-dim">This is what informed consent looks like.</span>
+    <span class="t-rule"></span>
+    <span class="t-dim t-line">// confirmation sent to [email]</span>
+    <span class="t-dim t-line">// your child's account will be activated within 24 hours</span>
+  </div>
+  <div class="dm-footer">Fires when all four evidence sections were opened before submission.</div>
+</div>
+
+<!-- DM: Parent Did Not Read -->
+<div class="designed-moment" id="dm-inv-partial" style="max-width:640px">
+  <div class="dm-header">Designed Moment · Trigger: Submitted Without Examining All Evidence</div>
+  <div class="dm-terminal">
+    <span class="t-dim t-line">// parental consent · received</span>
+    <span class="t-line" style="margin-top:8px">Consent received.</span>
+    <span class="t-line" style="margin-top:8px">The evidence you did not examine remains available.</span>
+    <span class="t-mid t-line" style="margin-top:4px">[url]/privacy — full disclosure</span>
+    <span class="t-rule"></span>
+    <span class="t-dim t-line">// confirmation sent to [email]</span>
+    <span class="t-dim t-line">// your child's account will be activated within 24 hours</span>
+  </div>
+  <div class="dm-footer">Fires when fewer than 4 evidence sections were examined. Not punishment — honest notation of the state of consent.</div>
+</div>
+</div>
+
+
+<!-- ═══════════════════════ RESULT VARIANTS -->
+<div id="panel-results" class="panel">
+<h1>Result Variants — What the System Says at Consent Completion</h1>
+<p>Five outcome states, matching the LILA result format. Each says something true and specific. Not generic. Not a score. Something that would only be true of this particular path through this particular encounter.</p>
+
+<div class="inset">LILA requirement: "Each: one heading (names what actually happened in game terms) + one paragraph (says something true, specific, not generic)." Applied here: the heading names what actually happened in the consent encounter. The paragraph says something true about that specific path.</div>
+
+<div class="result-grid">
+
+  <div class="result-card">
+    <div class="result-tag">Read Everything · Confirmed</div>
+    <div class="result-heading">You know what you agreed to.</div>
+    <div class="result-body">You opened all three sections, read what the ledger records, understood what model it builds, and confirmed. The system now has a baseline: empty. You know what filling it will look like. That is an unusual position to start from, and it is the correct one.</div>
+  </div>
+
+  <div class="result-card">
+    <div class="result-tag">Read Partially · Confirmed</div>
+    <div class="result-heading">You know part of what you agreed to.</div>
+    <div class="result-body">You examined some of the disclosure before confirming. The rest is available at [url]/privacy. The system notes this not to judge it — most people read partially — but because accurate expectations about the system improve the development process. The parts you did not read will become apparent as the model builds.</div>
+  </div>
+
+  <div class="result-card draw">
+    <div class="result-tag">Skipped Everything · Confirmed</div>
+    <div class="result-heading">You agreed to something you did not read.</div>
+    <div class="result-body">The system is recording this session. What it records, why it records it, and what model it builds from the records — all of that is at [url]/privacy. This message is not a warning. It is an honest statement of the state of your consent: you gave it without examining the basis. That is your right. The full disclosure is available whenever you want it. The system will behave identically regardless.</div>
+  </div>
+
+  <div class="result-card">
+    <div class="result-tag">Read Everything · Declined</div>
+    <div class="result-heading">You read it and said no.</div>
+    <div class="result-body">That is the system working correctly. The disclosure exists so that declining is possible on an informed basis, not to produce a specific outcome. You cannot participate without agreeing to the data collection — the system cannot give you better sessions without recording what you do. If your objection is specific, contact your administrator. If it is general, the system is not the right tool for you at this time.</div>
+  </div>
+
+  <div class="result-card">
+    <div class="result-tag">Under 13 · No Parental Consent Completed</div>
+    <div class="result-heading">Not yet.</div>
+    <div class="result-body">You are under 13 and a parent or guardian has not yet completed the consent form. This is not a rejection — it is a sequence. Your parent or guardian has been sent a link. When they complete it, your account will be activated. The form takes approximately two minutes and describes exactly what the system does.
+      <span class="result-layer3">Layer 3 note visible only to the motivated reader: the COPPA threshold is not arbitrary — it is the federal standard for when parental mediation of data collection agreements is structurally required.</span>
+    </div>
+  </div>
+
+</div>
+</div>
+
+
+<!-- ═══════════════════════ GRADUATION -->
+<div id="panel-graduation" class="panel">
+<h1>Graduation Condition — When Has the Consent Encounter Given Everything It Can Give?</h1>
+
+<div class="warn" style="max-width:640px">
+From the LILA framework: "When has this game given everything it can give to this community? State the observable sign that no player encounters genuine uncertainty in this game anymore. State what the game leaves in the players who played it seriously — the quality that persists after the game is archived."
+</div>
+
+<div class="grad-box">
+  <div class="grad-label">Observable Sign</div>
+  <p style="max-width:100%;margin-bottom:0">When students arrive at session 1 already knowing that the system builds a cognitive model from gameplay signals — because the community has transmitted this knowledge before the consent encounter fires. When the consent encounter produces no new information for any incoming student because the meta-community has already made the system fully transparent. When "I know what it tracks" is the standard entry state, not the exceptional one.</p>
+</div>
+
+<div class="grad-box" style="margin-top:12px">
+  <div class="grad-label">Persistent Quality Left in Players</div>
+  <p style="max-width:100%;margin-bottom:0">The habit of reading what they are agreeing to before agreeing to it. Not from moral pressure — from having encountered a system that responded differently based on whether they read it. The designed moment fires once. The habit, if formed, persists after the game is archived.</p>
+</div>
+
+<div class="sep"></div>
+<h2>What the Consent Encounter Is Not Designed To Do</h2>
+<table style="max-width:660px">
+<tr><th>Temptation</th><th>Why Rejected</th></tr>
+<tr><td>Track time-on-page and require a minimum read time</td><td>Designed moments triggered by time spent rather than specific action taken — FORBIDDEN by the LILA framework. Time is not a proxy for understanding.</td></tr>
+<tr><td>Require correct answers to questions before consent</td><td>Complexity substituting for depth. A quiz can be passed by guessing. The encounter works because the designed moment responds to choice, not performance.</td></tr>
+<tr><td>Show a progress bar rewarding "engagement"</td><td>Return-visit engineering in a consent context. The consent encounter has no hook. The work is done when the consent is given. No celebration.</td></tr>
+<tr><td>Keep a record of whether the student "read carefully" for use in the system</td><td>The designed moment uses this to fire the right message once. It is not stored in the ledger. It is not part of the cognitive model. Consent engagement is not a cognitive signal.</td></tr>
+<tr><td>Penalize quick consent with a worse first session</td><td>Loss that punishes without informing — FORBIDDEN. The system behaves identically regardless of path through consent.</td></tr>
+</table>
+
+<div class="terminal" style="margin-top:20px;max-width:640px">
+  <span class="t-dim t-line">// the consent encounter graduation condition</span>
+  <span class="t-line" style="margin-top:8px">The encounter is complete when the community no longer needs it.</span>
+  <span class="t-line" style="margin-top:4px">Not when everyone has read everything.</span>
+  <span class="t-line" style="margin-top:4px">When what the system does is common knowledge before the form appears.</span>
+  <span class="t-line" style="margin-top:12px">That is the second game working at scale.</span>
+  <span class="t-dim t-line" style="margin-top:8px">// the community reverse-engineered the consent layer</span>
+  <span class="t-dim t-line">// the same way it reverse-engineered the zone vocabulary</span>
+  <span class="t-dim t-line">// the work is done</span>
+  <span class="t-cursor t-line" style="margin-top:4px"></span>
+</div>
+</div>
+
+
+</div><!-- /content -->
+
+<script>
+/* ── TAB NAV ── */
+function show(id,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  el.classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function showLayer(id,el){
+  document.querySelectorAll('.layer-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.layer-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('layer-'+id).classList.add('active');
+  el.classList.add('active');
+}
+
+/* ── FIRST CONTACT ── */
+var fcOpened={1:false,2:false,3:false,4:false};
+function fcExpand(n){
+  var bd=document.getElementById('fc-e'+n+'-bd');
+  var ic=document.getElementById('fc-e'+n+'-icon');
+  var open=bd.classList.contains('open');
+  bd.classList.toggle('open',!open);
+  ic.textContent=open?'+':'−';
+  if(!open){
+    fcOpened[n]=true;
+    fcUpdateCounter();
+  }
+}
+function fcUpdateCounter(){
+  var count=Object.values(fcOpened).filter(Boolean).length;
+  document.getElementById('fc-read-counter').textContent=count+' of 4 sections examined';
+  document.getElementById('fc-read-counter').style.color=count===4?'#000':count>0?'#666':'#bbb';
+}
+function fcCheckAck(){
+  var ack=document.getElementById('fc-ack').checked;
+  document.getElementById('fc-confirm-btn').disabled=!ack;
+}
+function fcConfirm(){
+  var count=Object.values(fcOpened).filter(Boolean).length;
+  document.getElementById('fc-encounter').style.opacity='.35';
+  document.getElementById('fc-encounter').style.pointerEvents='none';
+  if(count===4) document.getElementById('dm-readall').style.display='block';
+  else if(count===0) document.getElementById('dm-noread').style.display='block';
+  else document.getElementById('dm-partread').style.display='block';
+}
+
+/* ── LAYER NAV SCROLL ── */
+/* already handled above */
+
+/* ── DELETION ── */
+var delOpened={1:false,2:false,3:false};
+function delExpand(n){
+  var bd=document.getElementById('dr'+n+'-bd');
+  var ic=document.getElementById('dr'+n+'-icon');
+  var open=bd.style.display==='block';
+  bd.style.display=open?'none':'block';
+  ic.textContent=open?'+':'−';
+  if(!open){
+    delOpened[n]=true;
+    var count=Object.values(delOpened).filter(Boolean).length;
+    document.getElementById('del-examined-label').textContent=count+' of 3 records examined';
+    document.getElementById('del-examined-label').style.color=count===3?'#000':count>0?'#666':'#bbb';
+  }
+}
+function delCheckAck(){
+  document.getElementById('del-confirm-btn').disabled=!document.getElementById('del-ack').checked;
+}
+function delConfirm(){
+  var count=Object.values(delOpened).filter(Boolean).length;
+  document.getElementById('del-encounter').style.opacity='.35';
+  document.getElementById('del-encounter').style.pointerEvents='none';
+  if(count===3) document.getElementById('dm-del-examined').style.display='block';
+  else document.getElementById('dm-del-blind').style.display='block';
+}
+function delCancel(){
+  alert('Cancelled. Your records are unchanged.');
+}
+
+/* ── PARENT INVESTIGATION ── */
+var invOpened={1:false,2:false,3:false,4:false};
+function invExpand(n){
+  var bd=document.getElementById('inv-e'+n+'-bd');
+  var ic=document.getElementById('inv-e'+n+'-icon');
+  var open=bd.style.display==='block';
+  bd.style.display=open?'none':'block';
+  ic.textContent=open?'+':'−';
+  if(!open){
+    invOpened[n]=true;
+    var count=Object.values(invOpened).filter(Boolean).length;
+    document.getElementById('inv-evidence-counter').textContent='Evidence examined: '+count+' of 4 sections';
+    document.getElementById('inv-evidence-counter').style.color=count===4?'#000':count>0?'#666':'#aaa';
+  }
+}
+function invSubmit(){
+  var a1=document.getElementById('inv-ack1').checked;
+  var a2=document.getElementById('inv-ack2').checked;
+  var a3=document.getElementById('inv-ack3').checked;
+  if(!a1||!a2||!a3){alert('Please complete all three acknowledgments.');return;}
+  var count=Object.values(invOpened).filter(Boolean).length;
+  document.querySelectorAll('#panel-investigation .inv-phase,#panel-investigation .inv-evidence').forEach(el=>el.style.opacity='.35');
+  document.getElementById('inv-submit-btn').style.display='none';
+  if(count===4) document.getElementById('dm-inv-full').style.display='block';
+  else document.getElementById('dm-inv-partial').style.display='block';
+}
+
+/* ── TERMINAL CURSOR INIT ── */
+document.querySelectorAll('.t-cursor').forEach(el=>{
+  el.textContent='';
+  el.innerHTML='<span style="animation:cur 1.2s step-end infinite;color:#d0d0d0">█</span>';
+});
+</script>
+</body>
+</html>
