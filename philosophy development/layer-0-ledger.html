@@ -98,7 +98,7 @@ header{border-bottom:2px solid #000;padding:8px 14px;display:flex;align-items:ba
 <div class="main" id="main-live">
   <!-- ── FEED ── -->
   <div class="feed-panel">
-    <div class="panel-hd"><div class="live-dot"></div>Observation Stream<span style="margin-left:auto;font-size:8px;color:#aaa" id="obs-count"></span></div>
+    <div class="panel-hd"><div class="live-dot"></div>Observation Stream<span id="data-source" style="font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #d97706;color:#d97706;padding:1px 5px">MOCK</span><span style="margin-left:auto;font-size:8px;color:#aaa" id="obs-count"></span></div>
     <div class="feed-scroll" id="feed-scroll"></div>
   </div>
 
@@ -227,6 +227,56 @@ OBS.sort((a,b) => b.t - a.t);
 let selectedId = null;
 let showLabels = false;
 
+// ── Normalize a real Ledger record into the internal format used by OBS
+function fromReal(obs) {
+  const rnd = (obs.signals?.round_snapshots || []).map(r => r.score_pct ?? r.rank_pct ?? 0);
+  return {
+    id: obs.id || obs.session_id || String(obs.t),
+    t: obs.t,
+    s: obs.student_id,
+    sname: obs.student_name || obs.student_id,
+    c: obs.config_vector,
+    o: obs.outcome?.rank_pct ?? 0.5,
+    sig: { rnd },
+    _real: true,
+    _flags: {
+      silent_inv: obs.silent_inv,
+      compiler_generated: obs.compiler_generated,
+      confirmed: obs.student_id_confirmed,
+    }
+  };
+}
+
+// ── Get display name for a record (works for both mock and real)
+function displayName(o) {
+  if (o.sname) return o.sname;
+  return STUDENT_NAMES[o.s] || String(o.s).replace('name:','').slice(0,12).toUpperCase();
+}
+
+// ── Load real data from server; fall back to mock if unavailable
+async function loadData() {
+  const badge = document.getElementById('data-source');
+  try {
+    const res = await fetch('/api/ledger/raw?limit=200');
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    if (data.length > 0) {
+      OBS.length = 0;
+      data.forEach(r => OBS.push(fromReal(r)));
+      badge.textContent = 'LIVE';
+      badge.style.borderColor = '#15803d';
+      badge.style.color = '#15803d';
+    } else {
+      badge.textContent = 'LIVE · empty';
+      badge.style.borderColor = '#15803d';
+      badge.style.color = '#15803d';
+    }
+  } catch {
+    badge.textContent = 'MOCK';
+    // Keep mock data (OBS already populated)
+  }
+}
+
 // ── Helpers
 function fmtTime(t){
   const d=new Date(t*1000);
@@ -252,12 +302,12 @@ function renderFeed(){
     const sel=selectedId===o.id;
     return `<div class="obs-row${sel?' selected':''}" onclick="selectObs('${o.id}')">
       <div class="obs-hash">${o.id} · ${fmtTime(o.t)}</div>
-      <div class="obs-student">${STUDENT_NAMES[o.s]}</div>
+      <div class="obs-student">${displayName(o)}</div>
       <div class="obs-vec">${vecStr(o.c)}</div>
       <span class="outcome-chip" style="border-color:${ol.border};background:${ol.bg};color:${ol.col}">
         ${(o.o*100).toFixed(0)}%
       </span>
-      <div class="obs-sig">rnd_trajectory[${o.sig.rnd.length}]</div>
+      <div class="obs-sig">rnd_trajectory[${o.sig.rnd.length}]${o._flags?.silent_inv?' · SILENT_INV':''}${o._flags?.compiler_generated?' · compiler':''}</div>
     </div>`;
   }).join('');
 }
@@ -287,7 +337,8 @@ function renderInspector(o){
     </div>
     <div class="inspect-field">
       <div class="field-name">Student</div>
-      <div class="field-val">${STUDENT_NAMES[o.s]}</div>
+      <div class="field-val">${displayName(o)}</div>
+      ${o._flags ? `<div class="field-note">id: ${o.s}${o._flags.silent_inv?' · SILENT_INV':''}${o._flags.compiler_generated?' · compiler-generated':''}${o._flags.confirmed===false?' · name-hash (unconfirmed)':''}</div>` : ''}
     </div>
     <div class="inspect-field" style="background:#f8f8f8;border:1px solid #000;padding:8px;margin-bottom:8px">
       <div class="field-name" style="margin-bottom:4px;color:#000">Configuration Vector — 12 parameters</div>
@@ -446,8 +497,10 @@ function drawScatter(){
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
-  renderFeed();
-  setTimeout(drawScatter, 80);
+  loadData().then(()=>{
+    renderFeed();
+    setTimeout(drawScatter, 80);
+  });
 
   const c=document.getElementById('scatter-canvas');
   c.addEventListener('mousemove', e=>{
@@ -464,7 +517,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       tt.style.left=(e.clientX-c.getBoundingClientRect().left+10)+'px';
       tt.style.top=(e.clientY-c.getBoundingClientRect().top-20)+'px';
       const o=hit.o;
-      tt.textContent=`${o.id}  ${STUDENT_NAMES[o.s]}
+      tt.textContent=`${o.id}  ${displayName(o)}
 c[0]:${o.c[0]}  c[1]:${o.c[1]}  c[2]:${o.c[2]}  c[3]:${o.c[3]}
 outcome: ${(o.o*100).toFixed(1)}%
 No mode label at Layer 0.`;
