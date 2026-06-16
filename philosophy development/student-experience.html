@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Student Experience — Terminal Language & Curation Architecture</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.6;padding:0}
+header{border-bottom:2px solid #000;padding:20px 28px 14px;position:sticky;top:0;background:#fff;z-index:10}
+.hd-title{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:4px}
+.hd-main{font-size:20px;font-weight:700;line-height:1.2;margin-bottom:6px}
+.hd-sub{font-size:11px;color:#555;max-width:700px;line-height:1.6}
+.nav{display:flex;gap:20px;margin-top:12px;border-top:1px solid #eee;padding-top:10px;flex-wrap:wrap}
+.nav a{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;text-decoration:none;padding:3px 0;border-bottom:2px solid transparent}
+.nav a:hover,.nav a.active{color:#000;border-bottom-color:#000}
+
+.content{max-width:960px;margin:0 auto;padding:32px 28px 60px}
+
+/* ── SECTIONS ── */
+.section{margin-bottom:48px}
+.section-label{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:8px}
+.section-title{font-size:18px;font-weight:700;margin-bottom:14px;line-height:1.3}
+.section-body{font-size:12px;color:#333;line-height:1.8;max-width:680px}
+.section-body p{margin-bottom:12px}
+.section-body strong{color:#000}
+
+/* ── TERMINAL DISPLAY ── */
+.terminal{background:#0a0a0a;color:#e8e8e8;font-family:'Courier New',monospace;font-size:11px;line-height:1.8;padding:20px 24px;margin:16px 0;position:relative;border-left:3px solid #000}
+.t-dim{color:#444}
+.t-amber{color:#d97706}
+.t-blue{color:#2563eb}
+.t-green{color:#059669}
+.t-red{color:#dc2626}
+.t-purple{color:#7c3aed}
+.t-cyan{color:#0891b2}
+.t-white{color:#fff;font-weight:700}
+.t-blink::after{content:'█';animation:blink 1.2s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.terminal-label{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:4px}
+
+/* ── ZONE CARDS ── */
+.zone-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin:16px 0}
+.zone-card{border:1px solid #ddd;padding:14px 16px}
+.zone-name{font-size:14px;font-weight:700;letter-spacing:2px;margin-bottom:4px}
+.zone-trigger{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:8px}
+.zone-feel{font-size:11px;color:#333;line-height:1.6;margin-bottom:8px}
+.zone-message{font-family:'Courier New',monospace;font-size:10px;color:#555;border-left:2px solid #ddd;padding-left:8px;line-height:1.7;font-style:italic}
+
+/* ── MYSTERY/TRANSPARENCY DIAL ── */
+.dial-wrap{margin:24px 0}
+.dial-bar{display:flex;height:32px;border:1px solid #ddd;overflow:hidden;margin:8px 0}
+.dial-seg{display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#fff}
+.dial-labels{display:flex;justify-content:space-between;font-size:9px;color:#888}
+
+/* ── CHEMICAL REACTION TABLE ── */
+.reaction-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin:16px 0}
+.rxn-card{border:1px solid #ddd;padding:14px 16px}
+.rxn-pair{font-size:13px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.rxn-arrow{color:#888;font-weight:400}
+.rxn-label{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:6px}
+.rxn-body{font-size:11px;color:#333;line-height:1.6}
+.rxn-signal{font-size:9px;color:#888;margin-top:6px;font-style:italic}
+
+/* ── CURATION LEVELS ── */
+.curation-table{width:100%;border-collapse:collapse;margin:16px 0}
+.curation-table th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px 10px;border-bottom:2px solid #000;text-align:left;background:#f5f5f5}
+.curation-table td{padding:10px;border-bottom:1px solid #eee;font-size:11px;vertical-align:top;line-height:1.6}
+.curation-table tr:last-child td{border-bottom:none}
+.budget-chip{display:inline-block;font-size:8px;font-weight:700;letter-spacing:1px;padding:2px 6px;border:1px solid #000;text-transform:uppercase;margin-bottom:2px}
+
+/* ── QUESTIONS ── */
+.q-list{margin:16px 0}
+.q-item{border-left:3px solid #000;padding:10px 14px;margin-bottom:10px;background:#fafafa}
+.q-num{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:2px}
+.q-text{font-size:12px;font-weight:700;margin-bottom:4px}
+.q-why{font-size:11px;color:#555;line-height:1.6}
+
+/* ── ASSERTED ── */
+.asserted{display:inline-block;font-size:8px;font-weight:700;color:#d97706;border:1px solid #d97706;padding:0 4px;letter-spacing:0.5px;vertical-align:middle}
+.phase-tag{display:inline-block;font-size:8px;font-weight:700;padding:1px 6px;border:1px solid;text-transform:uppercase;letter-spacing:1px;vertical-align:middle}
+
+/* ── DIVIDER ── */
+.rule{border:none;border-top:1px solid #eee;margin:32px 0}
+
+@media (max-width:768px){
+  header{padding:14px 14px 10px;position:relative}
+  .content{padding:20px 14px 40px}
+  .hd-main{font-size:16px}
+  .zone-grid,.reaction-grid{grid-template-columns:1fr}
+  .curation-table{font-size:10px}
+  .terminal{font-size:10px;padding:14px 14px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd-title">Phase 1 Architecture</div>
+  <div class="hd-main">Student Experience — Terminal Language & Curation</div>
+  <div class="hd-sub">How the system speaks to students, how much it reveals, how sessions are curated for maximum information gain and engagement — and what questions need answering before implementation.</div>
+  <nav class="nav">
+    <a href="#terminal" class="active">Terminal Language</a>
+    <a href="#zones">Zone Names</a>
+    <a href="#mystery">Mystery vs Transparency</a>
+    <a href="#reactions">Chemical Reactions</a>
+    <a href="#curation">Curation Architecture</a>
+    <a href="#questions">Open Questions</a>
+  </nav>
+</header>
+
+<div class="content">
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- 1. THE TERMINAL                                                    -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="section" id="terminal">
+  <div class="section-label">Section 1</div>
+  <div class="section-title">The Terminal — What the Student Sees</div>
+  <div class="section-body">
+    <p>The terminal is the only moment the system speaks directly to the student. It appears before each session. It does not explain the game. It does not give instructions. It communicates trajectory.</p>
+    <p>The language is designed to create a <strong>specific feeling before the first move</strong>: that this session was chosen for a reason, and that reason is about the student's position in something larger than today's game.</p>
+    <p><strong>Constraint:</strong> the terminal never says "you are in SPATIAL mode" or "you ranked 73rd percentile." It speaks about the student's relationship to cognitive territory, not about the system's internal variables. The system knows the variables. The student experiences the story.</p>
+  </div>
+
+  <div class="terminal-label">ZERO-SESSION STUDENT — first ever session</div>
+  <div class="terminal">
+<span class="t-dim">────────────────────────────────────────────────</span>
+<span class="t-white">CONSTELLATION</span>  <span class="t-dim">cognitive development system</span>
+
+<span class="t-dim">  session       </span><span class="t-amber">001</span>
+<span class="t-dim">  profile       </span><span class="t-amber">initializing</span>
+<span class="t-dim">  mode          </span><span class="t-amber">calibration</span>
+
+<span class="t-dim">  The system does not know you yet.</span>
+<span class="t-dim">  This session is a question, not an assessment.</span>
+
+<span class="t-dim">  Play as you would play.</span>
+<span class="t-dim">  The system is watching for what makes you different.</span>
+<span class="t-dim">────────────────────────────────────────────────</span>
+<span class="t-dim">  enter when ready</span> <span class="t-blink"></span>
+  </div>
+
+  <div class="terminal-label">DEVELOPING STUDENT — 8 sessions, QTY mode selected, ZPD at 620</div>
+  <div class="terminal">
+<span class="t-dim">────────────────────────────────────────────────</span>
+<span class="t-white">CONSTELLATION</span>  <span class="t-dim">cognitive development system</span>
+
+<span class="t-dim">  session       </span><span class="t-amber">009</span>
+<span class="t-dim">  zone          </span><span class="t-white">PARALLEL</span>
+<span class="t-dim">  signal        </span><span class="t-amber">quantity coordination · edge of range</span>
+
+<span class="t-dim">  You have been here before.</span>
+<span class="t-dim">  This time the conditions have shifted.</span>
+<span class="t-dim">  The system wants to know if you shifted with them.</span>
+
+<span class="t-dim">────────────────────────────────────────────────</span>
+<span class="t-dim">  enter when ready</span> <span class="t-blink"></span>
+  </div>
+
+  <div class="terminal-label">ADVANCED STUDENT — 34 sessions, high QTY Elo, compiler selects FRT to address deficit</div>
+  <div class="terminal">
+<span class="t-dim">────────────────────────────────────────────────</span>
+<span class="t-white">CONSTELLATION</span>  <span class="t-dim">cognitive development system</span>
+
+<span class="t-dim">  session       </span><span class="t-amber">035</span>
+<span class="t-dim">  zone          </span><span class="t-white">RADICAL</span>
+<span class="t-dim">  signal        </span><span class="t-green">new territory</span>
+
+<span class="t-dim">  The system has been watching a gap form.</span>
+<span class="t-dim">  One dimension of your thinking has outpaced another.</span>
+<span class="t-dim">  Today's session addresses the imbalance directly.</span>
+
+<span class="t-dim">  This will feel different. That is the point.</span>
+
+<span class="t-dim">────────────────────────────────────────────────</span>
+<span class="t-dim">  enter when ready</span> <span class="t-blink"></span>
+  </div>
+
+  <div class="terminal-label">SILENT INVERSION — INV config, invAnnounced = false</div>
+  <div class="terminal">
+<span class="t-dim">────────────────────────────────────────────────</span>
+<span class="t-white">CONSTELLATION</span>  <span class="t-dim">cognitive development system</span>
+
+<span class="t-dim">  session       </span><span class="t-amber">022</span>
+<span class="t-dim">  zone          </span><span class="t-white">SHIFTING</span>
+<span class="t-dim">  signal        </span><span class="t-cyan">inversion · silent</span>
+
+<span class="t-dim">  Something about this session is different.</span>
+<span class="t-dim">  The system is not going to tell you what.</span>
+<span class="t-dim">  Figure it out.</span>
+
+<span class="t-dim">────────────────────────────────────────────────</span>
+<span class="t-dim">  enter when ready</span> <span class="t-blink"></span>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- 2. ZONE NAMES                                                      -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="section" id="zones">
+  <div class="section-label">Section 2</div>
+  <div class="section-title">Zone Names — The Vocabulary of Trajectory</div>
+  <div class="section-body">
+    <p>Zone names are the only labels the student ever sees for their position. They describe <strong>the relationship between the student and the current session</strong>, not the cognitive mode or difficulty level. The student does not need to know they are in QTY mode. They need to know what kind of moment this is.</p>
+    <p>The five names form a complete vocabulary of challenge relationships. A student who has experienced all five has experienced the full range of how the system positions sessions relative to their current ability.</p>
+  </div>
+
+  <div class="zone-grid">
+    <div class="zone-card">
+      <div class="zone-name">ECHO</div>
+      <div class="zone-trigger">Trigger: high similarity to recent sessions, same mode, ZPD comfortable</div>
+      <div class="zone-feel">The student is being asked to confirm something already learned. Reinforcement. The session should feel familiar but not easy — familiar in structure, demanding in execution.</div>
+      <div class="zone-message">"You have been here before. The question is whether you've made it yours."</div>
+    </div>
+    <div class="zone-card">
+      <div class="zone-name" style="color:#2563eb">PARALLEL</div>
+      <div class="zone-trigger">Trigger: same mode, ZPD at ceiling, parameters shifted</div>
+      <div class="zone-feel">The cognitive domain is the same but the conditions have changed. The student must apply existing skill in a novel context. Tests transfer within a mode.</div>
+      <div class="zone-message">"Same territory, different weather. What you know still applies — but not directly."</div>
+    </div>
+    <div class="zone-card">
+      <div class="zone-name" style="color:#d97706">SHIFTING</div>
+      <div class="zone-trigger">Trigger: mode change from last session, or INVERSION config</div>
+      <div class="zone-feel">Something structurally different from the last session. The student enters without knowing exactly what changed. Diagnostic — the system is watching how they adapt to unfamiliar structure.</div>
+      <div class="zone-message">"The rules of the last session don't apply here. Find the new ones."</div>
+    </div>
+    <div class="zone-card">
+      <div class="zone-name" style="color:#dc2626">RADICAL</div>
+      <div class="zone-trigger">Trigger: compiler selects a mode with large deficit, first session in a long-stale mode</div>
+      <div class="zone-feel">The system is deliberately placing the student outside their comfort zone. This should feel slightly destabilizing. The session targets cognitive territory the student has not developed. High information gain expected.</div>
+      <div class="zone-message">"This session targets a gap the system has been watching. You may not perform well. That is useful."</div>
+    </div>
+    <div class="zone-card">
+      <div class="zone-name" style="color:#059669">REMATCH</div>
+      <div class="zone-trigger">Trigger: repeating a session type where student previously ranked below 0.40</div>
+      <div class="zone-feel">The system is returning the student to something they did not do well. Not punishment — the signal from the previous attempt was incomplete. The system needs more data, and the student needs the chance to develop.</div>
+      <div class="zone-message">"The system remembers the last time you were here. So do you."</div>
+    </div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- 3. MYSTERY VS TRANSPARENCY                                         -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="section" id="mystery">
+  <div class="section-label">Section 3</div>
+  <div class="section-title">Mystery vs Transparency — The Calibration Problem</div>
+  <div class="section-body">
+    <p>Every disclosure decision is a tradeoff between two goods: <strong>transparency</strong> builds trust and agency; <strong>mystery</strong> protects signal quality and maintains engagement. The system optimizes for information gain — which means it must protect the conditions under which authentic behavior is observed.</p>
+    <p>The fundamental tension: if a student knows exactly what the system is measuring, they may perform for the measurement rather than authentically. This contaminates the Ledger. But if they know nothing, they cannot develop the meta-cognitive relationship with their own learning that is the long-term goal.</p>
+    <p>The resolution: <strong>disclose the structure, withhold the current state.</strong> The student should always know <em>that</em> the system selects sessions based on their trajectory. They should never know <em>what</em> the system currently thinks their trajectory is until they have enough sessions to discuss it meaningfully.</p>
+  </div>
+
+  <div class="dial-wrap">
+    <div class="section-label">WHAT TO REVEAL — by phase</div>
+    <div class="dial-bar">
+      <div class="dial-seg" style="flex:2;background:#222">HIDDEN</div>
+      <div class="dial-seg" style="flex:1;background:#555">HINTED</div>
+      <div class="dial-seg" style="flex:0.5;background:#888">NAMED</div>
+    </div>
+    <div class="dial-labels">
+      <span>Phase 0: silent optimization</span>
+      <span>Phase 1: terminal language</span>
+      <span>Phase 3+: collaborative</span>
+    </div>
+  </div>
+
+  <table class="curation-table">
+    <thead><tr><th>Information</th><th>Phase 0</th><th>Phase 1</th><th>Phase 3+</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>That the system selects sessions</strong></td>
+        <td>Hidden</td>
+        <td>Implied by terminal</td>
+        <td>Explicit</td>
+        <td>Phase 0: revealing it changes behavior before data exists to interpret the change</td>
+      </tr>
+      <tr>
+        <td><strong>Zone name (ECHO/RADICAL/etc)</strong></td>
+        <td>Hidden</td>
+        <td><strong>Shown</strong></td>
+        <td>Shown + explained</td>
+        <td>Names describe the relationship, not the mechanism — safe to show</td>
+      </tr>
+      <tr>
+        <td><strong>Cognitive mode (QTY/SPT/FRT/etc)</strong></td>
+        <td>Hidden</td>
+        <td>Hidden</td>
+        <td>Shown to Alpha track only</td>
+        <td>Mode labels are Layer 1 views — explaining them requires explaining the model</td>
+      </tr>
+      <tr>
+        <td><strong>Student's current Elo</strong></td>
+        <td>Hidden</td>
+        <td>Hidden</td>
+        <td>Shown in Alpha track</td>
+        <td>Elo number without context is misleading; number without sufficient sessions is noise</td>
+      </tr>
+      <tr>
+        <td><strong>That INVERSION is happening</strong></td>
+        <td><strong>Never</strong> (silent_inv)</td>
+        <td><strong>Never</strong></td>
+        <td>Post-session only</td>
+        <td>Announcing INVERSION contaminates the signal entirely — student performs for the label</td>
+      </tr>
+      <tr>
+        <td><strong>The One Principle (argmax E[KL])</strong></td>
+        <td>Hidden</td>
+        <td>Hidden</td>
+        <td>Alpha track, late stage</td>
+        <td>The singularity goal: student eventually understands the system well enough to run it themselves</td>
+      </tr>
+      <tr>
+        <td><strong>Their session history</strong></td>
+        <td>Hidden</td>
+        <td>Implied by zone name</td>
+        <td>Shown on request</td>
+        <td>History without interpretation can create fixed mindset; history with interpretation is powerful</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<hr class="rule">
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- 4. CHEMICAL REACTIONS                                              -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="section" id="reactions">
+  <div class="section-label">Section 4</div>
+  <div class="section-title">Chemical Reactions — Students in Contact</div>
+  <div class="section-body">
+    <p>A "chemical reaction" is what happens when two students with different cognitive profiles are placed in the same session. The Ledger currently treats sessions as individual measurements. But every multiplayer session is also a social experiment — the outcome is shaped by the specific combination of students, not just the config vector.</p>
+    <p>The system does not yet track this. But the architecture needs to account for it, because <strong>the wrong pairing contaminates both students' data</strong>, and the right pairing creates information gain that neither student could produce alone.</p>
+  </div>
+
+  <div class="reaction-grid">
+    <div class="rxn-card">
+      <div class="rxn-label">High Elo × Low Elo, same mode</div>
+      <div class="rxn-pair"><span style="color:#059669">DEVELOPED</span> <span class="rxn-arrow">+</span> <span style="color:#888">EMERGING</span></div>
+      <div class="rxn-body">The high-Elo student may anchor or suppress the low-Elo student's authentic behavior. The low-Elo student's outcome is influenced by the high-Elo student's strategy, not their own cognition. <strong>Signal contamination for the lower student.</strong></div>
+      <div class="rxn-signal">Ledger flag needed: session_composition = [HIGH, LOW] → outcome weight reduction for LOW student</div>
+    </div>
+    <div class="rxn-card">
+      <div class="rxn-label">Matched Elo, different modes dominant</div>
+      <div class="rxn-pair"><span style="color:#d97706">QTY-dominant</span> <span class="rxn-arrow">+</span> <span style="color:#2563eb">SPT-dominant</span></div>
+      <div class="rxn-body">Both students are competent overall but excel in different dimensions. The session forces each to operate in the other's stronger domain. <strong>High information gain for both — this is the ideal pairing for a mixed config session.</strong></div>
+      <div class="rxn-signal">Ideal for QTY+SPT hybrid configs — each student's weakness is the other's strength</div>
+    </div>
+    <div class="rxn-card">
+      <div class="rxn-label">Similar profiles, high Elo, collaborative</div>
+      <div class="rxn-pair"><span style="color:#059669">EXPERT</span> <span class="rxn-arrow">+</span> <span style="color:#059669">EXPERT</span></div>
+      <div class="rxn-body">Two highly developed students in the same mode produce the system's highest quality signal. The session is essentially a stress test at the upper difficulty range. <strong>Most informative for the forgetting curve and ceiling behavior.</strong></div>
+      <div class="rxn-signal">Priority pairing for measuring τ (forgetting half-life) at high Elo</div>
+    </div>
+    <div class="rxn-card">
+      <div class="rxn-label">RADICAL vs ECHO in same session</div>
+      <div class="rxn-pair"><span style="color:#dc2626">RADICAL</span> <span class="rxn-arrow">+</span> <span style="color:#555">ECHO</span></div>
+      <div class="rxn-body">One student is being stretched; the other is consolidating. The ECHO student's session becomes unpredictable — the RADICAL student's behavior is unusual and may destabilize the ECHO student's consolidation. <strong>Avoid pairing — contradictory session purposes.</strong></div>
+      <div class="rxn-signal">Compiler should avoid this combination in multiplayer scheduling</div>
+    </div>
+    <div class="rxn-card">
+      <div class="rxn-label">First session student + any experienced student</div>
+      <div class="rxn-pair"><span style="color:#888">ZERO</span> <span class="rxn-arrow">+</span> <span style="color:#059669">ANY</span></div>
+      <div class="rxn-body">The zero-session student's calibration data is compromised — their behavior is shaped by observing the experienced student rather than exploring independently. <strong>Zero-session students should play against bots only for first 3–5 sessions.</strong> <span class="asserted">ASSERTED: 3–5</span></div>
+      <div class="rxn-signal">server.js: if session_count < 3, force bot-only session regardless of room composition</div>
+    </div>
+    <div class="rxn-card">
+      <div class="rxn-label">Student + their own past performance (bots at their Elo)</div>
+      <div class="rxn-pair"><span style="color:#7c3aed">STUDENT</span> <span class="rxn-arrow">vs</span> <span style="color:#555">ELO-MATCHED BOT</span></div>
+      <div class="rxn-body">When the bot is set to match the student's current Elo, the session is a clean self-comparison. <strong>The cleanest signal the system can generate for a solo student.</strong> This is what the compiler currently produces (R_bot = 520 ASSERTED baseline).</div>
+      <div class="rxn-signal">Phase 1: dynamic bot Elo matching per session based on student's current mode Elo</div>
+    </div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- 5. CURATION ARCHITECTURE                                           -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="section" id="curation">
+  <div class="section-label">Section 5</div>
+  <div class="section-title">Curation Architecture — How Sessions Are Selected</div>
+  <div class="section-body">
+    <p>The compiler currently selects mode and builds a config vector from ASSERTED MODE_DEFAULTS. This is the skeleton. The full curation pipeline has more stages — and some of those stages require decisions that are not yet made.</p>
+    <p>The curation pipeline as it should eventually work:</p>
+  </div>
+
+  <table class="curation-table">
+    <thead><tr><th>Stage</th><th>What it decides</th><th>Current state</th><th>Phase</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>1. Mode selection</strong></td>
+        <td>Which of 6 cognitive modes to target this session</td>
+        <td>Implemented: argmax(deficit × 0.50 + staleness × 0.30 + gap × 0.20) <span class="asserted">ASSERTED weights</span></td>
+        <td><span class="phase-tag" style="border-color:#d97706;color:#d97706">Phase 0</span></td>
+      </tr>
+      <tr>
+        <td><strong>2. Difficulty calibration</strong></td>
+        <td>Where within the mode to pitch the session (ZPD target)</td>
+        <td>Implemented: ZPD = elo × 0.85 × decay <span class="asserted">ASSERTED</span></td>
+        <td><span class="phase-tag" style="border-color:#d97706;color:#d97706">Phase 0</span></td>
+      </tr>
+      <tr>
+        <td><strong>3. Zone assignment</strong></td>
+        <td>Which zone name to show (ECHO/PARALLEL/SHIFTING/RADICAL/REMATCH)</td>
+        <td><strong>Not yet implemented.</strong> Zone logic exists in alpha-system.html but is not wired to compiler output</td>
+        <td><span class="phase-tag" style="border-color:#2563eb;color:#2563eb">Phase 1</span></td>
+      </tr>
+      <tr>
+        <td><strong>4. Template selection</strong></td>
+        <td>Which of 17 challenge templates to use within the mode</td>
+        <td><strong>Not yet implemented.</strong> Templates exist in challenge-meta.html but compiler uses MODE_DEFAULTS only</td>
+        <td><span class="phase-tag" style="border-color:#2563eb;color:#2563eb">Phase 1</span></td>
+      </tr>
+      <tr>
+        <td><strong>5. Similarity spectrum</strong></td>
+        <td>How different from the student's recent sessions this session should be</td>
+        <td><strong>Not yet implemented.</strong> REMATCH→RADICAL spectrum designed in challenge-meta.html</td>
+        <td><span class="phase-tag" style="border-color:#2563eb;color:#2563eb">Phase 1</span></td>
+      </tr>
+      <tr>
+        <td><strong>6. Social composition</strong></td>
+        <td>Who the student should play with or against</td>
+        <td><strong>Not yet tracked.</strong> Session records don't store team composition in a queryable way</td>
+        <td><span class="phase-tag" style="border-color:#2563eb;color:#2563eb">Phase 1</span></td>
+      </tr>
+      <tr>
+        <td><strong>7. Terminal message generation</strong></td>
+        <td>Which message to show, which zone name to use</td>
+        <td><strong>Not yet implemented.</strong> Message library exists in system-complete.html. Zone logic not wired.</td>
+        <td><span class="phase-tag" style="border-color:#2563eb;color:#2563eb">Phase 1</span></td>
+      </tr>
+      <tr>
+        <td><strong>8. Bot Elo matching</strong></td>
+        <td>Setting the bot difficulty to match the student's current mode Elo</td>
+        <td>Bot aggression exists as a config param. Compiler sets it to 50 <span class="asserted">ASSERTED</span>. No dynamic Elo matching.</td>
+        <td><span class="phase-tag" style="border-color:#2563eb;color:#2563eb">Phase 1</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<hr class="rule">
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- 6. OPEN QUESTIONS — WHAT I NEED FROM YOU                          -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="section" id="questions">
+  <div class="section-label">Section 6 — Questions for the designer</div>
+  <div class="section-title">What I Need to Know Before Building Phase 1</div>
+  <div class="section-body">
+    <p>These are the decisions that cannot be made from the architecture alone. They require your judgment about the students, the context, and the educational philosophy. Provide as much or as little detail as you have — each answer will shape the implementation.</p>
+  </div>
+
+  <div class="q-list">
+    <div class="q-item">
+      <div class="q-num">Q·A — Age &amp; Cognitive Profile</div>
+      <div class="q-text">Who are the students? What is the age range, and what do you know about their cognitive baseline?</div>
+      <div class="q-why">The terminal language, zone names, and transparency dial all depend on who is reading them. A 12-year-old and a 17-year-old need different language. A student who has been told the system is measuring them needs different messaging than one who thinks it's just a game.</div>
+    </div>
+    <div class="q-item">
+      <div class="q-num">Q·B — What Do Students Currently Think the System Is?</div>
+      <div class="q-text">Right now, before Phase 1 is implemented — what do students believe Constellation is? A game? An educational tool? Do they know sessions are being selected for them?</div>
+      <div class="q-why">The terminal message for a student who already knows "this session was chosen for me" is completely different from a student encountering that idea for the first time. The first session to show a terminal message is the most important one to get right.</div>
+    </div>
+    <div class="q-item">
+      <div class="q-num">Q·C — The INVERSION Reveal</div>
+      <div class="q-text">INVERSION (negative multipliers) creates inverted scoring. Currently it runs silently. When — if ever — should a student learn that INVERSION sessions exist?</div>
+      <div class="q-why">Options: (1) Never reveal — protect the signal permanently. (2) Reveal post-session — "that session had inverted rules, your instincts were correct but misapplied." (3) Reveal to Alpha track only as part of their deepening understanding. The terminal currently says "something is different" without naming it. Is that enough?</div>
+    </div>
+    <div class="q-item">
+      <div class="q-num">Q·D — Social Dynamics in Your Specific Context</div>
+      <div class="q-text">Are students competitive with each other? Do they play in fixed teams or rotating groups? Are there friendship dynamics that would affect pairing?</div>
+      <div class="q-why">The chemical reaction architecture depends on whether you can control who plays with whom. If students self-select into teams, the social composition stage of curation is limited. If the teacher assigns sessions, full curation is possible.</div>
+    </div>
+    <div class="q-item">
+      <div class="q-num">Q·E — Session Frequency &amp; Context</div>
+      <div class="q-text">How often do students play? In what setting — classroom, after-school, at home? How long is a typical session?</div>
+      <div class="q-why">The forgetting decay constant (τ=14d, ASSERTED) is the single biggest assumption the compiler makes. If students play twice a week, τ=14d may overestimate forgetting. If they play once a month, it may underestimate it. Knowing the actual cadence lets us know how wrong this ASSERTED value is.</div>
+    </div>
+    <div class="q-item">
+      <div class="q-num">Q·F — The Alpha Track Entry Criterion</div>
+      <div class="q-text">Who should be on the Alpha track, and what should the entry process feel like to the student?</div>
+      <div class="q-why">Alpha track (designed in alpha-system.html) is the detective framework — students who are ready to reason about the system itself. The application process, the mystery calibration, and the 5-phase analysis are designed. What triggers eligibility? A session count threshold? A teacher nomination? A specific Elo level? And critically: does the student apply, or are they invited?</div>
+    </div>
+    <div class="q-item">
+      <div class="q-num">Q·G — How Much Should the Terminal Explain Itself?</div>
+      <div class="q-text">The terminal currently says things like "the system wants to know if you shifted with the conditions." Should the terminal ever explain what it means by "the system"? Or does the opacity serve the experience?</div>
+      <div class="q-why">There's a spectrum: (1) Pure oracle — the terminal speaks and never explains. (2) Minimal context — "this is a cognitive development system" and nothing more. (3) Earned transparency — the terminal reveals more language over time as the student demonstrates they can handle it. The current examples lean toward (2). What's right for your students?</div>
+    </div>
+    <div class="q-item">
+      <div class="q-num">Q·H — What Happens When a Student Asks "Why Did I Get This Session?"</div>
+      <div class="q-text">A curious student will ask the teacher. What should the teacher say?</div>
+      <div class="q-why">This is a teacher script decision, not a software decision — but it shapes everything. Option A: "The system decides" (deflects, preserves mystery). Option B: "It's based on your history" (truthful but vague). Option C: "It thinks you're ready for something harder in [area]" (partially reveals the model). The answer determines how much the teacher is a translator between the student and the system, and how much the system should give the teacher to say.</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<script>
+// Active nav on scroll
+const sections = document.querySelectorAll('.section[id]');
+const navLinks = document.querySelectorAll('.nav a');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(a => {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id);
+      });
+    }
+  });
+}, { threshold: 0.3 });
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
