@@ -72,10 +72,14 @@ function listStudents() {
                 const cur = map.get(obs.student_id) || {
                     student_id: obs.student_id,
                     student_id_confirmed: obs.student_id_confirmed ?? false,
+                    student_name: null,
                     sessions: 0, last_t: 0, wins: 0
                 };
                 cur.sessions++;
-                if (obs.t > cur.last_t) cur.last_t = obs.t;
+                if (obs.t > cur.last_t) {
+                    cur.last_t = obs.t;
+                    if (obs.student_name) cur.student_name = obs.student_name;
+                }
                 if (obs.outcome?.rank === 1) cur.wins++;
                 map.set(obs.student_id, cur);
             } catch { }
@@ -85,17 +89,8 @@ function listStudents() {
 }
 
 // ─── State computation ────────────────────────────────────────────────────────
-function Kf(n) {
-    return n <= ASSERTED.K_high / ASSERTED.K_mid
-        ? ASSERTED.K_high
-        : n <= ASSERTED.K_mid * 1
-            ? ASSERTED.K_mid
-            : ASSERTED.K_low;
-}
-
-// Correct K lookup
 function Kval(n) {
-    if (n <= 5)  return ASSERTED.K_high;
+    if (n <= 5)  return ASSERTED.K_high;  // [ASSERTED] thresholds
     if (n <= 20) return ASSERTED.K_mid;
     return ASSERTED.K_low;
 }

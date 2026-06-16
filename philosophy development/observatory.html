@@ -193,8 +193,10 @@ function renderStudentList(students) {
   el.innerHTML = students.map(s => {
     const dt = s.last_t ? new Date(s.last_t*1000).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '—';
     const badgeCls = s.student_id_confirmed ? '' : ' stu-unconfirmed';
-    return `<div class="stu-row${s.student_id === currentStudent ? ' active' : ''}" onclick="loadStudent('${s.student_id.replace(/'/g,"\\'")}')">
-      <div class="stu-name">${s.student_id.replace('name:','').slice(0,16)}</div>
+    const displayName = s.student_name || s.student_id.replace('name:','').slice(0,16);
+    const sid = s.student_id.replace(/'/g,"\\'");
+    return `<div class="stu-row${s.student_id === currentStudent ? ' active' : ''}" data-sid="${s.student_id}" onclick="loadStudent('${sid}')">
+      <div class="stu-name">${displayName}</div>
       <div class="stu-meta">${s.sessions} sessions · last ${dt}</div>
       <span class="stu-badge${badgeCls}">${s.student_id_confirmed ? 'ID CONFIRMED' : 'NAME HASH'}</span>
     </div>`;
@@ -205,10 +207,8 @@ function renderStudentList(students) {
 async function loadStudent(sid) {
   currentStudent = sid;
 
-  // Re-render list to show active
-  const rows = document.querySelectorAll('.stu-row');
-  rows.forEach(r => {
-    r.classList.toggle('active', r.onclick && r.onclick.toString().includes(sid.slice(0,10)));
+  document.querySelectorAll('.stu-row').forEach(r => {
+    r.classList.toggle('active', r.dataset.sid === sid);
   });
 
   document.getElementById('mode-tbody').innerHTML = '<tr><td colspan="7" class="loading">Loading…</td></tr>';
@@ -403,7 +403,7 @@ function computePredictions(sessions) {
     const S=obs.outcome?.rank_pct??0.5;
     modeElo[mode]=elo+Kf(modeN[mode]+1)*(S-E);
     modeN[mode]++;
-    return {id:obs.id||obs.session_id,mode,predicted:parseFloat(E.toFixed(3)),actual:S,delta:parseFloat((S-E).toFixed(3))};
+    return {id:obs.session_id,mode,predicted:parseFloat(E.toFixed(3)),actual:S,delta:parseFloat((S-E).toFixed(3))};
   }).filter(Boolean);
 }
 
