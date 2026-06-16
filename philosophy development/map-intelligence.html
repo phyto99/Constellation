@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Map Intelligence — Topology, Strategy Patterns & Bot Calibration</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.6;padding:0}
+header{border-bottom:2px solid #000;padding:20px 28px 14px;position:sticky;top:0;background:#fff;z-index:10}
+.hd-title{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:4px}
+.hd-main{font-size:20px;font-weight:700;line-height:1.2;margin-bottom:6px}
+.hd-sub{font-size:11px;color:#555;max-width:740px;line-height:1.6}
+.nav{display:flex;gap:20px;margin-top:12px;border-top:1px solid #eee;padding-top:10px;flex-wrap:wrap}
+.nav a{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;text-decoration:none;padding:3px 0;border-bottom:2px solid transparent}
+.nav a:hover,.nav a.active{color:#000;border-bottom-color:#000}
+
+.content{max-width:1000px;margin:0 auto;padding:32px 28px 60px}
+.section{margin-bottom:52px}
+.section-label{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:6px}
+.section-title{font-size:18px;font-weight:700;margin-bottom:14px;line-height:1.3}
+.section-body{font-size:12px;color:#333;line-height:1.8;max-width:700px}
+.section-body p{margin-bottom:12px}
+.section-body strong{color:#000}
+.rule{border:none;border-top:1px solid #eee;margin:36px 0}
+
+/* ── TAGS ── */
+.asserted{display:inline-block;font-size:8px;font-weight:700;color:#d97706;border:1px solid #d97706;padding:0 4px;letter-spacing:0.5px;vertical-align:middle;margin-left:4px}
+.future{display:inline-block;font-size:8px;font-weight:700;color:#7c3aed;border:1px solid #7c3aed;padding:0 4px;letter-spacing:0.5px;vertical-align:middle;margin-left:4px}
+.phase-chip{display:inline-block;font-size:8px;font-weight:700;padding:1px 7px;border:1px solid;text-transform:uppercase;letter-spacing:1px;vertical-align:middle}
+
+/* ── TABLE ── */
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:11px}
+th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px 10px;border-bottom:2px solid #000;text-align:left;background:#f5f5f5}
+td{padding:9px 10px;border-bottom:1px solid #eee;vertical-align:top;line-height:1.6}
+tr:last-child td{border-bottom:none}
+
+/* ── BOT CARDS ── */
+.bot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px;margin:16px 0}
+.bot-card{border:1px solid #ddd;padding:14px 16px;position:relative}
+.bot-name{font-size:14px;font-weight:700;letter-spacing:2px;margin-bottom:2px}
+.bot-target{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:8px}
+.bot-body{font-size:11px;color:#333;line-height:1.6;margin-bottom:8px}
+.bot-deploy{font-size:10px;color:#555;border-top:1px solid #eee;padding-top:6px;margin-top:6px;line-height:1.6}
+.bot-deploy strong{color:#000;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.bot-signal{font-size:9px;color:#888;font-style:italic;margin-top:4px}
+
+/* ── MAP TOPOLOGY ── */
+.map-property-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin:16px 0}
+.map-prop{border:1px solid #eee;padding:10px 12px}
+.prop-name{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:4px}
+.prop-body{font-size:11px;color:#333;line-height:1.5}
+
+/* ── PIPELINE ── */
+.pipeline{display:flex;flex-direction:column;gap:0;margin:16px 0}
+.pipe-step{display:grid;grid-template-columns:32px 1fr 120px;gap:12px;align-items:start;padding:10px 0;border-bottom:1px solid #eee}
+.pipe-step:last-child{border-bottom:none}
+.pipe-num{font-size:14px;font-weight:700;color:#ccc;text-align:center;padding-top:2px}
+.pipe-body{}
+.pipe-title{font-size:12px;font-weight:700;margin-bottom:3px}
+.pipe-desc{font-size:11px;color:#555;line-height:1.6}
+.pipe-status{text-align:right;padding-top:3px}
+
+/* ── SIGNAL SPEC ── */
+.signal-block{background:#fafafa;border-left:3px solid #000;padding:10px 14px;margin:10px 0;font-family:'Courier New',monospace;font-size:10px;line-height:1.8}
+.signal-block .sk{color:#555}
+.signal-block .sv{color:#000}
+.signal-block .sc{color:#999}
+
+/* ── FORMULA ── */
+.formula{background:#f5f5f5;border:1px solid #ddd;padding:10px 14px;margin:10px 0;font-family:'Courier New',monospace;font-size:11px;color:#000}
+
+@media (max-width:768px){
+  header{padding:14px 14px 10px;position:relative}
+  .content{padding:20px 14px 40px}
+  .hd-main{font-size:16px}
+  .bot-grid,.map-property-grid{grid-template-columns:1fr}
+  .pipe-step{grid-template-columns:24px 1fr;grid-template-rows:auto auto}
+  .pipe-status{grid-column:2;text-align:left}
+  table{font-size:10px}
+  th,td{padding:6px 8px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd-title">Architectural Layer — Map × Student × Bot</div>
+  <div class="hd-main">Map Intelligence — Topology, Strategy Patterns & Bot Calibration</div>
+  <div class="hd-sub">The map is not just a config parameter. It is a structured environment with known optimal strategies, observable human pattern distributions, and the ability to be configured to maximally develop any specific student. This document defines what the system needs to know about maps and how to use that knowledge.</div>
+  <nav class="nav">
+    <a href="#map-as-variable" class="active">Map as Variable</a>
+    <a href="#topology">Topology Registry</a>
+    <a href="#patterns">Strategy Patterns</a>
+    <a href="#bot-profiles">Bot Profiles</a>
+    <a href="#composition">Student × Map × Bot</a>
+    <a href="#ledger-additions">Ledger Additions</a>
+    <a href="#pipeline">Build Pipeline</a>
+  </nav>
+</header>
+
+<div class="content">
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- 1. MAP AS VARIABLE                                                 -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="section" id="map-as-variable">
+  <div class="section-label">Section 1</div>
+  <div class="section-title">The Map as a Structured Variable</div>
+  <div class="section-body">
+    <p>Currently, <code>map_idx</code> is a single integer in the config vector — treated identically to <code>round_length_s</code> or <code>steals</code>. The system knows it used map 3, but knows nothing <em>about</em> map 3. This is the same as a chess engine that records which board was used but doesn't know the rules vary by board.</p>
+    <p>A map is a <strong>structured environment</strong> with topological properties that determine which cognitive modes are favored, which human strategies emerge, and which bot behaviors produce the most informative sessions. The compiler must understand this to select the right map for a given student's development target.</p>
+    <p><strong>The current blind spot:</strong> a student with high QTY Elo placed on a map where quantity play is impossible gets a contaminated signal — the outcome reflects map topology, not cognitive skill. The system currently cannot distinguish these.</p>
+    <p>The resolution requires three layers: a <strong>topology registry</strong> (what is each map), a <strong>strategy pattern library</strong> (what humans do on each map), and a <strong>bot calibration system</strong> (how to create the maximally informative opponent for each student-map combination).</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- 2. TOPOLOGY REGISTRY                                               -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="section" id="topology">
+  <div class="section-label">Section 2</div>
+  <div class="section-title">Map Topology Registry — What the System Needs to Know</div>
+  <div class="section-body">
+    <p>Every map needs a topology record. This is not derived from play data — it is structural, derivable from the map definition itself. Some properties can be computed algorithmically; others require manual annotation.</p>
+  </div>
+
+  <div class="map-property-grid">
+    <div class="map-prop">
+      <div class="prop-name">Symmetry Class</div>
+      <div class="prop-body">Rotationally symmetric, bilaterally symmetric, or asymmetric. Symmetric maps make QTY/SPT strategies predictable across player positions. Asymmetric maps favor positional reasoning and force role differentiation.</div>
+    </div>
+    <div class="map-prop">
+      <div class="prop-name">HQ Geometry</div>
+      <div class="prop-body">How far are HQs from each other, from the map center, and from neutral resource clusters? Short HQ distance favors FORTRESS play. Long HQ distance favors SPT/distance-seeking strategies.</div>
+    </div>
+    <div class="map-prop">
+      <div class="prop-name">Resource Density</div>
+      <div class="prop-body">How many capturable positions exist, and how clustered or dispersed are they? High-density maps favor QTY (capture everything). Sparse maps force selective sequencing and spatial planning.</div>
+    </div>
+    <div class="map-prop">
+      <div class="prop-name">Chokepoint Count</div>
+      <div class="prop-body">How many bottleneck positions exist where territory control is decisive? High chokepoint maps reward spatial occupation and position holding. Low chokepoint maps reward open maneuvering.</div>
+    </div>
+    <div class="map-prop">
+      <div class="prop-name">Mode Affinity Vector</div>
+      <div class="prop-body">A [6]-dim vector over [QTY, SPT, FRT, DST, WRM, INV] rating how much each mode's scoring strategy is viable on this map. Example: a tight, HQ-centric map: [0.4, 0.6, 0.9, 0.3, 0.5, 0.7]. Used by compiler to select maps that match the target mode.</div>
+    </div>
+    <div class="map-prop">
+      <div class="prop-name">Opening Divergence</div>
+      <div class="prop-body">Do most players open similarly, or do opening moves diverge widely? Low-divergence maps have a dominant first move (easy to identify; tests whether students find it). High-divergence maps produce more varied data per session.</div>
+    </div>
+    <div class="map-prop">
+      <div class="prop-name">Theoretical Optimal</div>
+      <div class="prop-body">The provably or empirically best strategy for each mode on this map. Derived from top-percentile sessions or from simulation. Used as the THEORETICIAN bot's playbook and as the baseline for measuring student gap.</div>
+    </div>
+    <div class="map-prop">
+      <div class="prop-name">Difficulty Rating per Mode</div>
+      <div class="prop-body">How much does this map add to cognitive load for each mode? A map where QTY is easy (many close clusters) vs where QTY is hard (resources dispersed) should affect Elo weighting differently. <span class="asserted">NOT YET ASSERTED</span> — needs empirical data from Phase 1.</div>
+    </div>
+  </div>
+
+  <div class="section-body" style="margin-top:16px">
+    <p>The topology record is stored as a static JSON file (<code>maps/topology.json</code>), updated when new maps are added, and loaded by the compiler at session generation time. It does not go in the Ledger — it is environmental metadata, not an observation.</p>
+  </div>
+
+  <div class="signal-block">
+<span class="sc">// maps/topology.json — structure</span>
+<span class="sk">{</span>
+  <span class="sk">"0": {</span>
+    <span class="sk">"name":</span> <span class="sv">"Map Alpha"</span>,
+    <span class="sk">"symmetry":</span> <span class="sv">"bilateral"</span>,
+    <span class="sk">"hq_distance_norm":</span> <span class="sv">0.72</span>,        <span class="sc">// 0=adjacent 1=opposite corners</span>
+    <span class="sk">"resource_density":</span> <span class="sv">0.61</span>,          <span class="sc">// 0=sparse 1=saturated</span>
+    <span class="sk">"chokepoints":</span> <span class="sv">3</span>,
+    <span class="sk">"mode_affinity":</span> <span class="sv">[0.7, 0.5, 0.8, 0.4, 0.5, 0.6]</span>,  <span class="sc">// [qty,spt,frt,dst,wrm,inv]</span>
+    <span class="sk">"opening_divergence":</span> <span class="sv">0.4</span>,          <span class="sc">// 0=everyone plays the same, 1=fully random</span>
+    <span class="sk">"theoretical_optimal":</span> <span class="sv">{ "qty": [...], "spt": [...] }</span>,
+    <span class="sk">"difficulty":</span> <span class="sv">{ "qty": 0.45, "spt": 0.65, "frt": 0.30 }</span>
+  <span class="sk">}</span>
+<span class="sk">}</span>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- 3. STRATEGY PATTERNS                                               -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="section" id="patterns">
+  <div class="section-label">Section 3</div>
+  <div class="section-title">Strategy Pattern Library — What Humans Actually Do</div>
+  <div class="section-body">
+    <p>Beyond the topology, the system needs to know what human players actually do when placed on each map. This is empirical knowledge accumulated from the Ledger — not derivable from the map structure alone.</p>
+    <p>The pattern library serves two purposes: it tells the compiler what <em>this</em> student's behavior on this map looks like vs. what most students do, and it gives the bot calibration system enough context to create a bot that plays against the student's specific tendencies — not just against generic play.</p>
+  </div>
+
+  <table>
+    <thead><tr><th>Pattern Dimension</th><th>What it measures</th><th>How it's captured</th><th>How it's used</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>First-move distribution</strong></td>
+        <td>Where do most players send their first piece on this map? What % claim the central resource vs. the HQ-adjacent resource vs. the far edge?</td>
+        <td>Round 1, move 1 position from Ledger records. Aggregated across all sessions on map_idx=X.</td>
+        <td>Bot can be configured to either play the statistically dominant first move (THEORETICIAN) or to counter the student's documented first move (CONTESTER).</td>
+      </tr>
+      <tr>
+        <td><strong>Phase distribution</strong></td>
+        <td>How does the average player's board position evolve round-by-round? Do most players expand in early rounds and consolidate later, or hold and then push?</td>
+        <td>round_snapshots from Ledger → per-round rank_pct curves, averaged across all students on this map.</td>
+        <td>Identifies the typical tempo of the map. A student who is significantly ahead or behind the average tempo curve at round 3 is showing map-specific tempo skill or deficit.</td>
+      </tr>
+      <tr>
+        <td><strong>Common archetypes</strong></td>
+        <td>On this map, what strategic archetypes emerge? e.g. "Rusher" (early all-in expansion), "Turtler" (consolidate own territory), "HQ Sniper" (ignore resources, target opponent HQ), "Opportunist" (react to opponent moves).</td>
+        <td>Session-level behavioral signals: early_expansion_rate, hq_attack_frequency, contested_zone_entry, reactive_vs_proactive_ratio.</td>
+        <td>Student gets tagged with their dominant archetype on each map. The bot is selected to counter or mirror that archetype depending on the development target.</td>
+      </tr>
+      <tr>
+        <td><strong>Student map fingerprint</strong></td>
+        <td>For a specific student: how does their play on map X differ from their play overall? Do they default to the same strategy regardless of map, or do they adapt?</td>
+        <td>Compare per-map behavioral signals to student's overall mean. High deviation = map-aware player. Low deviation = map-blind player (applies same strategy everywhere).</td>
+        <td>Map-blind players need maps that punish their default strategy. Map-aware players need more complex maps that force higher-order adaptation. Compiler uses this signal in map selection.</td>
+      </tr>
+      <tr>
+        <td><strong>Chokepoint behavior</strong></td>
+        <td>When a chokepoint is available, what % of players take it vs. bypass it? How long do players who take chokepoints hold them?</td>
+        <td>Requires positional data in Ledger (currently not stored — needs round_snapshots to include position data). <span class="future">FUTURE</span></td>
+        <td>Identifies whether students understand positional leverage. A student who consistently bypasses high-value chokepoints is showing SPT deficit on positional maps.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="section-body" style="margin-top:16px">
+    <p><strong>Privacy note:</strong> Pattern data is aggregated at the cohort level before being used in compiler decisions. The system does not expose "what most students do" to students — only to the admin panel and to bot calibration. The pattern library is a system resource, not a student-facing feature.</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- 4. BOT STRATEGY PROFILES                                           -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="section" id="bot-profiles">
+  <div class="section-label">Section 4</div>
+  <div class="section-title">Bot Strategy Profiles — Six Personalities for Maximum Development</div>
+  <div class="section-body">
+    <p>The current system treats bot configuration as a single parameter: <code>bot_aggression</code> (0–100). This is a scalar on a behavior that needs to be a vector. Aggression is one dimension of bot strategy. The others are: target selection logic, tempo, and adaptive vs. fixed behavior.</p>
+    <p>The following six profiles cover the full space of what a bot can do to develop a specific student. Each is defined by its <em>development target</em> — the cognitive dimension in the student it is designed to stress-test.</p>
+  </div>
+
+  <div class="bot-grid">
+    <div class="bot-card">
+      <div class="bot-name">MIRROR</div>
+      <div class="bot-target">Target: self-model accuracy</div>
+      <div class="bot-body">The bot replicates the student's dominant strategy from their Ledger history. If the student always starts with a northern expansion, the bot opens with a northern expansion. The student is playing against a projection of themselves.</div>
+      <div class="bot-deploy">
+        <strong>Deploy when:</strong> student has a strong, consistent strategy and the question is whether that strategy is fundamentally sound or exploitable. The student must either defeat their own strategy (validating its weaknesses) or watch it beat them (validating its strength).<br>
+        <span class="bot-signal">Signal: rank_pct vs. own historical baseline on this map. If the MIRROR bot beats the student more often than the student beats the bot, the strategy has an exploitable weakness.</span>
+      </div>
+    </div>
+    <div class="bot-card">
+      <div class="bot-name">CONTESTER</div>
+      <div class="bot-target">Target: adaptability under pressure</div>
+      <div class="bot-body">The bot specifically targets and contests the zones the student is developing — not the strategically optimal zones. If the student typically develops the right side of the map, the bot occupies and defends the right side, forcing the student to develop somewhere they don't usually go.</div>
+      <div class="bot-deploy">
+        <strong>Deploy when:</strong> student is map-blind (plays the same opening regardless of map) or shows low variance in strategy. The contester forces variation — the student cannot execute their default plan.<br>
+        <span class="bot-signal">Signal: strategy_shift_speed, alternative_axis_discovery. Students who find new approaches quickly are showing genuine adaptability. Students who keep trying the same approach are showing rigidity.</span>
+      </div>
+    </div>
+    <div class="bot-card">
+      <div class="bot-name">ACCELERANT</div>
+      <div class="bot-target">Target: tempo and decision speed</div>
+      <div class="bot-body">The bot plays at maximum aggression in early rounds — claiming as many positions as possible as fast as possible. By round 3, the board state is already contested. The student must respond at a tempo faster than they are comfortable with.</div>
+      <div class="bot-deploy">
+        <strong>Deploy when:</strong> student shows slow early development (round 1–2 rank_pct below average) or high move_pool_rate unused. Also ideal for students who play well when they set the pace but struggle when the opponent dictates tempo.<br>
+        <span class="bot-signal">Signal: early_response_latency, round_1_rank_pct. Students who adapt and match the accelerant's pace are showing temporal flexibility.</span>
+      </div>
+    </div>
+    <div class="bot-card">
+      <div class="bot-name">TURTLER</div>
+      <div class="bot-target">Target: initiative and aggression</div>
+      <div class="bot-body">The bot plays defensively — consolidating a small territory and holding it, rather than expanding. The student must be the aggressor. There is no external pressure forcing action; the student must generate their own momentum.</div>
+      <div class="bot-deploy">
+        <strong>Deploy when:</strong> student is reactive (low proactive_vs_reactive ratio) or when prior sessions show high variance that might be due to external pressure masking underlying skill. The turtler removes external forcing and exposes the student's natural tempo.<br>
+        <span class="bot-signal">Signal: proactive_expansion_rate, initiative_score. A student who expands effectively against a turtler is showing self-generated strategic momentum.</span>
+      </div>
+    </div>
+    <div class="bot-card">
+      <div class="bot-name">THEORETICIAN</div>
+      <div class="bot-target">Target: skill ceiling measurement</div>
+      <div class="bot-body">The bot plays the theoretical optimal strategy for this map and mode, derived from the strategy pattern library. It is not adaptive — it executes the best known fixed strategy. The gap between the student's performance and the theoretician's performance IS the map-specific skill gap.</div>
+      <div class="bot-deploy">
+        <strong>Deploy when:</strong> the student has high session count on this map (≥ 6 sessions) and the compiler needs a clean skill ceiling measurement. Not for early sessions — the student needs enough exposure that the comparison is meaningful.<br>
+        <span class="bot-signal">Signal: rank_pct vs. theoretician is the map-mode skill gap signal. Used in Phase 2 BT transfer calculations.</span>
+      </div>
+    </div>
+    <div class="bot-card">
+      <div class="bot-name">ADAPTOR</div>
+      <div class="bot-target">Target: meta-cognitive flexibility</div>
+      <div class="bot-body">The bot changes strategy mid-session based on what the student is doing. If the student is expanding north, the bot shifts to contest north. If the student shifts south, the bot follows. The student is not playing against a fixed strategy — they are playing against an opponent who is reading them in real time.</div>
+      <div class="bot-deploy">
+        <strong>Deploy when:</strong> student has high experience on this map and simple strategies no longer produce information. The adaptor tests whether the student can reason about an opponent who is reasoning about them — the highest-order spatial cognition available in this game.<br>
+        <span class="bot-signal">Signal: counter_detection_speed, strategy_oscillation. The student who recognizes the adaptor is adapting and responds with deception (decoy expansion) is showing meta-game reasoning.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- 5. STUDENT × MAP × BOT COMPOSITION                                -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="section" id="composition">
+  <div class="section-label">Section 5</div>
+  <div class="section-title">The Perfect Session — Composing Student × Map × Bot</div>
+  <div class="section-body">
+    <p>The compiler's current job is: select mode → build config vector. The future compiler's job is: select mode → select map that best exposes that mode → select bot strategy that maximally develops the student on that map in that mode. Three decisions, not one.</p>
+    <p>The composition principle: <strong>the best session is the one that maximizes expected KL divergence between the student's prior model and their posterior model after the session.</strong> Every component choice (map, bot type, config parameters) is an instrument for moving the student's cognitive model.</p>
+  </div>
+
+  <table>
+    <thead><tr><th>Student Profile</th><th>Target Mode</th><th>Map Selection Logic</th><th>Bot Profile</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Zero-session student</strong></td>
+        <td>QTY (calibration)</td>
+        <td>High-resource-density, symmetric, low chokepoints — minimum environmental complexity</td>
+        <td>TURTLER at aggression=30</td>
+        <td>Let the student explore freely. Turtler removes pressure. Symmetric map removes positional confusion. Clean baseline capture.</td>
+      </tr>
+      <tr>
+        <td><strong>Map-blind student</strong> (same opening always)</td>
+        <td>Any deficit mode</td>
+        <td>Asymmetric map that makes their default opening suboptimal</td>
+        <td>CONTESTER</td>
+        <td>The map itself provides structural pressure against their default strategy. The contester adds behavioral pressure. Student must adapt twice.</td>
+      </tr>
+      <tr>
+        <td><strong>High QTY, low SPT</strong></td>
+        <td>SPT</td>
+        <td>High-chokepoint, sparse-resource map — positional leverage is the main instrument</td>
+        <td>THEORETICIAN (SPT optimal)</td>
+        <td>Student's quantity instinct is useless on this map. The theoretician shows what optimal SPT play looks like. The gap is the SPT deficit signal.</td>
+      </tr>
+      <tr>
+        <td><strong>High-variance student</strong> (inconsistent performance)</td>
+        <td>Student's strongest mode</td>
+        <td>Their highest-frequency map (most familiar environment)</td>
+        <td>TURTLER</td>
+        <td>Remove all external forcing. Familiar map, passive opponent. Variance in this condition = psychological inconsistency, not skill inconsistency. Clean diagnosis.</td>
+      </tr>
+      <tr>
+        <td><strong>Expert student</strong> (high Elo, low velocity)</td>
+        <td>Any mode</td>
+        <td>Novel map (low map_idx history) — unfamiliar topology</td>
+        <td>ADAPTOR</td>
+        <td>Expert has mastered all familiar maps. New map breaks their cached strategies. Adaptor forces them to reason meta-cognitively. Maximum KL gain available.</td>
+      </tr>
+      <tr>
+        <td><strong>RADICAL zone student</strong> (compiler targets deficit)</td>
+        <td>Deficit mode</td>
+        <td>Map with HIGH affinity for the deficit mode — maximum exposure to what they're weak at</td>
+        <td>MIRROR (their dominant mode strategy, now wrong context)</td>
+        <td>Student enters their strongest strategy into a mode that doesn't reward it, AND plays against a bot that does exactly what they do. Double displacement: mode is wrong, strategy is mirrored.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="section-body" style="margin-top:16px">
+    <p>The composition table above is a heuristic framework. The real compiler should eventually optimize this directly by minimizing the expected entropy of the student's posterior model — which requires fitted parameters (Phase 3). Until then, the table gives deterministic, principled choices that are better than the current single-axis optimization.</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- 6. LEDGER ADDITIONS                                                -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="section" id="ledger-additions">
+  <div class="section-label">Section 6</div>
+  <div class="section-title">What the Ledger Needs — New Signals for Map Intelligence</div>
+  <div class="section-body">
+    <p>The current Ledger records outcome and config vector. Map intelligence requires behavioral signals that go into the session record. These are observed quantities — they go in the Ledger as part of the session observation, not as derived views.</p>
+  </div>
+
+  <div class="signal-block">
+<span class="sc">// New fields in session observation (appended to existing record)</span>
+<span class="sk">"map_signals"</span>: {
+  <span class="sk">"bot_profile"</span>: <span class="sv">"CONTESTER"</span>,          <span class="sc">// which bot strategy was used</span>
+  <span class="sk">"opening_position"</span>: <span class="sv">[x, y]</span>,          <span class="sc">// first move target position</span>
+  <span class="sk">"archetype_tag"</span>: <span class="sv">"rusher"</span>,             <span class="sc">// inferred from behavioral signals</span>
+  <span class="sk">"strategy_shift_count"</span>: <span class="sv">2</span>,             <span class="sc">// how many times student changed approach</span>
+  <span class="sk">"chokepoint_claim_rate"</span>: <span class="sv">0.67</span>,         <span class="sc">// fraction of available chokepoints claimed</span>
+  <span class="sk">"early_rank_pct"</span>: <span class="sv">0.42</span>,               <span class="sc">// rank at round floor(rounds/3)</span>
+  <span class="sk">"tempo_delta"</span>: <span class="sv">-0.15</span>,                 <span class="sc">// student tempo vs map average (neg=slower)</span>
+  <span class="sk">"map_affinity_match"</span>: <span class="sv">0.78</span>            <span class="sc">// how well this map matched the target mode</span>
+}
+  </div>
+
+  <table>
+    <thead><tr><th>Signal</th><th>Definition</th><th>Layer</th><th>Phase</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>bot_profile</code></td>
+        <td>Which of the 6 bot strategies was used in this session</td>
+        <td>Ledger (raw)</td>
+        <td><span class="phase-chip" style="border-color:#2563eb;color:#2563eb">Phase 1</span></td>
+      </tr>
+      <tr>
+        <td><code>archetype_tag</code></td>
+        <td>Student's dominant archetype (rusher, turtler, sniper, opportunist) inferred from behavioral signals</td>
+        <td>Ledger (raw signal)</td>
+        <td><span class="phase-chip" style="border-color:#2563eb;color:#2563eb">Phase 1</span></td>
+      </tr>
+      <tr>
+        <td><code>strategy_shift_count</code></td>
+        <td>How many times the student changed their primary strategic focus during the session</td>
+        <td>Ledger (raw)</td>
+        <td><span class="phase-chip" style="border-color:#2563eb;color:#2563eb">Phase 1</span></td>
+      </tr>
+      <tr>
+        <td><code>tempo_delta</code></td>
+        <td>Student's expansion tempo relative to map baseline (derived from pattern library)</td>
+        <td>Layer 1 (derived view) — needs pattern library</td>
+        <td><span class="phase-chip" style="border-color:#059669;color:#059669">Phase 2</span></td>
+      </tr>
+      <tr>
+        <td><code>map_elo[map_idx]</code></td>
+        <td>Per-map Elo separate from mode Elo — tracks map-specific skill accumulation</td>
+        <td>Layer 1 (derived) — 6-mode × N-map matrix per student</td>
+        <td><span class="phase-chip" style="border-color:#059669;color:#059669">Phase 2</span></td>
+      </tr>
+      <tr>
+        <td><code>bot_vs_student_gap</code></td>
+        <td>THEORETICIAN bot's final score minus student's final score, normalized</td>
+        <td>Ledger (raw) — only meaningful when THEORETICIAN used</td>
+        <td><span class="phase-chip" style="border-color:#059669;color:#059669">Phase 2</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<hr class="rule">
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- 7. BUILD PIPELINE                                                  -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="section" id="pipeline">
+  <div class="section-label">Section 7</div>
+  <div class="section-title">Build Pipeline — What Gets Built When</div>
+
+  <div class="pipeline">
+    <div class="pipe-step">
+      <div class="pipe-num">1</div>
+      <div class="pipe-body">
+        <div class="pipe-title">Map Topology Registry (manual + algorithmic)</div>
+        <div class="pipe-desc">Create <code>maps/topology.json</code> with structural properties for each existing map. Mode affinity vectors require playtesting annotation for now; algorithmic derivation from map geometry is a Phase 2 task.</div>
+      </div>
+      <div class="pipe-status"><span class="phase-chip" style="border-color:#2563eb;color:#2563eb">Phase 1</span></div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">2</div>
+      <div class="pipe-body">
+        <div class="pipe-title">Bot profile parameter set in compiler output</div>
+        <div class="pipe-desc">The compiler selects a bot profile name (one of 6) and passes it to server.js with the session config. server.js uses it to override <code>bot_type</code> and <code>bot_aggression</code> to match the profile. Profiles stored in <code>compiler.js</code> as constants.</div>
+      </div>
+      <div class="pipe-status"><span class="phase-chip" style="border-color:#2563eb;color:#2563eb">Phase 1</span></div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">3</div>
+      <div class="pipe-body">
+        <div class="pipe-title">Map selection added to compiler</div>
+        <div class="pipe-desc">Compiler reads topology.json and selects the map with highest <code>mode_affinity[target_mode]</code> subject to recency penalty (don't repeat the last 3 maps). Currently map_idx is passed through unchanged from admin or defaulted.</div>
+      </div>
+      <div class="pipe-status"><span class="phase-chip" style="border-color:#2563eb;color:#2563eb">Phase 1</span></div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">4</div>
+      <div class="pipe-body">
+        <div class="pipe-title">Behavioral signal extraction from session records</div>
+        <div class="pipe-desc">Extract <code>archetype_tag</code> and <code>strategy_shift_count</code> from round_snapshots and add to Ledger observation. Requires defining the signal extraction formulas and wiring them into <code>_writeSessionObservations</code>.</div>
+      </div>
+      <div class="pipe-status"><span class="phase-chip" style="border-color:#2563eb;color:#2563eb">Phase 1</span></div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">5</div>
+      <div class="pipe-body">
+        <div class="pipe-title">Strategy pattern library (aggregate from Ledger)</div>
+        <div class="pipe-desc">After ≥ 20 sessions per map, aggregate behavioral signals into per-map pattern records. This powers tempo_delta, opening_distribution, and chokepoint behavior comparisons. A nightly or on-demand compute job, not real-time.</div>
+      </div>
+      <div class="pipe-status"><span class="phase-chip" style="border-color:#059669;color:#059669">Phase 2</span></div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">6</div>
+      <div class="pipe-body">
+        <div class="pipe-title">Per-student map Elo matrix</div>
+        <div class="pipe-desc">Extend the compiler's Elo computation to produce a [modes × maps] matrix per student rather than a [modes] vector. Requires enough per-map session count for each student — gated behind Phase 2 data accumulation.</div>
+      </div>
+      <div class="pipe-status"><span class="phase-chip" style="border-color:#059669;color:#059669">Phase 2</span></div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">7</div>
+      <div class="pipe-body">
+        <div class="pipe-title">THEORETICIAN bot from theoretical optimal</div>
+        <div class="pipe-desc">Once theoretical optimal strategies are documented per map per mode, the THEORETICIAN bot executes them. This may require the game's bot AI to accept a move-sequence directive rather than a scalar aggression parameter — a server.js game engine change.</div>
+      </div>
+      <div class="pipe-status"><span class="phase-chip" style="border-color:#059669;color:#059669">Phase 2</span></div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">8</div>
+      <div class="pipe-body">
+        <div class="pipe-title">Adaptive bot (ADAPTOR profile)</div>
+        <div class="pipe-desc">The ADAPTOR bot requires real-time read of the student's current session state and strategy inference mid-game. This is the most technically demanding bot profile — it needs in-game signal processing, not just session-level configuration.</div>
+      </div>
+      <div class="pipe-status"><span class="phase-chip" style="border-color:#7c3aed;color:#7c3aed">Phase 3</span></div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">9</div>
+      <div class="pipe-body">
+        <div class="pipe-title">Full composition optimization (argmax E[KL] over map × bot)</div>
+        <div class="pipe-desc">The compiler optimizes all three dimensions simultaneously — mode, map, bot profile — using fitted parameters from Phase 3. Until then, heuristic rules from the composition table in Section 5 approximate the optimization.</div>
+      </div>
+      <div class="pipe-status"><span class="phase-chip" style="border-color:#e11d48;color:#e11d48">Phase ∞</span></div>
+    </div>
+  </div>
+
+  <div class="formula">
+compiler_session_v2(student) =
+  mode   ← argmax(deficit×0.50 + staleness×0.30 + gap×0.20)       // existing
+  map    ← argmax(topology[m].mode_affinity[mode] − recency_penalty[m])  // Phase 1
+  bot    ← select_profile(student.archetype, student.map_history[map], zone)  // Phase 1
+  config ← MODE_DEFAULTS[mode] adjusted for map.difficulty[mode]    // Phase 1
+  return { mode, map_idx: map, bot_profile: bot, config_vector, zone }
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<script>
+const sections = document.querySelectorAll('.section[id]');
+const navLinks  = document.querySelectorAll('.nav a');
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id));
+    }
+  });
+}, { threshold: 0.25 });
+sections.forEach(s => obs.observe(s));
+</script>
+</body>
+</html>

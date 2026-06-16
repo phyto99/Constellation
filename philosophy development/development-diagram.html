@@ -366,7 +366,7 @@ const TEMPLATES={
   ],
   inv:[
     {name:'MIRROR',locked:['inversion structure (exact)','reference session'],free:['inversion magnitude'],constraint:'Exact inverse of last session — max reversal learning signal'},
-    {name:'NEGATIVE SPACE',locked:['all multipliers negative'],free:['magnitude per unit'],constraint:'Everything costs points — restraint is the correct strategy'},
+    {name:'NEGATIVE SPACE',locked:['exactly one axis inverted (dominant from Ledger)','all others positive'],free:['inversion magnitude','which axis'],constraint:'Dominant axis costs points — unlearn your best move, find value through the rest'},
     {name:'HIDDEN OBJECTIVE',locked:['shuffle mechanism','server truth'],free:['shuffle distance','ithkuil overlay'],constraint:'Fisher-Yates shuffle — deduction from score feedback required'},
   ],
 };
