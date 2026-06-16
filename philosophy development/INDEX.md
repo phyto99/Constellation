@@ -155,6 +155,15 @@ Purpose: Reference index for all philosophy/architecture documents. Do not modif
 
 ---
 
+## Era 10 — Opacity Model
+*2026-06-16. Resolves the philosophical question of what the system is actually justified in withholding, and why.*
+
+| File | What it is | Accuracy |
+|------|-----------|---------|
+| `opacity-model.html` | Position paper on the system's opacity architecture. Core argument: opacity is justified only when disclosure would change what the measurement measures — not merely when it would change the student's experience. INVERSION architectural silence is the only opacity that passes this test precisely. Zone vocabulary must remain shared (community formation mechanism — per-player codenames would destroy virality). Alpha students transmitting zone meanings to friends is the singularity trajectory functioning, not a failure to be prevented. NDA is wrong instrument: legally problematic with minors, culturally punitive, unnecessary when Alpha application already selects for understanding. Six design principles: (1) the measurement-corruption test, (2) INVERSION as the model, (3) vocabulary as community asset, (4) knowledge transfer as trajectory, (5) application as cultural mechanism, (6) terminal message survives disclosure. What changes in practice: nothing architectural — the current implementation is not wrong. The opacity model needed justification, not correction. | **Current — doctrine** |
+
+---
+
 ## Build Order
 - **Phase −1** (before everything, per Era 3): Start the ledger. Recording must precede every other phase — observations not recorded during Phases 0–1 can never be recovered. Recording is not endorsement; the ledger has no opinion.
 - **Phase 0** (now): Silent INVERSION, elo_velocity tracking, forgetting measurement, template history
