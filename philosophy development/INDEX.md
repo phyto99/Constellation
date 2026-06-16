@@ -135,6 +135,15 @@ Purpose: Reference index for all philosophy/architecture documents. Do not modif
 
 ---
 
+## Era 8 — Identity, Authentication & Mixed-Consent Architecture
+*2026-06-16. Answers: what happens when a player doesn't sign in, how do invited friends' data work, what auth providers to implement and in what order.*
+
+| File | What it is | Accuracy |
+|------|-----------|---------|
+| `identity-auth.html` | Full identity architecture. Four tiers: Tier 0 Anonymous (session token, no PII, no consent required), Tier 1 Named Guest (current default — name stored in localStorage, model accumulates but not surfaced to student), Tier 2 Registered (Google OAuth2, age gate, explicit consent, cross-device), Tier 3 School SSO (Clever/ClassLink/Google Workspace — DPA covers consent, no age gate). Core rule: consent affects what the student sees, not what the Ledger records. Every tier contributes to session outcomes. Mixed-consent sessions handled per-player: each player's record is independently attributed; one player's anonymity never blocks another's model. Auth provider stack ordered by ROI: Clever first (70% of US K-12, one integration unlocks school market), Google OAuth2 with hd-field school/consumer detection, ClassLink, Microsoft, email/password. Join flow prototype (pre-game identity screen). Ledger schema additions: identity_tier, consent_source, auth_provider_id, grade_level. _students.json additions: auth_providers[], consent{}, age_verified, pending_parental_consent. Server onJoin diff: JWT verification path vs named-guest path vs anonymous path. Build spec: 10 items ordered by impact, from anon token (now, 30 min) through Clever integration (month 3). Package list: passport, passport-google-oauth20, jsonwebtoken, express-session, passport-clever. | **Architecture complete — not yet built** |
+
+---
+
 ## Build Order
 - **Phase −1** (before everything, per Era 3): Start the ledger. Recording must precede every other phase — observations not recorded during Phases 0–1 can never be recovered. Recording is not endorsement; the ledger has no opinion.
 - **Phase 0** (now): Silent INVERSION, elo_velocity tracking, forgetting measurement, template history
