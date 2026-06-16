@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Connections — Constellation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0a;--surface:#111;--surface2:#161616;--border:#1e1e1e;--border2:#2a2a2a;
+  --text:#e8e8e8;--dim:#555;--faint:#2a2a2a;
+  --google:#4285F4;--clever:#7c3aed;--discord:#5865F2;--spotify:#1DB954;--steam:#c7d5e0;
+  --observer:#d97706;--radical:#dc2626;--alpha:#a78bfa;--inv:#059669;
+}
+body{background:var(--bg);color:var(--text);font-family:Arial,sans-serif;font-size:12px;line-height:1.6;min-height:100vh}
+
+/* ── header ── */
+.header{padding:28px 32px 20px;border-bottom:1px solid var(--border)}
+.header-label{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.header-title{font-size:20px;font-weight:700;letter-spacing:-0.5px;margin-bottom:4px}
+.header-sub{font-size:10px;color:var(--dim);line-height:1.7;max-width:540px}
+
+/* ── layout ── */
+.main{max-width:780px;margin:0 auto;padding:28px 32px 80px}
+.section{margin-bottom:40px}
+.section-hd{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--dim);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.section-hd::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── profile strip ── */
+.profile-strip{display:flex;align-items:center;gap:16px;padding:16px 0 22px;border-bottom:1px solid var(--border);margin-bottom:28px}
+.avatar{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#1a0820,#0a1628);border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#555;flex-shrink:0}
+.profile-name{font-size:15px;font-weight:700;margin-bottom:2px}
+.profile-tier{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#7c3aed}
+.profile-id{font-size:9px;color:#2a2a2a;margin-top:2px}
+
+/* ── connection card ── */
+.card-row{display:flex;flex-wrap:wrap;gap:8px}
+
+.card{
+  width:88px;
+  border-radius:6px;
+  border:1.5px solid var(--border2);
+  background:var(--surface);
+  cursor:pointer;
+  position:relative;
+  transition:border-color 160ms,transform 120ms,box-shadow 160ms;
+  user-select:none;
+  padding:14px 8px 10px;
+  display:flex;flex-direction:column;align-items:center;gap:7px;
+  text-align:center;
+}
+.card:hover{transform:translateY(-2px)}
+.card.active{transform:translateY(-2px)}
+
+/* connected color variants */
+.card.c-school{border-color:var(--clever);box-shadow:0 0 12px rgba(124,58,237,.15)}
+.card.c-school.active{box-shadow:0 0 22px rgba(124,58,237,.28)}
+.card.c-google{border-color:var(--google);box-shadow:0 0 10px rgba(66,133,244,.13)}
+.card.c-google.active{box-shadow:0 0 18px rgba(66,133,244,.26)}
+.card.c-discord{border-color:var(--discord);box-shadow:0 0 10px rgba(88,101,242,.15)}
+.card.c-discord.active{box-shadow:0 0 18px rgba(88,101,242,.28)}
+.card.c-observer{border-color:var(--observer);box-shadow:0 0 10px rgba(217,119,6,.15)}
+.card.c-observer.active{box-shadow:0 0 18px rgba(217,119,6,.28)}
+.card.c-radical{border-color:var(--radical);box-shadow:0 0 10px rgba(220,38,38,.15)}
+.card.c-radical.active{box-shadow:0 0 18px rgba(220,38,38,.28)}
+.card.c-alpha{border-color:var(--alpha);box-shadow:0 0 10px rgba(167,139,250,.12)}
+.card.c-alpha.active{box-shadow:0 0 18px rgba(167,139,250,.26)}
+
+/* status dot */
+.card-dot{
+  position:absolute;top:7px;right:7px;
+  width:6px;height:6px;border-radius:50%;
+  border:1.5px solid var(--bg);
+}
+.dot-green{background:#059669}
+.dot-amber{background:#d97706}
+.dot-none{display:none}
+
+/* icon area */
+.card-icon{width:32px;height:32px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.card.dim .card-icon{opacity:.25}
+.card.dim-partial .card-icon{opacity:.55}
+
+/* label */
+.card-name{font-size:9px;font-weight:700;letter-spacing:.5px;color:var(--dim);text-transform:uppercase;line-height:1.2}
+.card.c-school .card-name{color:#a78bfa}
+.card.c-google .card-name{color:#60a5fa}
+.card.c-discord .card-name{color:#818cf8}
+.card.c-observer .card-name{color:#d97706}
+.card.c-radical .card-name{color:#dc2626}
+.card.c-alpha .card-name{color:#a78bfa}
+
+.card-sub{font-size:8px;color:#2a2a2a;line-height:1.3;max-width:72px}
+.card.connected .card-sub{color:#444}
+
+/* add card */
+.card.add-card{border-style:dashed;border-color:#1e1e1e;cursor:default}
+.card.add-card:hover{transform:none}
+.card.add-card .card-icon{opacity:.15}
+.card.add-card .card-name{color:#222}
+
+/* ── expand panel ── */
+.panel{
+  position:absolute;
+  top:calc(100% + 8px);
+  left:0;
+  z-index:60;
+  width:260px;
+  background:var(--surface2);
+  border:1px solid var(--border2);
+  border-radius:6px;
+  overflow:hidden;
+  opacity:0;
+  transform:translateY(-5px) scale(.98);
+  pointer-events:none;
+  transition:opacity 140ms ease,transform 140ms ease;
+}
+.panel.open{opacity:1;transform:translateY(0) scale(1);pointer-events:all}
+.panel.right{left:auto;right:0}
+.panel.up{top:auto;bottom:calc(100% + 8px);transform:translateY(5px) scale(.98)}
+.panel.up.open{transform:translateY(0) scale(1)}
+
+.panel::before{
+  content:'';position:absolute;top:-6px;left:16px;
+  width:10px;height:10px;
+  background:var(--surface2);
+  border-left:1px solid var(--border2);border-top:1px solid var(--border2);
+  transform:rotate(45deg);
+}
+.panel.right::before{left:auto;right:16px}
+.panel.up::before{top:auto;bottom:-6px;border-left:none;border-top:none;border-right:1px solid var(--border2);border-bottom:1px solid var(--border2)}
+
+.ph{padding:12px 14px 10px;border-bottom:1px solid var(--border)}
+.ph-service{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px}
+.ph-name{font-size:13px;font-weight:700}
+.ph-meta{font-size:10px;color:var(--dim);margin-top:2px}
+
+.pb{padding:10px 14px}
+.pr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.pk{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.8px}
+.pv{font-size:10px;color:var(--text)}
+.pv.green{color:#059669}.pv.amber{color:#d97706}.pv.purple{color:#a78bfa}.pv.red{color:#dc2626}.pv.blue{color:#60a5fa}.pv.dim2{color:#444}
+
+.p-note{font-size:9px;color:#444;line-height:1.65;margin:6px 0 4px;padding:8px 10px;background:#0d0d0d;border-left:2px solid #222}
+.p-btn{
+  width:100%;margin-top:8px;padding:7px;
+  background:transparent;border:1px solid var(--border2);
+  color:var(--dim);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  cursor:pointer;font-family:Arial,sans-serif;transition:border-color 150ms,color 150ms;
+}
+.p-btn:hover{border-color:#555;color:var(--text)}
+.p-btn.lit{border-color:#444;color:var(--text)}
+.pf{padding:6px 14px 10px;border-top:1px solid var(--border);font-size:9px;color:#222;line-height:1.5}
+
+/* rarity chip */
+.rarity{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:1px 6px;border:1px solid}
+.r-uncommon{color:#d97706;border-color:#d97706}
+.r-rare{color:#7c3aed;border-color:#7c3aed}
+.r-pending{color:#d97706;border-color:rgba(217,119,6,.4);font-style:italic}
+.r-locked{color:#2a2a2a;border-color:#1e1e1e}
+
+/* stats strip */
+.stats{border:1px solid var(--border);padding:14px 16px;display:flex;gap:28px;flex-wrap:wrap;align-items:center}
+.stat-block{}
+.stat-label{font-size:8px;color:var(--dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:2px}
+.stat-val{font-size:18px;font-weight:700}
+.stat-val span{font-size:11px;color:var(--dim)}
+.trajectory-line{margin-left:auto;font-size:9px;color:#222;line-height:1.6}
+.trajectory-line .cur{color:#d97706}
+
+/* overlay */
+#overlay{position:fixed;inset:0;z-index:50;display:none}
+</style>
+</head>
+<body>
+
+<div id="overlay" onclick="closeAll()"></div>
+
+<div class="header">
+  <div class="header-label">Constellation — Account</div>
+  <div class="header-title">Connections</div>
+  <div class="header-sub">External accounts you've linked, and recognitions earned through the system. What you earn is not awarded — it is recorded.</div>
+</div>
+
+<div class="main">
+
+  <!-- profile strip -->
+  <div class="profile-strip">
+    <div class="avatar">A</div>
+    <div>
+      <div class="profile-name">Alex</div>
+      <div class="profile-tier">Observer</div>
+      <div class="profile-id">12 sessions</div>
+    </div>
+  </div>
+
+  <!-- EXTERNAL CONNECTIONS -->
+  <div class="section">
+    <div class="section-hd">External connections</div>
+    <div class="card-row">
+
+      <!-- SCHOOL -->
+      <div style="position:relative">
+        <div class="card c-school connected" id="card-school" onclick="tog('school','panel-school')">
+          <div class="card-dot dot-green"></div>
+          <div class="card-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+              <path d="M12 3L2 8l10 5 10-5-10-5z" fill="#a78bfa"/>
+              <path d="M2 12.5l10 5 10-5" stroke="#7c3aed" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+              <path d="M2 16l10 5 10-5" stroke="#4c1d95" stroke-width="1" fill="none" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="card-name">School</div>
+          <div class="card-sub">Lincoln High</div>
+        </div>
+        <div class="panel" id="panel-school">
+          <div class="ph">
+            <div class="ph-service" style="color:#a78bfa">School · Verified</div>
+            <div class="ph-name">Lincoln High School</div>
+            <div class="ph-meta">Grade 10 · Connected via Clever</div>
+          </div>
+          <div class="pb">
+            <div class="pr"><span class="pk">Status</span><span class="pv green">Verified</span></div>
+            <div class="pr"><span class="pk">Grade</span><span class="pv">10</span></div>
+            <div class="pr"><span class="pk">Data agreement</span><span class="pv purple">Active</span></div>
+            <div class="p-note">Your school has an active data agreement with Constellation. This is the highest-trust connection available — it cannot be removed from here.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GOOGLE -->
+      <div style="position:relative">
+        <div class="card c-google connected" id="card-google" onclick="tog('google','panel-google')">
+          <div class="card-dot dot-green"></div>
+          <div class="card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+          </div>
+          <div class="card-name">Google</div>
+          <div class="card-sub">alex@gmail</div>
+        </div>
+        <div class="panel" id="panel-google">
+          <div class="ph">
+            <div class="ph-service" style="color:#4285F4">Google</div>
+            <div class="ph-name">alex@gmail.com</div>
+            <div class="ph-meta">Sign-in provider · Connected 2026-04-08</div>
+          </div>
+          <div class="pb">
+            <div class="pr"><span class="pk">Cross-device</span><span class="pv green">Active</span></div>
+            <div class="pr"><span class="pk">Age confirmed</span><span class="pv green">Yes</span></div>
+            <div class="pr"><span class="pk">Consent</span><span class="pv green">Recorded</span></div>
+          </div>
+          <div class="pf">Used to sign in across devices and verify age.</div>
+        </div>
+      </div>
+
+      <!-- DISCORD -->
+      <div style="position:relative">
+        <div class="card c-discord connected" id="card-discord" onclick="tog('discord','panel-discord')">
+          <div class="card-dot dot-green"></div>
+          <div class="card-icon">
+            <svg width="26" height="20" viewBox="0 0 24 18">
+              <path d="M20.317 1.492A19.82 19.82 0 0 0 15.88.162a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.29 18.29 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 1.492a.07.07 0 0 0-.032.027C.533 6.093-.32 10.555.099 14.961a.08.08 0 0 0 .031.055 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.026 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 12.278c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" fill="#5865F2"/>
+            </svg>
+          </div>
+          <div class="card-name">Discord</div>
+          <div class="card-sub">alex#4291</div>
+        </div>
+        <div class="panel" id="panel-discord">
+          <div class="ph">
+            <div class="ph-service" style="color:#5865F2">Discord</div>
+            <div class="ph-name">alex#4291</div>
+            <div class="ph-meta">Constellation Community · Member</div>
+          </div>
+          <div class="pb">
+            <div class="pr"><span class="pk">Community</span><span class="pv green">Joined</span></div>
+            <div class="pr"><span class="pk">Server role</span><span class="pv purple">Observer</span></div>
+            <div class="pr"><span class="pk">Linked</span><span class="pv dim2">2026-04-20</span></div>
+            <div class="p-note">Discord role syncs with your trajectory tier. When you reach Alpha, your server role updates automatically.</div>
+          </div>
+          <div class="pf"><span style="color:#222;cursor:pointer;text-decoration:underline" onclick="alert('Disconnected')">Disconnect</span></div>
+        </div>
+      </div>
+
+      <!-- SPOTIFY (not connected) -->
+      <div style="position:relative">
+        <div class="card dim" id="card-spotify" onclick="tog('spotify','panel-spotify')">
+          <div class="card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="11" fill="#1DB954"/>
+              <path d="M16.7 16.2c-.2 0-.3-.1-.5-.2-2.5-1.5-5.6-1.8-9.3-1-.3.1-.5-.1-.6-.4-.1-.3.1-.5.4-.6 4-.9 7.5-.5 10.2 1.2.2.1.3.4.2.7-.1.2-.3.3-.4.3zm1.1-2.7c-.2 0-.4-.1-.5-.2-2.8-1.7-7.1-2.2-10.4-1.2-.3.1-.6-.1-.7-.4-.1-.3.1-.6.4-.7 3.8-1.1 8.5-.6 11.7 1.4.3.2.4.5.2.8-.1.2-.4.3-.7.3zm.1-2.8c-3.4-2-9-2.2-12.2-1.2-.4.1-.8-.1-.9-.5-.1-.4.1-.8.5-.9 3.7-1.1 9.8-.9 13.7 1.4.4.2.5.6.3 1-.1.3-.5.4-.8.2z" fill="white"/>
+            </svg>
+          </div>
+          <div class="card-name" style="color:#2a2a2a">Spotify</div>
+          <div class="card-sub">Not linked</div>
+        </div>
+        <div class="panel right" id="panel-spotify">
+          <div class="ph">
+            <div class="ph-service" style="color:#1DB954">Spotify</div>
+            <div class="ph-name">Not connected</div>
+            <div class="ph-meta">Link to record session audio context</div>
+          </div>
+          <div class="pb">
+            <div class="p-note">When you play with Spotify active, the system records what kind of music you're listening to. Over time it becomes a signal: does music affect your performance in different cognitive modes? The data makes it measurable.</div>
+            <button class="p-btn lit">Connect Spotify →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEAM (not connected) -->
+      <div style="position:relative">
+        <div class="card dim" id="card-steam" onclick="tog('steam','panel-steam')">
+          <div class="card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24">
+              <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0z" fill="#c7d5e0"/>
+            </svg>
+          </div>
+          <div class="card-name" style="color:#2a2a2a">Steam</div>
+          <div class="card-sub">Not linked</div>
+        </div>
+        <div class="panel right" id="panel-steam">
+          <div class="ph">
+            <div class="ph-service" style="color:#c7d5e0">Steam</div>
+            <div class="ph-name">Not connected</div>
+            <div class="ph-meta">Gaming identity</div>
+          </div>
+          <div class="pb">
+            <div class="p-note">Links your gaming background as context. Hours and game type are a proxy for strategic experience, used to calibrate your starting model in spatial and territory modes.</div>
+            <button class="p-btn">Connect Steam →</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /card-row -->
+  </div>
+
+  <!-- SYSTEM RECOGNITION -->
+  <div class="section">
+    <div class="section-hd">System recognition</div>
+    <p style="font-size:10px;color:var(--dim);margin-bottom:14px;line-height:1.7;max-width:520px">Not awarded. Recorded — assigned by the compiler when the Ledger confirms the condition is true.</p>
+    <div class="card-row">
+
+      <!-- OBSERVER — earned -->
+      <div style="position:relative">
+        <div class="card c-observer connected" id="card-observer" onclick="tog('observer','panel-observer')">
+          <div class="card-dot dot-green"></div>
+          <div class="card-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="3" fill="#d97706"/>
+              <circle cx="12" cy="12" r="7" fill="none" stroke="#d97706" stroke-width="1" stroke-dasharray="2 2"/>
+              <circle cx="12" cy="12" r="10.5" fill="none" stroke="#92400e" stroke-width=".5"/>
+              <line x1="12" y1="1.5" x2="12" y2="4.5" stroke="#d97706" stroke-width="1.5"/>
+              <line x1="12" y1="19.5" x2="12" y2="22.5" stroke="#d97706" stroke-width="1.5"/>
+              <line x1="1.5" y1="12" x2="4.5" y2="12" stroke="#d97706" stroke-width="1.5"/>
+              <line x1="19.5" y1="12" x2="22.5" y2="12" stroke="#d97706" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <div class="card-name">Observer</div>
+          <div class="card-sub">12 sessions</div>
+        </div>
+        <div class="panel" id="panel-observer">
+          <div class="ph">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div class="ph-service" style="color:#d97706">Observer</div>
+              <span class="rarity r-uncommon">Uncommon</span>
+            </div>
+            <div class="ph-name">The system has a model</div>
+            <div class="ph-meta">Recorded 2026-04-22 · 12 sessions in</div>
+          </div>
+          <div class="pb">
+            <div class="pr"><span class="pk">Sessions</span><span class="pv amber">12</span></div>
+            <div class="pr"><span class="pk">Threshold</span><span class="pv dim2">10 sessions</span></div>
+            <div class="pr"><span class="pk">Model confidence</span><span class="pv amber">Low — improving</span></div>
+            <div class="p-note">At 10 sessions the preliminary Elo values across modes are computable. The system doesn't know you yet. But it has enough to start asking the right questions.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RADICAL PIONEER — earned -->
+      <div style="position:relative">
+        <div class="card c-radical connected" id="card-radical" onclick="tog('radical','panel-radical')">
+          <div class="card-dot dot-green"></div>
+          <div class="card-icon">
+            <svg width="26" height="26" viewBox="0 0 24 24">
+              <polygon points="12,2 22,20 2,20" fill="none" stroke="#dc2626" stroke-width="1.5" stroke-linejoin="round"/>
+              <line x1="12" y1="8" x2="12" y2="14" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="12" cy="17" r="1" fill="#dc2626"/>
+            </svg>
+          </div>
+          <div class="card-name">RADICAL</div>
+          <div class="card-sub">4 sessions</div>
+        </div>
+        <div class="panel" id="panel-radical">
+          <div class="ph">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div class="ph-service" style="color:#dc2626">RADICAL Pioneer</div>
+              <span class="rarity r-rare">Rare</span>
+            </div>
+            <div class="ph-name">Maximum prior uncertainty</div>
+            <div class="ph-meta">First recorded 2026-04-14 · 1 of 47 players</div>
+          </div>
+          <div class="pb">
+            <div class="pr"><span class="pk">RADICAL sessions</span><span class="pv red">4</span></div>
+            <div class="pr"><span class="pk">Earned by</span><span class="pv red">1 of 47 players</span></div>
+            <div class="p-note">RADICAL means the system placed you in a configuration where it had maximum uncertainty about your response. You've been there 4 times. The system learned the most from these sessions.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALPHA — pending -->
+      <div style="position:relative">
+        <div class="card c-alpha dim-partial" id="card-alpha" onclick="tog('alpha','panel-alpha')">
+          <div class="card-dot dot-amber"></div>
+          <div class="card-icon">
+            <svg width="26" height="26" viewBox="0 0 24 24">
+              <path d="M12 2L2 19h20L12 2z" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-linejoin="round"/>
+              <path d="M8 14h8" stroke="#7c3aed" stroke-width="1" stroke-linecap="round"/>
+              <circle cx="12" cy="10" r="1.5" fill="#a78bfa"/>
+            </svg>
+          </div>
+          <div class="card-name">Alpha</div>
+          <div class="card-sub">Pending</div>
+        </div>
+        <div class="panel right" id="panel-alpha">
+          <div class="ph">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div class="ph-service" style="color:#a78bfa">Alpha Track</div>
+              <span class="rarity r-pending">Pending</span>
+            </div>
+            <div class="ph-name">Application under review</div>
+            <div class="ph-meta">Submitted 2026-06-01 · Phase 2 of 5</div>
+          </div>
+          <div class="pb">
+            <div class="pr"><span class="pk">Status</span><span class="pv amber">Under review</span></div>
+            <div class="pr"><span class="pk">Review phase</span><span class="pv purple">2 of 5</span></div>
+            <div class="p-note">Alpha is not awarded for performance. It requires demonstrated understanding of what the system measures. Badge activates when Phase 5 review is complete.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INVERSION — locked -->
+      <div style="position:relative">
+        <div class="card dim" id="card-inv" onclick="tog('inv','panel-inv')">
+          <div class="card-icon">
+            <svg width="26" height="26" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="9" fill="none" stroke="#333" stroke-width="1.5"/>
+              <path d="M12 3v18M3 12h18" stroke="#2a2a2a" stroke-width="1" stroke-linecap="round"/>
+              <path d="M12 8l4 4-4 4-4-4z" fill="#333"/>
+            </svg>
+          </div>
+          <div class="card-name" style="color:#2a2a2a">INVERSION</div>
+          <div class="card-sub">Locked</div>
+        </div>
+        <div class="panel right" id="panel-inv">
+          <div class="ph">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div class="ph-service" style="color:#333">INVERSION Operator</div>
+              <span class="rarity r-locked">Locked</span>
+            </div>
+            <div class="ph-name">Condition not yet met</div>
+            <div class="ph-meta">Requires INV mode Elo &gt; 600</div>
+          </div>
+          <div class="pb">
+            <div class="p-note">INVERSION mode runs without announcement. The system records these sessions silently. When your Elo in this mode exceeds 600, this badge records itself.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SINGULARITY — hidden -->
+      <div style="position:relative">
+        <div class="card dim" id="card-singularity" onclick="tog('singularity','panel-singularity')" style="opacity:.3">
+          <div class="card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="2" fill="#444"/>
+              <circle cx="12" cy="12" r="5.5" fill="none" stroke="#2a2a2a" stroke-width=".75"/>
+              <circle cx="12" cy="12" r="9" fill="none" stroke="#1e1e1e" stroke-width=".5"/>
+              <path d="M12 3v3M12 18v3M3 12h3M18 12h3M6.2 6.2l2.1 2.1M15.7 15.7l2.1 2.1M6.2 17.8l2.1-2.1M15.7 8.3l2.1-2.1" stroke="#222" stroke-width=".75" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="card-name" style="color:#1e1e1e">?</div>
+          <div class="card-sub" style="color:#1a1a1a">Unknown</div>
+        </div>
+        <div class="panel right" id="panel-singularity">
+          <div class="ph">
+            <div class="ph-service" style="color:#2a2a2a">Unknown</div>
+            <div class="ph-name" style="color:#333">Condition unknown</div>
+            <div class="ph-meta" style="color:#2a2a2a">Not disclosed</div>
+          </div>
+          <div class="pb">
+            <div class="p-note" style="color:#2a2a2a">You can see it exists. That's all the system is saying right now.</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /card-row -->
+  </div>
+
+  <!-- stats strip -->
+  <div class="stats">
+    <div class="stat-block">
+      <div class="stat-label">Connections</div>
+      <div class="stat-val">3<span>/5</span></div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-label">Recognition</div>
+      <div class="stat-val">2<span>/5</span></div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-label">Trajectory</div>
+      <div class="stat-val" style="color:#d97706;font-size:14px">Observer</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-label">Sessions</div>
+      <div class="stat-val">12</div>
+    </div>
+    <div class="trajectory-line">
+      Consumer → <span class="cur">Observer</span> → Theorist → Predictor → Designer → Teacher → Architect
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+var open = null;
+
+function closeAll() {
+  if (open) {
+    var card = document.getElementById('card-' + open);
+    var panel = document.getElementById('panel-' + open);
+    if (card) card.classList.remove('active');
+    if (panel) panel.classList.remove('open');
+    open = null;
+  }
+  document.getElementById('overlay').style.display = 'none';
+}
+
+function tog(id, panelId) {
+  var wasOpen = open === id;
+  closeAll();
+  if (wasOpen) return;
+
+  var card = document.getElementById('card-' + id);
+  var panel = document.getElementById(panelId);
+  if (!card || !panel) return;
+
+  card.classList.add('active');
+  panel.classList.add('open');
+  open = id;
+  document.getElementById('overlay').style.display = 'block';
+}
+
+document.querySelectorAll('.panel').forEach(function(p) {
+  p.addEventListener('click', function(e) { e.stopPropagation(); });
+});
+document.querySelectorAll('.card').forEach(function(c) {
+  c.addEventListener('click', function(e) { e.stopPropagation(); });
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeAll();
+});
+</script>
+</body>
+</html>

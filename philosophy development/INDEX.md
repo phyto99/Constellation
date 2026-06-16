@@ -144,6 +144,15 @@ Purpose: Reference index for all philosophy/architecture documents. Do not modif
 
 ---
 
+## Era 9 — Identity Connections & Badge System
+*2026-06-16. Account profile UI for linked external services and system-earned recognitions.*
+
+| File | What it is | Accuracy |
+|------|-----------|---------|
+| `connections.html` | Interactive account connections page. Two sections: External Connections (School/Clever, Google, Discord, Spotify, Steam — cards with icon + name, connected/disconnected states, expand panels) and System Recognition (Observer, RADICAL Pioneer, Alpha Track, INVERSION Operator, Singularity — same card format, earned by compiler when Ledger condition is true). Design: dark background, brand colors only for connected services, all unconnected badges are dim/monochrome — connection is the earned color exception. Click-to-expand panels show user-facing info only (no internal IDs or technical auth details). School badge has special treatment: always verified via Clever, cannot be self-removed. Achievement badges ordered by rarity with rarity chips. Singularity badge visible but condition undisclosed. Stats strip shows connection count, recognition count, trajectory stage, session count. Trajectory line at bottom: Consumer → Observer → … → Architect. | **Designed — not yet wired to live account system** |
+
+---
+
 ## Build Order
 - **Phase −1** (before everything, per Era 3): Start the ledger. Recording must precede every other phase — observations not recorded during Phases 0–1 can never be recovered. Recording is not endorsement; the ledger has no opinion.
 - **Phase 0** (now): Silent INVERSION, elo_velocity tracking, forgetting measurement, template history
