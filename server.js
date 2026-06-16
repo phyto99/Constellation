@@ -7,6 +7,7 @@ const path = require('path');
 const basicAuth = require('express-basic-auth');
 const { monitor } = require('@colyseus/monitor');
 const fs = require('fs');
+const ledger = require('./ledger');
 const axios = require('axios');
 const { StarSchema, TeamSchema, GameStateSchema } = require('./game-schema');
 const WebSocket = require('ws');
@@ -760,6 +761,13 @@ class ConstellationRoom extends Room {
         this.startGameLoop = () => {
             if (this.gameLoopInterval) clearInterval(this.gameLoopInterval);
 
+            // Layer 0 session tracking — reset on every game start
+            this.sessionStartTime = Date.now();
+            this.moveLog = {};
+            this.roundSnapshots = [];
+            this.hqPlacementRounds = {};
+            this.stealsUsed = {};
+
             // Config
             const roundLength = (this.gameConfig.roundLength || 30) * 1000;
             const rounds = this.gameConfig.rounds || 10;
@@ -826,6 +834,7 @@ class ConstellationRoom extends Room {
                         this.setMetadata({ ...this.metadata, gameState: 'finished' });
                         this.updateAdminRoom();
 
+                        this._writeSessionObservations('score', winningTeam);
                         this.broadcast('game_ended', {
                             finalRound: this.state.game.round,
                             winningTeam: winningTeam,
@@ -837,6 +846,7 @@ class ConstellationRoom extends Room {
                     }
 
                     // INSTANT ROUND TRANSITION (No Intermission)
+                    this._snapshotRound(this.state.game.round);
                     this.state.game.round++;
                     timeRemaining = roundLength;
                     console.log(`🚀 Round ${this.state.game.round} starting. Replenishing moves.`);
@@ -975,6 +985,15 @@ class ConstellationRoom extends Room {
 
                 console.log(`✅ Star ${data.starIndex} claimed by team ${teamIndex}${isHQ ? ' (HQ)' : ''} (player: ${player.id})`);
 
+                if (!data.botId) {
+                    const sid = client.sessionId;
+                    if (!this.moveLog[sid]) this.moveLog[sid] = [];
+                    this.moveLog[sid].push({ t: Date.now(), star: data.starIndex, isHQ, isSteal: false, round: this.state.game.round });
+                    if (isHQ && this.hqPlacementRounds[teamIndex] === undefined) {
+                        this.hqPlacementRounds[teamIndex] = this.state.game.round;
+                    }
+                }
+
                 // Check for special star activations after the move
                 // Check wormhole first - it takes priority over blackhole
                 const wormholeWin = this.checkWormHoleActivation(teamIndex);
@@ -988,6 +1007,7 @@ class ConstellationRoom extends Room {
                         state: 'ended'
                     });
                     
+                    this._writeSessionObservations('wormhole', teamIndex);
                     this.broadcast('game_ended', {
                         winner: teamIndex,
                         reason: 'wormhole',
@@ -1086,6 +1106,13 @@ class ConstellationRoom extends Room {
 
                 console.log(`✅ Star ${data.starIndex} stolen by team ${teamIndex}${isHQ ? ' (HQ)' : ''} (player: ${player.id})`);
 
+                if (!data.botId) {
+                    const sid = client.sessionId;
+                    if (!this.moveLog[sid]) this.moveLog[sid] = [];
+                    this.moveLog[sid].push({ t: Date.now(), star: data.starIndex, isHQ, isSteal: true, round: this.state.game.round });
+                    this.stealsUsed[teamIndex] = (this.stealsUsed[teamIndex] || 0) + 1;
+                }
+
                 // Check for special star activations after the move
                 // Check wormhole first - it takes priority over blackhole
                 const wormholeWin = this.checkWormHoleActivation(teamIndex);
@@ -1099,6 +1126,7 @@ class ConstellationRoom extends Room {
                         state: 'ended'
                     });
                     
+                    this._writeSessionObservations('wormhole', teamIndex);
                     this.broadcast('game_ended', {
                         winner: teamIndex,
                         reason: 'wormhole',
@@ -1190,6 +1218,7 @@ class ConstellationRoom extends Room {
                         state: 'ended'
                     });
                     
+                    this._writeSessionObservations('wormhole', teamIndex);
                     this.broadcast('game_ended', {
                         winner: teamIndex,
                         reason: 'wormhole',
@@ -2088,6 +2117,93 @@ class ConstellationRoom extends Room {
         });
 
         console.log(`📊 Broadcast authoritative scores:`, teamScores);
+    }
+
+    // Layer 0: snapshot star counts at the end of a completed round
+    _snapshotRound(roundNum) {
+        if (!this.roundSnapshots) return;
+        const starsByTeam = {};
+        this.state.game.stars.forEach(s => {
+            if (s.tm !== -1) starsByTeam[s.tm] = (starsByTeam[s.tm] || 0) + 1;
+        });
+        this.roundSnapshots.push({ round: roundNum, t: Date.now(), starsByTeam });
+    }
+
+    // Layer 0: write one Ledger record per human player at session end
+    _writeSessionObservations(winCondition, winningTeam) {
+        if (!this.sessionStartTime) return;
+        try {
+            const cv = ledger.extractConfigVector(this.gameConfig);
+            const ch = ledger.configHash(cv);
+            const now = Date.now();
+            const duration = Math.round((now - this.sessionStartTime) / 1000);
+
+            const starsByTeam = {};
+            this.state.game.stars.forEach(s => {
+                if (s.tm !== -1) starsByTeam[s.tm] = (starsByTeam[s.tm] || 0) + 1;
+            });
+
+            // Rank each team. For score wins, sort by star count. For wormhole, winner=1 rest=2.
+            const rankOf = {};
+            if (winCondition === 'score') {
+                Object.entries(starsByTeam)
+                    .sort((a, b) => b[1] - a[1])
+                    .forEach(([t], i) => { rankOf[parseInt(t)] = i + 1; });
+            } else {
+                this.state.players.forEach(p => {
+                    if (p.team !== null && p.team !== undefined) {
+                        rankOf[p.team] = p.team === winningTeam ? 1 : 2;
+                    }
+                });
+            }
+
+            const teamCount = Math.max(2, Object.keys(rankOf).length);
+
+            this.state.players.forEach((player, sessionId) => {
+                if (player.isBot) return;
+                if (player.team === null || player.team === undefined) return;
+                const team = player.team;
+                const rank = rankOf[team] ?? teamCount;
+                const rankPct = teamCount > 1
+                    ? parseFloat((1 - (rank - 1) / (teamCount - 1)).toFixed(2))
+                    : (team === winningTeam ? 1.0 : 0.0);
+
+                const obs = {
+                    id: `${this.roomId}_${sessionId}_${now}`,
+                    t: now,
+                    type: 'session',
+                    layer: 0,
+                    channel: 'GAME',
+                    student_id: player.studentId || player.name,
+                    session_id: this.roomId,
+                    session_number: this.gameConfig.sessionNumber,
+                    config_hash: ch,
+                    config_vector: cv,
+                    outcome: {
+                        win_condition: winCondition,
+                        winning_team: winningTeam,
+                        player_team: team,
+                        rank,
+                        rank_pct: rankPct,
+                        stars_for_team: starsByTeam[team] || 0,
+                        total_rounds: this.state.game.round
+                    },
+                    signals: {
+                        round_snapshots: this.roundSnapshots || [],
+                        move_log: this.moveLog[sessionId] || [],
+                        hq_placement_round: (this.hqPlacementRounds || {})[team] ?? null,
+                        steals_used_by_team: (this.stealsUsed || {})[team] || 0,
+                        session_duration_s: duration
+                    },
+                    params_version: ledger.PARAMS_VERSION
+                };
+                ledger.append(obs);
+            });
+
+            console.log(`📋 Ledger: session ${this.roomId} (${winCondition}, team ${winningTeam}) written`);
+        } catch (err) {
+            console.error('[ledger] _writeSessionObservations error:', err);
+        }
     }
 
     onDispose() {

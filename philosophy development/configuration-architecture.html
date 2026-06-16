@@ -58,6 +58,8 @@ code{font-family:'Courier New',monospace;font-size:10px;background:#f0f0f0;paddi
   <div class="tab" onclick="showTab('signals',this)">Signal Additions</div>
   <div class="tab" onclick="showTab('terminal',this)">Terminal</div>
   <div class="tab" onclick="showTab('build',this)">Build Order</div>
+  <div class="tab" onclick="showTab('templates',this)">Templates</div>
+  <div class="tab" onclick="showTab('model',this)">Student Model</div>
 </nav>
 
 <!-- ═══════════════════════════════════ THE FULL LOOP -->
@@ -956,8 +958,355 @@ PARAM_WATCH = {
 </div>
 </div>
 
+<!-- ═══════════════════════════════════ TEMPLATES (ARCHETYPES, NOT CONTAINERS) -->
+<div id="panel-templates" class="panel">
+<h2>Configuration Archetypes — The UX Layer, Not the Architecture</h2>
+
+<div class="card-dk" style="margin-bottom:14px">
+  <div style="font-size:9px;letter-spacing:2px;color:#888;margin-bottom:8px">DOCTRINE</div>
+  <div style="font-size:12px;line-height:1.9;color:#fff">
+    The compiler does not select a template. It outputs a configuration vector — 12 continuous parameters. The label "FLOOD" or "NETWORK" is a derived human-legible description of the region of that vector space where the config lands. Labels flow from config. Config does not flow from labels. Treating templates as architectural categories would reproduce the exact mistake the Evidence Engine forbids: categories as containers that determine interpretation before observation.
+  </div>
+</div>
+
+<div class="grid2">
+  <div>
+    <h3>What configuration archetypes ARE</h3>
+    <div class="card" style="margin-bottom:8px">
+      <h4>Initialization assertions</h4>
+      <p style="font-size:10px;line-height:1.7">Archetypes are pre-registered hypotheses: "this configuration region is likely to produce informative signals for this cognitive target." They are starting points for the compiler, not boxes. They carry [ASSERTED] status. They have pre-registered refutation conditions just like every other parameter. The compiler may drift away from archetype configs as it learns which configurations produce better outcomes for specific student profiles.</p>
+    </div>
+    <div class="card" style="margin-bottom:8px">
+      <h4>UX scaffolding</h4>
+      <p style="font-size:10px;line-height:1.7">Archetypes generate: codenames (episodic memory anchors for students), loading text (the system's observational voice), player-facing hints, and success criterion descriptions. These are the student experience layer. They are derived from the config vector after the compiler has decided the config — not before. The system picks {count:500, steals:0, moves:12}; the narrative layer calls this "THE FLOOD."</p>
+    </div>
+    <div class="card">
+      <h4>Cognitive landscape hypotheses</h4>
+      <p style="font-size:10px;line-height:1.7">An archetype's locked_axes declaration is a hypothesis: "the signals generated in this config region are valid evidence for this cognitive dimension." The Conundrum Protocol handles the case where a student's behavior doesn't fit the expected signal structure — that's the boundary case inbox. No archetype is exempt from revision if the corroboration matrix consistently fails to support it.</p>
+    </div>
+  </div>
+  <div>
+    <h3>What configuration archetypes are NOT</h3>
+    <div class="card" style="margin-bottom:8px">
+      <h4 style="color:#dc2626">NOT architectural categories</h4>
+      <p style="font-size:10px;line-height:1.7">The Ledger does not store "FLOOD session" — it stores the config_hash of the actual 12-parameter vector. The label "FLOOD" appears only in the context field as a UX convenience for humans reading the evidence feed. It has no semantic weight in the corroboration matrix. You cannot filter the Ledger by archetype name and claim you're doing something architecturally meaningful.</p>
+    </div>
+    <div class="card" style="margin-bottom:8px">
+      <h4 style="color:#dc2626">NOT selection inputs to the compiler</h4>
+      <p style="font-size:10px;line-height:1.7">The compiler does not run "which template?" as a step. It runs "what configuration vector maximizes E[KL] for this student?" The answer may correspond closely to an archetype's config (in which case the archetype's codename and loading text are used) or it may fall in a region between archetypes (in which case the nearest archetype's UX vocabulary is borrowed with appropriate caution).</p>
+    </div>
+    <div class="card">
+      <h4 style="color:#dc2626">NOT interpretation containers</h4>
+      <p style="font-size:10px;line-height:1.7">The signal "star_count_rate = 0.47" is recorded as raw observation regardless of which config region produced it. The interpretation — "this is evidence for QUANTITY cognitive mode performance" — is a view applied after the fact. If a student produces high star_count_rate in a config region labeled SPATIAL, that is a Conundrum Protocol event, not an error in the recording.</p>
+    </div>
+  </div>
+</div>
+
+<h3>The Continuous Configuration Space — Where Archetypes Live</h3>
+<p>The 4 multipliers define a 4-dimensional space. Archetypes are named regions within it, not points. The compiler navigates this space continuously. Archetypes are landmarks — they help the compiler start, and they provide UX vocabulary — but the optimal config for a specific student at a specific moment is almost certainly not exactly at any archetype's center.</p>
+
+<table class="t">
+  <tr>
+    <th>Archetype label</th><th>Config region</th><th>Cognitive hypothesis (ASSERTED)</th><th>Refutation condition</th><th>UX: codename pool</th><th>Game features required</th>
+  </tr>
+  <tr>
+    <td><strong>FLOOD</strong><br><span style="color:#aaa;font-size:9px">QTY — pure expansion</span></td>
+    <td><code>count≥400, dist=1, hq=1, dest=1, steals=0</code></td>
+    <td>Rewarding breadth with no adversarial pressure isolates volume decision-making under resource constraints</td>
+    <td>If star_count_rate does not correlate with BT processing speed score (r &lt; 0.2) over 50+ sessions</td>
+    <td>THE FLOOD · WAVE FRONT · MANIFEST DENSITY · THE SWARM · OVERFLOW · LANDGRAB</td>
+    <td>None — all features exist</td>
+  </tr>
+  <tr>
+    <td><strong>SPEED FLOOD</strong><br><span style="color:#aaa;font-size:9px">QTY — compressed rounds</span></td>
+    <td><code>count≥400, rounds=5, roundLength≤20</code></td>
+    <td>Compressing session length forces front-loading; measures early-round priority formation speed</td>
+    <td>If early_vs_late trajectory does not differentiate students in BT processing speed quartiles</td>
+    <td>Same as FLOOD — codename may add SPRINT suffix</td>
+    <td>None</td>
+  </tr>
+  <tr>
+    <td><strong>MISER</strong><br><span style="color:#aaa;font-size:9px">QTY — move scarcity</span></td>
+    <td><code>count≥400, moves=8 (fixed)</code></td>
+    <td>Fixed low move count forces selectivity — measures claim prioritization under scarcity</td>
+    <td>If claim_selectivity (moves_to_high_value_stars / total_moves) does not differentiate Elo quartiles</td>
+    <td>LANDGRAB · THE TIDE · SATURATION</td>
+    <td>None</td>
+  </tr>
+  <tr>
+    <td><strong>REACH</strong><br><span style="color:#aaa;font-size:9px">SPT — distance reward</span></td>
+    <td><code>dist≥400, count=1, hq=0</code></td>
+    <td>Rewarding Euclidean distance isolates long-range spatial planning and directionality commitment</td>
+    <td>If avg_claim_distance does not correlate with BT spatial rotation score (r &lt; 0.2)</td>
+    <td>THE EXPANSE · LONG REACH · FAR HORIZON · THE CARTOGRAPHER</td>
+    <td>None</td>
+  </tr>
+  <tr>
+    <td><strong>BLIND REACH</strong><br><span style="color:#aaa;font-size:9px">SPT — hidden map</span></td>
+    <td><code>dist≥400, map_hidden=true, reveal_radius=variable</code></td>
+    <td>Hiding the map forces spatial hypothesis formation under uncertainty; measures commitment vs hedging under incomplete information</td>
+    <td>If direction_commitment does not diverge from non-hidden REACH sessions for the same students</td>
+    <td>BLIND REACH · DEEP SPACE · EDGE CASE</td>
+    <td style="color:#dc2626"><strong>NEW: proximity reveal mechanic</strong> — stars invisible until a team's claimed star is within reveal_radius. Requires index.html visibility masking + server proximity check per round.</td>
+  </tr>
+  <tr>
+    <td><strong>ARCHITECT</strong><br><span style="color:#aaa;font-size:9px">SPT — pattern match</span></td>
+    <td><code>dist≥200, pattern_target=active</code></td>
+    <td>A given geometric pattern to recreate tests spatial working memory and shape decomposition</td>
+    <td>If pattern_accuracy does not correlate with BT spatial rotation score</td>
+    <td>THE CARTOGRAPHER · FURTHEST POINT</td>
+    <td style="color:#dc2626"><strong>NEW: pattern overlay display</strong> — server sends a target star pattern; client renders it as ghost positions on the map. Requires server-side pattern library + client overlay rendering.</td>
+  </tr>
+  <tr>
+    <td><strong>NETWORK</strong><br><span style="color:#aaa;font-size:9px">FRT — pure construction</span></td>
+    <td><code>hq≥400, dest≤-100, headquarters≥3</code></td>
+    <td>Penalizing destruction while rewarding HQ distance isolates graph construction planning without adversarial interference</td>
+    <td>If hq_connection_speed does not correlate with BT executive function score</td>
+    <td>IRON CURTAIN · THE CITADEL · DEEP ROOTS · SIEGE LINES</td>
+    <td>None — negative dest multiplier exists</td>
+  </tr>
+  <tr>
+    <td><strong>SIEGE</strong><br><span style="color:#aaa;font-size:9px">FRT — under pressure</span></td>
+    <td><code>hq≥400, bots=ATHENA×1–3, aggression≥0.6</code></td>
+    <td>Sustained aggressive opposition while measuring network maintenance tests graph resilience under adversarial pressure</td>
+    <td>If network_distance_delta does not differentiate DST-high vs DST-low students (modes should be separable)</td>
+    <td>BASTILLE · THE HOLD · STONEWORK · ENTRENCHED</td>
+    <td>None</td>
+  </tr>
+  <tr>
+    <td><strong>PATIENCE</strong><br><span style="color:#aaa;font-size:9px">FRT — move constraint</span></td>
+    <td><code>hq≥400, moves=10 (fixed), rounds≥8</code></td>
+    <td>Fixed low moves over many rounds tests long-horizon planning — does the student develop a network strategy that survives 8+ rounds of constrained action?</td>
+    <td>If move_entropy (distribution evenness across rounds) does not differ from unconstrained FRT sessions</td>
+    <td>DEEP ROOTS · ENTRENCHED</td>
+    <td>None</td>
+  </tr>
+  <tr>
+    <td><strong>CHAIN REACTION</strong><br><span style="color:#aaa;font-size:9px">DST — blackhole chains</span></td>
+    <td><code>dest≥400, count≤-50, blackhole_density≥0.3</code></td>
+    <td>Penalizing own-star ownership while rewarding destruction forces the composite DST+SPT signal: position blackholes optimally to chain across opponent network</td>
+    <td>If blackhole_activations + chain_length do not correlate with combined DST+SPT BT score</td>
+    <td>CHAIN REACTION · AFTERBURN · NULL FIELD</td>
+    <td>None — blackhole mechanic exists</td>
+  </tr>
+  <tr>
+    <td><strong>HUNTER</strong><br><span style="color:#aaa;font-size:9px">DST — targeted steal</span></td>
+    <td><code>steals≥40, dest≥150, count=1</code></td>
+    <td>High steal limit with destruction reward isolates opponent modeling — does the student identify and target the opponent's highest-value stars?</td>
+    <td>If steal_target_value does not exceed random baseline (opponent's mean star value) by &gt;15%</td>
+    <td>GHOST CIRCUIT · SHATTER · ERASURE</td>
+    <td>None</td>
+  </tr>
+  <tr>
+    <td><strong>SCORCHED EARTH</strong><br><span style="color:#aaa;font-size:9px">DST — denial</span></td>
+    <td><code>dest≥400, map_density=variable</code></td>
+    <td>Measuring opponent HQ network damage (denial rate) tests whether the student prioritizes strategic network disruption over personal score</td>
+    <td>If denial_rate does not differentiate students with high vs low opponent_modeling BT score</td>
+    <td>SCORCHED EARTH · THE BREAKING</td>
+    <td>None — requires server-side denial tracking (opponent network distance at end vs start)</td>
+  </tr>
+  <tr>
+    <td><strong>THE GATEWAY</strong><br><span style="color:#aaa;font-size:9px">WRM — instant win</span></td>
+    <td><code>all_multipliers=1, wormhole_pairs=2, req=variable (3–8)</code></td>
+    <td>A binary win condition with no score-path alternative tests goal-directed search commitment: does the student ignore score in pursuit of the wormhole?</td>
+    <td>If wormhole_proximity trajectory does not diverge between WRM Elo quartiles by session 10</td>
+    <td>THE GATEWAY · FOLD SPACE · THE BRIDGE · TRANSIT</td>
+    <td>Randomized req values (TODO.md — specced, not yet implemented)</td>
+  </tr>
+  <tr>
+    <td><strong>DECOY</strong><br><span style="color:#aaa;font-size:9px">WRM — discrimination</span></td>
+    <td><code>wormhole_pairs=3, active_wormholes=1</code></td>
+    <td>Multiple wormhole candidates with only one activatable tests pattern discrimination: can the student identify the real vs trap gates from req star claimability?</td>
+    <td>If false_start_rate does not decrease with session count in WRM (pattern discrimination should improve)</td>
+    <td>EVENT HORIZON · SINGULARITY · THE NEEDLE · CROSSING</td>
+    <td style="color:#dc2626"><strong>NEW: selective wormhole activation</strong> — server marks 2 of 3 wormhole pairs as traps (req stars permanently set to null). Requires server-side wormhole metadata + client rendering distinction.</td>
+  </tr>
+  <tr>
+    <td><strong>HIDDEN OBJECTIVE</strong><br><span style="color:#aaa;font-size:9px">INV — shuffled multipliers</span></td>
+    <td><code>multipliers: [shuffled per Fisher-Yates], no hint</code></td>
+    <td>Unknown reward structure forces the student to infer what the system is measuring from score feedback alone — the purest test of adaptive hypothesis formation</td>
+    <td>If strategy_shift_speed (rounds until correct strategy emerges) does not decrease with session count in INV</td>
+    <td>MIRROR LOGIC · NULL SPACE · THE FLIP · WRONG ANSWER</td>
+    <td style="color:#d97706"><strong>PENDING: silent INVERSION flag</strong> (Phase 0). Without it, all INV sessions are contaminated by announcement.</td>
+  </tr>
+  <tr>
+    <td><strong>MIRROR</strong><br><span style="color:#aaa;font-size:9px">INV — exact inverse of prior</span></td>
+    <td><code>multipliers = −prev_session_multipliers × magnitude</code></td>
+    <td>Exact inversion of the prior session's config tests pure reversal learning speed: can the student unlearn what worked and adopt the opposite strategy?</td>
+    <td>If session_delta (change in strategy from prior session) does not differ between students with high vs low cognitive flexibility BT score</td>
+    <td>DARK MATTER · REVERSAL · ANTI-PATTERN · OPPOSITE DAY</td>
+    <td>None — requires tracking prior session config (available from Ledger)</td>
+  </tr>
+  <tr>
+    <td><strong>NEGATIVE SPACE</strong><br><span style="color:#aaa;font-size:9px">INV — all negative</span></td>
+    <td><code>all_multipliers &lt; 0, steals=0</code></td>
+    <td>Negative rewards for all actions tests inhibitory control at its maximum: optimal play is complete inaction, or selective denial that costs less than it prevents</td>
+    <td>If move_pool_rate (fraction of available moves used) does not decrease significantly vs baseline sessions</td>
+    <td>NEGATIVE SPACE · OPPOSITE DAY · NULL SPACE</td>
+    <td>None</td>
+  </tr>
+</table>
+
+<div class="warn" style="margin-top:8px">
+  <strong>Three archetypes require new game features.</strong> BLIND REACH (proximity reveal mechanic), ARCHITECT (pattern overlay display), and DECOY (selective wormhole activation) cannot be assigned until those mechanics exist in index.html and server.js. The compiler must check feature availability before including these archetypes in its selection space. Until then: 14 of 17 archetypes are available.
+</div>
+
+<h3 style="margin-top:14px">Mode Adjacency — SHIFTING Zone Transitions</h3>
+<p style="font-size:11px">When the compiler targets a SHIFTING zone session (mode change without full recalibration), it selects from adjacent modes only. The adjacency graph is defined by shared cognitive sub-skills:</p>
+<div class="formula">QTY ↔ SPT   (both: expand, move, claim — spatial breadth vs spatial depth)
+SPT ↔ FRT   (both: geography-first, network awareness)
+FRT ↔ DST   (both: opponent-aware, reactive to network state)
+DST ↔ INV   (both: disruption, unconventional goal structure)
+INV ↔ WRM   (both: non-obvious objective, requires deduction)
+WRM ↔ SPT   (both: spatial reasoning, path-finding to target)
+// Note: QTY ↔ WRM are NOT adjacent — too cognitively distant for SHIFTING.
+// Use RADICAL for QTY→WRM transitions.</div>
+</div>
+
+<!-- ═══════════════════════════════════ STUDENT MODEL -->
+<div id="panel-model" class="panel">
+<h2>Student Model — How Raw Observations Become Understanding</h2>
+
+<p>The student-observatory.html shows what teachers see. This tab specifies the computation that produces it — from raw Ledger records to the 18-dimensional State. Every step is explicit. Every parameter is labeled <strong>[ASSERTED]</strong> or <strong>[LEARNED]</strong>. No step is hidden inside a black box.</p>
+
+<div class="card-dk" style="margin-bottom:14px">
+  <div style="font-size:9px;letter-spacing:2px;color:#888;margin-bottom:8px">WHAT "UNDERSTANDING A STUDENT PERFECTLY" MEANS</div>
+  <div style="font-size:11px;line-height:1.9;color:#fff">
+    Perfect understanding = a model of the student that predicts outcomes with zero residual variance. This is unreachable. The correct question is: how close is the current model, and where is the remaining uncertainty? The Student Model is a calibration instrument. It is accurate when the scatter plot of predicted vs actual rank_pct lies on the diagonal. Drift from the diagonal is the earliest warning that the model no longer matches the student.
+  </div>
+</div>
+
+<div style="margin-bottom:14px">
+  <div style="font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:4px">Computation Pipeline — Layer 0 → State → Config Vector</div>
+  <canvas id="pipeline-canvas" height="80" style="display:block;width:100%;border:1px solid #ddd;background:#fafafa"></canvas>
+</div>
+
+<div class="grid2" style="margin-bottom:14px">
+  <div>
+    <h3>Step 1 — Elo Update <span class="st st-mode">ASSERTED K-schedule</span></h3>
+    <div class="formula">// After game_ended, for the mode active this session.
+// Mode = argmax(config_vector[0:4]) — Layer 1 view over Layer 0.
+
+E = 1 / (1 + 10^((R_bot − R_student) / [ASSERTED: 400]))
+S = outcome.rank_pct          // from Layer 0 record, 0.0–1.0
+K = 40   if n_in_mode ≤ 5    // [ASSERTED] fast initial estimate
+K = 20   if n_in_mode ≤ 20   // [ASSERTED] moderate development
+K = 10   if n_in_mode > 20   // [ASSERTED] stable
+ΔElo = K × (S − E)
+game_elo[mode] += ΔElo</div>
+    <div class="warn"><strong>Refutation:</strong> If mean |predicted rank_pct − actual rank_pct| &gt; 0.10 after ≥ 30 sessions per mode: K-schedule is miscalibrated. Refit from data. Phase 3 replaces Elo entirely with a function fitted over the full config × outcome space in Layer 0.</div>
+  </div>
+  <div>
+    <h3>Step 2 — Velocity &amp; ZPD Target <span class="st st-mode">ASSERTED</span></h3>
+    <div class="formula">// Learning rate proxy. Undefined when n_in_mode &lt; 4.
+
+velocity[m] = (elo_N − elo_{N−3}) / 3          // [ASSERTED window=3]
+
+// Forgetting decay applied to ZPD target
+decay[m] = exp(−sessions_since[m] / [ASSERTED: τ=14])
+
+// ZPD target: difficulty setpoint for next session in mode m
+zpd_target[m] = game_elo[m] × [ASSERTED: 0.85] × decay[m]</div>
+    <div class="warn"><strong>Refutation:</strong> window=3 — refute if window=5 produces lower prediction autocorrelation on held-out set. τ=14 — refute if empirical return-session data gives τ ∉ [10d,18d] (expected: τ closer to 30–60d). 0.85 — refute if challenge-success curve peaks at a different difficulty ratio.</div>
+  </div>
+</div>
+
+<div class="grid2" style="margin-bottom:14px">
+  <div>
+    <h3>Step 3 — Gap Signal <span class="st st-add">REQUIRES BT</span></h3>
+    <div class="formula">// Available only after BT (Brain Training) is administered.
+// transfer_elo[m] = BT cognitive score mapped to mode m.
+
+gap[m] = game_elo[m] − transfer_elo[m]
+
+// gap &gt; +100 → game skill ahead of cognitive development.
+//   Student is optimizing game mechanics, not skills.
+//   Response: reduce ECHO, add INVERSION or cross-mode.
+// gap &lt; −100 → cognitive potential exceeds game expression.
+//   Bot challenge is too low. Increase aggressively.
+// |gap| &lt; 50  → aligned. Nominal progression.
+
+// Thresholds (±100) are [ASSERTED].
+// The Ledger records all sessions now.
+// When BT arrives: gap computed retroactively for all history.</div>
+    <div class="warn"><strong>Note:</strong> The gap signal is the most diagnostically powerful metric in the system. Its absence before BT does not make gap zero — it makes gap unknown. Every session is recorded regardless. Nothing is permanently lost.</div>
+  </div>
+  <div>
+    <h3>Step 4 — Session Priority <span class="st st-mode">ASSERTED weights</span></h3>
+    <div class="formula">// Compiler scores all 6 modes, takes argmax.
+
+score[m] = w1 × (1 − game_elo[m] / ELO_MAX)    // elo deficit
+         + w2 × (sessions_since[m] / SINCE_MAX)  // staleness
+         + w3 × (gap[m] / GAP_MAX)               // transfer gap
+
+// w1 = 0.50  [ASSERTED]
+// w2 = 0.30  [ASSERTED]
+// w3 = 0.20  [ASSERTED] → set to 0 when BT unavailable
+
+next_mode = argmax(score)
+
+// These weights may be student-specific.
+// Some students respond to staleness-driven scheduling,
+// others to gap-driven. Phase 3 learns this per student.</div>
+    <div class="warn"><strong>Refutation:</strong> If alternative weights produce higher mean E[KL] in held-out validation: refute. First formula to attempt fitting once Ledger has ≥ 200 cross-student sessions. Note: w3 dormant until BT — effectively 2-parameter selection until then. Acceptable.</div>
+  </div>
+</div>
+
+<h3 style="margin-bottom:8px">The Self-Grading Criterion — Calibration Is Observable</h3>
+<div class="card-dk" style="margin-bottom:14px">
+  <div style="font-size:9px;letter-spacing:2px;color:#888;margin-bottom:8px">HOW THE SYSTEM KNOWS IF IT IS WRONG</div>
+  <div style="font-size:11px;line-height:1.9;color:#fff">
+    Before every session, the compiler predicts the expected rank_pct using the Elo formula (E above). After the session, the Ledger records the actual rank_pct. The calibration scatter — predicted vs actual — should lie on the diagonal. Systematic bow above: system overestimates student ability (sessions too easy). Below: underestimates. The Reaction Library and Calibration views in layer-1-approximation.html track this per student and per mode. They are the system grading itself. If the system cannot grade itself, it cannot improve.
+  </div>
+</div>
+
+<table class="t">
+  <tr>
+    <th>Variable</th><th>Dims</th><th>Source</th><th>Status</th><th>Refutation condition</th>
+  </tr>
+  <tr>
+    <td><code>game_elo[m]</code></td><td>6</td><td>Layer 0 — rank_pct records</td>
+    <td><span class="st st-mode">ASSERTED</span> K-values, scale=400</td>
+    <td>Residual bias &gt; 0.10 after ≥ 30 sessions per mode</td>
+  </tr>
+  <tr>
+    <td><code>elo_velocity[m]</code></td><td>6</td><td>Layer 0 — session sequence</td>
+    <td><span class="st st-mode">ASSERTED</span> window=3</td>
+    <td>window=5 outperforms window=3 in held-out prediction</td>
+  </tr>
+  <tr>
+    <td><code>sessions_since[m]</code></td><td>6</td><td>Layer 0 — timestamps</td>
+    <td><span class="st st-primary">LEARNED</span> directly observable</td>
+    <td>N/A</td>
+  </tr>
+  <tr>
+    <td><code>transfer_elo[m]</code></td><td>6</td><td>BT system (external channel)</td>
+    <td><span class="st st-add">BT required</span></td>
+    <td>BT factor analysis fails to recover 6 loadings matching the 6 modes</td>
+  </tr>
+  <tr>
+    <td><code>gap[m]</code></td><td>6</td><td>Layer 0 + BT</td>
+    <td><span class="st st-add">BT required</span></td>
+    <td>Thresholds (±100) ASSERTED — refute when population Elo distribution is known</td>
+  </tr>
+  <tr>
+    <td><code>zpd_target[m]</code></td><td>6</td><td>State (derived)</td>
+    <td><span class="st st-mode">ASSERTED</span> 0.85, τ=14d</td>
+    <td>Challenge-success curve peak ≠ 0.85×Elo; return data gives τ ∉ [10d,18d]</td>
+  </tr>
+  <tr>
+    <td><code>session_priority[m]</code></td><td>6</td><td>State (derived)</td>
+    <td><span class="st st-mode">ASSERTED</span> weights [0.50, 0.30, 0.20]</td>
+    <td>Alternative weights produce higher mean E[KL] in held-out validation</td>
+  </tr>
+</table>
+
+<div class="inset" style="margin-top:8px">
+  <strong>Phase 3:</strong> Every ASSERTED parameter becomes a LEARNED value fitted from Layer 0. The Student Model tab becomes a model card: not a specification of formulas, but a record of which formula was selected, when, and why. Every parameter replacement is itself an Observation written to the SYSTEM channel of the Ledger.
+</div>
+</div>
+
 <script>
-// ════════════════════════ LOOP CANVAS
 const LOOP_NODES = [
   {id:'ledger', label:'LEDGER', sub:'append-only\nraw observations', x:.10, y:.50, w:110, h:60, fill:'#000', tc:'#fff',
    detail:'The permanent foundation. Append-only. Every observation with full provenance. config_hash joins every record to the exact configuration that produced it. Never modified — only extended.'},
@@ -1034,7 +1383,7 @@ function drawLoop() {
     const nx = n.x * W, ny = H * n.y;
     const hov = loopHover && loopHover.id === n.id;
     ctx.fillStyle = n.fill || '#fff';
-    ctx.strokeStyle = n.border || (n.fill === '#000' ? '#000' : '#111') ;
+    ctx.strokeStyle = n.border || (n.fill === '#000' ? '#000' : '#111');
     ctx.lineWidth = hov ? 2.5 : 1.5;
     const rx = nx - n.w/2, ry = ny - n.h/2;
     ctx.fillRect(rx, ry, n.w, n.h);
@@ -1089,7 +1438,7 @@ function drawBuild() {
   const pw = W*0.18, ph = 200;
 
   phases.forEach((p,i) => {
-    if (p.offset) return; // skip BT for separate rendering
+    if (p.offset) return;
     const px = p.x*W - pw/2;
     ctx.fillStyle = '#fff'; ctx.strokeStyle = p.col; ctx.lineWidth = 2;
     ctx.fillRect(px, 24, pw, ph); ctx.strokeRect(px, 24, pw, ph);
@@ -1110,7 +1459,6 @@ function drawBuild() {
     }
   });
 
-  // Phase 2 BT as side annotation on Phase 1 → Phase 3
   const p1x = phases[2].x*W;
   ctx.fillStyle = '#faf8ff'; ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 1.5;
   ctx.setLineDash([3,2]);
@@ -1126,16 +1474,58 @@ function drawBuild() {
   ctx.fillText('Do not build Phase 1 without completing Phase −1. Observations not captured during Phase −1 are permanently lost.', W/2, 305);
 }
 
+// ════════════════════════ PIPELINE CANVAS (Student Model tab)
+function drawPipeline() {
+  const c = document.getElementById('pipeline-canvas'); if (!c) return;
+  const W = c.clientWidth || 900, H = 80;
+  c.setAttribute('width', W); c.setAttribute('height', H);
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  const nodes = [
+    {label:'LAYER 0', sub:'config_vector · rank_pct\nround snapshots · moves', x:.10, fill:'#000', tc:'#fff'},
+    {label:'MODE ASSIGN', sub:'argmax(c[0:4])\nLayer 1 view over L0', x:.28, fill:'#fafafa', tc:'#555'},
+    {label:'ELO UPDATE', sub:'K×(S−E) · ASSERTED\ngame_elo[6] ± CI', x:.46, fill:'#fef3c7', tc:'#92400e'},
+    {label:'STATE', sub:'18 dims · velocity\nzpd_target · gap?', x:.64, fill:'#fff', tc:'#000'},
+    {label:'COMPILER', sub:'argmax E[KL]\n12-param config out', x:.82, fill:'#000', tc:'#fff'},
+  ];
+
+  const bw = Math.min(W * 0.155, 140), bh = 54;
+
+  for (let i = 0; i < nodes.length - 1; i++) {
+    const ax = nodes[i].x * W + bw/2 + 2, ay = H/2;
+    const bx = nodes[i+1].x * W - bw/2 - 2, by = H/2;
+    ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx-6, by); ctx.stroke();
+    ctx.fillStyle = '#ccc';
+    ctx.beginPath(); ctx.moveTo(bx-6,by-3); ctx.lineTo(bx,by); ctx.lineTo(bx-6,by+3); ctx.closePath(); ctx.fill();
+  }
+
+  nodes.forEach(n => {
+    const nx = n.x * W, ny = H/2;
+    ctx.fillStyle = n.fill;
+    ctx.strokeStyle = n.fill === '#000' ? '#000' : '#ccc';
+    ctx.lineWidth = 1.5;
+    const rx = nx - bw/2, ry = ny - bh/2;
+    ctx.fillRect(rx, ry, bw, bh); ctx.strokeRect(rx, ry, bw, bh);
+    ctx.fillStyle = n.tc;
+    ctx.font = 'bold 8px Arial'; ctx.textAlign = 'center';
+    ctx.fillText(n.label, nx, ny - 7);
+    ctx.fillStyle = n.fill === '#000' ? '#777' : '#888';
+    ctx.font = '7px Arial';
+    n.sub.split('\n').forEach((s, i) => ctx.fillText(s, nx, ny + 4 + i*9));
+  });
+}
+
 // ════════════════════════ TABS
 function showTab(name, el) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
   el.classList.add('active');
-  setTimeout(() => { drawLoop(); drawBuild(); }, 50);
+  setTimeout(() => { drawLoop(); drawBuild(); drawPipeline(); }, 50);
 }
-window.addEventListener('DOMContentLoaded', () => setTimeout(() => { drawLoop(); drawBuild(); }, 100));
-window.addEventListener('resize', () => { drawLoop(); drawBuild(); });
+window.addEventListener('DOMContentLoaded', () => setTimeout(() => { drawLoop(); drawBuild(); drawPipeline(); }, 100));
+window.addEventListener('resize', () => { drawLoop(); drawBuild(); drawPipeline(); });
 </script>
 </body>
-</html>
