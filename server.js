@@ -22,6 +22,7 @@ const WebSocket = require('ws');
 // Client→Server [dest_peer_id(LE32), ...payload]  dest 0 = broadcast
 const centauriGodotWss  = new WebSocket.Server({ noServer: true });
 const centauriGodotRooms = new Map(); // roomId → Map<peerId, ws>
+const roomTerminalCache  = new Map(); // roomId → {zone, mode, bot_profile, session_number, has_bot}
 
 centauriGodotWss.on('connection', (ws, roomId) => {
     if (!centauriGodotRooms.has(roomId)) centauriGodotRooms.set(roomId, new Map());
@@ -384,6 +385,15 @@ app.post('/api/rooms/:roomId/apply-compiler', (req, res) => {
         const payload = { ...gc, mapJson, compiler: result };
         presence.publish(`compiler_apply_${req.params.roomId}`, payload);
 
+        // Cache terminal data for the student-facing overlay
+        roomTerminalCache.set(req.params.roomId, {
+            zone:           result.zone        || null,
+            mode:           result.mode        || null,
+            bot_profile:    result.bot_profile || null,
+            session_number: null, // filled by room on first client join
+            has_bot:        !!(gc.aiBots && gc.aiBots.length > 0),
+        });
+
         res.json({
             ok: true,
             mode:        result.mode,
@@ -393,6 +403,22 @@ app.post('/api/rooms/:roomId/apply-compiler', (req, res) => {
             config_hash: result.config_hash,
         });
     } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Terminal data for student-facing overlay — called by centauri-web/index.html on load
+app.get('/api/rooms/:roomId/terminal', (req, res) => {
+    const data = roomTerminalCache.get(req.params.roomId);
+    res.json({ terminal: data || null });
+});
+
+// Update terminal cache session_number when room knows it
+// Called internally; exposed so rooms can patch it after a client joins
+app.post('/api/rooms/:roomId/terminal/session', (req, res) => {
+    const cached = roomTerminalCache.get(req.params.roomId);
+    if (cached && req.body.session_number != null) {
+        cached.session_number = req.body.session_number;
+    }
+    res.json({ ok: true });
 });
 
 app.post('/api/ledger/students/merge', (req, res) => {
@@ -447,6 +473,46 @@ type('string')(RoomState.prototype, 'gameState');
 type({ map: 'any' })(RoomState.prototype, 'teams');
 type('string')(RoomState.prototype, 'hostId');
 type(GameStateSchema)(RoomState.prototype, 'game');
+
+// ── Behavioral signal derivation (pure functions — no class dependencies) ─────
+
+// Phase 1 signal: classify player's dominant movement strategy
+function _deriveArchetypeTag(moveLog) {
+    if (!moveLog || moveLog.length === 0) return 'unknown';
+    const total = moveLog.length;
+    const hqCount    = moveLog.filter(m => m.isHQ).length;
+    const stealCount = moveLog.filter(m => m.isSteal).length;
+    const earlyCount = moveLog.filter(m => m.round <= 2).length;
+    const hqRatio    = hqCount    / total;
+    const stealRatio = stealCount / total;
+    const earlyRatio = earlyCount / total;
+    if (hqRatio > 0.35)    return 'hq_sniper';
+    if (stealRatio > 0.25) return 'opportunist';
+    if (earlyRatio > 0.50) return 'rusher';
+    if (earlyRatio < 0.15) return 'turtler';
+    return 'balanced';
+}
+
+// Phase 1 signal: count how many times a team reversed their expansion direction
+function _deriveStrategyShiftCount(roundSnapshots, team) {
+    if (!roundSnapshots || roundSnapshots.length < 3) return 0;
+    const snaps = roundSnapshots.slice().sort((a, b) => a.round - b.round);
+    const gains = [];
+    for (let i = 1; i < snaps.length; i++) {
+        const prev = (snaps[i-1].starsByTeam || {})[team] || 0;
+        const curr = (snaps[i].starsByTeam   || {})[team] || 0;
+        gains.push(curr - prev);
+    }
+    let shifts = 0;
+    for (let i = 1; i < gains.length; i++) {
+        const wasGaining = gains[i-1] > 0;
+        const nowGaining = gains[i]   > 0;
+        const wasLosing  = gains[i-1] < 0;
+        const nowLosing  = gains[i]   < 0;
+        if ((wasGaining && nowLosing) || (wasLosing && nowGaining)) shifts++;
+    }
+    return shifts;
+}
 
 // ConstellationRoom class
 class ConstellationRoom extends Room {
@@ -1781,6 +1847,12 @@ class ConstellationRoom extends Room {
 
         this.state.players.set(client.sessionId, player);
 
+        // Keep terminal cache session_number in sync when first human joins
+        if (!player.isBot && roomTerminalCache.has(this.roomId)) {
+            const tc = roomTerminalCache.get(this.roomId);
+            if (tc.session_number == null) tc.session_number = this.gameConfig.sessionNumber || null;
+        }
+
         // CRITICAL: Send current game config to the new player so they get the correct map and settings
         client.send('settings_update', { config: this.gameConfig });
         console.log(`📤 Sent current config to new player ${client.sessionId}, customMap:`, this.gameConfig.customMap ? `exists (${this.gameConfig.customMap.title || 'untitled'})` : 'null');
@@ -2377,6 +2449,8 @@ class ConstellationRoom extends Room {
                         compiler_expected_rank_pct: this.gameConfig._compiler?.expected_rank_pct ?? null,
                         compiler_zone:              this.gameConfig._compiler?.zone              ?? null,
                         compiler_bot_profile:       this.gameConfig._compiler?.bot_profile       ?? null,
+                        archetype_tag:              _deriveArchetypeTag(this.moveLog[sessionId] || []),
+                        strategy_shift_count:       _deriveStrategyShiftCount(this.roundSnapshots || [], team),
                     },
                     params_version: ledger.PARAMS_VERSION
                 };

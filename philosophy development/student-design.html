@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Student Design — Experience, Signal Integrity & Progressive Disclosure</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.6}
+header{border-bottom:2px solid #000;padding:20px 28px 14px;position:sticky;top:0;background:#fff;z-index:10}
+.hd-title{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:4px}
+.hd-main{font-size:20px;font-weight:700;line-height:1.2;margin-bottom:6px}
+.hd-sub{font-size:11px;color:#555;max-width:740px;line-height:1.6}
+.nav-parts{display:flex;gap:0;margin-top:12px;border-top:1px solid #eee}
+.nav-part{padding:8px 0 0}
+.nav-part+.nav-part{margin-left:28px;padding-left:28px;border-left:1px solid #eee}
+.nav-part-label{font-size:7px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#bbb;margin-bottom:5px}
+.nav{display:flex;gap:16px;flex-wrap:wrap}
+.nav a{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;text-decoration:none;padding:3px 0;border-bottom:2px solid transparent}
+.nav a:hover,.nav a.active{color:#000;border-bottom-color:#000}
+.content{max-width:980px;margin:0 auto;padding:32px 28px 80px}
+.section{margin-bottom:52px}
+.section-label{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:8px}
+.section-title{font-size:18px;font-weight:700;margin-bottom:14px;line-height:1.3}
+.body,.section-body{font-size:12px;color:#333;line-height:1.8;max-width:700px}
+.body p,.section-body p{margin-bottom:12px}
+.body strong,.section-body strong{color:#000}
+.rule{border:none;border-top:1px solid #eee;margin:36px 0}
+.part-divider{border:none;border-top:3px solid #000;margin:56px 0 48px}
+.part-divider-label{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;background:#fff;padding-right:12px;white-space:nowrap}
+
+/* tags */
+.asserted{display:inline-block;font-size:8px;font-weight:700;color:#d97706;border:1px solid #d97706;padding:0 4px;letter-spacing:.5px;vertical-align:middle}
+.phase-tag{display:inline-block;font-size:8px;font-weight:700;padding:1px 6px;border:1px solid;text-transform:uppercase;letter-spacing:1px;vertical-align:middle}
+.never{display:inline-block;font-size:8px;font-weight:700;color:#dc2626;border:1px solid #dc2626;padding:0 5px;letter-spacing:1px;vertical-align:middle}
+.admin{display:inline-block;font-size:8px;font-weight:700;color:#2563eb;border:1px solid #2563eb;padding:0 5px;letter-spacing:1px;vertical-align:middle}
+.alpha{display:inline-block;font-size:8px;font-weight:700;color:#7c3aed;border:1px solid #7c3aed;padding:0 5px;letter-spacing:1px;vertical-align:middle}
+.ok{display:inline-block;font-size:8px;font-weight:700;color:#059669;border:1px solid #059669;padding:0 5px;letter-spacing:1px;vertical-align:middle}
+
+/* tables */
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:11px}
+th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px 10px;border-bottom:2px solid #000;text-align:left;background:#f5f5f5}
+td{padding:9px 10px;border-bottom:1px solid #eee;vertical-align:top;line-height:1.6}
+tr:last-child td{border-bottom:none}
+
+/* ── TERMINAL ── */
+.terminal{background:#0a0a0a;color:#e8e8e8;font-family:'Courier New',monospace;font-size:11px;line-height:1.8;padding:20px 24px;margin:16px 0;border-left:3px solid #000}
+.t-dim{color:#444}
+.t-amber{color:#d97706}
+.t-white{color:#fff;font-weight:700}
+.t-green{color:#059669}
+.t-red{color:#dc2626}
+.t-cyan{color:#0891b2}
+.t-blink::after{content:'█';animation:blink 1.2s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.terminal-label{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:4px}
+
+/* ── ZONES ── */
+.zone-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin:16px 0}
+.zone-card{border:1px solid #ddd;padding:14px 16px}
+.zone-name{font-size:14px;font-weight:700;letter-spacing:2px;margin-bottom:4px}
+.zone-trigger{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:8px}
+.zone-feel{font-size:11px;color:#333;line-height:1.6;margin-bottom:8px}
+.zone-message{font-family:'Courier New',monospace;font-size:10px;color:#555;border-left:2px solid #ddd;padding-left:8px;line-height:1.7;font-style:italic}
+
+/* ── MYSTERY DIAL ── */
+.dial-bar{display:flex;height:32px;border:1px solid #ddd;overflow:hidden;margin:8px 0}
+.dial-seg{display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#fff}
+.dial-labels{display:flex;justify-content:space-between;font-size:9px;color:#888}
+
+/* ── CHEMICAL REACTIONS ── */
+.reaction-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin:16px 0}
+.rxn-card{border:1px solid #ddd;padding:14px 16px}
+.rxn-pair{font-size:13px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.rxn-arrow{color:#888;font-weight:400}
+.rxn-label{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:6px}
+.rxn-body{font-size:11px;color:#333;line-height:1.6}
+.rxn-signal{font-size:9px;color:#888;margin-top:6px;font-style:italic}
+
+/* ── QUESTIONS ── */
+.q-item{border-left:3px solid #000;padding:10px 14px;margin-bottom:10px;background:#fafafa}
+.q-num{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:2px}
+.q-text{font-size:12px;font-weight:700;margin-bottom:4px}
+.q-why{font-size:11px;color:#555;line-height:1.6}
+
+/* ── PRINCIPLE BLOCKS ── */
+.principle{border-left:3px solid #000;padding:10px 14px;margin:12px 0;background:#fafafa}
+.p-num{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:3px}
+.p-title{font-size:13px;font-weight:700;margin-bottom:4px}
+.p-body{font-size:11px;color:#333;line-height:1.6}
+
+/* ── BOUNDARY DIAGRAM ── */
+.boundary{display:grid;grid-template-columns:1fr 3px 1fr;gap:0;margin:20px 0;align-items:start}
+.boundary-col{padding:16px}
+.boundary-line{background:#000;align-self:stretch}
+.boundary-label{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
+.boundary-item{font-size:11px;padding:6px 0;border-bottom:1px solid #eee;display:flex;align-items:center;gap:8px;line-height:1.5}
+.boundary-item:last-child{border-bottom:none}
+
+/* ── PROGRESSIVE UNLOCK TIERS ── */
+.tier-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0;margin:16px 0;border:1px solid #ddd}
+.tier{border-right:1px solid #ddd;padding:16px}
+.tier:last-child{border-right:none}
+.tier-header{margin-bottom:12px}
+.tier-name{font-size:13px;font-weight:700;letter-spacing:1px;margin-bottom:2px}
+.tier-range{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:8px}
+.tier-sees{margin-bottom:8px}
+.tier-sees-label{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:4px}
+.tier-item{font-size:10px;color:#333;line-height:1.7;display:flex;gap:5px}
+.tier-item::before{content:'·';color:#ccc;flex-shrink:0}
+.tier-item.hidden{color:#aaa}
+.tier-item.hidden::before{content:'—'}
+.tier-kl{font-size:9px;color:#888;font-style:italic;border-top:1px solid #eee;padding-top:6px;margin-top:8px;line-height:1.6}
+
+/* ── BOT OPACITY CARDS ── */
+.obs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px;margin:16px 0}
+.obs-card{border:1px solid #ddd;padding:12px 14px}
+.obs-title{font-size:12px;font-weight:700;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px}
+.obs-body{font-size:11px;color:#333;line-height:1.6;margin-bottom:6px}
+.obs-tag{font-size:8px;font-weight:700;padding:1px 5px;border:1px solid #ddd;margin-right:4px;color:#888;letter-spacing:1px;text-transform:uppercase}
+
+/* ── SANDBOX PROTOTYPE ── */
+.sandbox{border:1px solid #ddd;margin:20px 0;font-family:Arial,sans-serif;font-size:11px}
+.sandbox-header{background:#000;color:#fff;padding:8px 14px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center}
+.sb-badge{font-size:7px;padding:1px 6px;border:1px solid #555;letter-spacing:1px;color:#888}
+.sandbox-body{display:grid;grid-template-columns:220px 1fr;min-height:380px}
+.sb-left{border-right:1px solid #ddd}
+.sb-section{border-bottom:1px solid #eee;padding:10px 12px}
+.sb-section-label{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:8px}
+.sb-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.sb-key{font-size:10px;color:#555}
+.sb-val{font-size:10px;font-weight:700}
+select,input[type=range],input[type=text]{font-family:Arial,sans-serif;font-size:10px;border:1px solid #ddd;padding:3px 6px;width:100%;margin-top:4px;background:#fff}
+input[type=range]{padding:0;height:16px}
+.sb-right{display:flex;flex-direction:column}
+.sb-canvas-wrap{flex:1;background:#0d0d0d;position:relative;overflow:hidden;min-height:240px}
+canvas#sbCanvas{display:block;width:100%;height:100%}
+.sb-overlay{position:absolute;top:8px;left:8px;font-family:'Courier New',monospace;font-size:9px;color:#444;line-height:1.8;pointer-events:none}
+.sb-metrics{border-top:1px solid #eee;padding:10px 14px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.sb-metric{text-align:center}
+.sb-metric-val{font-size:16px;font-weight:700;line-height:1}
+.sb-metric-lbl{font-size:8px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+.sb-footer{border-top:2px solid #000;padding:8px 14px;display:flex;align-items:center;gap:10px;background:#f9f9f9}
+.sb-btn{border:1px solid #000;background:#000;color:#fff;padding:5px 14px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer}
+.sb-btn.secondary{background:#fff;color:#000}
+.sb-btn:disabled{opacity:.35;cursor:default}
+.sb-notif{font-size:9px;color:#888;font-style:italic}
+
+@media(max-width:768px){
+  header{padding:14px 14px 10px;position:relative}
+  .content{padding:20px 14px 40px}
+  .hd-main{font-size:16px}
+  .zone-grid,.reaction-grid,.obs-grid{grid-template-columns:1fr}
+  .boundary{grid-template-columns:1fr;grid-template-rows:auto 3px auto}
+  .boundary-line{height:3px;align-self:auto}
+  .tier-grid{grid-template-columns:1fr;grid-template-rows:auto}
+  .tier{border-right:none;border-bottom:1px solid #ddd}
+  .tier:last-child{border-bottom:none}
+  .sandbox-body{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .sb-left{border-right:none;border-bottom:1px solid #ddd}
+  .sb-metrics{grid-template-columns:repeat(2,1fr)}
+  .terminal{font-size:10px;padding:14px}
+  table{font-size:10px}
+  th,td{padding:6px 8px}
+  .nav-parts{flex-direction:column;gap:10px}
+  .nav-part+.nav-part{margin-left:0;padding-left:0;border-left:none;border-top:1px solid #eee;padding-top:10px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd-title">Phase 1 — Student Layer</div>
+  <div class="hd-main">Student Design — Experience, Signal Integrity & Progressive Disclosure</div>
+  <div class="hd-sub">Part I: how the system speaks to students, how sessions are curated, and what chemistry emerges from student pairings. Part II: why pre-testing destroys signal, what the Ledger boundary means, how access expands over time, and the admin sandbox that lets designers test freely without contaminating the model.</div>
+  <div class="nav-parts">
+    <div class="nav-part">
+      <div class="nav-part-label">Part I — Student Experience</div>
+      <nav class="nav">
+        <a href="#terminal">Terminal Language</a>
+        <a href="#zones">Zone Names</a>
+        <a href="#mystery">Mystery vs Transparency</a>
+        <a href="#reactions">Chemical Reactions</a>
+        <a href="#curation">Curation Architecture</a>
+        <a href="#questions">Open Questions</a>
+      </nav>
+    </div>
+    <div class="nav-part">
+      <div class="nav-part-label">Part II — Signal Integrity</div>
+      <nav class="nav">
+        <a href="#core-problem">Core Problem</a>
+        <a href="#boundary">The Boundary</a>
+        <a href="#principles">Principles</a>
+        <a href="#unlock-tiers">Unlock Tiers</a>
+        <a href="#access">Access Matrix</a>
+        <a href="#bot-opacity">Bot Opacity</a>
+        <a href="#sandbox">Sandbox</a>
+        <a href="#retrospective">Retrospective</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<div class="content">
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!--  PART I — STUDENT EXPERIENCE                                              -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+
+<div class="section" id="terminal">
+  <div class="section-label">Part I · Section 1</div>
+  <div class="section-title">The Terminal — What the Student Sees</div>
+  <div class="section-body">
+    <p>The terminal is the only moment the system speaks directly to the student. It appears before each session. It does not explain the game. It does not give instructions. It communicates trajectory.</p>
+    <p>The language is designed to create a <strong>specific feeling before the first move</strong>: that this session was chosen for a reason, and that reason is about the student's position in something larger than today's game.</p>
+    <p><strong>Constraint:</strong> the terminal never says "you are in SPATIAL mode" or "you ranked 73rd percentile." It speaks about the student's relationship to cognitive territory, not about the system's internal variables. The system knows the variables. The student experiences the story.</p>
+  </div>
+
+  <div class="terminal-label">ZERO-SESSION STUDENT — first ever session</div>
+  <div class="terminal">
+<span class="t-dim">────────────────────────────────────────────────</span>
+<span class="t-white">CONSTELLATION</span>  <span class="t-dim">cognitive development system</span>
+
+<span class="t-dim">  session       </span><span class="t-amber">001</span>
+<span class="t-dim">  profile       </span><span class="t-amber">initializing</span>
+<span class="t-dim">  mode          </span><span class="t-amber">calibration</span>
+
+<span class="t-dim">  The system does not know you yet.</span>
+<span class="t-dim">  This session is a question, not an assessment.</span>
+
+<span class="t-dim">  Play as you would play.</span>
+<span class="t-dim">  The system is watching for what makes you different.</span>
+<span class="t-dim">────────────────────────────────────────────────</span>
+<span class="t-dim">  enter when ready</span> <span class="t-blink"></span>
+  </div>
+
+  <div class="terminal-label">DEVELOPING STUDENT — 8 sessions, QTY mode selected, ZPD at 620</div>
+  <div class="terminal">
+<span class="t-dim">────────────────────────────────────────────────</span>
+<span class="t-white">CONSTELLATION</span>  <span class="t-dim">cognitive development system</span>
+
+<span class="t-dim">  session       </span><span class="t-amber">009</span>
+<span class="t-dim">  zone          </span><span class="t-white">PARALLEL</span>
+<span class="t-dim">  signal        </span><span class="t-amber">quantity coordination · edge of range</span>
+
+<span class="t-dim">  You have been here before.</span>
+<span class="t-dim">  This time the conditions have shifted.</span>
+<span class="t-dim">  The system wants to know if you shifted with them.</span>
+
+<span class="t-dim">────────────────────────────────────────────────</span>
+<span class="t-dim">  enter when ready</span> <span class="t-blink"></span>
+  </div>
+
+  <div class="terminal-label">ADVANCED STUDENT — 34 sessions, high QTY Elo, compiler selects FRT to address deficit</div>
+  <div class="terminal">
+<span class="t-dim">────────────────────────────────────────────────</span>
+<span class="t-white">CONSTELLATION</span>  <span class="t-dim">cognitive development system</span>
+
+<span class="t-dim">  session       </span><span class="t-amber">035</span>
+<span class="t-dim">  zone          </span><span class="t-white">RADICAL</span>
+<span class="t-dim">  signal        </span><span class="t-green">new territory</span>
+
+<span class="t-dim">  The system has been watching a gap form.</span>
+<span class="t-dim">  One dimension of your thinking has outpaced another.</span>
+<span class="t-dim">  Today's session addresses the imbalance directly.</span>
+
+<span class="t-dim">  This will feel different. That is the point.</span>
+
+<span class="t-dim">────────────────────────────────────────────────</span>
+<span class="t-dim">  enter when ready</span> <span class="t-blink"></span>
+  </div>
+
+  <div class="terminal-label">SILENT INVERSION — INV config, invAnnounced = false</div>
+  <div class="terminal">
+<span class="t-dim">────────────────────────────────────────────────</span>
+<span class="t-white">CONSTELLATION</span>  <span class="t-dim">cognitive development system</span>
+
+<span class="t-dim">  session       </span><span class="t-amber">022</span>
+<span class="t-dim">  zone          </span><span class="t-white">SHIFTING</span>
+<span class="t-dim">  signal        </span><span class="t-cyan">inversion · silent</span>
+
+<span class="t-dim">  Something about this session is different.</span>
+<span class="t-dim">  The system is not going to tell you what.</span>
+<span class="t-dim">  Figure it out.</span>
+
+<span class="t-dim">────────────────────────────────────────────────</span>
+<span class="t-dim">  enter when ready</span> <span class="t-blink"></span>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="zones">
+  <div class="section-label">Part I · Section 2</div>
+  <div class="section-title">Zone Names — The Vocabulary of Trajectory</div>
+  <div class="section-body">
+    <p>Zone names are the only labels the student ever sees for their position. They describe <strong>the relationship between the student and the current session</strong>, not the cognitive mode or difficulty level. The student does not need to know they are in QTY mode. They need to know what kind of moment this is.</p>
+    <p>The five names form a complete vocabulary of challenge relationships. A student who has experienced all five has experienced the full range of how the system positions sessions relative to their current ability.</p>
+  </div>
+
+  <div class="zone-grid">
+    <div class="zone-card">
+      <div class="zone-name">ECHO</div>
+      <div class="zone-trigger">Trigger: high similarity to recent sessions, same mode, ZPD comfortable</div>
+      <div class="zone-feel">The student is being asked to confirm something already learned. Reinforcement. The session should feel familiar but not easy — familiar in structure, demanding in execution.</div>
+      <div class="zone-message">"You have been here before. The question is whether you've made it yours."</div>
+    </div>
+    <div class="zone-card">
+      <div class="zone-name" style="color:#2563eb">PARALLEL</div>
+      <div class="zone-trigger">Trigger: same mode, ZPD at ceiling, parameters shifted</div>
+      <div class="zone-feel">The cognitive domain is the same but the conditions have changed. The student must apply existing skill in a novel context. Tests transfer within a mode.</div>
+      <div class="zone-message">"Same territory, different weather. What you know still applies — but not directly."</div>
+    </div>
+    <div class="zone-card">
+      <div class="zone-name" style="color:#d97706">SHIFTING</div>
+      <div class="zone-trigger">Trigger: mode change from last session, or INVERSION config</div>
+      <div class="zone-feel">Something structurally different from the last session. The student enters without knowing exactly what changed. Diagnostic — the system is watching how they adapt to unfamiliar structure.</div>
+      <div class="zone-message">"The rules of the last session don't apply here. Find the new ones."</div>
+    </div>
+    <div class="zone-card">
+      <div class="zone-name" style="color:#dc2626">RADICAL</div>
+      <div class="zone-trigger">Trigger: compiler selects a mode with large deficit, first session in a long-stale mode</div>
+      <div class="zone-feel">The system is deliberately placing the student outside their comfort zone. This should feel slightly destabilizing. High information gain expected.</div>
+      <div class="zone-message">"This session targets a gap the system has been watching. You may not perform well. That is useful."</div>
+    </div>
+    <div class="zone-card">
+      <div class="zone-name" style="color:#059669">REMATCH</div>
+      <div class="zone-trigger">Trigger: repeating a session type where student previously ranked below 0.40</div>
+      <div class="zone-feel">The system is returning the student to something they did not do well. Not punishment — the signal from the previous attempt was incomplete. The system needs more data, and the student needs the chance to develop.</div>
+      <div class="zone-message">"The system remembers the last time you were here. So do you."</div>
+    </div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="mystery">
+  <div class="section-label">Part I · Section 3</div>
+  <div class="section-title">Mystery vs Transparency — The Calibration Problem</div>
+  <div class="section-body">
+    <p>Every disclosure decision is a tradeoff between two goods: <strong>transparency</strong> builds trust and agency; <strong>mystery</strong> protects signal quality and maintains engagement. The system optimizes for information gain — which means it must protect the conditions under which authentic behavior is observed.</p>
+    <p>The fundamental tension: if a student knows exactly what the system is measuring, they may perform for the measurement rather than authentically. This contaminates the Ledger. But if they know nothing, they cannot develop the meta-cognitive relationship with their own learning that is the long-term goal.</p>
+    <p>The resolution: <strong>disclose the structure, withhold the current state.</strong> The student should always know <em>that</em> the system selects sessions based on their trajectory. They should never know <em>what</em> the system currently thinks their trajectory is until they have enough sessions to discuss it meaningfully.</p>
+  </div>
+
+  <div style="margin:24px 0">
+    <div class="section-label">WHAT TO REVEAL — by phase</div>
+    <div class="dial-bar">
+      <div class="dial-seg" style="flex:2;background:#222">HIDDEN</div>
+      <div class="dial-seg" style="flex:1;background:#555">HINTED</div>
+      <div class="dial-seg" style="flex:0.5;background:#888">NAMED</div>
+    </div>
+    <div class="dial-labels"><span>Phase 0: silent optimization</span><span>Phase 1: terminal language</span><span>Phase 3+: collaborative</span></div>
+  </div>
+
+  <table>
+    <thead><tr><th>Information</th><th>Phase 0</th><th>Phase 1</th><th>Phase 3+</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>That the system selects sessions</strong></td>
+        <td>Hidden</td>
+        <td>Implied by terminal</td>
+        <td>Explicit</td>
+        <td>Revealing it changes behavior before data exists to interpret the change</td>
+      </tr>
+      <tr>
+        <td><strong>Zone name (ECHO/RADICAL/etc)</strong></td>
+        <td>Hidden</td>
+        <td><strong>Shown</strong></td>
+        <td>Shown + explained</td>
+        <td>Names describe the relationship, not the mechanism — safe to show</td>
+      </tr>
+      <tr>
+        <td><strong>Cognitive mode (QTY/SPT/FRT/etc)</strong></td>
+        <td>Hidden</td>
+        <td>Hidden</td>
+        <td>Shown to Alpha track only</td>
+        <td>Mode labels are Layer 1 views — explaining them requires explaining the model</td>
+      </tr>
+      <tr>
+        <td><strong>Student's current Elo</strong></td>
+        <td>Hidden</td>
+        <td>Hidden</td>
+        <td>Shown in Alpha track</td>
+        <td>Elo number without context is misleading; number without sufficient sessions is noise</td>
+      </tr>
+      <tr>
+        <td><strong>That INVERSION is happening</strong></td>
+        <td><strong>Never</strong> (silent_inv)</td>
+        <td><strong>Never</strong></td>
+        <td>Post-session only</td>
+        <td>Announcing INVERSION contaminates the signal entirely — student performs for the label</td>
+      </tr>
+      <tr>
+        <td><strong>The One Principle (argmax E[KL])</strong></td>
+        <td>Hidden</td>
+        <td>Hidden</td>
+        <td>Alpha track, late stage</td>
+        <td>The singularity goal: student eventually understands the system well enough to run it themselves</td>
+      </tr>
+      <tr>
+        <td><strong>Their session history</strong></td>
+        <td>Hidden</td>
+        <td>Implied by zone name</td>
+        <td>Shown on request</td>
+        <td>History without interpretation can create fixed mindset; history with interpretation is powerful</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="reactions">
+  <div class="section-label">Part I · Section 4</div>
+  <div class="section-title">Chemical Reactions — Students in Contact</div>
+  <div class="section-body">
+    <p>A "chemical reaction" is what happens when two students with different cognitive profiles are placed in the same session. The Ledger currently treats sessions as individual measurements. But every multiplayer session is also a social experiment — the outcome is shaped by the specific combination of students, not just the config vector.</p>
+    <p>The system does not yet track this. But the architecture needs to account for it, because <strong>the wrong pairing contaminates both students' data</strong>, and the right pairing creates information gain that neither student could produce alone.</p>
+  </div>
+
+  <div class="reaction-grid">
+    <div class="rxn-card">
+      <div class="rxn-label">High Elo × Low Elo, same mode</div>
+      <div class="rxn-pair"><span style="color:#059669">DEVELOPED</span> <span class="rxn-arrow">+</span> <span style="color:#888">EMERGING</span></div>
+      <div class="rxn-body">The high-Elo student may anchor or suppress the low-Elo student's authentic behavior. The low-Elo student's outcome is influenced by the high-Elo student's strategy, not their own cognition. <strong>Signal contamination for the lower student.</strong></div>
+      <div class="rxn-signal">Ledger flag needed: session_composition = [HIGH, LOW] → outcome weight reduction for LOW student</div>
+    </div>
+    <div class="rxn-card">
+      <div class="rxn-label">Matched Elo, different modes dominant</div>
+      <div class="rxn-pair"><span style="color:#d97706">QTY-dominant</span> <span class="rxn-arrow">+</span> <span style="color:#2563eb">SPT-dominant</span></div>
+      <div class="rxn-body">Both students are competent overall but excel in different dimensions. The session forces each to operate in the other's stronger domain. <strong>High information gain for both — this is the ideal pairing for a mixed config session.</strong></div>
+      <div class="rxn-signal">Ideal for QTY+SPT hybrid configs — each student's weakness is the other's strength</div>
+    </div>
+    <div class="rxn-card">
+      <div class="rxn-label">Similar profiles, high Elo, collaborative</div>
+      <div class="rxn-pair"><span style="color:#059669">EXPERT</span> <span class="rxn-arrow">+</span> <span style="color:#059669">EXPERT</span></div>
+      <div class="rxn-body">Two highly developed students in the same mode produce the system's highest quality signal. The session is essentially a stress test at the upper difficulty range. <strong>Most informative for the forgetting curve and ceiling behavior.</strong></div>
+      <div class="rxn-signal">Priority pairing for measuring τ (forgetting half-life) at high Elo</div>
+    </div>
+    <div class="rxn-card">
+      <div class="rxn-label">RADICAL vs ECHO in same session</div>
+      <div class="rxn-pair"><span style="color:#dc2626">RADICAL</span> <span class="rxn-arrow">+</span> <span style="color:#555">ECHO</span></div>
+      <div class="rxn-body">One student is being stretched; the other is consolidating. The ECHO student's session becomes unpredictable — the RADICAL student's behavior is unusual and may destabilize the ECHO student's consolidation. <strong>Avoid pairing — contradictory session purposes.</strong></div>
+      <div class="rxn-signal">Compiler should avoid this combination in multiplayer scheduling</div>
+    </div>
+    <div class="rxn-card">
+      <div class="rxn-label">First session student + any experienced student</div>
+      <div class="rxn-pair"><span style="color:#888">ZERO</span> <span class="rxn-arrow">+</span> <span style="color:#059669">ANY</span></div>
+      <div class="rxn-body">The zero-session student's calibration data is compromised — their behavior is shaped by observing the experienced student rather than exploring independently. <strong>Zero-session students should play against bots only for first 3–5 sessions.</strong> <span class="asserted">ASSERTED: 3–5</span></div>
+      <div class="rxn-signal">server.js: if session_count &lt; 3, force bot-only session regardless of room composition</div>
+    </div>
+    <div class="rxn-card">
+      <div class="rxn-label">Student + their own past performance (bots at their Elo)</div>
+      <div class="rxn-pair"><span style="color:#7c3aed">STUDENT</span> <span class="rxn-arrow">vs</span> <span style="color:#555">ELO-MATCHED BOT</span></div>
+      <div class="rxn-body">When the bot is set to match the student's current Elo, the session is a clean self-comparison. <strong>The cleanest signal the system can generate for a solo student.</strong> This is what the compiler currently produces (R_bot = 520 ASSERTED baseline).</div>
+      <div class="rxn-signal">Phase 1: dynamic bot Elo matching per session based on student's current mode Elo</div>
+    </div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="curation">
+  <div class="section-label">Part I · Section 5</div>
+  <div class="section-title">Curation Architecture — How Sessions Are Selected</div>
+  <div class="section-body">
+    <p>The compiler currently selects mode and builds a config vector from ASSERTED MODE_DEFAULTS. This is the skeleton. The full curation pipeline has more stages — and some of those stages require decisions that are not yet made.</p>
+  </div>
+
+  <table>
+    <thead><tr><th>Stage</th><th>What it decides</th><th>Current state</th><th>Phase</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>1. Mode selection</strong></td>
+        <td>Which of 6 cognitive modes to target this session</td>
+        <td>Implemented: argmax(deficit × 0.50 + staleness × 0.30 + gap × 0.20) <span class="asserted">ASSERTED weights</span></td>
+        <td><span class="phase-tag" style="border-color:#d97706;color:#d97706">Phase 0</span></td>
+      </tr>
+      <tr>
+        <td><strong>2. Difficulty calibration</strong></td>
+        <td>Where within the mode to pitch the session (ZPD target)</td>
+        <td>Implemented: ZPD = elo × 0.85 × decay <span class="asserted">ASSERTED</span></td>
+        <td><span class="phase-tag" style="border-color:#d97706;color:#d97706">Phase 0</span></td>
+      </tr>
+      <tr>
+        <td><strong>3. Zone assignment</strong></td>
+        <td>Which zone name to show (ECHO/PARALLEL/SHIFTING/RADICAL/REMATCH)</td>
+        <td>Implemented: assignZone() in compiler.js — wired to compiler output and Ledger</td>
+        <td><span class="phase-tag" style="border-color:#059669;color:#059669">Built</span></td>
+      </tr>
+      <tr>
+        <td><strong>4. Map selection</strong></td>
+        <td>Which map to use, based on topology affinity for target mode</td>
+        <td>Implemented: selectMap() reads topology.json, selects highest mode_affinity, avoids recent repeats</td>
+        <td><span class="phase-tag" style="border-color:#059669;color:#059669">Built</span></td>
+      </tr>
+      <tr>
+        <td><strong>5. Bot profile selection</strong></td>
+        <td>Which of 6 bot personalities to deploy</td>
+        <td>Implemented: selectBotProfile() maps zone + session count to profile. aggression set accordingly.</td>
+        <td><span class="phase-tag" style="border-color:#059669;color:#059669">Built</span></td>
+      </tr>
+      <tr>
+        <td><strong>6. Template selection</strong></td>
+        <td>Which of 17 challenge templates to use within the mode</td>
+        <td>Not yet implemented. Templates exist in challenge-meta.html but compiler uses MODE_DEFAULTS only.</td>
+        <td><span class="phase-tag" style="border-color:#2563eb;color:#2563eb">Phase 1</span></td>
+      </tr>
+      <tr>
+        <td><strong>7. Social composition</strong></td>
+        <td>Who the student should play with or against</td>
+        <td>Not yet tracked. Session records don't store team composition in a queryable way.</td>
+        <td><span class="phase-tag" style="border-color:#2563eb;color:#2563eb">Phase 1</span></td>
+      </tr>
+      <tr>
+        <td><strong>8. Terminal message generation</strong></td>
+        <td>Which message to show, which zone name to use</td>
+        <td>Not yet implemented. Message library exists in system-complete.html. Zone logic not wired.</td>
+        <td><span class="phase-tag" style="border-color:#2563eb;color:#2563eb">Phase 1</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="questions">
+  <div class="section-label">Part I · Section 6 — Questions for the designer</div>
+  <div class="section-title">What I Need to Know Before Building Phase 1</div>
+  <div class="section-body">
+    <p>These are the decisions that cannot be made from the architecture alone. They require your judgment about the students, the context, and the educational philosophy.</p>
+  </div>
+
+  <div>
+    <div class="q-item">
+      <div class="q-num">Q·A — Age & Cognitive Profile</div>
+      <div class="q-text">Who are the students? What is the age range, and what do you know about their cognitive baseline?</div>
+      <div class="q-why">The terminal language, zone names, and transparency dial all depend on who is reading them. A 12-year-old and a 17-year-old need different language. A student who has been told the system is measuring them needs different messaging than one who thinks it's just a game.</div>
+    </div>
+    <div class="q-item">
+      <div class="q-num">Q·B — What Do Students Currently Think the System Is?</div>
+      <div class="q-text">Right now, before Phase 1 is implemented — what do students believe Constellation is? A game? An educational tool? Do they know sessions are being selected for them?</div>
+      <div class="q-why">The terminal message for a student who already knows "this session was chosen for me" is completely different from a student encountering that idea for the first time. The first session to show a terminal message is the most important one to get right.</div>
+    </div>
+    <div class="q-item">
+      <div class="q-num">Q·C — The INVERSION Reveal</div>
+      <div class="q-text">INVERSION (negative multipliers) creates inverted scoring. Currently it runs silently. When — if ever — should a student learn that INVERSION sessions exist?</div>
+      <div class="q-why">Options: (1) Never reveal — protect the signal permanently. (2) Reveal post-session — "that session had inverted rules, your instincts were correct but misapplied." (3) Reveal to Alpha track only. The terminal currently says "something is different" without naming it. Is that enough?</div>
+    </div>
+    <div class="q-item">
+      <div class="q-num">Q·D — Social Dynamics in Your Specific Context</div>
+      <div class="q-text">Are students competitive with each other? Do they play in fixed teams or rotating groups? Are there friendship dynamics that would affect pairing?</div>
+      <div class="q-why">The chemical reaction architecture depends on whether you can control who plays with whom. If students self-select into teams, the social composition stage of curation is limited. If the teacher assigns sessions, full curation is possible.</div>
+    </div>
+    <div class="q-item">
+      <div class="q-num">Q·E — Session Frequency & Context</div>
+      <div class="q-text">How often do students play? In what setting — classroom, after-school, at home? How long is a typical session?</div>
+      <div class="q-why">The forgetting decay constant (τ=14d, ASSERTED) is the single biggest assumption the compiler makes. If students play twice a week, τ=14d may overestimate forgetting. If they play once a month, it may underestimate it.</div>
+    </div>
+    <div class="q-item">
+      <div class="q-num">Q·F — The Alpha Track Entry Criterion</div>
+      <div class="q-text">Who should be on the Alpha track, and what should the entry process feel like to the student?</div>
+      <div class="q-why">Alpha track students are ready to reason about the system itself. The application process and mystery calibration are designed. What triggers eligibility? A session count threshold? A teacher nomination? And critically: does the student apply, or are they invited?</div>
+    </div>
+    <div class="q-item">
+      <div class="q-num">Q·G — How Much Should the Terminal Explain Itself?</div>
+      <div class="q-text">The terminal currently says things like "the system wants to know if you shifted with the conditions." Should the terminal ever explain what it means by "the system"? Or does the opacity serve the experience?</div>
+      <div class="q-why">Spectrum: (1) Pure oracle — speaks and never explains. (2) Minimal context — "this is a cognitive development system" and nothing more. (3) Earned transparency — reveals more language over time as the student demonstrates they can handle it.</div>
+    </div>
+    <div class="q-item">
+      <div class="q-num">Q·H — What Happens When a Student Asks "Why Did I Get This Session?"</div>
+      <div class="q-text">A curious student will ask the teacher. What should the teacher say?</div>
+      <div class="q-why">Option A: "The system decides" (deflects, preserves mystery). Option B: "It's based on your history" (truthful but vague). Option C: "It thinks you're ready for something harder in [area]" (partially reveals the model). The answer determines how much the teacher is a translator between the student and the system.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!--  PART II — SIGNAL INTEGRITY & PROGRESSIVE DISCLOSURE                     -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+
+<div class="part-divider">
+  <span class="part-divider-label">PART II — SIGNAL INTEGRITY: TESTING, THE BOUNDARY & PROGRESSIVE DISCLOSURE</span>
+</div>
+<p class="body" style="margin-bottom:36px;margin-top:-24px">The Ledger is the boundary. Everything outside it can be explored freely. Everything inside it must be authentic. This section defines what testing is, who can do it, what it can observe, and what it must never touch — and how access to system knowledge expands progressively as students develop.</p>
+
+<div class="section" id="core-problem">
+  <div class="section-label">Part II · Section 1</div>
+  <div class="section-title">Why Pre-Testing Destroys Signal</div>
+  <div class="body">
+    <p>The system's One Principle is <code>argmax E[KL(posterior ‖ prior)]</code> — maximize expected information gain about the student's cognitive model per session. This principle assumes one thing absolutely: <strong>the behavior observed in a session reflects genuine real-time cognition.</strong></p>
+    <p>Pre-testing violates this assumption at the root. A student who has already played a map against the bot before their assigned session is not discovering strategy — they are executing a remembered one. The cognitive task has changed from <em>formation under uncertainty</em> to <em>retrieval under certainty</em>. The Ledger entry produced looks identical to an authentic session but measures a completely different thing.</p>
+    <p>This is not a minor signal degradation. It is a category error. The posterior update the compiler computes from a pre-tested session is wrong — not noisy, but wrong. It updates the student's model in the direction of "good at QTY" when the correct update might be "good at remembering QTY solutions." These are different cognitive skills and they require different development paths.</p>
+    <p><strong>The constraint is not about preventing cheating.</strong> It is about preserving the epistemic validity of the Ledger. A system that cannot distinguish authentic signal from rehearsed signal cannot serve its function — regardless of how sophisticated the compiler becomes.</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="boundary">
+  <div class="section-label">Part II · Section 2</div>
+  <div class="section-title">The Ledger Boundary — What Exists on Each Side</div>
+  <div class="body">
+    <p>The Ledger boundary is the single architectural invariant of this system. It divides everything into two categories: observations that enter the student model, and exploration that does not. Crossing the boundary in the wrong direction is the only true integrity failure.</p>
+  </div>
+
+  <div class="boundary">
+    <div class="boundary-col">
+      <div class="boundary-label" style="color:#555">Outside the Ledger — free exploration</div>
+      <div class="boundary-item"><span class="ok">OK</span> Admin sandbox sessions (explicitly non-recording)</div>
+      <div class="boundary-item"><span class="ok">OK</span> Map topology analysis (no player)</div>
+      <div class="boundary-item"><span class="ok">OK</span> Bot behavior observation in sandbox</div>
+      <div class="boundary-item"><span class="ok">OK</span> Strategy simulation (algorithmic, no student)</div>
+      <div class="boundary-item"><span class="ok">OK</span> Alpha retrospective — reading completed sessions</div>
+      <div class="boundary-item"><span class="ok">OK</span> Teacher playtesting a map before assigning it</div>
+      <div class="boundary-item"><span class="ok">OK</span> Any repetition, configuration change, or restart</div>
+    </div>
+    <div class="boundary-line"></div>
+    <div class="boundary-col">
+      <div class="boundary-label" style="color:#dc2626">Inside the Ledger — authentic only</div>
+      <div class="boundary-item"><span class="never">NEVER</span> Student plays map before assigned session</div>
+      <div class="boundary-item"><span class="never">NEVER</span> Student observes bot pattern before session</div>
+      <div class="boundary-item"><span class="never">NEVER</span> Student selects their own map or mode</div>
+      <div class="boundary-item"><span class="never">NEVER</span> Student chooses difficulty target</div>
+      <div class="boundary-item"><span class="never">NEVER</span> Any session played "for practice" that still writes</div>
+      <div class="boundary-item"><span class="never">NEVER</span> Admin plays as a student (pollutes student ID)</div>
+      <div class="boundary-item"><span class="never">NEVER</span> Replay of the same config the student will face</div>
+    </div>
+  </div>
+
+  <div class="body" style="margin-top:16px">
+    <p><strong>Implementation note:</strong> the sandbox mode is enforced by the <code>sandbox: true</code> flag on the session. Any session with this flag is excluded from all Ledger writes — the game runs identically but <code>_writeSessionObservations</code> is skipped entirely. This is not a soft filter applied at query time; it is a hard skip at write time. A sandbox session that accidentally writes is the only unrecoverable integrity failure in the system.</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="principles">
+  <div class="section-label">Part II · Section 3</div>
+  <div class="section-title">The Four Principles of Testing Integrity</div>
+
+  <div class="principle">
+    <div class="p-num">Principle 1</div>
+    <div class="p-title">The Sandbox is not a lesser version of the real session. It is a different system entirely.</div>
+    <div class="p-body">The sandbox and the real session share the same game engine, the same map files, and the same bot AI. But they are separated by the Ledger boundary. In the sandbox, you are studying the environment. In the real session, the environment is studying you. These are not gradations — they are categorically different modes of operation. Any UI that makes them look similar is a design failure.</div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Principle 2</div>
+    <div class="p-title">Discovery during a session is signal. Discovery before a session is contamination.</div>
+    <div class="p-body">A student who notices the bot is passive in round 1 and adjusts their strategy accordingly is demonstrating real-time cognitive flexibility — exactly what the system is designed to observe. That observation IS the signal. The same student who knew the bot was TURTLER before the session starts is demonstrating memory retrieval, not cognition. The observation looks identical in the Ledger but means something completely different. Temporal order relative to session start is the only distinction — and it is absolute.</div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Principle 3</div>
+    <div class="p-title">The bot must be partially unpredictable at the student level — not as a design feature, but as a mathematical requirement.</div>
+    <div class="p-body">If bot behavior were fully deterministic and knowable in advance, pre-testing would produce a complete map from (map, config) → (optimal strategy). Any student who had access to this map would play identically regardless of their actual cognitive capacity. The system would measure map-knowledge, not cognitive skill. Some degree of bot unpredictability is therefore not a limitation to be engineered away — it is a requirement to be preserved.</div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Principle 4</div>
+    <div class="p-title">Retrospective access is never contaminating. Prospective access always is.</div>
+    <div class="p-body">A student who studies their own past sessions to understand the bot's behavior pattern is reading signal that already exists in the Ledger. Their reading cannot change what was written. A student who uses that understanding to predict and pre-adapt to a future session is using past signal to corrupt future signal. The direction of time relative to the Ledger write is the invariant. Everything retrospective is safe. Everything prospective is contaminating.</div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<!--  PROGRESSIVE UNLOCK TIERS — NEW SECTION                            -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<div class="section" id="unlock-tiers">
+  <div class="section-label">Part II · Section 4</div>
+  <div class="section-title">Progressive Unlock Tiers — How Access Expands Over Time</div>
+  <div class="body">
+    <p>The constraint on student knowledge is not permanent. It is a scaffold that comes down as the student develops. The system uses four tiers, each unlocked by demonstrated development, not by time elapsed. The tiers are not communicated to students as a ladder — the unlock happens through what they see, not through an announcement that they've leveled up.</p>
+    <p>Each tier is justified directly by <code>argmax E[KL]</code>: the access granted at each tier is exactly the access that produces maximum information gain for the student's cognitive model at that stage, without contaminating the signal the Ledger needs to function.</p>
+  </div>
+
+  <div class="tier-grid">
+    <div class="tier">
+      <div class="tier-header">
+        <div class="tier-name">BASELINE</div>
+        <div class="tier-range">Sessions 1–10</div>
+      </div>
+      <div class="tier-sees">
+        <div class="tier-sees-label">Student sees</div>
+        <div class="tier-item">Zone name in terminal</div>
+        <div class="tier-item">Session number</div>
+        <div class="tier-item">That a bot is present</div>
+        <div class="tier-item">Map title — after session only</div>
+      </div>
+      <div class="tier-sees">
+        <div class="tier-sees-label">Withheld</div>
+        <div class="tier-item hidden">Mode name</div>
+        <div class="tier-item hidden">Elo or rank</div>
+        <div class="tier-item hidden">Bot profile name</div>
+        <div class="tier-item hidden">Why this session was selected</div>
+      </div>
+      <div class="tier-kl">argmax E[KL]: maximum prior uncertainty. First-session signal is the highest-information observation the system will ever make for this student. Any contamination before this prior is established corrupts the entire model.</div>
+    </div>
+    <div class="tier">
+      <div class="tier-header">
+        <div class="tier-name">DEVELOPING</div>
+        <div class="tier-range">Sessions 10–30</div>
+      </div>
+      <div class="tier-sees">
+        <div class="tier-sees-label">Student sees</div>
+        <div class="tier-item">Everything from Baseline</div>
+        <div class="tier-item">Directional hints in terminal ("your spatial strategy is developing")</div>
+        <div class="tier-item">Zone names explained minimally ("this session is at the edge of your range")</div>
+      </div>
+      <div class="tier-sees">
+        <div class="tier-sees-label">Withheld</div>
+        <div class="tier-item hidden">Mode name</div>
+        <div class="tier-item hidden">Elo numbers</div>
+        <div class="tier-item hidden">Bot profile</div>
+        <div class="tier-item hidden">Specific metrics or scores</div>
+      </div>
+      <div class="tier-kl">argmax E[KL]: posterior over student model is now meaningful. Mild directional language calibrates the student's self-model without fixing their strategy or creating label-seeking behavior.</div>
+    </div>
+    <div class="tier">
+      <div class="tier-header">
+        <div class="tier-name" style="color:#7c3aed">ALPHA TRACK</div>
+        <div class="tier-range">~30+ sessions · application-based</div>
+      </div>
+      <div class="tier-sees">
+        <div class="tier-sees-label">Student sees</div>
+        <div class="tier-item">Everything from Developing</div>
+        <div class="tier-item">Own mode Elo (retrospective)</div>
+        <div class="tier-item">Which modes have been targeted</div>
+        <div class="tier-item">Bot behavior patterns from own past sessions</div>
+        <div class="tier-item">Ability to request a zone (accuracy verified)</div>
+      </div>
+      <div class="tier-sees">
+        <div class="tier-sees-label">Withheld</div>
+        <div class="tier-item hidden">Cohort-level data</div>
+        <div class="tier-item hidden">Bot profile name (pre-session)</div>
+        <div class="tier-item hidden">Full compiler formula</div>
+      </div>
+      <div class="tier-kl">argmax E[KL]: student's meta-cognitive accuracy — their prediction vs. the compiler's prediction — is the highest-information signal available at this stage. Their zone request is a test, not a choice.</div>
+    </div>
+    <div class="tier">
+      <div class="tier-header">
+        <div class="tier-name">SINGULARITY</div>
+        <div class="tier-range">Individual · earned</div>
+      </div>
+      <div class="tier-sees">
+        <div class="tier-sees-label">Student sees</div>
+        <div class="tier-item">Full retrospective analysis of own sessions</div>
+        <div class="tier-item">Complete system philosophy (argmax E[KL])</div>
+        <div class="tier-item">Ability to design maps</div>
+        <div class="tier-item">Ability to compile sessions for others</div>
+        <div class="tier-item">Peer framing — no longer hierarchical</div>
+      </div>
+      <div class="tier-sees">
+        <div class="tier-sees-label">Withheld</div>
+        <div class="tier-item hidden">Nothing — the scaffold is fully down</div>
+      </div>
+      <div class="tier-kl">argmax E[KL]: the student is now a node in the network. They generate signal for others. The system's final goal — a student who can run the One Principle themselves — is achieved.</div>
+    </div>
+  </div>
+
+  <div class="body" style="margin-top:16px">
+    <p><strong>The constraint relaxes — it does not disappear.</strong> Even at Singularity, a student who designs a map cannot then face that map in a Ledger session without the boundary being disclosed. The Ledger boundary is permanent. What changes over time is how much of the system's philosophy the student can access, reason about, and use — not the integrity of the signal the system produces from them.</p>
+    <p><strong>Alpha entry criteria</strong> are not a fixed threshold. They are three signals in combination: (1) session count sufficient for stable Elo in at least 3 modes, (2) at least one documented accurate zone prediction, and (3) teacher observation of meta-cognitive language ("I think the system is targeting my spatial deficit"). The student applies. The decision is the teacher's.</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="access">
+  <div class="section-label">Part II · Section 5</div>
+  <div class="section-title">Who Can Test What — Access Matrix</div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Action</th>
+        <th>Admin / Teacher</th>
+        <th>Alpha Track Student</th>
+        <th>Standard Student</th>
+        <th>Why</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Play any map in sandbox</strong><br><span style="font-size:9px;color:#888">No Ledger write</span></td>
+        <td><span class="admin">YES — full sandbox</span></td>
+        <td><span class="never">NO</span></td>
+        <td><span class="never">NO</span></td>
+        <td>Admin needs to validate map playability and bot behavior before assigning. Students cannot access any pre-session map. No Alpha exception — this is prospective access.</td>
+      </tr>
+      <tr>
+        <td><strong>Observe bot aggression level before session</strong></td>
+        <td><span class="admin">YES</span></td>
+        <td><span class="never">NO</span></td>
+        <td><span class="never">NO</span></td>
+        <td>Bot profile is a compiler output variable. Pre-knowing it changes behavior. Discovery during session is the signal.</td>
+      </tr>
+      <tr>
+        <td><strong>Read past session bot behavior patterns</strong><br><span style="font-size:9px;color:#888">From own completed sessions</span></td>
+        <td><span class="admin">YES</span></td>
+        <td><span class="alpha">YES — retrospective only</span></td>
+        <td><span class="never">NO</span></td>
+        <td>Retrospective analysis is safe. Alpha students reading their own past sessions are performing the meta-cognitive task that defines Alpha status.</td>
+      </tr>
+      <tr>
+        <td><strong>See which map was assigned</strong><br><span style="font-size:9px;color:#888">Before session starts</span></td>
+        <td><span class="admin">YES</span></td>
+        <td><span class="never">NO</span></td>
+        <td><span class="never">NO</span></td>
+        <td>Knowing the map before the session allows pre-loading spatial strategy. First-encounter behavior is the highest-information moment.</td>
+      </tr>
+      <tr>
+        <td><strong>See which map was used</strong><br><span style="font-size:9px;color:#888">After session completes</span></td>
+        <td><span class="admin">YES</span></td>
+        <td><span class="alpha">YES</span></td>
+        <td><span class="ok">YES — map title shown post-session</span></td>
+        <td>Post-session map disclosure is safe. It informs community discussion without corrupting future signal.</td>
+      </tr>
+      <tr>
+        <td><strong>Run topology analysis on maps</strong></td>
+        <td><span class="admin">YES — full topology.json</span></td>
+        <td><span class="alpha">YES — aggregate stats only</span></td>
+        <td><span class="never">NO</span></td>
+        <td>Topology data is structural. Knowing a map has high chokepoint ratio doesn't give optimal strategy. Alpha can reason about this.</td>
+      </tr>
+      <tr>
+        <td><strong>See their own Elo per mode</strong></td>
+        <td><span class="admin">YES — all students</span></td>
+        <td><span class="alpha">YES — own model</span></td>
+        <td><span class="never">NO — until Phase 3</span></td>
+        <td>Elo before model stability (Phase 3) is noisy enough that showing it is misleading. Showing it earlier risks fixed-mindset anchoring.</td>
+      </tr>
+      <tr>
+        <td><strong>Request a specific zone</strong></td>
+        <td><span class="admin">YES — override compiler</span></td>
+        <td><span class="alpha">YES — if prediction is accurate</span></td>
+        <td><span class="never">NO</span></td>
+        <td>Alpha students who can accurately predict their zone are demonstrating meta-cognitive accuracy. Their request IS the assessment. Standard students requesting zones are choosing comfort, not demonstrating cognition.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="bot-opacity">
+  <div class="section-label">Part II · Section 6</div>
+  <div class="section-title">Bot Opacity — What Students Can Discover vs. Pre-Know</div>
+  <div class="body">
+    <p>The bot is not fully opaque — it cannot be, because its behavior is observable during play. The design question is: what information about the bot should be available before play begins, vs. what must be discovered during play?</p>
+    <p>The answer follows directly from Principle 2: <strong>anything that changes first-move behavior is prospective and must be withheld. Anything that becomes visible through play is retrospective and acceptable to reveal after.</strong></p>
+  </div>
+
+  <div class="obs-grid">
+    <div class="obs-card">
+      <div class="obs-title">Bot aggression level <span class="never">WITHHELD pre-session</span></div>
+      <div class="obs-body">Aggression determines how early and aggressively the bot expands. Knowing it before round 1 allows the student to pre-select a counter-strategy (aggression=2 → expand freely early; aggression=8 → defend immediately). This eliminates the first-round diagnostic signal entirely — the system cannot observe the student's natural opening behavior.</div>
+      <div><span class="obs-tag">changes opening move</span><span class="obs-tag">eliminates calibration signal</span></div>
+    </div>
+    <div class="obs-card">
+      <div class="obs-title">Bot profile name <span class="never">WITHHELD always</span></div>
+      <div class="obs-body">Profile names (TURTLER, CONTESTER, ACCELERANT) are system-internal labels. Students should never see them — not because the information is harmful but because the labels create cognitive anchors. "You're facing a CONTESTER" shifts the student's attention to the label, not to the actual game state.</div>
+      <div><span class="obs-tag">creates label-seeking behavior</span><span class="obs-tag">admin-internal only</span></div>
+    </div>
+    <div class="obs-card">
+      <div class="obs-title">That a bot is present <span class="ok">VISIBLE — always</span></div>
+      <div class="obs-body">Students should always know whether they are playing against a bot or a human. This is an ethical requirement, not a strategic one. Deceiving students about whether their opponent is human would violate the trust the system depends on. The terminal indicates "bot session" vs "multiplayer session" at session start.</div>
+      <div><span class="obs-tag">ethical floor</span><span class="obs-tag">does not affect cognitive signal</span></div>
+    </div>
+    <div class="obs-card">
+      <div class="obs-title">Bot behavior during play <span class="ok">OBSERVABLE — always</span></div>
+      <div class="obs-body">Observing the bot's moves and adapting to them is exactly the cognitive work the system is designed to measure. A student who notices the bot is passive and shifts to aggressive expansion is showing strategic adaptation. This is the signal. Preventing in-session bot observation would prevent the student from playing strategically at all.</div>
+      <div><span class="obs-tag">real-time signal</span><span class="obs-tag">core cognitive task</span></div>
+    </div>
+    <div class="obs-card">
+      <div class="obs-title">Bot behavior in past sessions <span class="alpha">ALPHA — retrospective only</span></div>
+      <div class="obs-body">Alpha track students can review bot behavior patterns from their own completed sessions. "In my last 5 RADICAL sessions, the bot started by contesting the northwest cluster every time" — this retrospective pattern recognition is itself a cognitive signal. Safe because it affects past-session interpretation, not future-session opening moves.</div>
+      <div><span class="obs-tag">retrospective = safe</span><span class="obs-tag">meta-cognitive signal</span></div>
+    </div>
+    <div class="obs-card">
+      <div class="obs-title">Aggregate bot patterns across cohort <span class="never">WITHHELD from students</span></div>
+      <div class="obs-body">Cohort-level bot behavior data is the teacher's design knowledge and goes in the admin panel. If this reached students, even retrospectively, it would allow collective pre-testing through shared knowledge — a student who learned from their peer what the bot does on a map they haven't played yet has effectively pre-tested it.</div>
+      <div><span class="obs-tag">collective contamination</span><span class="obs-tag">admin-only</span></div>
+    </div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="sandbox">
+  <div class="section-label">Part II · Section 7 — Prototype</div>
+  <div class="section-title">The Admin Sandbox — Specification & Interface</div>
+  <div class="body">
+    <p>The sandbox is the admin's tool for testing map-bot combinations before assigning them to students. It is architecturally identical to a real session — same game engine, same bot AI, same config vector — with one invariant: <strong>no Ledger writes, ever.</strong> The sandbox flag is set at session creation and cannot be cleared at runtime.</p>
+    <p>The sandbox exposes signals the real session also captures, but displays them in real time because here they serve design validation, not student assessment. The signals visible in the sandbox are the same signals written to the Ledger in real sessions — but their audience is the designer, not the compiler.</p>
+  </div>
+
+  <div class="sandbox">
+    <div class="sandbox-header">
+      ADMIN SANDBOX
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="sb-badge">NO LEDGER WRITES</span>
+        <span class="sb-badge" id="sb-status-badge">IDLE</span>
+      </div>
+    </div>
+    <div class="sandbox-body">
+      <div class="sb-left">
+        <div class="sb-section">
+          <div class="sb-section-label">Map</div>
+          <select id="sb-map" onchange="sbUpdate()">
+            <option value="Castle Conundrum.json">Castle Conundrum</option>
+            <option value="Ad Astra by Josh Dahn.json">Ad Astra (FRT)</option>
+            <option value="CITYSCAPE.json">CITYSCAPE</option>
+            <option value="Championship.json">Championship</option>
+            <option value="Butterfly Effect by Kavi Amrhein.json">Butterfly Effect</option>
+            <option value="PROVIDENCE.json">PROVIDENCE</option>
+            <option value="6 Syn Wormholes.json">6 Syn Wormholes</option>
+            <option value="Pattern Recognition (alt).json">Pattern Recognition</option>
+          </select>
+        </div>
+        <div class="sb-section">
+          <div class="sb-section-label">Bot Profile</div>
+          <select id="sb-bot" onchange="sbUpdate()">
+            <option value="TURTLER">TURTLER — aggression 2</option>
+            <option value="STANDARD" selected>STANDARD — aggression 5</option>
+            <option value="CONTESTER">CONTESTER — aggression 6</option>
+            <option value="ACCELERANT">ACCELERANT — aggression 8</option>
+            <option value="MIRROR">MIRROR — aggression 5</option>
+            <option value="THEORETICIAN">THEORETICIAN — aggression 5</option>
+          </select>
+        </div>
+        <div class="sb-section">
+          <div class="sb-section-label">Mode Config</div>
+          <select id="sb-mode" onchange="sbUpdate()">
+            <option value="QTY">QTY — quantity</option>
+            <option value="SPT">SPT — spatial</option>
+            <option value="FRT">FRT — fortress</option>
+            <option value="DST">DST — destruction</option>
+            <option value="INV">INV — inversion</option>
+          </select>
+        </div>
+        <div class="sb-section">
+          <div class="sb-section-label">Rounds</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="range" id="sb-rounds" min="3" max="15" value="10" style="flex:1" oninput="document.getElementById('sb-rounds-val').textContent=this.value;sbUpdate()">
+            <span id="sb-rounds-val" style="font-size:10px;font-weight:700;width:16px">10</span>
+          </div>
+        </div>
+        <div class="sb-section">
+          <div class="sb-section-label">Sandbox State</div>
+          <div class="sb-row"><span class="sb-key">Ledger writes</span><span class="sb-val" style="color:#dc2626">DISABLED</span></div>
+          <div class="sb-row"><span class="sb-key">Student ID</span><span class="sb-val" style="color:#888">none</span></div>
+          <div class="sb-row"><span class="sb-key">Runs this session</span><span class="sb-val" id="sb-run-count">0</span></div>
+        </div>
+      </div>
+      <div class="sb-right">
+        <div class="sb-canvas-wrap">
+          <canvas id="sbCanvas"></canvas>
+          <div class="sb-overlay" id="sb-overlay">SELECT CONFIG · PRESS RUN</div>
+        </div>
+        <div class="sb-metrics">
+          <div class="sb-metric"><div class="sb-metric-val" id="m-round">—</div><div class="sb-metric-lbl">Round</div></div>
+          <div class="sb-metric"><div class="sb-metric-val" id="m-bot-claims">—</div><div class="sb-metric-lbl">Bot claims</div></div>
+          <div class="sb-metric"><div class="sb-metric-val" id="m-chokepoints">—</div><div class="sb-metric-lbl">Choke held</div></div>
+          <div class="sb-metric"><div class="sb-metric-val" id="m-rank">—</div><div class="sb-metric-lbl">Player %</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-footer">
+      <button class="sb-btn" id="sb-run-btn" onclick="sbRun()">RUN SIMULATION</button>
+      <button class="sb-btn secondary" onclick="sbReset()">RESET</button>
+      <span class="sb-notif" id="sb-notif">This session will not write to any Ledger. Bot behavior shown in real time for map validation only.</span>
+    </div>
+  </div>
+
+  <div class="body" style="margin-top:16px">
+    <p><strong>What the sandbox reveals:</strong> which clusters the bot targets first; whether the bot gets stuck (connectivity problem); how often the bot contests chokepoints; which mode's scoring strategy the bot naturally converges toward; at what round the bot achieves peak territory (tempo profile).</p>
+    <p><strong>What the sandbox does not reveal:</strong> how a specific student would respond to this bot on this map. The sandbox has no student. It can validate that the bot behaves meaningfully — it cannot predict what the session will teach the compiler. That only happens in the real session.</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="retrospective">
+  <div class="section-label">Part II · Section 8</div>
+  <div class="section-title">Retrospective Access — What Alpha Students Can Study</div>
+  <div class="body">
+    <p>The Alpha track exists because some students are ready to reason about the system. Retrospective access — reading their own completed session data — is the bridge between "player" and "analyst." It is always safe because the Ledger entries being read are already written. Nothing the student learns retrospectively can contaminate the data they are reading.</p>
+    <p>What it <em>can</em> contaminate is future sessions — if the student uses retrospective patterns to pre-load strategy for a map they haven't played yet. The constraint is therefore topological: retrospective access is safe for maps already played; it becomes prospective contamination when the student applies it to maps they haven't played.</p>
+    <p><strong>The retrospective access gradient maps directly to the singularity.</strong> A student with full retrospective access who has played enough sessions to have stable Elos across all modes has everything they need to compile their own sessions. This is the Alpha track's endpoint. At that point, the student's retrospective analysis of bot behavior, zone patterns, and compiler decisions is not contamination — it is the student operating as their own compiler, which is the system's stated final goal.</p>
+  </div>
+
+  <table>
+    <thead><tr><th>Retrospective Access Type</th><th>Safe or Constrained</th><th>Constraint</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Own session outcomes</strong><br>rank_pct, win rate, zone history</td>
+        <td><span class="ok">SAFE</span></td>
+        <td>None. Knowing this does not change the cognitive challenge of future sessions.</td>
+      </tr>
+      <tr>
+        <td><strong>Own bot behavior in completed sessions</strong></td>
+        <td><span class="alpha">CONSTRAINED</span></td>
+        <td>Safe for maps already played. Contaminating if used to predict bot behavior on a map not yet played.</td>
+      </tr>
+      <tr>
+        <td><strong>Own zone assignment history</strong></td>
+        <td><span class="ok">SAFE</span></td>
+        <td>None. Zone history is already visible in the terminal. Making it reviewable retrospectively adds meta-cognitive value without contaminating future zones.</td>
+      </tr>
+      <tr>
+        <td><strong>Own strategy shift signals</strong><br>strategy_shift_count, archetype_tag</td>
+        <td><span class="alpha">ALPHA ONLY</span></td>
+        <td>Showing students their own behavioral signals rewards meta-cognitive accuracy. Standard students seeing archetype_tag ("RUSHER") might perform for the label in future sessions.</td>
+      </tr>
+      <tr>
+        <td><strong>Cohort aggregate patterns</strong></td>
+        <td><span class="never">WITHHELD from students</span></td>
+        <td>Collective knowledge of bot patterns on unplayed maps is prospective contamination regardless of how it was obtained.</td>
+      </tr>
+      <tr>
+        <td><strong>Compiler decisions for own sessions</strong></td>
+        <td><span class="alpha">ALPHA ONLY — partial</span></td>
+        <td>Alpha students can see mode selection formula weights (all ASSERTED). They cannot see their specific deficit/staleness scores for modes they haven't played enough to have stable Elos.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</div><!-- /content -->
+
+<script>
+// Nav active state (unified)
+const sections = document.querySelectorAll('.section[id]');
+const navLinks  = document.querySelectorAll('.nav a');
+sections.forEach(s => new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id));
+  });
+}, { threshold: 0.25 }).observe(s));
+
+// ── Sandbox simulation ────────────────────────────────────────────────────────
+let sbRunning=false, sbTimer=null, sbRound=0, sbRunCount=0;
+let botOwned=new Set(), playerOwned=new Set([0]);
+const BOT_AGG={TURTLER:2,STANDARD:5,CONTESTER:6,ACCELERANT:8,MIRROR:5,THEORETICIAN:5};
+const MODE_COLOR={QTY:'#d97706',SPT:'#2563eb',FRT:'#059669',DST:'#dc2626',INV:'#7c3aed'};
+const STARS=[[50,60],[120,40],[200,55],[280,70],[320,50],[80,120],[160,100],[240,110],[310,130],[40,180],[130,160],[210,170],[300,175],[70,240],[160,220],[250,230],[320,250],[100,290],[200,275],[300,290],[160,50],[160,180],[160,320],[40,320]];
+const EDGES=[[0,1],[1,2],[2,3],[3,4],[1,5],[2,6],[3,7],[4,8],[5,6],[6,7],[7,8],[5,9],[6,10],[7,11],[8,12],[9,10],[10,11],[11,12],[10,13],[11,14],[12,15],[13,14],[14,15],[15,16],[13,17],[14,18],[15,19],[0,5],[20,1],[20,6],[21,11],[22,18],[23,17]];
+
+function sbGetCfg(){return{bot:document.getElementById('sb-bot').value,mode:document.getElementById('sb-mode').value,rounds:+document.getElementById('sb-rounds').value};}
+function sbUpdate(){const c=sbGetCfg();document.getElementById('sb-overlay').textContent=`MAP: ${document.getElementById('sb-map').value.replace('.json','').toUpperCase()}\nBOT: ${c.bot} (agg=${BOT_AGG[c.bot]})\nMODE: ${c.mode}  ROUNDS: ${c.rounds}\n\n— PRESS RUN TO SIMULATE —`;drawSb([],new Set(),new Set());}
+function sbRun(){
+  if(sbRunning)return;
+  sbRunning=true;sbRound=0;botOwned=new Set();playerOwned=new Set([0]);
+  sbRunCount++;document.getElementById('sb-run-count').textContent=sbRunCount;
+  document.getElementById('sb-status-badge').textContent='RUNNING';
+  document.getElementById('sb-run-btn').disabled=true;
+  const c=sbGetCfg();const agg=BOT_AGG[c.bot]||5;
+  function tick(){
+    if(sbRound>=c.rounds){sbRunning=false;document.getElementById('sb-status-badge').textContent='COMPLETE';document.getElementById('sb-run-btn').disabled=false;document.getElementById('m-rank').textContent=(playerOwned.size/STARS.length*100).toFixed(0)+'%';document.getElementById('sb-notif').textContent=`Run complete — bot ${botOwned.size} stars, player ${playerOwned.size}. No Ledger write.`;return;}
+    sbRound++;
+    const unowned=STARS.map((_,i)=>i).filter(i=>!botOwned.has(i)&&!playerOwned.has(i));
+    const adj=[];for(const bi of botOwned)for(const[a,b]of EDGES){const n=a===bi?b:b===bi?a:-1;if(n>=0&&!botOwned.has(n)&&!playerOwned.has(n))adj.push(n);}
+    const toTake=Math.max(1,Math.round(unowned.length*(agg/10)*0.35*Math.random()+agg*0.4));
+    const tgts=adj.length>0?[...new Set(adj)].slice(0,toTake):unowned.slice(0,toTake);
+    tgts.forEach(t=>botOwned.add(t));
+    const padj=[];for(const pi of playerOwned)for(const[a,b]of EDGES){const n=a===pi?b:b===pi?a:-1;if(n>=0&&!botOwned.has(n)&&!playerOwned.has(n))padj.push(n);}
+    if(padj.length)playerOwned.add(padj[Math.floor(Math.random()*padj.length)]);
+    document.getElementById('m-round').textContent=`${sbRound}/${c.rounds}`;
+    document.getElementById('m-bot-claims').textContent=botOwned.size;
+    const degMap={};EDGES.forEach(([a,b])=>{degMap[a]=(degMap[a]||0)+1;degMap[b]=(degMap[b]||0)+1;});
+    document.getElementById('m-chokepoints').textContent=Object.entries(degMap).filter(([i,d])=>d<=2&&botOwned.has(+i)).length;
+    drawSb(EDGES,botOwned,playerOwned,c.mode);
+    sbTimer=setTimeout(tick,360);
+  }
+  tick();
+}
+function sbReset(){if(sbTimer)clearTimeout(sbTimer);sbRunning=false;sbRound=0;botOwned=new Set();playerOwned=new Set([0]);document.getElementById('sb-status-badge').textContent='IDLE';document.getElementById('sb-run-btn').disabled=false;['m-round','m-bot-claims','m-chokepoints','m-rank'].forEach(id=>document.getElementById(id).textContent='—');sbUpdate();}
+function drawSb(edges,bot,player,mode){
+  const c=document.getElementById('sbCanvas');const ctx=c.getContext('2d');
+  c.width=c.offsetWidth;c.height=c.offsetHeight;
+  const W=c.width,H=c.height,sx=W/360,sy=H/320;
+  ctx.fillStyle='#0d0d0d';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='#222';ctx.lineWidth=1;
+  for(const[a,b]of edges){ctx.beginPath();ctx.moveTo(STARS[a][0]*sx,STARS[a][1]*sy);ctx.lineTo(STARS[b][0]*sx,STARS[b][1]*sy);ctx.stroke();}
+  const mc=MODE_COLOR[mode]||'#888';
+  for(let i=0;i<STARS.length;i++){const[x,y]=STARS[i];let fill='#2a2a2a';if(bot.has(i))fill='#dc2626';if(player.has(i))fill=mc;ctx.beginPath();ctx.arc(x*sx,y*sy,5,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill();}
+}
+document.addEventListener('DOMContentLoaded',()=>sbUpdate());
+</script>
+</body>
+</html>

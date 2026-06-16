@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Constellation — Bayesian Architecture</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0a;color:#f0f0f0;font-family:Arial,sans-serif;font-size:11px;min-height:100vh;line-height:1.55}
+header{border-bottom:1px solid #1a1a1a;padding:20px 28px;display:flex;align-items:baseline;gap:16px}
+.h-logo{font-size:11px;letter-spacing:3px;font-weight:700;text-transform:uppercase}
+.h-sub{font-size:9px;letter-spacing:1px;color:#444;text-transform:uppercase}
+.h-tag{font-size:8px;letter-spacing:2px;border:1px solid #1a3a1a;color:#22c55e;padding:1px 8px;text-transform:uppercase;margin-left:auto}
+
+.main{padding:28px;max-width:1100px;margin:0 auto;padding-bottom:80px}
+
+/* ── PRINCIPLE BLOCK */
+.principle{border:1px solid #1a1a1a;padding:24px 28px;margin-bottom:24px;background:#0c0c0c}
+.principle-label{font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#333;margin-bottom:14px}
+.principle-eq{font-family:monospace;font-size:18px;color:#f0f0f0;letter-spacing:1px;margin:10px 0 10px 0;padding:14px 0;border-top:1px solid #1a1a1a;border-bottom:1px solid #1a1a1a}
+.principle-sub{font-size:10px;color:#555;margin-top:12px}
+
+/* ── SECTION BLOCKS */
+.section{margin-bottom:20px}
+.section-label{font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#333;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #111}
+.section-body{font-size:11px;color:#777;line-height:1.7}
+.section-body p{margin-bottom:10px}
+.section-body p:last-child{margin-bottom:0}
+
+/* ── EQUATION BLOCKS */
+.eq-block{background:#0d0d0d;border:1px solid #1a1a1a;border-left:2px solid #333;padding:14px 18px;margin:12px 0;font-family:monospace;font-size:12px;color:#ccc;line-height:2}
+.eq-block .comment{color:#333;font-size:10px}
+.eq-block .key{color:#f0f0f0}
+.eq-block .derived{color:#555}
+.eq-label{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#333;margin-bottom:6px}
+
+/* ── REPLACEMENT TABLE */
+.rep-table{width:100%;border-collapse:collapse;margin:12px 0}
+.rep-table th{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#333;text-align:left;padding:6px 10px;border-bottom:1px solid #151515}
+.rep-table td{padding:7px 10px;border-bottom:1px solid #0f0f0f;vertical-align:top;font-size:10px}
+.rep-table .old{color:#444;font-family:monospace;text-decoration:line-through}
+.rep-table .new{color:#f0f0f0;font-family:monospace}
+.rep-table .why{color:#555}
+.rep-table tr:hover td{background:#0d0d0d}
+
+/* ── INVARIANTS */
+.inv-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.inv-card{border:1px solid #141414;padding:10px 12px;background:#0c0c0c}
+.inv-card .inv-title{font-size:9px;font-weight:700;letter-spacing:1px;color:#f0f0f0;margin-bottom:4px}
+.inv-card .inv-body{font-size:10px;color:#555;line-height:1.5}
+
+/* ── PHASE LADDER */
+.phase-row{display:flex;align-items:baseline;gap:12px;padding:7px 0;border-bottom:1px solid #0f0f0f}
+.phase-row:last-child{border-bottom:none}
+.phase-num{font-size:9px;font-weight:700;color:#333;width:60px;flex-shrink:0;font-family:monospace}
+.phase-text{font-size:10px;color:#555}
+.phase-status{font-size:8px;letter-spacing:1px;text-transform:uppercase;margin-left:auto;flex-shrink:0}
+
+/* ── DEMO */
+.demo{border:1px solid #1a1a1a;background:#0c0c0c;margin-top:24px}
+.demo-header{padding:14px 18px;border-bottom:1px solid #141414;display:flex;align-items:center;gap:12px}
+.demo-label{font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#333}
+.demo-presets{display:flex;gap:6px;margin-left:auto}
+.preset-btn{font-size:8px;letter-spacing:1px;text-transform:uppercase;border:1px solid #222;background:none;color:#555;padding:4px 10px;cursor:pointer;transition:all .12s;font-family:Arial,sans-serif}
+.preset-btn:hover,.preset-btn.active{border-color:#444;color:#f0f0f0;background:#111}
+
+.demo-body{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.demo-left{padding:18px;border-right:1px solid #141414}
+.demo-right{padding:18px}
+
+.result-zone{font-size:22px;font-weight:700;letter-spacing:2px;color:#f0f0f0;margin-bottom:2px}
+.result-line{font-size:10px;color:#555;margin-bottom:14px;font-family:monospace}
+.result-codename{font-size:11px;color:#f0f0f0;font-family:monospace;letter-spacing:1px;margin-bottom:4px}
+.result-note{font-size:9px;color:#333;line-height:1.5;margin-bottom:14px}
+
+.ig-table{width:100%;border-collapse:collapse;margin-top:8px}
+.ig-table th{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:#2a2a2a;text-align:left;padding:4px 8px;border-bottom:1px solid #111}
+.ig-table td{padding:4px 8px;border-bottom:1px solid #0d0d0d;font-size:9px;font-family:monospace}
+.ig-table .winner{background:#0f1a0f}
+.ig-table .winner td{color:#22c55e}
+.ig-table .mode-col{color:#888;width:30px}
+.ig-table .gain-bar{display:inline-block;height:3px;background:#222;vertical-align:middle;margin-left:4px}
+.ig-table .gain-bar-fill{display:inline-block;height:3px;background:#444;vertical-align:middle}
+
+.posterior-row{display:flex;gap:4px;align-items:center;padding:3px 0;border-bottom:1px solid #0d0d0d}
+.posterior-row:last-child{border-bottom:none}
+.posterior-mode{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:#333;width:40px}
+.posterior-bar-track{flex:1;height:2px;background:#111;position:relative}
+.posterior-bar-mu{position:absolute;height:2px;background:#333}
+.posterior-bar-sigma{position:absolute;height:2px;background:#1a3a1a;opacity:0.8}
+.posterior-vals{font-size:8px;color:#333;font-family:monospace;width:130px;text-align:right}
+.posterior-vals .hi{color:#555}
+
+.compare-row{display:flex;gap:0;margin-top:4px;border:1px solid #111}
+.compare-cell{flex:1;padding:8px 10px;border-right:1px solid #111}
+.compare-cell:last-child{border-right:none}
+.compare-head{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:#2a2a2a;margin-bottom:4px}
+.compare-val{font-size:9px;font-family:monospace;color:#555}
+.compare-val.match{color:#22c55e}
+.compare-val.diff{color:#888}
+
+.zone-map{margin:10px 0}
+.zone-row{display:flex;align-items:baseline;gap:12px;padding:5px 0;border-bottom:1px solid #0f0f0f}
+.zone-row:last-child{border-bottom:none}
+.zone-name{font-size:9px;font-weight:700;letter-spacing:1px;font-family:monospace;width:80px;color:#888}
+.zone-heuristic{font-size:9px;color:#333;flex:1}
+.zone-bayesian{font-size:9px;color:#555;flex:1}
+.zone-same{color:#22c55e;font-size:8px}
+.zone-richer{color:#888;font-size:8px}
+
+.asserted{color:#d97706}
+.learned{color:#22c55e}
+.gap{color:#ef4444}
+
+/* ── STATUS BAR */
+.status-bar{border-top:1px solid #141414;padding:14px 28px;display:flex;gap:20px;align-items:center;position:fixed;bottom:0;left:0;right:0;background:#0a0a0a}
+.status-item{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:#333;display:flex;align-items:center;gap:6px}
+.status-dot{width:6px;height:6px;border-radius:50%}
+</style>
+</head>
+<body>
+<header>
+  <span class="h-logo">Constellation</span>
+  <span class="h-sub">Philosophy Development</span>
+  <span class="h-tag">NEW · CANONICAL · 100%</span>
+</header>
+
+<div class="main">
+
+  <!-- ══ THE PRINCIPLE ══ -->
+  <div class="principle">
+    <div class="principle-label">The Principle</div>
+    <div class="principle-eq"><span class="key">d* = argmax<sub>d</sub> E<sub>y</sub>[KL( P(θ | y, d, data) ‖ P(θ | data) )]</span></div>
+    <div class="principle-sub">
+      d = candidate session (mode × template). θ = student's true cognitive state. y = outcome we would observe.
+      The selected session is the one that, in expectation, most changes what we believe about the student.
+      Everything else in the system — zone, mode, template, difficulty, forgetting, velocity — is a consequence of this equation.
+    </div>
+  </div>
+
+  <!-- ══ THE PROBLEM ══ -->
+  <div class="section">
+    <div class="section-label">The Wrong Question</div>
+    <div class="section-body">
+      <p>
+        The current heuristic system asks: <em>how do we combine elo, velocity, staleness, and engagement into a weight that ranks sessions?</em>
+        The answer is elo<sup>0.7</sup> × 1/(τ+1) × vel_mod × hyp_mod × eng_mod. Every factor in that product is a parameter someone guessed.
+        The system works in the same sense that a thermometer works — it reads the environment. But it does not model the environment.
+      </p>
+      <p>
+        The question was always wrong. The right question is: <em>given everything we have recorded about this student, which session would most reduce our uncertainty about their cognitive state?</em>
+        That question has a precise mathematical answer. It requires no guessed exponents. It produces the zone, the mode, and the template as consequences, not as inputs.
+      </p>
+      <p>
+        The current architecture is already structured as Bayesian inference — it is simply doing it wrong.
+        The ledger is the observation history. The state (elo, vel, tau) is a handmade approximation of the posterior.
+        The weight formula is a handmade approximation of expected information gain. Zone selection is a handmade approximation of comparing d* to d_last.
+        This document replaces the approximations with the thing they were approximating.
+      </p>
+    </div>
+  </div>
+
+  <!-- ══ THE STATE ══ -->
+  <div class="section">
+    <div class="section-label">The State θ — Minimum Sufficient</div>
+    <div class="section-body">
+      <p>
+        The current state encodes three values per mode: position (elo), momentum (vel), recency (tau).
+        The Bayesian state encodes three different values per mode: mean (μ), uncertainty (σ²), forgetting rate (λ).
+        This is the same 18-dimensional minimum sufficient state identified in perfect-system.html — the dimensions are correct; only the semantics change.
+      </p>
+    </div>
+    <table class="rep-table">
+      <tr><th>Heuristic</th><th>Bayesian</th><th>Why it's better</th></tr>
+      <tr>
+        <td><span class="old">elo[i]</span></td>
+        <td><span class="new">μ[i]</span></td>
+        <td class="why">Same concept. elo is a point estimate. μ is a posterior mean — same number, but now the system knows how confident it is in that number.</td>
+      </tr>
+      <tr>
+        <td><span class="old">vel[i]</span></td>
+        <td><span class="derived">(emergent)</span></td>
+        <td class="why">Velocity is ∂μ/∂t — the slope of the posterior mean over time. It is not stored separately; it falls out of the update equations. No vel_mod parameter needed.</td>
+      </tr>
+      <tr>
+        <td><span class="old">tau[i]</span></td>
+        <td><span class="derived">(drives σ² growth)</span></td>
+        <td class="why">Staleness is not a separate dimension. Time elapsed inflates σ²[i] via the forgetting model. The "staleness modifier" is a consequence of σ², not a separate factor.</td>
+      </tr>
+      <tr>
+        <td><span class="old">— (missing)</span></td>
+        <td><span class="new">σ²[i]</span></td>
+        <td class="why">Posterior variance. How confident is the system about μ[i]? This is the dimension the heuristic system is missing entirely. It drives session selection: high σ² → system experiments more.</td>
+      </tr>
+      <tr>
+        <td><span class="old">— (asserted: 1/14d)</span></td>
+        <td><span class="new">λ[i]</span></td>
+        <td class="why">Forgetting rate per mode, per student. Initially asserted (λ=1/30d prior). Learned from data in Phase 3. Replaces the single hardcoded 14-day half-life for the entire system.</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ══ THE MODEL ══ -->
+  <div class="section">
+    <div class="section-label">The Model — Kalman Filter on Cognitive State</div>
+    <div class="section-body">
+      <p>
+        Between sessions, the student's cognitive state evolves. Skills regress slightly toward the prior (forgetting).
+        Uncertainty about those skills grows (more time = less confident). This is an Ornstein-Uhlenbeck process.
+        The Kalman filter gives the exact posterior update for this class of models.
+      </p>
+    </div>
+
+    <div class="eq-label">Predict step — time elapsed τ days since last session on mode i</div>
+    <div class="eq-block">
+<span class="comment">// Mean: regress toward prior (forgetting)</span>
+<span class="key">μ_pred[i]  = μ_∞ + exp(−λ[i] × τ) × (μ[i] − μ_∞)</span>  <span class="comment">// μ_∞ = 500, the prior mean</span>
+
+<span class="comment">// Variance: grow toward stationary (uncertainty)</span>
+<span class="key">σ²_pred[i] = σ²_∞ + exp(−2λ[i] × τ) × (σ²[i] − σ²_∞)</span>  <span class="comment">// σ²_∞ = 5625 (75²)</span>
+    </div>
+
+    <div class="eq-label">Update step — outcome y observed after session on mode i</div>
+    <div class="eq-block">
+<span class="key">K         = σ²_pred[i] / (σ²_pred[i] + R)  </span><span class="comment">// Kalman gain — how much to trust new evidence vs prior</span>
+<span class="key">μ[i]     ← μ_pred[i] + K × (y − μ_pred[i]) </span><span class="comment">// posterior mean (moves toward observation)</span>
+<span class="key">σ²[i]   ← (1 − K) × σ²_pred[i]             </span><span class="comment">// posterior variance (always shrinks)</span>
+    </div>
+
+    <div class="section-body">
+      <p>
+        R is the observation noise for this session — how much of the outcome is skill vs noise.
+        R decreases with template depth (more constrained template → cleaner signal) and increases with Q2 contamination (announced INVERSION inflates noise because the student's response is partially to the announcement, not to the mode).
+        R is <span class="asserted">[ASSERTED]</span> initially and becomes <span class="learned">[LEARNED]</span> in Phase 3 from the variance of residuals across sessions.
+      </p>
+      <p>
+        Velocity (∂μ/∂t) is not stored. It falls out: the difference between μ_pred (what we expected) and μ_updated (what we measured) is the velocity signal. The system doesn't need a separate vel[] array because the posterior carries this implicitly.
+        The heuristic vel_mod > 12 penalty (elo moving too fast = unreliable) is now captured by the Kalman gain K — when outcomes vary wildly, K is already small, dampening the update.
+      </p>
+    </div>
+  </div>
+
+  <!-- ══ SESSION SELECTION ══ -->
+  <div class="section">
+    <div class="section-label">Session Selection — argmax E[KL]</div>
+    <div class="section-body">
+      <p>
+        For a Gaussian likelihood model, the expected information gain of session d = (mode i, template t) has a closed form.
+        No sampling required. The system evaluates all candidates analytically and picks the maximum.
+      </p>
+    </div>
+
+    <div class="eq-label">Information gain for candidate session d = (mode i, template t)</div>
+    <div class="eq-block">
+<span class="key">I(d) = ½ log( 1 + σ²_pred[i] / R(t) )</span>
+
+<span class="comment">// R(t) = R_base / depth(t) × purity_penalty(i)</span>
+<span class="comment">// depth(t) = locked axes count for template t (from TEMPLATE_DEPTH — same as heuristic)</span>
+<span class="comment">// purity_penalty(i) = 3.0 if mode i has Q2 contamination and no silent overlay, else 1.0</span>
+<span class="comment">// R_base [ASSERTED] → [LEARNED] in Phase 3 from residual variance per template</span>
+    </div>
+
+    <div class="eq-label">The selected session</div>
+    <div class="eq-block">
+<span class="key">d* = argmax<sub>(i,t)</sub> I(i, t)  </span><span class="comment">// over all eligible (mode, template) pairs</span>
+    </div>
+
+    <div class="section-body">
+      <p>
+        This is why the formula is correct: I(d) is large when σ²_pred[i] is large (we know little about mode i, so observing it is informative) and when R(t) is small (the template gives a clean signal). Both are meaningful. A deeply familiar mode with low uncertainty produces low I(d) — the system already knows. A stale mode with growing uncertainty produces high I(d) — the system has forgotten and wants to know again.
+      </p>
+      <p>
+        The heuristic weight formula was approximating this: elo^0.7 ≈ σ²^0.5 (uncertainty grows with skill variance), 1/(τ+1) ≈ the R(t)/σ² ratio as τ grows, TEMPLATE_DEPTH is identical. The Bayesian formula is what the heuristic was reaching toward.
+      </p>
+      <p>
+        <strong>INV eligibility.</strong> The current heuristic has an explicit gate: τ[5] &lt; 7 AND e[5] &lt; 300 AND not cooldown.
+        The Bayesian model has no gate. The purity penalty on announced INVERSION (R × 3.0) automatically deprioritizes INV when the signal is contaminated.
+        Silent INVERSION (plannedSilentOverlay=true) removes the penalty: the system no longer needs the gate because R is now honest.
+        Cooldown between INV sessions: σ²[5] drops sharply after an INV session (we just observed it). I(d) for INV falls below other modes naturally. No cooldown rule needed.
+      </p>
+      <p>
+        <strong>YOUNGER suppression.</strong> This remains an explicit rule (sessions &lt; 20). It is not a statistical property — it is a design decision about developmental readiness. It stays.
+      </p>
+    </div>
+  </div>
+
+  <!-- ══ ZONE FROM POSTERIOR ══ -->
+  <div class="section">
+    <div class="section-label">Zone Vocabulary — Communication Layer from Posterior</div>
+    <div class="section-body">
+      <p>
+        In the heuristic system, zone is a selection input — it constrains what mode and template are chosen.
+        In the Bayesian system, zone is a communication output — the session is selected first (argmax I(d)), and then the zone label is applied to describe the relationship between d* and d_last.
+        The vocabulary survives intact. The computation underneath changes.
+      </p>
+    </div>
+    <div class="zone-map">
+      <div class="zone-row" style="border-bottom:1px solid #141414;padding-bottom:6px;margin-bottom:4px">
+        <div class="zone-name" style="color:#2a2a2a">ZONE</div>
+        <div class="zone-heuristic" style="color:#2a2a2a;font-size:8px;letter-spacing:1px;text-transform:uppercase">Heuristic: selection criterion</div>
+        <div class="zone-bayesian" style="color:#2a2a2a;font-size:8px;letter-spacing:1px;text-transform:uppercase">Bayesian: label applied after d*</div>
+      </div>
+      <div class="zone-row">
+        <div class="zone-name">ECHO</div>
+        <div class="zone-heuristic">lastRank ≥ 30 and &lt; flow zone, or absence=14d override</div>
+        <div class="zone-bayesian">d* == d_last (argmax selects identical session) <span class="zone-same">— exact, not approximate</span></div>
+      </div>
+      <div class="zone-row">
+        <div class="zone-name">PARALLEL</div>
+        <div class="zone-heuristic">flow zone (42–82nd pct) OR mastered close loss</div>
+        <div class="zone-bayesian">d* same mode, different template <span class="zone-same">— exact</span></div>
+      </div>
+      <div class="zone-row">
+        <div class="zone-name">SHIFTING</div>
+        <div class="zone-heuristic">comfortableWinStreak ≥ 2 → forced adjacency</div>
+        <div class="zone-bayesian">d* adjacent mode (per MODE_ADJACENCY) <span class="zone-richer">— richer: any adjacent move qualifies</span></div>
+      </div>
+      <div class="zone-row">
+        <div class="zone-name">RADICAL</div>
+        <div class="zone-heuristic">lastRank > 82 AND margin > 25 AND sessions ≥ 3</div>
+        <div class="zone-bayesian">d* non-adjacent mode <span class="zone-richer">— richer: emerges when σ² gap is large</span></div>
+      </div>
+      <div class="zone-row">
+        <div class="zone-name">REMATCH</div>
+        <div class="zone-heuristic">lastRank &lt; 30 (decisive loss)</div>
+        <div class="zone-bayesian">last outcome surprise &gt; 2.0σ (outcome far from prediction) <span class="zone-richer">— richer: captures partial surprise</span></div>
+      </div>
+    </div>
+    <div class="section-body" style="margin-top:10px">
+      <p>
+        The zone labels are now exact rather than approximate. ECHO no longer means "probably the same territory" — it means the optimal session is identical to the last session. RADICAL no longer requires a rank threshold — it emerges when the argmax has jumped a large distance, which happens when σ² is concentrated in a non-adjacent mode.
+      </p>
+    </div>
+  </div>
+
+  <!-- ══ WHAT GETS LEARNED ══ -->
+  <div class="section">
+    <div class="section-label">What Gets Learned — Phase 3 Closure</div>
+    <div class="section-body">
+      <p>
+        Every <span class="asserted">[ASSERTED]</span> parameter in the current system dissolves in Phase 3. They do not get replaced one by one — they dissolve entirely into quantities that the Bayesian model infers from data.
+      </p>
+    </div>
+    <table class="rep-table">
+      <tr><th>Parameter</th><th>Current status</th><th>Phase 3: learned from</th></tr>
+      <tr>
+        <td class="new">λ[i] — forgetting rate</td>
+        <td><span class="asserted">ASSERTED 1/30d</span></td>
+        <td class="why">Residual between predicted μ_pred (after τ days) and observed outcome y. High residual after short absence → fast forgetter (high λ). Learned per mode, per student.</td>
+      </tr>
+      <tr>
+        <td class="new">R(t) — observation noise</td>
+        <td><span class="asserted">ASSERTED R_base/depth</span></td>
+        <td class="why">Variance of (y − μ_pred) across all sessions on template t. Low variance → clean template → low R. Learned per template across the entire cohort.</td>
+      </tr>
+      <tr>
+        <td class="new">σ²_∞ — stationary variance</td>
+        <td><span class="asserted">ASSERTED 5625</span></td>
+        <td class="why">Long-run variance of outcomes per mode. Converges from cohort data after ~100 sessions per mode.</td>
+      </tr>
+      <tr>
+        <td class="new">μ_∞ — prior mean</td>
+        <td><span class="asserted">ASSERTED 500</span></td>
+        <td class="why">Population mean elo across all students at session 1. Directly measurable. Updates continuously.</td>
+      </tr>
+      <tr>
+        <td class="new">purity penalty — R multiplier</td>
+        <td><span class="asserted">ASSERTED 3.0</span></td>
+        <td class="why">Compare I(d) predictions vs actual information gain on contaminated vs clean INV sessions. The ratio IS the penalty. Learned from silent vs announced INVERSION comparison (Phase 0 + Phase 3).</td>
+      </tr>
+    </table>
+    <div class="section-body" style="margin-top:12px">
+      <p>
+        After Phase 3, the only remaining <span class="asserted">[ASSERTED]</span> element is the choice of model family (Gaussian likelihood, Ornstein-Uhlenbeck forgetting). That choice will survive because it is falsifiable: if the residuals are non-Gaussian, we will see it in the evidence feed. A non-Gaussian residual structure is the pre-registered refutation condition for the model family itself.
+      </p>
+    </div>
+  </div>
+
+  <!-- ══ WHAT STAYS ══ -->
+  <div class="section">
+    <div class="section-label">What Stays — Invariants</div>
+    <div class="inv-grid">
+      <div class="inv-card">
+        <div class="inv-title">The Ledger</div>
+        <div class="inv-body">Append-only raw observations. The Bayesian model reads observations from the ledger and writes posterior updates. The ledger is unchanged — it is the observation history, not the model.</div>
+      </div>
+      <div class="inv-card">
+        <div class="inv-title">Zone Vocabulary</div>
+        <div class="inv-body">ECHO · PARALLEL · SHIFTING · RADICAL · REMATCH. The labels survive. Students have already learned them. The computation underneath changes from threshold rules to posterior comparison.</div>
+      </div>
+      <div class="inv-card">
+        <div class="inv-title">Mode Framework</div>
+        <div class="inv-body">6 cognitive modes (QTY, SPT, FRT, DST, WRM, INV). The mode framework is a design decision about what cognitive dimensions to measure, not a statistical choice. It stays.</div>
+      </div>
+      <div class="inv-card">
+        <div class="inv-title">3-Layer Terminal</div>
+        <div class="inv-body">Layer 1 disclosed, Layer 2 named, Layer 3 hidden. The information architecture is unchanged. The terminal still shows zone, mode, template. The math is still never shown.</div>
+      </div>
+      <div class="inv-card">
+        <div class="inv-title">Codename System</div>
+        <div class="inv-body">The canonical codenames (challenge-meta.html) are community vocabulary. They are indexed by session count, unchanged. The Bayesian model does not affect the naming layer.</div>
+      </div>
+      <div class="inv-card">
+        <div class="inv-title">MODE_ADJACENCY</div>
+        <div class="inv-body">The adjacency map (QTY↔SPT, SPT↔FRT↔WRM, FRT↔DST, DST↔INV, INV↔WRM) is a cognitive design decision — which modes share underlying structure. It stays and is used in zone classification.</div>
+      </div>
+      <div class="inv-card">
+        <div class="inv-title">Q2 Semantics</div>
+        <div class="inv-body">Announced INVERSION = contaminated signal. This is not a statistical claim — it is a measurement design constraint. Silent INVERSION removes the purity penalty. The Q2 frame survives unchanged.</div>
+      </div>
+      <div class="inv-card">
+        <div class="inv-title">Evidence Axiom</div>
+        <div class="inv-body">Record observations, not interpretations. The Bayesian model produces interpretations (posteriors). The ledger records only what happened. The distinction is preserved — and now more important than ever.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ BUILD ORDER ══ -->
+  <div class="section">
+    <div class="section-label">Build Order — Migration Path</div>
+    <div class="section-body">
+      <p>
+        The Bayesian compiler does not replace the heuristic compiler at once. The migration is additive — the Bayesian model runs alongside the heuristic, both producing outputs, both feeding the ledger. Phase 3 is when the heuristic is retired.
+      </p>
+    </div>
+    <div style="margin-top:8px">
+      <div class="phase-row">
+        <div class="phase-num">Phase −1</div>
+        <div class="phase-text">Start the ledger. The Bayesian model is useless without observations. Every session not recorded is an observation permanently lost.</div>
+        <div class="phase-status" style="color:#ef4444">URGENT</div>
+      </div>
+      <div class="phase-row">
+        <div class="phase-num">Phase 0</div>
+        <div class="phase-text">Silent INVERSION (clean purity signal), elo_velocity tracking (needed for residual estimation), template history, forgetting measurement (τ per mode). These are the observations the Bayesian model will train on.</div>
+        <div class="phase-status" style="color:#d97706">NEXT</div>
+      </div>
+      <div class="phase-row">
+        <div class="phase-num">Phase 1</div>
+        <div class="phase-text">Run Bayesian compiler in shadow mode — compute d* alongside heuristic, log both, compare. Do not switch sessions yet. Measure divergence between heuristic and Bayesian selections.</div>
+        <div class="phase-status" style="color:#555">AFTER LEDGER</div>
+      </div>
+      <div class="phase-row">
+        <div class="phase-num">Phase 2</div>
+        <div class="phase-text">Switch to Bayesian selection for RADICAL and SHIFTING zones first (highest divergence from heuristic, highest expected gain from getting it right). Keep heuristic for ECHO/PARALLEL/REMATCH (lower stakes, smaller divergence).</div>
+        <div class="phase-status" style="color:#555">AFTER SHADOW</div>
+      </div>
+      <div class="phase-row">
+        <div class="phase-num">Phase 3</div>
+        <div class="phase-text">Learn λ[i], R(t), σ²_∞ from accumulated data. Replace all <span class="asserted">[ASSERTED]</span> parameters. Retire heuristic compiler. All [ASSERTED] labels become <span class="learned">[MEASURED]</span>. System is now fully self-calibrating.</div>
+        <div class="phase-status" style="color:#555">DATA DEPENDENT</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ THE COMPILER ══ -->
+  <div class="demo">
+    <div class="demo-header">
+      <div class="demo-label">Bayesian Compiler — Live Demo</div>
+      <div style="font-size:9px;color:#333;margin-left:8px">d* = argmax E[KL] · σ² drives selection · zone emerges from posterior</div>
+      <div class="demo-presets">
+        <button class="preset-btn" onclick="runPreset('mvega')">M. VEGA</button>
+        <button class="preset-btn" onclick="runPreset('dkosa')">D. KOSA</button>
+        <button class="preset-btn" onclick="runPreset('srios')">S. RIOS</button>
+        <button class="preset-btn" onclick="runPreset('atanaka')">A. TANAKA</button>
+      </div>
+    </div>
+    <div class="demo-body">
+      <div class="demo-left">
+        <div id="result-zone" class="result-zone">—</div>
+        <div id="result-line" class="result-line">— · — · —</div>
+        <div id="result-codename" class="result-codename"></div>
+        <div id="result-note" class="result-note"></div>
+
+        <div class="section-label" style="margin-top:16px;margin-bottom:8px">Posterior State (predicted)</div>
+        <div id="posterior-display"></div>
+
+        <div class="section-label" style="margin-top:16px;margin-bottom:8px">vs Heuristic</div>
+        <div id="compare-display"></div>
+      </div>
+      <div class="demo-right">
+        <div class="section-label" style="margin-bottom:8px">Information Gain — All Candidates</div>
+        <div id="ig-display" style="font-size:9px;color:#333">Select a preset to run the compiler.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="status-bar">
+  <div class="status-item"><div class="status-dot" style="background:#22c55e"></div><span class="learned">Learned from data</span></div>
+  <div class="status-item"><div class="status-dot" style="background:#d97706"></div><span class="asserted">Asserted — dissolves in Phase 3</span></div>
+  <div class="status-item"><div class="status-dot" style="background:#ef4444"></div>Known gap — needs BT</div>
+  <div class="status-item" style="margin-left:auto;color:#1a1a1a">bayesian.html</div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// SHARED CONSTANTS (duplicated from terminal-compiler.html — pending module extraction)
+// ══════════════════════════════════════════════════════════════════════════════
+
+const MODES = [
+  {id:'qty', n:'QUANTITY'},
+  {id:'spt', n:'SPATIAL'},
+  {id:'frt', n:'FORTRESS'},
+  {id:'dst', n:'DESTRUCTION'},
+  {id:'wrm', n:'WORMHOLE'},
+  {id:'inv', n:'INVERSION'},
+];
+
+const TEMPLATES = {
+  qty:['MISER','FLOOD','SPEED FLOOD','THE DELUGE','OVERFLOW','EFFICIENCY GATE'],
+  spt:['BLIND REACH','ARCHITECT','REACH','THE PERIMETER','SIGHTLINE','FURTHEST POINT'],
+  frt:['NETWORK','SIEGE','PATIENCE','THE LATTICE','CONVERGENCE','ANCHOR POINT'],
+  dst:['SCORCHED EARTH','HUNTER','CHAIN REACTION','OBLITERATION','THE DENIAL','CLEARANCE'],
+  wrm:['DECOY','THE GATEWAY','TUNNEL VISION','SIGNAL LOCK','THE FOLD','ONE THING'],
+  inv:['MIRROR','HIDDEN OBJECTIVE','NEGATIVE SPACE','THE FLIP','WRONG CONTEXT','NULL SIGNAL'],
+};
+
+const TEMPLATE_DEPTH = {
+  'MISER':2,'SPEED FLOOD':2,'FLOOD':2,'THE DELUGE':1,'OVERFLOW':1,'EFFICIENCY GATE':1,
+  'BLIND REACH':2,'ARCHITECT':2,'REACH':2,'THE PERIMETER':1,'SIGHTLINE':1,'FURTHEST POINT':1,
+  'NETWORK':3,'PATIENCE':2,'SIEGE':1,'THE LATTICE':1,'CONVERGENCE':1,'ANCHOR POINT':1,
+  'CHAIN REACTION':3,'HUNTER':2,'SCORCHED EARTH':1,'OBLITERATION':1,'THE DENIAL':1,'CLEARANCE':1,
+  'DECOY':2,'THE GATEWAY':2,'TUNNEL VISION':2,'SIGNAL LOCK':1,'THE FOLD':1,'ONE THING':1,
+  'MIRROR':2,'HIDDEN OBJECTIVE':2,'NEGATIVE SPACE':1,'THE FLIP':1,'WRONG CONTEXT':1,'NULL SIGNAL':1,
+};
+
+const CODENAMES = {
+  qty:['THE FLOOD','WAVE FRONT','MANIFEST DENSITY','THE SWARM','OVERFLOW','LANDGRAB','SATURATION','THE TIDE'],
+  spt:['THE EXPANSE','LONG REACH','FAR HORIZON','THE CARTOGRAPHER','BLIND REACH','DEEP SPACE','FURTHEST POINT','EDGE CASE'],
+  frt:['IRON CURTAIN','SIEGE LINES','THE CITADEL','DEEP ROOTS','BASTILLE','THE HOLD','STONEWORK','ENTRENCHED'],
+  dst:['CHAIN REACTION','SCORCHED EARTH','THE BREAKING','GHOST CIRCUIT','SHATTER','ERASURE','NULL FIELD','AFTERBURN'],
+  wrm:['THE GATEWAY','EVENT HORIZON','FOLD SPACE','THE BRIDGE','TRANSIT','SINGULARITY','THE NEEDLE','CROSSING'],
+  inv:['MIRROR LOGIC','NULL SPACE','THE FLIP','OPPOSITE DAY','DARK MATTER','REVERSAL','ANTI-PATTERN','WRONG ANSWER'],
+};
+
+const MODE_ADJACENCY = {
+  0:[1], 1:[0,2,4], 2:[1,3], 3:[2,5], 4:[5,1], 5:[3,4],
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BAYESIAN PARAMETERS
+// [ASSERTED] markers indicate values that dissolve in Phase 3 via learned posteriors.
+// ══════════════════════════════════════════════════════════════════════════════
+
+const MU_PRIOR    = 500;    // [ASSERTED] population prior mean elo → [MEASURED] from cohort session-1 data
+const SIGMA2_0    = 22500;  // [ASSERTED] prior variance (150²) — very uncertain initially
+const SIGMA2_INF  = 5625;   // [ASSERTED] stationary variance (75²) — minimum achievable certainty
+const LAMBDA_0    = 1/30;   // [ASSERTED] prior forgetting rate (30-day half-life) → [LEARNED] per student per mode
+const R_BASE      = 6250;   // [ASSERTED] baseline observation noise → [LEARNED] from residual variance per template
+const PURITY_MULT = 3.0;    // [ASSERTED] Q2 contamination noise multiplier → [LEARNED] from silent vs announced INV comparison
+
+// ══════════════════════════════════════════════════════════════════════════════
+// STATE CONVERSION
+// The heuristic state (elo, vel, tau) maps to Bayesian state (mu, sigma2, lambda).
+// This is the bridge used during Phase 1–2 shadow operation.
+// ══════════════════════════════════════════════════════════════════════════════
+
+function toBayesianState(s) {
+  const mu = s.elo.map(e => e || MU_PRIOR);
+
+  // σ²: starts high (few sessions), grows with absence, capped at prior
+  const sigma2 = s.elo.map((e, i) => {
+    if (!e || e === 0) return SIGMA2_0;
+    const n = (s.modeSessions && s.modeSessions[i]) || 1;
+    // More sessions → lower base variance
+    const base = SIGMA2_0 / n;
+    // Absence → uncertainty grows toward stationary from base
+    const tau_i = (s.tau && s.tau[i]) || 0;
+    const grown = SIGMA2_INF * (1 - Math.exp(-2 * LAMBDA_0 * tau_i));
+    return Math.min(base + grown, SIGMA2_0);
+  });
+
+  // λ: uniform prior, will be updated per student in Phase 3
+  const lambda = new Array(6).fill(LAMBDA_0);
+
+  return { ...s, mu, sigma2, lambda };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PREDICT STEP — Ornstein-Uhlenbeck forgetting model
+// ══════════════════════════════════════════════════════════════════════════════
+
+function predict(mu_i, sigma2_i, lambda_i, tau_i) {
+  const alpha   = Math.exp(-lambda_i * tau_i);
+  const mu_p    = MU_PRIOR + alpha * (mu_i - MU_PRIOR);
+  const sigma2_p = SIGMA2_INF + (sigma2_i - SIGMA2_INF) * alpha * alpha;
+  return { mu_p, sigma2_p };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// INFORMATION GAIN — I(d) = ½ log(1 + σ²_pred / R(t))
+// The closed-form expected KL for Gaussian likelihood.
+// ══════════════════════════════════════════════════════════════════════════════
+
+function informationGain(sigma2_pred, depth, purityPenalty) {
+  const R = R_BASE / Math.max(depth, 1) * (purityPenalty || 1);
+  return { gain: 0.5 * Math.log(1 + sigma2_pred / R), R };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SESSION SELECTION — argmax I(d) over all eligible (mode, template) pairs
+// ══════════════════════════════════════════════════════════════════════════════
+
+function selectSession(state, mu_pred, sigma2_pred) {
+  const { tier, sessions, purity, plannedSilentOverlay, invCooldownActive, hist } = state;
+  const invSuppressed = tier === 'YOUNGER' && sessions < 20;
+  const candidates = [];
+
+  for (let i = 0; i < 6; i++) {
+    if (i === 5 && invSuppressed) continue;
+    if (!state.elo[i] || state.elo[i] === 0) continue;
+    if (i === 5 && invCooldownActive) continue;
+
+    const contaminated = purity[i] && purity[i].some(p => /Q2|announced/i.test(p));
+    const purityPenalty = (contaminated && !plannedSilentOverlay) ? PURITY_MULT : 1.0;
+    const pool = TEMPLATES[MODES[i].id];
+
+    for (let t = 0; t < pool.length; t++) {
+      const template = pool[t];
+      const depth = TEMPLATE_DEPTH[template] || 1;
+      const { gain, R } = informationGain(sigma2_pred[i], depth, purityPenalty);
+      candidates.push({
+        i, t, template, gain, R, depth, purityPenalty,
+        sigma2: sigma2_pred[i],
+        mu: mu_pred[i],
+        label: `${MODES[i].id.toUpperCase()}·${template}: I=½log(1+${sigma2_pred[i].toFixed(0)}/${R.toFixed(0)})=${gain.toFixed(4)}`
+      });
+    }
+  }
+
+  candidates.sort((a, b) => b.gain - a.gain);
+  return candidates;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ZONE CLASSIFICATION — applied after d* is chosen, not before
+// ══════════════════════════════════════════════════════════════════════════════
+
+function classifyZone(modeIdxStar, templateStar, lastModeIdx, hist, surprise) {
+  if (surprise && surprise > 2.0) {
+    return { zone: 'REMATCH', reason: `Last outcome surprise=${surprise.toFixed(2)}σ > 2.0 — signal incomplete. REMATCH.` };
+  }
+
+  const last = (lastModeIdx !== undefined && lastModeIdx !== null) ? lastModeIdx : -1;
+  const lastTpl = (hist && hist[last] && hist[last].length > 0) ? hist[last][hist[last].length - 1] : null;
+
+  if (modeIdxStar === last) {
+    if (templateStar === lastTpl) {
+      return { zone: 'ECHO', reason: `d*=(${MODES[last].n}, ${templateStar}) == d_last — same session is still maximally informative.` };
+    }
+    return { zone: 'PARALLEL', reason: `d* same mode (${MODES[last].n}), different template (${lastTpl} → ${templateStar}).` };
+  }
+
+  if (last >= 0 && MODE_ADJACENCY[last] && MODE_ADJACENCY[last].includes(modeIdxStar)) {
+    return { zone: 'SHIFTING', reason: `d* adjacent: ${last >= 0 ? MODES[last].n : '—'} → ${MODES[modeIdxStar].n}.` };
+  }
+
+  return { zone: 'RADICAL', reason: `d* non-adjacent: ${last >= 0 ? MODES[last].n : '—'} → ${MODES[modeIdxStar].n}.` };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// THE BAYESIAN COMPILER — pure function
+// state → { zone, mode, modeIdx, template, codename, posterior }
+// Replaces terminalCompiler() when Phase 2 migration is complete.
+// ══════════════════════════════════════════════════════════════════════════════
+
+function bayesianCompiler(rawState) {
+  // 1. Convert to Bayesian state
+  const state = toBayesianState(rawState);
+
+  // 2. Predict: apply forgetting model per mode
+  const mu_pred = [], sigma2_pred = [];
+  for (let i = 0; i < 6; i++) {
+    const { mu_p, sigma2_p } = predict(state.mu[i], state.sigma2[i], state.lambda[i], (rawState.tau && rawState.tau[i]) || 0);
+    mu_pred.push(mu_p);
+    sigma2_pred.push(sigma2_p);
+  }
+
+  // 3. Select session: argmax I(d)
+  const candidates = selectSession(state, mu_pred, sigma2_pred);
+  if (!candidates.length) return null;
+
+  const dStar = candidates[0];
+  const modeIdx = dStar.i;
+  const template = dStar.template;
+
+  // 4. Zone: label from posterior comparison
+  const surprise = rawState.lastSurprise || 0;
+  const zoneResult = classifyZone(modeIdx, template, rawState.lastModeIdx, rawState.hist, surprise);
+
+  // 5. Codename (unchanged from heuristic — session count indexed)
+  const codename = CODENAMES[MODES[modeIdx].id][rawState.sessions % 8];
+
+  return {
+    zone: zoneResult.zone,
+    zoneReason: zoneResult.reason,
+    mode: MODES[modeIdx],
+    modeIdx,
+    template,
+    codename,
+    posterior: { mu_pred, sigma2_pred },
+    candidates,
+    dStar,
+  };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// REFERENCE PRESETS (same students as terminal-compiler.html)
+// heuristic ref from terminal-compiler.html · bayesian output computed live
+// ══════════════════════════════════════════════════════════════════════════════
+
+const PRESETS = {
+  mvega:{
+    label:'M. VEGA — S24', sessions:23, stage:3, tier:'TEEN', track:'COMPETITIVE', register:'teen-standard', engagement:'OK',
+    elo:[520,610,445,690,380,505], vel:[8,-2,31,-12,0,15], tau:[4,9,1,12,19,2],
+    modeSessions:[4,4,4,4,3,4], lastModeIdx:4, invCooldownActive:false,
+    purity:[[''],[''],[''],[''],['near-binary signal'],['announced×4 Q2']],
+    hist:[['MISER','FLOOD'],['REACH','ARCHITECT'],['NETWORK','SIEGE'],['HUNTER','CHAIN REACTION'],['DECOY'],['MIRROR','HIDDEN OBJECTIVE']],
+    lastRank:78, lastMargin:12, comfortableWinStreak:2, absenceDays:0,
+    zeroPctileStreak:0, stagePredictions:0, plannedSilentOverlay:false, moveConstraint:0, personalTarget:0, teacherObservation:'',
+    heuristicRef:'SHIFTING · SPT · BLIND REACH · EDGE CASE',
+  },
+  dkosa:{
+    label:'D. KOSA — S10', sessions:9, stage:2, tier:'GIFTED', track:'COMPETITIVE', register:'gifted-compressed', engagement:'HIGH',
+    elo:[640,590,675,610,705,580], vel:[42,38,51,29,44,36], tau:[2,3,1,4,2,1],
+    modeSessions:[2,2,2,2,2,1], lastModeIdx:0, invCooldownActive:false,
+    purity:[[''],[''],[''],[''],[''],['announced×1 partially clean']],
+    hist:[['MISER'],['BLIND REACH'],['PATIENCE','SIEGE'],['SCORCHED EARTH'],['DECOY'],['MIRROR','NEGATIVE SPACE']],
+    lastRank:68, lastMargin:20, comfortableWinStreak:0, absenceDays:0,
+    zeroPctileStreak:9, stagePredictions:0, plannedSilentOverlay:true, moveConstraint:8, personalTarget:0, teacherObservation:'',
+    heuristicRef:'RADICAL · INV (silent) · HIDDEN OBJECTIVE · NULL SPACE',
+  },
+  srios:{
+    label:'S. RIOS — S15', sessions:14, stage:2, tier:'YOUNGER', track:'COLLABORATIVE', register:'younger-warm', engagement:'RECOVERING',
+    elo:[310,255,290,180,420,0], vel:[12,9,14,4,22,0], tau:[3,6,4,11,1,0],
+    modeSessions:[4,3,3,2,3,0], lastModeIdx:4, invCooldownActive:false,
+    purity:[[''],[''],[''],['low engagement S8-9'],[''],['']],
+    hist:[['FLOOD'],['REACH'],['NETWORK'],['HUNTER'],['THE GATEWAY','DECOY'],[]],
+    lastRank:68, lastMargin:12, comfortableWinStreak:1, absenceDays:0,
+    zeroPctileStreak:0, stagePredictions:0, plannedSilentOverlay:false, moveConstraint:0, personalTarget:96, teacherObservation:'explained wormhole pairing to teammate',
+    heuristicRef:'PARALLEL · WRM · TUNNEL VISION · THE NEEDLE',
+  },
+  atanaka:{
+    label:'A. TANAKA — S32', sessions:31, stage:4, tier:'TEEN', track:'COMPETITIVE', register:'teen-standard', engagement:'RECOVERING',
+    elo:[580,475,610,555,640,635], vel:[0,0,0,0,0,0], tau:[21,21,21,21,21,21],
+    modeSessions:[5,5,5,5,5,6], lastModeIdx:2, invCooldownActive:false,
+    purity:[['stale 21d'],['stale 21d · REMATCH-loop'],['stale 21d'],['stale 21d'],['stale 21d'],['stale 21d']],
+    hist:[['SPEED FLOOD'],['ARCHITECT','REACH'],['SIEGE'],['SCORCHED EARTH'],['DECOY','THE GATEWAY'],['HIDDEN OBJECTIVE','MIRROR']],
+    lastRank:75, lastMargin:20, comfortableWinStreak:0, absenceDays:21,
+    zeroPctileStreak:0, stagePredictions:3, plannedSilentOverlay:false, moveConstraint:0, personalTarget:0, teacherObservation:'',
+    heuristicRef:'ECHO · FRT · SIEGE · ENTRENCHED',
+  },
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// UI RENDERING
+// ══════════════════════════════════════════════════════════════════════════════
+
+function runPreset(key) {
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.preset-btn[onclick="runPreset('${key}')"]`).classList.add('active');
+
+  const p = PRESETS[key];
+  const r = bayesianCompiler(p);
+  if (!r) { document.getElementById('result-zone').textContent = 'ERROR'; return; }
+
+  // ── Zone + result line
+  document.getElementById('result-zone').textContent = r.zone;
+  document.getElementById('result-line').textContent =
+    `${r.mode.id.toUpperCase()} · ${r.template} · I(d*)=${r.dStar.gain.toFixed(4)} nats`;
+  document.getElementById('result-codename').textContent = r.codename;
+  document.getElementById('result-note').textContent = r.zoneReason;
+
+  // ── Posterior display
+  const maxSigma = Math.max(...r.posterior.sigma2_pred);
+  const pEl = document.getElementById('posterior-display');
+  pEl.innerHTML = MODES.map((m, i) => {
+    const mu = r.posterior.mu_pred[i];
+    const sig = Math.sqrt(r.posterior.sigma2_pred[i]);
+    const muPct = ((mu / 999) * 100).toFixed(0);
+    const sigPct = ((sig / 150) * 100).toFixed(0);
+    const isSelected = i === r.modeIdx;
+    return `<div class="posterior-row" style="${isSelected ? 'background:#0a1a0a' : ''}">
+      <div class="posterior-mode" style="${isSelected ? 'color:#22c55e' : ''}">${m.id}</div>
+      <div class="posterior-bar-track">
+        <div class="posterior-bar-mu" style="left:0;width:${muPct}%;background:${isSelected?'#1a3a1a':'#1a1a1a'}"></div>
+        <div class="posterior-bar-sigma" style="left:${Math.max(0,muPct-sigPct/2)}%;width:${Math.min(sigPct,100)}%;background:${isSelected?'#22c55e22':'#1a1a1a'}"></div>
+      </div>
+      <div class="posterior-vals">
+        <span class="${isSelected ? 'hi' : ''}">μ=${mu.toFixed(0)}</span> <span>±${sig.toFixed(0)}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  // ── Heuristic comparison
+  const hRef = p.heuristicRef;
+  const [hZone, hMode, hTemplate, hCodename] = hRef.split(' · ');
+  const bZone = r.zone;
+  const bMode = r.mode.id.toUpperCase() + (p.plannedSilentOverlay && r.modeIdx===5 ? ' (silent)' : '');
+  const bTemplate = r.template;
+  const bCodename = r.codename;
+  const match = (a,b) => a===b ? 'match' : 'diff';
+  document.getElementById('compare-display').innerHTML = `
+    <div class="compare-row">
+      <div class="compare-cell"><div class="compare-head">Heuristic</div><div class="compare-val">${hZone}</div></div>
+      <div class="compare-cell"><div class="compare-head">Bayesian</div><div class="compare-val ${match(bZone,hZone)}">${bZone}</div></div>
+    </div>
+    <div class="compare-row">
+      <div class="compare-cell"><div class="compare-val">${hMode}</div></div>
+      <div class="compare-cell"><div class="compare-val ${match(bMode,hMode)}">${bMode}</div></div>
+    </div>
+    <div class="compare-row">
+      <div class="compare-cell"><div class="compare-val">${hTemplate}</div></div>
+      <div class="compare-cell"><div class="compare-val ${match(bTemplate,hTemplate)}">${bTemplate}</div></div>
+    </div>
+    <div class="compare-row">
+      <div class="compare-cell"><div class="compare-val">${hCodename}</div></div>
+      <div class="compare-cell"><div class="compare-val ${match(bCodename,hCodename)}">${bCodename}</div></div>
+    </div>
+    <div style="font-size:9px;color:#222;margin-top:6px">
+      ${bZone===hZone && bMode===hMode && bTemplate===hTemplate ? '✓ converges with heuristic' : '↗ diverges — Bayesian follows σ² not threshold rules'}
+    </div>`;
+
+  // ── Information gain table (top 12)
+  const top = r.candidates.slice(0, 12);
+  const maxGain = top[0].gain;
+  const igEl = document.getElementById('ig-display');
+  igEl.innerHTML = `<table class="ig-table">
+    <tr><th>#</th><th>Mode</th><th>Template</th><th>σ²</th><th>R</th><th>I(d) nats</th><th></th></tr>
+    ${top.map((c, idx) => `
+    <tr class="${idx===0?'winner':''}">
+      <td>${idx+1}</td>
+      <td class="mode-col">${MODES[c.i].id}</td>
+      <td>${c.template}</td>
+      <td>${c.sigma2.toFixed(0)}</td>
+      <td>${c.R.toFixed(0)}</td>
+      <td>${c.gain.toFixed(4)}</td>
+      <td><span class="gain-bar-fill" style="width:${(c.gain/maxGain*60).toFixed(0)}px;display:inline-block;height:2px;background:${idx===0?'#22c55e':'#222'};vertical-align:middle"></span></td>
+    </tr>`).join('')}
+  </table>
+  <div style="color:#222;font-size:8px;margin-top:6px">showing top ${top.length} of ${r.candidates.length} candidates · d*=row 1 · all [ASSERTED] parameters</div>`;
+}
+
+window.addEventListener('load', () => runPreset('mvega'));
+</script>
+</body>
+</html>

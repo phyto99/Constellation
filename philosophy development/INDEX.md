@@ -100,6 +100,41 @@ Purpose: Reference index for all philosophy/architecture documents. Do not modif
 
 ---
 
+## Era 5 — Map Intelligence, Bot Calibration & Testing Integrity
+*2026-06-15/16. Built the environmental intelligence layer (map topology, bot profiles, compiler integration) and consolidated all student-facing design into unified documents.*
+
+| File | What it is | Accuracy |
+|------|-----------|---------|
+| `map-system.html` | **Merged doc (map-intelligence + mapmaker).** Part I: topology registry (maps/topology.json built — all 14 maps), 6 bot profiles (MIRROR/CONTESTER/ACCELERANT/TURTLER/THEORETICIAN/ADAPTOR), student×map×bot composition table, new Ledger signals (archetype_tag, strategy_shift_count, tempo_delta), build pipeline with status. Part II: full game mechanics for AI mapmaker, JSON format + 7 constraints, 8-type strategic catalogue, 8-step AI pipeline, image→topology transformation rules, legibility spectrum (TRANSPARENT→DISCOVERY), 3-layer validation. Interactive map canvas prototype. | **95%** |
+| `student-design.html` | **Merged doc (student-experience + testing-philosophy).** Part I: terminal language (4 student type examples), 5 zone cards (ECHO/PARALLEL/SHIFTING/RADICAL/REMATCH), mystery vs transparency calibration table, 6 chemical reaction pairings, 8-stage curation pipeline (updated with built steps). Part II: Ledger boundary (two-column diagram), 4 testing integrity principles, **Progressive Unlock Tiers** (BASELINE → DEVELOPING → ALPHA → SINGULARITY with argmax E[KL] justification for each), access matrix (8 rows × 3 actors), 6 bot opacity cards, admin sandbox prototype (interactive simulation), retrospective access constraints. | **100%** |
+| `roadmap.html` | Phase 0 → Phase 1 → Phase 2 → Phase ∞ build sequence with implementation status, dependencies, and what each phase unlocks for the student model. | **95%** |
+
+**Files removed by merge (2026-06-16):** `map-intelligence.html`, `mapmaker.html`, `student-experience.html`, `testing-philosophy.html` — all content preserved in the merged documents above.
+
+**Implemented in server-side code (compiler.js, server.js):** topology registry loading, selectMap(), selectBotProfile(), assignZone(), /api/maps/topology route, /api/rooms/:roomId/apply-compiler push endpoint, compiler_apply presence channel, Ledger fields compiler_zone and compiler_bot_profile.
+
+---
+
+## Era 6 — Multi-Game Universal Architecture
+*2026-06-16. Scales the One Principle across all games in the suite.*
+
+| File | What it is | Accuracy |
+|------|-----------|---------|
+| `multi-game-architecture.html` | The generalization problem and its solution. 8 universal cognitive dimensions (SIM/COM/OPP/TOP/ADP/OPT/MOS/KNW) derived from the union of all game mechanics. Per-game config space → dimension loading for Constellation, GOLAD, Geobridge, C4D. Composition matrix (ordinal, ASSERTED). Two-level compiler: game_selection() → config_selection(). Per-game behavioral signals for GOLAD (5), Geobridge (5), C4D (5). Cross-game transfer model architecture. Precise build order: Ledger integration for all games → signal extraction → Observatory multi-game view → data accumulation → factor analysis → empirical matrix → two-level compiler → retire game Elo. Document explicitly states it should be revisited when multi-game data exists. | **ASSERTED (architecture 100%, dimension loadings pending factor analysis)** |
+
+---
+
+## Era 7 — Market Strategy, Legal Architecture & Company Position
+*2026-06-16. Outward-facing layer: go-to-market sequence, legal compliance implementation, awards/research credibility stack, competitive positioning, and virality mechanics.*
+
+| File | What it is | Accuracy |
+|------|-----------|---------|
+| `strategy.html` | Complete company strategy document. Core thesis: virality → demand → evidence → schools (not the reverse). Phase map: Foundation (now–Month 3) → Community (Month 3–9) → Credibility (Month 9–24) → School Adoption (Month 24+), with unlock conditions per phase. Legal gap table: designed vs production-ready across 9 compliance items (age gate, consent recording, deletion endpoint, privacy contact, parental consent backend, DPA, export endpoint). Awards & credibility stack by ROI tier: Common Sense Media (free, do first), SIIA CODiE (~$500, school procurement unlock), Games for Change (network value), Digital Promise, ESSA Tier 3 (Title IV-A funding unlock), BAFTA/IGF (prestige tier). Virality mechanics: zone vocabulary as community formation mechanism, Alpha track as aspirational exclusivity, terminal aesthetic as visual social object. Competitive analysis: honest Synthesis/Astra Nova/Ad Astra comparison (their advantage = origin story; ours = falsifiable architecture + researcher interest). Researcher pitch framing. Prioritized action list: 14 items across this week / this month / next quarter. Color-coded by domain throughout. | **Current — living document** |
+| `legal-architecture.html` | Legal design system. 8 tabs: Principle, Privacy Policy, Age Gate, Student Onboarding, Student Data View, Parental Consent, School DPA, Deletion Flow. Full privacy policy text in system voice. Three variants per flow. Student data view tiered by Progressive Unlock (BASELINE/DEVELOPING/ALPHA). Complete DPA with responsibility table and signature block. Deletion receipt flow. Framing: the game is exceptional on its own terms — one of the most configurationally variable strategy games in its class — and a cognitive development system built underneath it. | **Designed — not yet in production** |
+| `legal-encounters.html` | Interactive LILA-derived consent encounters. Strictly monochrome. 8 tabs: Why This Exists, Short Form, Design Principle, First Contact, The Ledger (3-layer), Erasure, Parent Investigation, Result Variants, Graduation. Designed moments fire based on what the user actually reads. Layer 3 shows real JSONL schema. Includes social media contrast (opposite reason for opacity: social media hides to protect manipulation; Constellation withholds because disclosure collapses the development mechanism). Short Form tab with legal validity table — each section mapped to the law it satisfies. | **Designed — not yet in production** |
+
+---
+
 ## Build Order
 - **Phase −1** (before everything, per Era 3): Start the ledger. Recording must precede every other phase — observations not recorded during Phases 0–1 can never be recovered. Recording is not endorsement; the ledger has no opinion.
 - **Phase 0** (now): Silent INVERSION, elo_velocity tracking, forgetting measurement, template history

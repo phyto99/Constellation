@@ -9,15 +9,16 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:Arial,sans-serif;font-size:12p
 header{border-bottom:1px solid #1e1e1e;padding:20px 28px;display:flex;align-items:baseline;gap:16px}
 .h-logo{font-size:11px;letter-spacing:3px;font-weight:700;text-transform:uppercase;color:#f0f0f0}
 .h-sub{font-size:9px;letter-spacing:1px;color:#444;text-transform:uppercase}
-.main{padding:28px;max-width:1100px;margin:0 auto}
-.era-label{font-size:8px;letter-spacing:3px;font-weight:700;text-transform:uppercase;color:#333;margin-bottom:10px;margin-top:24px}
+.main{padding:28px;max-width:1100px;margin:0 auto;padding-bottom:80px}
+.era-label{font-size:8px;letter-spacing:3px;font-weight:700;text-transform:uppercase;color:#333;margin-bottom:10px;margin-top:28px}
 .doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;margin-bottom:4px}
-.doc-card{border:1px solid #1a1a1a;padding:14px 16px;background:#111;cursor:pointer;transition:border-color .15s;text-decoration:none;display:block;position:relative}
+.doc-card{border:1px solid #1a1a1a;padding:14px 16px;background:#111;text-decoration:none;display:block;position:relative;transition:border-color .15s}
 .doc-card:hover{border-color:#333}
 .doc-card.featured{border-color:#252525}
 .doc-card.featured:hover{border-color:#555}
+.doc-card.functional{border-left:2px solid #2563eb}
+.doc-card.merged{border-left:2px solid #d97706}
 .doc-card.new{border-left:2px solid #22c55e}
-.doc-card.amber{border-left:2px solid #d97706}
 .doc-card.archive{border-left:2px solid #333;opacity:.7}
 .doc-title{font-size:10px;font-weight:700;letter-spacing:.5px;color:#f0f0f0;margin-bottom:4px}
 .doc-sub{font-size:9px;color:#555;line-height:1.5;margin-bottom:8px}
@@ -27,127 +28,251 @@ header{border-bottom:1px solid #1e1e1e;padding:20px 28px;display:flex;align-item
 .tag-green{border-color:#15803d;color:#22c55e}
 .tag-amber{border-color:#92400e;color:#d97706}
 .tag-red{border-color:#7f1d1d;color:#ef4444}
+.tag-blue{border-color:#1e3a8a;color:#2563eb}
 .tag-purple{border-color:#4c1d95;color:#a78bfa}
-.tag-new{border-color:#15803d;color:#22c55e;background:#0a1f0a}
 .acc{font-size:8px;color:#333;margin-left:auto}
 .separator{border:none;border-top:1px solid #141414;margin:20px 0}
 .status-bar{border-top:1px solid #141414;padding:14px 28px;display:flex;gap:20px;align-items:center;position:fixed;bottom:0;left:0;right:0;background:#0a0a0a}
 .status-item{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:#333;display:flex;align-items:center;gap:6px}
 .status-dot{width:6px;height:6px;border-radius:50%}
-.open-q{border:1px solid #1a1a1a;padding:12px 14px;background:#0d0d0d;margin-top:24px}
-.open-q h3{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#333;margin-bottom:10px}
-.q-row{display:flex;align-items:baseline;gap:10px;padding:5px 0;border-bottom:1px solid #141414}
-.q-row:last-child{border-bottom:none}
-.q-num{font-size:9px;font-weight:700;width:20px;flex-shrink:0}
-.q-text{font-size:10px;color:#888;flex:1}
-.q-pri{font-size:8px;letter-spacing:1px;text-transform:uppercase;font-weight:700}
+@media(max-width:768px){
+  .main{padding:16px}
+  .doc-grid{grid-template-columns:1fr}
+  .status-bar{position:relative;flex-wrap:wrap}
+}
 </style>
 </head>
 <body>
 <header>
   <span class="h-logo">Constellation</span>
-  <span class="h-sub">Philosophy Development</span>
+  <span class="h-sub">Philosophy Development — Document Index</span>
 </header>
 
 <div class="main">
 
-  <div class="era-label">Core System — New Architecture</div>
+  <!-- ── FUNCTIONAL TOOLS ─────────────────────────────────────── -->
+  <div class="era-label">Functional Tools — Live Admin & Compiler</div>
   <div class="doc-grid">
-    <a href="bayesian.html" class="doc-card featured new" style="border-color:#22c55e22;border-left-width:2px">
-      <div class="doc-title">Bayesian Architecture</div>
-      <div class="doc-sub">The mathematically perfect system. Posterior over cognitive state, BOED session selection, all manual parameters replaced by inference. The objectively correct foundation.</div>
+    <a href="observatory.html" class="doc-card functional">
+      <div class="doc-title">Observatory — Admin Panel</div>
+      <div class="doc-sub">Live student view. Compiler output with zone + bot profile + map. Push-to-room session application. Room management. Requires server running on port 2567.</div>
       <div class="doc-meta">
-        <span class="tag tag-new">NEW</span>
+        <span class="tag tag-blue">FUNCTIONAL</span>
+        <span class="tag tag-green">LIVE</span>
+        <span class="acc">admin only</span>
+      </div>
+    </a>
+    <a href="terminal-compiler.html" class="doc-card functional">
+      <div class="doc-title">Terminal Compiler — Session Generator</div>
+      <div class="doc-sub">Full compiler UI. Mode selection, config vector, challenge template previews, zone assignment. The primary tool for constructing and reviewing session parameters.</div>
+      <div class="doc-meta">
+        <span class="tag tag-blue">FUNCTIONAL</span>
+        <span class="tag tag-green">BUILT</span>
+        <span class="acc">admin only</span>
+      </div>
+    </a>
+    <a href="student-observatory.html" class="doc-card functional">
+      <div class="doc-title">Student Observatory</div>
+      <div class="doc-sub">Philosophy document for the student-facing panel. Defines what information students can see, the progressive disclosure model, and the terminal message framework.</div>
+      <div class="doc-meta">
+        <span class="tag tag-blue">FUNCTIONAL</span>
+        <span class="tag tag-amber">PARTIAL</span>
+        <span class="acc">philosophy + UI</span>
+      </div>
+    </a>
+  </div>
+
+  <!-- ── CORE PHILOSOPHY ─────────────────────────────────────── -->
+  <div class="era-label">Core Philosophy & Architecture</div>
+  <div class="doc-grid">
+    <a href="bayesian.html" class="doc-card featured new">
+      <div class="doc-title">Bayesian Architecture</div>
+      <div class="doc-sub">The mathematically perfect system. Posterior over cognitive state, BOED session selection, all manual parameters replaced by inference. The objectively correct foundation. One Principle: argmax E[KL(posterior ‖ prior)].</div>
+      <div class="doc-meta">
         <span class="tag tag-green">CANONICAL</span>
+        <span class="tag tag-green">CURRENT</span>
         <span class="acc">100%</span>
       </div>
     </a>
-    <a href="system-map.html" class="doc-card featured">
-      <div class="doc-title">System Map — Open Questions</div>
-      <div class="doc-sub">Orbital confidence diagram. All 8 open questions (Q1–Q8). BT bridge architecture. Build order. Confidence levels: confirmed / amber / known problems.</div>
+    <a href="roadmap.html" class="doc-card featured">
+      <div class="doc-title">Roadmap — Build Order & Phases</div>
+      <div class="doc-sub">Phase 0 → Phase 1 → Phase 2 → Phase ∞ build sequence. What is implemented, what is next, dependencies, and what each phase unlocks for the student model.</div>
       <div class="doc-meta">
         <span class="tag tag-green">CURRENT</span>
-        <span class="tag tag-amber">Q1–Q8 OPEN</span>
         <span class="acc">95%</span>
       </div>
     </a>
-    <a href="SYNTHESIS.html" class="doc-card featured">
-      <div class="doc-title">Synthesis — Complete Philosophy</div>
-      <div class="doc-sub">The full written philosophy. Never about winning the game. Singularity trajectory. Design challenge system. Multi-audience architecture. 18 unwritten insights.</div>
+    <a href="configuration-architecture.html" class="doc-card featured">
+      <div class="doc-title">Configuration Architecture</div>
+      <div class="doc-sub">The complete config vector [12]. All parameters, their ranges, mode defaults, constraint system, and how the compiler maps student state to config values. The most implementation-dense document.</div>
       <div class="doc-meta">
         <span class="tag tag-green">CURRENT</span>
-        <span class="acc">95%</span>
+        <span class="tag tag-green">IMPLEMENTED</span>
+        <span class="acc">98%</span>
       </div>
     </a>
   </div>
 
-  <div class="era-label">Student Experience</div>
+  <!-- ── DATA LAYER ──────────────────────────────────────────── -->
+  <div class="era-label">Data Architecture — Ledger & Approximation</div>
   <div class="doc-grid">
-    <a href="alpha-system.html" class="doc-card new">
-      <div class="doc-title">Alpha System</div>
-      <div class="doc-sub">Zone names in terminal (ECHO / PARALLEL / SHIFTING / RADICAL / REMATCH). Live previews. Detective framework. Alpha application form. Mystery calibration — 3 layers.</div>
+    <a href="layer-0-ledger.html" class="doc-card">
+      <div class="doc-title">Layer 0 — The Ledger</div>
+      <div class="doc-sub">Append-only JSONL observation stream. The Four Permanence Axioms. Live feed prototype with config space visualization. Everything the system knows begins here and is never modified.</div>
       <div class="doc-meta">
-        <span class="tag tag-new">NEW</span>
-        <span class="tag tag-green">READY TO BUILD</span>
+        <span class="tag tag-green">CURRENT</span>
+        <span class="tag tag-green">BUILT</span>
         <span class="acc">95%</span>
       </div>
     </a>
-    <a href="system-complete.html" class="doc-card">
-      <div class="doc-title">System Complete</div>
-      <div class="doc-sub">Variable audit scatter. 3-layer diagram. Information gain curves. Mutual information loop animation. Terminal demo with live message generation. Message library.</div>
+    <a href="layer-1-approximation.html" class="doc-card">
+      <div class="doc-title">Layer 1 — Current Approximation</div>
+      <div class="doc-sub">18-dimensional state space derived from Layer 0. Elo update formula, Elo velocity, mode assignment, forgetting curve. Every value has a refutation condition. Every formula will be replaced.</div>
       <div class="doc-meta">
         <span class="tag tag-green">CURRENT</span>
-        <span class="acc">92%</span>
-      </div>
-    </a>
-  </div>
-
-  <div class="era-label">Architecture Development — Era 1</div>
-  <div class="doc-grid">
-    <a href="perfect-system.html" class="doc-card amber">
-      <div class="doc-title">Perfect System</div>
-      <div class="doc-sub">Variable audit. 3-layer architecture. Minimum sufficient state. Self-similarity diagram. First formal specification. Superseded by Bayesian Architecture for the math, still valid for the variable logic.</div>
-      <div class="doc-meta">
-        <span class="tag tag-amber">SUPERSEDED (math)</span>
+        <span class="tag tag-amber">ASSERTED weights</span>
         <span class="acc">90%</span>
       </div>
     </a>
-    <a href="entropy-architecture.html" class="doc-card amber">
-      <div class="doc-title">Entropy Architecture</div>
-      <div class="doc-sub">Mutual information loop. Information gain curve per mode. Derivation table. Self-similarity. Philosophically complete. Variable set superseded.</div>
+    <a href="evidence-engine.html" class="doc-card">
+      <div class="doc-title">Evidence Engine</div>
+      <div class="doc-sub">How observations from the Ledger become posterior updates. Signal extraction, weight functions, surprise metrics. The bridge between raw Ledger data and the compiler's decisions.</div>
       <div class="doc-meta">
-        <span class="tag tag-amber">SUPERSEDED (variables)</span>
-        <span class="acc">90%</span>
-      </div>
-    </a>
-    <a href="development-diagram.html" class="doc-card amber">
-      <div class="doc-title">Development Diagram</div>
-      <div class="doc-sub">Interactive priority engine. Template depth ranking. Spectrum matrix. Overlay gate. First visual synthesis of the meta-system.</div>
-      <div class="doc-meta">
-        <span class="tag tag-amber">SUPERSEDED</span>
-        <span class="acc">85%</span>
+        <span class="tag tag-green">CURRENT</span>
+        <span class="acc">88%</span>
       </div>
     </a>
   </div>
 
-  <div class="era-label">Original Game Documents — Archive (Do Not Modify)</div>
+  <!-- ── STUDENT DESIGN ─────────────────────────────────────── -->
+  <div class="era-label">Student Layer — Experience & Signal Integrity</div>
   <div class="doc-grid">
-    <a href="challenge-meta.html" class="doc-card archive">
+    <a href="student-design.html" class="doc-card new merged">
+      <div class="doc-title">Student Design ✦</div>
+      <div class="doc-sub">
+        <strong>Part I — Student Experience:</strong> terminal language, zone names (ECHO/PARALLEL/SHIFTING/RADICAL/REMATCH), mystery vs transparency calibration, chemical reactions, curation architecture, open questions.<br>
+        <strong>Part II — Signal Integrity:</strong> Ledger boundary, testing principles, progressive unlock tiers (Baseline → Developing → Alpha → Singularity), access matrix, bot opacity, admin sandbox prototype, retrospective access.
+      </div>
+      <div class="doc-meta">
+        <span class="tag tag-amber">MERGED</span>
+        <span class="tag tag-green">COMPLETE</span>
+        <span class="acc">100%</span>
+      </div>
+    </a>
+  </div>
+
+  <!-- ── MAP SYSTEM ─────────────────────────────────────────── -->
+  <div class="era-label">Map Layer — Intelligence & AI Creation</div>
+  <div class="doc-grid">
+    <a href="map-system.html" class="doc-card new merged">
+      <div class="doc-title">Map System ✦</div>
+      <div class="doc-sub">
+        <strong>Part I — Map Intelligence:</strong> topology registry, strategy pattern library, 6 bot profiles (MIRROR/CONTESTER/ACCELERANT/TURTLER/THEORETICIAN/ADAPTOR), student×map×bot composition, new Ledger signals, build pipeline.<br>
+        <strong>Part II — AI Mapmaker:</strong> full game mechanics, JSON format + constraints, strategic catalogue (8 map types), 8-step AI pipeline, image→map formula, legibility spectrum, 3-layer validation.
+      </div>
+      <div class="doc-meta">
+        <span class="tag tag-amber">MERGED</span>
+        <span class="tag tag-green">TOPOLOGY BUILT</span>
+        <span class="acc">95%</span>
+      </div>
+    </a>
+  </div>
+
+  <!-- ── MULTI-GAME ARCHITECTURE ──────────────────────────── -->
+  <div class="era-label">Multi-Game — Universal Cognitive Assessment</div>
+  <div class="doc-grid">
+    <a href="multi-game-architecture.html" class="doc-card featured new">
+      <div class="doc-title">Multi-Game Architecture</div>
+      <div class="doc-sub">The generalization problem. 8 universal cognitive dimensions (SIM/COM/OPP/TOP/ADP/OPT/MOS/KNW). Per-game config space → dimension mapping for Constellation, GOLAD, Geobridge, C4D. Composition matrix. Two-level compiler (game selection + config selection). Per-game behavioral signals. Cross-game transfer model. Precise path from current ASSERTED state to empirically grounded perfection.</div>
+      <div class="doc-meta">
+        <span class="tag tag-green">CANONICAL</span>
+        <span class="tag tag-amber">ASSERTED dimensions</span>
+        <span class="acc">revisit with data</span>
+      </div>
+    </a>
+  </div>
+
+  <!-- ── CHALLENGE SYSTEM ───────────────────────────────────── -->
+  <div class="era-label">Challenge System — Templates & Development</div>
+  <div class="doc-grid">
+    <a href="challenge-meta.html" class="doc-card">
       <div class="doc-title">Challenge Meta-System</div>
-      <div class="doc-sub">The original challenge compiler. 14 templates, similarity spectrum, session generator, codename vocabulary, loading sequence, game plugin interface. Implemented.</div>
+      <div class="doc-sub">17 challenge templates across 6 modes. Similarity spectrum (REMATCH→ECHO→PARALLEL→SHIFTING→RADICAL). Template depth ranking, overlay gates, negative space and INVERSION configs. Interactive session generator.</div>
+      <div class="doc-meta">
+        <span class="tag tag-green">IMPLEMENTED</span>
+        <span class="tag tag-green">CURRENT</span>
+        <span class="acc">100%</span>
+      </div>
+    </a>
+    <a href="development-diagram.html" class="doc-card">
+      <div class="doc-title">Development Diagram</div>
+      <div class="doc-sub">Interactive priority engine. Template depth ranking. Spectrum matrix. Mode relationship diagram. Visual synthesis of the challenge meta-system and its relationship to the compiler.</div>
+      <div class="doc-meta">
+        <span class="tag tag-green">CURRENT</span>
+        <span class="acc">90%</span>
+      </div>
+    </a>
+  </div>
+
+  <!-- ── ARCHIVE ─────────────────────────────────────────────── -->
+  <div class="era-label">Archive — Original Documents (Do Not Modify)</div>
+  <div class="doc-grid">
+    <a href="bayesian.html" class="doc-card archive" style="pointer-events:none;opacity:.4">
+      <!-- placeholder spacing -->
+    </a>
+    <a href="SYNTHESIS.html" class="doc-card archive">
+      <div class="doc-title">Synthesis — Complete Philosophy</div>
+      <div class="doc-sub">The full written philosophy. Singularity trajectory. Multi-audience architecture. 18 unwritten insights. Superseded by newer docs but preserves the original philosophical framing.</div>
       <div class="doc-meta">
         <span class="tag tag-solid">ARCHIVE</span>
-        <span class="tag tag-green">IMPLEMENTED</span>
-        <span class="acc">100%</span>
+        <span class="tag tag-amber">PARTIALLY SUPERSEDED</span>
+      </div>
+    </a>
+    <a href="alpha-system.html" class="doc-card archive">
+      <div class="doc-title">Alpha System (original)</div>
+      <div class="doc-sub">Original Alpha track design. Zone names in terminal. Detective framework. Alpha application form. Mystery calibration — 3 layers. Content partially ported to student-design.html.</div>
+      <div class="doc-meta">
+        <span class="tag tag-solid">ARCHIVE</span>
+        <span class="tag tag-amber">PARTIALLY PORTED</span>
+      </div>
+    </a>
+    <a href="system-complete.html" class="doc-card archive">
+      <div class="doc-title">System Complete</div>
+      <div class="doc-sub">Variable audit scatter. 3-layer diagram. Information gain curves. Terminal demo with live message generation and message library. Some unique message library content.</div>
+      <div class="doc-meta">
+        <span class="tag tag-solid">ARCHIVE</span>
+      </div>
+    </a>
+    <a href="perfect-system.html" class="doc-card archive">
+      <div class="doc-title">Perfect System</div>
+      <div class="doc-sub">Variable audit. 3-layer architecture. Minimum sufficient state. First formal specification. Superseded by Bayesian Architecture for the math.</div>
+      <div class="doc-meta">
+        <span class="tag tag-solid">ARCHIVE</span>
+        <span class="tag tag-amber">SUPERSEDED (math)</span>
+      </div>
+    </a>
+    <a href="entropy-architecture.html" class="doc-card archive">
+      <div class="doc-title">Entropy Architecture</div>
+      <div class="doc-sub">Mutual information loop. Information gain curve per mode. Derivation table. Philosophically complete. Variable set superseded by current config vector.</div>
+      <div class="doc-meta">
+        <span class="tag tag-solid">ARCHIVE</span>
+        <span class="tag tag-amber">SUPERSEDED (variables)</span>
+      </div>
+    </a>
+    <a href="system-map.html" class="doc-card archive">
+      <div class="doc-title">System Map — Open Questions</div>
+      <div class="doc-sub">Orbital confidence diagram. Original 8 open questions (Q1–Q8) with priorities. BT bridge architecture. Some questions still open — valid reference for Q1/Q2 status.</div>
+      <div class="doc-meta">
+        <span class="tag tag-solid">ARCHIVE</span>
+        <span class="tag tag-amber">Q1/Q2 STILL OPEN</span>
       </div>
     </a>
     <a href="system-viz.html" class="doc-card archive">
       <div class="doc-title">Entropy Framework v2</div>
-      <div class="doc-sub">6 cognitive modes. Player profile. Latin hypercube. Scoring formula. Centauri mechanics. Bot archetypes. Session validity. Team composer. Implemented.</div>
+      <div class="doc-sub">6 cognitive modes. Player profile. Latin hypercube. Scoring formula. Bot archetypes. Session validity. Team composer. Original implemented framework.</div>
       <div class="doc-meta">
         <span class="tag tag-solid">ARCHIVE</span>
         <span class="tag tag-green">IMPLEMENTED</span>
-        <span class="acc">100%</span>
       </div>
     </a>
     <a href="DESIGN_PHILOSOPHY.md" class="doc-card archive">
@@ -156,63 +281,19 @@ header{border-bottom:1px solid #1e1e1e;padding:20px 28px;display:flex;align-item
       <div class="doc-meta">
         <span class="tag tag-solid">ARCHIVE</span>
         <span class="tag tag-green">CANONICAL</span>
-        <span class="acc">100%</span>
       </div>
     </a>
-  </div>
-
-  <div class="open-q">
-    <h3>Open Questions — Resolve in Order</h3>
-    <div class="q-row">
-      <span class="q-num" style="color:#ef4444">Q1</span>
-      <span class="q-text">Elo measures game performance, not cognitive skill. Needs transfer_elo from BT integration.</span>
-      <span class="q-pri" style="color:#ef4444">P0</span>
-    </div>
-    <div class="q-row">
-      <span class="q-num" style="color:#ef4444">Q2</span>
-      <span class="q-text">Announced INVERSION measures wrong skill. Silent INVERSION sessions needed.</span>
-      <span class="q-pri" style="color:#ef4444">P0</span>
-    </div>
-    <div class="q-row">
-      <span class="q-num" style="color:#d97706">Q3</span>
-      <span class="q-text">Modes not cognitively orthogonal. Covariance model replaces independence assumption.</span>
-      <span class="q-pri" style="color:#d97706">P1</span>
-    </div>
-    <div class="q-row">
-      <span class="q-num" style="color:#d97706">Q4</span>
-      <span class="q-text">Forgetting curve wrong domain. 14-day half-life likely 30–60 days for strategic skills.</span>
-      <span class="q-pri" style="color:#d97706">P1</span>
-    </div>
-    <div class="q-row">
-      <span class="q-num" style="color:#6366f1">Q5</span>
-      <span class="q-text">Social dimension entirely absent. Teacher tags as partial solution.</span>
-      <span class="q-pri" style="color:#6366f1">P2</span>
-    </div>
-    <div class="q-row">
-      <span class="q-num" style="color:#6366f1">Q6</span>
-      <span class="q-text">All parameters asserted. Bayesian posterior replaces every hardcoded number.</span>
-      <span class="q-pri" style="color:#6366f1">P2 → Bayesian</span>
-    </div>
-    <div class="q-row">
-      <span class="q-num" style="color:#d97706">Q7</span>
-      <span class="q-text">Gifted detection threshold guessed. Gifted need calibrated failure, not accelerated success.</span>
-      <span class="q-pri" style="color:#d97706">P1</span>
-    </div>
-    <div class="q-row">
-      <span class="q-num" style="color:#a78bfa">Q8</span>
-      <span class="q-text">brain_metrics excluded until BT validated. BT integration transforms this to CORE.</span>
-      <span class="q-pri" style="color:#a78bfa">P0 (BT)</span>
-    </div>
   </div>
 
 </div>
 
 <div class="status-bar">
-  <div class="status-item"><div class="status-dot" style="background:#22c55e"></div>Implemented</div>
-  <div class="status-item"><div class="status-dot" style="background:#d97706"></div>Asserted — needs calibration</div>
-  <div class="status-item"><div class="status-dot" style="background:#ef4444"></div>Known problem</div>
-  <div class="status-item"><div class="status-dot" style="background:#a78bfa"></div>BT bridge</div>
-  <div class="status-item" style="margin-left:auto;color:#222">localhost:8080</div>
+  <div class="status-item"><div class="status-dot" style="background:#2563eb"></div>Functional tool</div>
+  <div class="status-item"><div class="status-dot" style="background:#22c55e"></div>Current / implemented</div>
+  <div class="status-item"><div class="status-dot" style="background:#d97706"></div>Merged doc (✦)</div>
+  <div class="status-item"><div class="status-dot" style="background:#ef4444"></div>Asserted / open question</div>
+  <div class="status-item"><div class="status-dot" style="background:#333"></div>Archive</div>
+  <div class="status-item" style="margin-left:auto;font-size:8px;color:#222">localhost:2567</div>
 </div>
 
 </body>
