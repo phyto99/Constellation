@@ -194,15 +194,15 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
     <div class="term-body" id="termBody">
       <div class="trow"><span class="tk">────────────</span></div>
       <div class="trow" style="margin-top:4px"><span class="tv w">CONSTELLATION</span><span class="tk" style="padding-left:12px;font-size:9px;color:#1a1a1a">cognitive development system</span></div>
-      <div class="trow" style="margin-top:8px"><span class="tk">session</span><span class="tv a" id="tSess">—</span></div>
-      <div class="trow"><span class="tk">zone</span><span class="tv w" id="tZone">—</span></div>
-      <div class="trow"><span class="tk">signal</span><span class="tv g" id="tSignal">loading</span></div>
+      <div class="trow" style="margin-top:8px" id="tZoneRow"><span class="tk">zone</span><span class="tv w" id="tZone">—</span></div>
+      <div class="trow" id="tSignalRow"><span class="tk">signal</span><span class="tv g" id="tSignal">—</span></div>
       <div class="thr"></div>
       <div class="tmsg" id="tMsg1"></div>
       <div class="tmsg" id="tMsg2"></div>
       <div class="tmsg" id="tMsg3"></div>
+      <div class="tmsg" id="tMsg4"></div>
       <div style="margin-top:10px"><span class="tk">────────────</span></div>
-      <div style="margin-top:2px"><span class="tk">ready when you are</span><span class="tcursor"></span></div>
+      <div style="margin-top:2px"><span class="tk" id="tFooter">ready when you are</span><span class="tcursor"></span></div>
     </div>
     <div class="term-foot">
       <button class="btn-launch" id="btnLaunchRec" onclick="launchRecommended()" disabled>Launch Recommended</button>
@@ -544,65 +544,129 @@ function fallbackCompiler(){
   renderTerminal(S.mode);
 }
 
-// ── TERMINAL
+// ── TERMINAL VOICE SYSTEM
+// Zone code words accumulate meaning through experience — never explained, always used.
+// Session count never shown. The voice becomes more specific as the system knows you.
+// First session: warm, friend-like. Not clinical. Not surveillance.
+
+const ZONE_VOICE = {
+  CALIBRATION: {
+    signal: 'listening · forming a picture',
+    msgs: [
+      'The system doesn\'t know you well enough yet to say anything specific.',
+      'That\'s what the next few sessions are for.',
+      'Play as you would play. Not to win. Not to perform.',
+    ]
+  },
+  ECHO: {
+    signal: 'familiar ground · consolidating',
+    msgs: [
+      'You\'re in familiar territory.',
+      'ECHO means the system recognises what you\'re doing.',
+      'This session deepens something you already have.',
+    ]
+  },
+  RADICAL: {
+    signal: 'new territory · gap detected',
+    msgs: [
+      'One dimension of your thinking has outpaced another.',
+      'RADICAL means the system has found the edge.',
+      'This will feel different. That is the point.',
+    ]
+  },
+  ALPHA: {
+    signal: 'high signal · pushing limits',
+    msgs: [
+      'The system is reaching for something it hasn\'t seen from you before.',
+      'ALPHA means you\'re near the boundary of your current model.',
+      'What happens here is genuinely unpredictable.',
+    ]
+  },
+  SINGULARITY: {
+    signal: 'exceptional · uncharted',
+    msgs: [
+      'The system doesn\'t have many reference points for where you are.',
+      'SINGULARITY means the model is being rewritten around your sessions.',
+      'There isn\'t a recommended configuration. Build what feels right.',
+    ]
+  },
+};
+
 function renderTerminal(mode){
   const c=S.compiler; const n=S.sessionCount;
   const isTrain=mode==='train';
+  const zone=(c?.zone)||'CALIBRATION';
 
-  document.getElementById('termLabel').textContent=isTrain?'System Recommendation':'Session Framing';
+  document.getElementById('termLabel').textContent=isTrain?'System':'Before You Start';
 
-  // badge
+  // badge shows zone, not session count
   const badge=document.getElementById('termBadge');
-  if(n===0){ badge.textContent='Calibrating'; badge.className='term-badge warn'; }
-  else if(n<5){ badge.textContent=n+' sessions'; badge.className='term-badge warn'; }
-  else{ badge.textContent=n+' sessions recorded'; badge.className='term-badge rdy'; }
-
-  // data
-  document.getElementById('tSess').textContent=String(n+1).padStart(3,'0');
-  document.getElementById('tZone').textContent=(c?.zone)||'CALIBRATION';
-  document.getElementById('tSignal').textContent=(c?.signal_text)||'initializing';
-
-  let msgs;
-  if(isTrain){
-    if(n===0){
-      msgs=[
-        'The system does not know you yet.',
-        'This session is a question. The system is listening.',
-        'Play as you would play. Do not perform.'
-      ];
-    } else if(n<5){
-      msgs=[
-        `${n} session${n>1?'s':''} recorded. Early signal only.`,
-        'The system is beginning to form a picture.',
-        'It will become more specific.'
-      ];
-    } else {
-      msgs=(c?.messages)||[
-        'The system has a recommendation based on your history.',
-        'Zone: '+(c?.zone||'CALIBRATION')+'. This targets a specific dimension.',
-        'Launch or adjust below.'
-      ];
-    }
+  if(n===0){
+    badge.textContent='First session'; badge.className='term-badge';
   } else {
-    // host mode — social framing
-    msgs=[
-      'You are hosting. The system will tune for engagement.',
-      'New players get accessible sessions. Known players get pushed.',
-      'The room shapes the configuration once people join.'
-    ];
+    badge.textContent=zone; badge.className='term-badge rdy';
   }
 
-  document.getElementById('tMsg1').textContent=msgs[0]||'';
-  document.getElementById('tMsg2').textContent=msgs[1]||'';
-  document.getElementById('tMsg3').textContent=msgs[2]||'';
+  // zone + signal rows: hidden on first session (no zone yet), visible after
+  const showZone=n>0&&isTrain;
+  document.getElementById('tZoneRow').style.display=showZone?'flex':'none';
+  document.getElementById('tSignalRow').style.display=showZone?'flex':'none';
+  if(showZone){
+    document.getElementById('tZone').textContent=zone;
+    document.getElementById('tSignal').textContent=(c?.signal_text)||(ZONE_VOICE[zone]?.signal||'—');
+  }
 
-  // aside
+  let msgs, footer;
+
+  if(isTrain){
+    if(n===0){
+      // First session voice — warm, friend-like, not clinical
+      msgs=[
+        'Most people find their way here through someone else.',
+        'Someone who thought you\'d get it.',
+        '',
+        'Play the way you\'d play if no one was watching.',
+      ];
+      footer='the system is listening';
+    } else if(n<5){
+      // Early calibration — the system is forming a picture, quietly
+      msgs=[
+        'The system is still listening.',
+        'A few more sessions before it has anything worth saying.',
+        '',
+        ZONE_VOICE['CALIBRATION'].msgs[2],
+      ];
+      footer='calibration in progress';
+    } else {
+      // Zone-specific voice — gets more precise as sessions accumulate
+      const voice=ZONE_VOICE[zone]||ZONE_VOICE['CALIBRATION'];
+      msgs=c?.messages||voice.msgs.concat(['']);
+      footer='launch the recommendation or adjust below';
+    }
+  } else {
+    // HOST mode — social, not personal
+    msgs=[
+      'You\'re setting this up for others.',
+      'The system will read the room as people join.',
+      '',
+      'New players get something accessible. Known players get pushed.',
+    ];
+    footer='create the session, then share the link';
+  }
+
+  ['tMsg1','tMsg2','tMsg3','tMsg4'].forEach((id,i)=>{
+    document.getElementById(id).textContent=msgs[i]||'';
+  });
+  document.getElementById('tFooter').textContent=footer;
+
+  // aside: contextual, never a raw count
   const aside=document.getElementById('termAside');
-  aside.textContent=n>0?`Based on ${n} recorded session${n!==1?'s':''}`:
-    'No sessions on record — calibration mode';
+  if(n===0)       aside.textContent='no prior sessions';
+  else if(n<5)    aside.textContent='calibrating';
+  else if(isTrain) aside.textContent='zone · '+zone;
+  else             aside.textContent='hosting mode';
 
-  // enable launch button in train mode if we have compiler data
-  document.getElementById('btnLaunchRec').disabled=!(isTrain&&n>0&&c);
+  document.getElementById('btnLaunchRec').disabled=!(isTrain&&n>=5&&c);
 }
 
 // ── MODE
