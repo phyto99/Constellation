@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Adaptive Voice — Personalisation Philosophy</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.6}
+header{border-bottom:2px solid #000;padding:20px 28px 14px;position:sticky;top:0;background:#fff;z-index:10}
+.hd-label{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:4px}
+.hd-main{font-size:20px;font-weight:700;line-height:1.2;margin-bottom:6px}
+.hd-sub{font-size:11px;color:#555;max-width:720px;line-height:1.8}
+.hd-note{display:inline-block;margin-top:10px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:3px 10px;border:1px solid #d97706;color:#d97706;background:#fffbeb}
+nav{display:flex;gap:20px;flex-wrap:wrap;margin-top:14px;padding-top:10px;border-top:1px solid #eee}
+nav a{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;text-decoration:none;padding:2px 0;border-bottom:2px solid transparent}
+nav a:hover{color:#000;border-bottom-color:#000}
+.content{max-width:760px;margin:0 auto;padding:36px 28px 100px}
+hr.rule{border:none;border-top:1px solid #eee;margin:44px 0}
+.sec-label{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:6px}
+.sec-title{font-size:17px;font-weight:700;margin-bottom:14px;line-height:1.3}
+.body{font-size:12px;color:#333;line-height:1.9;max-width:680px}
+.body p{margin-bottom:14px}
+.body p:last-child{margin-bottom:0}
+.body strong{color:#000}
+ul.bl{font-size:12px;color:#333;line-height:2.1;padding-left:20px;margin:10px 0 14px}
+ul.bl li{margin-bottom:2px}
+.callout{border-left:3px solid #000;padding:10px 16px;margin:20px 0;font-size:11px;line-height:1.8;color:#444;background:#fafafa}
+.callout.amber{border-color:#d97706;background:#fffbeb;color:#92400e}
+.callout.green{border-color:#059669;background:#f0fdf4;color:#065f46}
+.callout.violet{border-color:#7c3aed;background:#faf5ff;color:#4c1d95}
+.callout.blue{border-color:#2563eb;background:#eff6ff;color:#1e40af}
+.callout.red{border-color:#dc2626;background:#fef2f2;color:#991b1b}
+.principle{border:1px solid #e5e7eb;padding:14px 18px;margin:12px 0}
+.p-num{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#bbb;margin-bottom:3px}
+.p-title{font-size:12px;font-weight:700;margin-bottom:6px}
+.p-body{font-size:11px;color:#555;line-height:1.8}
+.p-status{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-top:8px}
+.p-status.open{color:#d97706}.p-status.decided{color:#059669}.p-status.future{color:#7c3aed}
+
+/* axis cards */
+.axis-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#eee;margin:16px 0}
+.axis-card{background:#fff;padding:16px}
+.ax-label{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;color:#888}
+.ax-title{font-size:12px;font-weight:700;margin-bottom:6px}
+.ax-body{font-size:11px;color:#555;line-height:1.7}
+.ax-range{margin-top:8px;font-size:10px;color:#aaa;border-top:1px solid #f0f0f0;padding-top:6px}
+
+/* variant comparison */
+.variants{margin:16px 0}
+.variant{border:1px solid #eee;padding:14px 16px;margin-bottom:6px}
+.var-label{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#aaa;margin-bottom:8px;display:flex;justify-content:space-between}
+.var-label span{color:#2563eb}
+.var-msg{font-family:Arial,sans-serif;font-size:11.5px;line-height:2;color:#111}
+.var-msg .blank{display:block;height:.8em}
+
+/* tree */
+.tree{margin:16px 0;border:1px solid #eee}
+.tree-hdr{background:#000;color:#fff;padding:8px 14px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.tree-body{padding:14px 16px;font-size:11px;color:#333;line-height:1.9}
+.tree-node{margin-bottom:2px}
+.tree-node .q{font-weight:700;color:#000}
+.tree-node .opts{padding-left:20px;color:#555}
+.tree-node .opts span{display:block}
+
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:11px}
+th{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 10px;border-bottom:2px solid #000;text-align:left}
+td{padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top;line-height:1.6}
+tr:last-child td{border-bottom:none}
+code{font-family:'Courier New',monospace;font-size:10px;background:#f5f5f5;padding:1px 4px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd-label">Philosophy Development · Era 11 — Future Work</div>
+  <div class="hd-main">Adaptive Voice</div>
+  <div class="hd-sub">The terminal messages we write now are seeds, not final copy. The real system personalises every message to the student in front of it — their age, how they arrived, what just happened in their last game, who they play with. This document defines what that system should know, how it should choose, and what it must never do.</div>
+  <div class="hd-note">Not the current priority — foundation for Era 12+</div>
+  <nav>
+    <a href="#seeds">Seeds vs Final Copy</a>
+    <a href="#axes">Personalisation Axes</a>
+    <a href="#variants">Variant Writing</a>
+    <a href="#selection">Selection Logic</a>
+    <a href="#constraints">Hard Constraints</a>
+    <a href="#contamination">Contamination Risk</a>
+    <a href="#model">The Underlying Model</a>
+    <a href="#open">Open Questions</a>
+  </nav>
+</header>
+
+<div class="content">
+
+<!-- ── SEEDS ── -->
+<div id="seeds">
+  <div class="sec-label">Architecture</div>
+  <div class="sec-title">Seeds, not final copy</div>
+  <div class="body">
+    <p>Every message written in <a href="terminal-voice.html">terminal-voice.html</a> is a seed. A seed is the canonical version of a message — the one that captures exactly what needs to be said, in the right register, for a generic student at that stage and zone. It is the reference point from which variants are generated.</p>
+    <p>The final copy — what any specific student actually sees — is a variant of the seed adapted to that student's personalisation axes. A 13-year-old in their first session gets a different surface form of the same message than a 17-year-old. The underlying truth of the message is identical. The register, vocabulary, and framing adapt.</p>
+    <p>This architecture matters because it separates two concerns that should not be conflated:</p>
+    <ul class="bl">
+      <li><strong>What to say</strong> — the cognitive content of the message, what is true about the student's current state. This lives in the seeds. Designed by humans, reviewed philosophically.</li>
+      <li><strong>How to say it</strong> — the surface form of the message appropriate for this specific student. This is the adaptation layer. Could be rules-based, could eventually be generative.</li>
+    </ul>
+    <p>The risk of not making this distinction: messages drift toward the middle. You write for a generic student and end up with something that resonates for no specific student particularly well. The seed system forces explicit decisions about what the core content is, separately from how it's delivered.</p>
+  </div>
+
+  <div class="callout green">
+    <strong>Current state:</strong> We are in the seed phase. Every message currently in the system is a seed. The adaptation layer does not exist yet. This is correct — build the seeds first, get the cognitive content right, then build the adaptation layer on top of a stable foundation. Do not build the adaptation layer before the seeds are solid.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── AXES ── -->
+<div id="axes">
+  <div class="sec-label">Personalisation Axes</div>
+  <div class="sec-title">What the system knows about the student that should shape the message</div>
+  <div class="body">
+    <p>These are the dimensions along which messages should vary. Each axis is a real thing the system either already knows or could know, and each genuinely changes what the right message is — not just the vocabulary, but the framing and sometimes the content.</p>
+  </div>
+
+  <div class="axis-grid">
+    <div class="axis-card">
+      <div class="ax-label">Axis 1</div>
+      <div class="ax-title">Age / developmental stage</div>
+      <div class="ax-body">The most important axis. The cognitive and emotional register appropriate for a 12-year-old is genuinely different from what works for a 17-year-old. Not just vocabulary — the relationship to challenge, to failure, to the system's authority, to competition. Younger students benefit from slightly more warmth and permission. Older students benefit from more directness and less cushioning.</div>
+      <div class="ax-range">Range: ~11–18. Possibly grouped: early (11–13), middle (14–15), late (16–18).</div>
+    </div>
+    <div class="axis-card">
+      <div class="ax-label">Axis 2</div>
+      <div class="ax-title">Arrival context</div>
+      <div class="ax-body">How the student found Constellation changes what the first message should acknowledge. Invited by a specific known friend: social context already present, message can imply the connection. Invited through a class or teacher: more formal arrival, different relationship to authority. Found it organically: no social anchor — the message carries the full weight of the first impression.</div>
+      <div class="ax-range">States: friend-referral, teacher-referral, organic. Currently only detectable if referral is tracked via link parameter.</div>
+    </div>
+    <div class="axis-card">
+      <div class="ax-label">Axis 3</div>
+      <div class="ax-title">First game result</div>
+      <div class="ax-body">The student panel message after session 1 can know what happened in that session. A dominant win, a close loss, a chaotic draw — these are different experiences that warrant different terminal messages. The student who barely lost is in a different state than the student who was comprehensively beaten. The message can meet them where they are without being clinical about it.</div>
+      <div class="ax-range">States: dominant win, narrow win, draw, narrow loss, dominant loss. From Ledger session record.</div>
+    </div>
+    <div class="axis-card">
+      <div class="ax-label">Axis 4</div>
+      <div class="ax-title">Social context</div>
+      <div class="ax-body">Does the student play alone or with known people? A student who always trains solo is in a different relationship to the system than one who primarily plays in hosted sessions with friends. The terminal voice for a social student can acknowledge the room. The terminal voice for a solo student is more internal, more personal.</div>
+      <div class="ax-range">Derivable from Ledger: ratio of solo sessions to multiplayer sessions over time.</div>
+    </div>
+    <div class="axis-card">
+      <div class="ax-label">Axis 5</div>
+      <div class="ax-title">Trajectory direction</div>
+      <div class="ax-body">Is the student moving toward more challenging zones or consolidating? A student who recently moved from ECHO to RADICAL is in a different moment than one who has been in RADICAL for 8 sessions. The trajectory — not just the current zone — carries meaning. The message can reflect motion, not just position.</div>
+      <div class="ax-range">Derivable from zone history in Ledger: previous 3 zones compared to current.</div>
+    </div>
+    <div class="axis-card">
+      <div class="ax-label">Axis 6</div>
+      <div class="ax-title">Relationship to recommendation</div>
+      <div class="ax-body">Does this student follow the compiler's recommendation or override it? A student who always accepts is in a different relationship to the system than one who consistently customises. The terminal can begin to acknowledge this pattern after enough sessions — not as a judgement, but as a reflection of what the system has noticed about the student's relationship to its voice.</div>
+      <div class="ax-range">Derivable from Q1/Q6 SELF channel signals once implemented.</div>
+    </div>
+    <div class="axis-card">
+      <div class="ax-label">Axis 7</div>
+      <div class="ax-title">Temporal pattern</div>
+      <div class="ax-body">When does the student play? Morning sessions, late-night sessions, irregular bursts, consistent daily practice — these are real patterns that reflect real things about the student's relationship to the system. A student returning after a 3-week absence is in a different state than one who played yesterday. The message can acknowledge time without referencing data.</div>
+      <div class="ax-range">Derivable from session timestamps in Ledger.</div>
+    </div>
+    <div class="axis-card">
+      <div class="ax-label">Axis 8</div>
+      <div class="ax-title">Competitive vs developmental orientation</div>
+      <div class="ax-body">Some students are primarily oriented toward winning. Others are primarily oriented toward understanding the system. Both are valid — but they need different messages. A competitive student in ECHO hears "familiar ground" as "you're not growing." A developmental student hears "familiar ground" as "something to go deeper into." The same zone, the same truth, but the framing that lands is different.</div>
+      <div class="ax-range">Inferred from: choice patterns, session type (train vs host), reaction to loss (immediate retry or pause).</div>
+    </div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── VARIANTS ── -->
+<div id="variants">
+  <div class="sec-label">Variant Writing</div>
+  <div class="sec-title">What variants look like in practice — the same seed, different surfaces</div>
+  <div class="body"><p>The seed for session 1 is: "Looks like this is your first game. Through adaptability and flexible thinking, you may win. Embrace the chaos." Here is what adaptation along the age axis looks like:</p></div>
+
+  <div class="variants">
+    <div class="variant">
+      <div class="var-label">Age 11–13 · Warmer, more permission, slightly playful <span>Early</span></div>
+      <div class="var-msg">
+        Looks like this is your first game.<span class="blank"></span>
+        The chaos is real. So is the strategy inside it.<span class="blank"></span>
+        If you can think flexibly enough — you might just win.
+      </div>
+    </div>
+    <div class="variant">
+      <div class="var-label">Age 14–15 · Balanced, direct, confident <span>Middle</span></div>
+      <div class="var-msg">
+        Looks like this is your first game.<span class="blank"></span>
+        Through adaptability and flexible thinking, you may win.<span class="blank"></span>
+        Embrace the chaos.
+      </div>
+    </div>
+    <div class="variant">
+      <div class="var-label">Age 16–18 · Drier, more peer-register, no cushioning <span>Late</span></div>
+      <div class="var-msg">
+        First game.<span class="blank"></span>
+        Adaptability wins here more than strategy.<span class="blank"></span>
+        Embrace the chaos.
+      </div>
+    </div>
+  </div>
+
+  <div class="body"><p>The same seed, adapted along the first-game-result axis:</p></div>
+
+  <div class="variants">
+    <div class="variant">
+      <div class="var-label">Result: dominant win <span>Session 1 post-game</span></div>
+      <div class="var-msg">
+        You won your first game.<span class="blank"></span>
+        Although it's just a 25% chance — the system noticed how.<span class="blank"></span>
+        There's considerably more here, if you want it.
+      </div>
+    </div>
+    <div class="variant">
+      <div class="var-label">Result: narrow loss <span>Session 1 post-game</span></div>
+      <div class="var-msg">
+        Close.<span class="blank"></span>
+        Although it's just a 25% win rate on a first game — you got there.<span class="blank"></span>
+        The system has already started a record. There's considerably more here.
+      </div>
+    </div>
+    <div class="variant">
+      <div class="var-label">Result: dominant loss <span>Session 1 post-game</span></div>
+      <div class="var-msg">
+        The chaos won this time.<span class="blank"></span>
+        That's not unusual — and your first game carries more weight in the system than any other.<span class="blank"></span>
+        What happens next is up to you.
+      </div>
+    </div>
+  </div>
+
+  <div class="callout blue">
+    <strong>Variant writing rule:</strong> When writing a variant, start from the seed and ask what changes. The cognitive content — what is true, what needs to land — does not change. Only the surface form adapts. If you find yourself changing what the message is about, you're writing a new seed, not a variant. Write the new seed separately and decide if it's needed.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── SELECTION LOGIC ── -->
+<div id="selection">
+  <div class="sec-label">Selection Logic</div>
+  <div class="sec-title">How the system chooses which variant to show</div>
+  <div class="body">
+    <p>The selection system reads the student's known axes and finds the best-fit variant. This is not a simple lookup — it is a priority ordering of axes, because not all axes are equally important and some override others.</p>
+  </div>
+
+  <div class="tree">
+    <div class="tree-hdr">Axis Priority Order — Session 1 Message</div>
+    <div class="tree-body">
+      <div class="tree-node">
+        <span class="q">1. Is this session 1?</span>
+        <span class="opts">
+          <span>→ Yes: proceed to axis 2. Age is the primary differentiator.</span>
+          <span>→ No: go to zone voice system (terminal-voice.html).</span>
+        </span>
+      </div>
+      <div class="tree-node" style="margin-top:10px">
+        <span class="q">2. What is the student's age group?</span>
+        <span class="opts">
+          <span>→ Early (11–13): use warmer, permissive variant.</span>
+          <span>→ Middle (14–15): use seed (canonical) variant.</span>
+          <span>→ Late (16–18): use drier, peer-register variant.</span>
+          <span>→ Unknown: use seed variant. Do not guess.</span>
+        </span>
+      </div>
+      <div class="tree-node" style="margin-top:10px">
+        <span class="q">3. How did they arrive? (if known)</span>
+        <span class="opts">
+          <span>→ Friend referral: variant can imply the connection without naming it.</span>
+          <span>→ Teacher referral: use seed variant unchanged — neutral register appropriate.</span>
+          <span>→ Organic / unknown: use seed variant.</span>
+        </span>
+      </div>
+      <div class="tree-node" style="margin-top:10px">
+        <span class="q">4. Post-game popup — what was the result?</span>
+        <span class="opts">
+          <span>→ Win: acknowledge without inflating.</span>
+          <span>→ Loss: acknowledge without softening into meaninglessness.</span>
+          <span>→ No game played yet: do not show post-game popup.</span>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="body">
+    <p>For zone messages (session 5+), the axis priority shifts. Zone and trajectory direction become primary. Age remains a modifier. Social context begins to matter for HOST mode messages specifically.</p>
+  </div>
+
+  <table>
+    <thead><tr><th>Session stage</th><th>Primary axis</th><th>Secondary axis</th><th>Tertiary axis</th></tr></thead>
+    <tbody>
+      <tr><td>Session 1</td><td>Age group</td><td>Arrival context</td><td>—</td></tr>
+      <tr><td>Sessions 2–4</td><td>Age group</td><td>First game result</td><td>—</td></tr>
+      <tr><td>Sessions 5–15</td><td>Zone</td><td>Age group</td><td>Trajectory direction</td></tr>
+      <tr><td>Sessions 15+</td><td>Zone</td><td>Trajectory direction</td><td>Relationship to recommendation</td></tr>
+      <tr><td>Host mode (any)</td><td>Social context</td><td>Age group</td><td>Room composition (new vs known players)</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<hr class="rule">
+
+<!-- ── HARD CONSTRAINTS ── -->
+<div id="constraints">
+  <div class="sec-label">Hard Constraints</div>
+  <div class="sec-title">What adaptation must never do</div>
+
+  <div class="principle">
+    <div class="p-num">Constraint 1</div>
+    <div class="p-title">Never adapt in a way the student can detect.</div>
+    <div class="p-body">If a student can tell the system is showing them a "young person version" of a message, the adaptation has failed. The student should experience the message as addressed to them specifically, not as a categorised version. This means variants must be genuinely different in register, not just simplified or elaborated versions of the same text.</div>
+    <div class="p-status open">Implication: each variant needs independent quality review, not just a diff against the seed.</div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Constraint 2</div>
+    <div class="p-title">Never adapt based on what the student wants to hear.</div>
+    <div class="p-body">Adaptation is about register and framing — what is appropriate for this student. It is not about softening difficult truths for students who might not want to hear them, or adding challenge for students who seem to respond to it. A student in CALIBRATION gets the CALIBRATION message regardless of whether they prefer encouraging messages. The truth of the zone does not adapt. Only the surface form does.</div>
+    <div class="p-status decided">This is the line between personalisation and manipulation.</div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Constraint 3</div>
+    <div class="p-title">Never use data the student hasn't implicitly consented to.</div>
+    <div class="p-body">Age is entered at registration — using it is consented. Session history is generated by play — using it is implicitly consented. But inferring emotional state from session timing ("you played late at night, you seem stressed") is not consented and would feel stalky. The adaptation system reads what the student gave the system through their actions. It does not infer what they didn't give.</div>
+    <div class="p-status decided">Temporal patterns (axis 7) are available — emotional inferences from them are not.</div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Constraint 4</div>
+    <div class="p-title">The seed must always be a valid message. Variants must be better, not required.</div>
+    <div class="p-body">If the adaptation layer fails — bad data, unknown age, system error — the seed is shown. The seed is not a fallback of last resort. It is a fully valid message for a generic student. Variants are improvements in fit, not corrections of a broken default. This keeps the system robust and prevents message quality from depending on data quality.</div>
+    <div class="p-status decided">Architectural constraint — build the seed layer to be self-sufficient before building variants.</div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Constraint 5</div>
+    <div class="p-title">Do not adapt so much that the voice fragments.</div>
+    <div class="p-body">Two students comparing their terminal messages should hear the same system. The voice — its economy, its directness, its refusal to explain itself — must be consistent across all variants. What varies is register and framing. What does not vary is the character of the voice. A community built around Constellation will eventually share language from the terminal. If variants are too different, that shared language doesn't form.</div>
+    <div class="p-status open">Needs a cross-variant review process — not currently defined.</div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── CONTAMINATION RISK ── -->
+<div id="contamination">
+  <div class="sec-label">Contamination Risk</div>
+  <div class="sec-title">How adaptation can corrupt the signal — and how to prevent it</div>
+  <div class="body">
+    <p>The adaptation layer sits between the seed (what the system wants to say) and the student (what they receive). Every transformation in that layer is an opportunity for the signal to degrade. The main failure modes:</p>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Failure 1</div>
+    <div class="p-title">Overfitting to preference</div>
+    <div class="p-body">If the adaptation system learns which message variants produce positive responses and starts optimising for those, it will eventually tell students what they want to hear rather than what is true about their zone. This is the recommendation system corruption problem applied to copy. The solution: adaptation must not be trained on student response. It is a one-way transformation from seed to variant, not a feedback loop.</div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Failure 2</div>
+    <div class="p-title">Demographic collapse</div>
+    <div class="p-body">If age groups are defined too broadly (just "young" and "old"), the adaptation doesn't produce genuinely personalised messages — it produces two versions instead of one. If defined too narrowly (year-by-year), the sample size for each group is too small to test quality. The sweet spot is probably 3 groups (early/middle/late) with careful overlap at the boundaries, and a willingness to revise groupings as data accumulates.</div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Failure 3</div>
+    <div class="p-title">Proxy contamination</div>
+    <div class="p-body">Some axes are proxies for things we actually care about. "Age" is a proxy for developmental stage and cognitive register — but a 13-year-old who has been playing competitive games for four years is not the same as one who hasn't. Using age as a hard axis may produce worse results than using behavioural signals (session depth, challenge level chosen, recovery speed after loss) that more directly measure the thing we're trying to adapt to. Worth exploring once enough data exists.</div>
+  </div>
+
+  <div class="callout red">
+    <strong>The deepest contamination risk:</strong> A student who notices the system is adapting its voice to them may start playing for the adaptation rather than the game. If they suspect the terminal says harder things when they do well, they might deliberately underperform to get a gentler message. This is unlikely but possible — and the solution is to ensure adaptation is invisible and never maps transparently to performance. Zone voice is not a reward or a punishment. It is a description of a real state. If the state changes, the message changes. Not before.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── THE UNDERLYING MODEL ── -->
+<div id="model">
+  <div class="sec-label">The Underlying Model</div>
+  <div class="sec-title">What adaptive voice is really optimising for</div>
+  <div class="body">
+    <p>The point of adaptive voice is not personalisation as an end in itself. Personalisation is not a feature. It is a means toward a specific goal: <strong>the message that lands most cleanly for this specific student in this specific moment, without them noticing it was chosen.</strong></p>
+    <p>The goal is fit, not novelty. A message that fits perfectly reads as if it was written specifically for you. A message that doesn't fit reads as generic even if it's beautifully written. The adaptation layer exists to maximise fit across students without requiring the seed author to write every possible variant upfront.</p>
+    <p>This connects to the argmax E[KL] principle at the level of communication. The terminal message is itself a communication with a prior and a posterior. A generic seed has high uncertainty about fit — it might land well or poorly for any given student. A well-chosen variant has lower uncertainty — it is specifically selected to match what we know about this student. The adaptation layer is reducing the prior uncertainty of the communication, not just making it prettier.</p>
+    <p>Said differently: adaptive voice is the argmax E[KL] principle applied to the terminal. The message that maximises expected fit is the one most likely to produce the cognitive state we want the student to enter the session with — not distracted by a message that felt off-register, not flattered by a message that felt too easy, not alienated by a message that felt cold.</p>
+  </div>
+
+  <div class="callout violet">
+    <strong>Why this matters philosophically:</strong> If the terminal message is wrong for the student — too young, too cold, too generic — they enter the session in a slightly worse cognitive state than if it had been right. That's a real cost to the session's information value. The adaptation layer is not cosmetic. It is part of the measurement system. A message that produces the right entry state produces better session data.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── OPEN QUESTIONS ── -->
+<div id="open">
+  <div class="sec-label">Open Questions</div>
+  <div class="sec-title">What this document does not yet resolve</div>
+
+  <div class="principle">
+    <div class="p-num">Q1</div>
+    <div class="p-title">How is age collected, and what if it's wrong?</div>
+    <div class="p-body">Age at registration is the obvious source. But registration data is frequently wrong — students enter false ages, or age changes over the course of their time in the system (a 13-year-old who plays for two years becomes 15). The system should probably re-evaluate age-axis assignment periodically, and should not hard-lock a student into an early-group variant forever. A 15-year-old who registered at 12 should be getting the middle-group register, not the early-group one. Behavioural signals may be more reliable than stated age over time. <span class="p-status open">OPEN</span></div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Q2</div>
+    <div class="p-title">How many variants per seed, and who writes them?</div>
+    <div class="p-body">The current seed system has no variants. When the adaptation layer is built, each seed needs variants for each relevant axis. That is potentially 3 age groups × 3 arrival contexts × 5 result states for the session 1 message alone = 45 variants, most of which will never be shown. The variant writing process needs to be principled and not overwhelming. The axis priority order (primary/secondary/tertiary) constrains this: only the primary axis needs full variant coverage. Secondary axis creates sub-variants only where the difference genuinely matters. <span class="p-status open">OPEN</span></div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Q3</div>
+    <div class="p-title">Does the HOST mode terminal adapt, and along which axes?</div>
+    <div class="p-body">HOST mode messages currently don't adapt at all — they cycle through three seeds regardless of who's hosting or what the room looks like. The most obvious adaptation: if new players are in the room, the HOST terminal should shift. If the host is a late-stage student and all their players are also late-stage, the message should reflect that. The room composition axis is the primary one for HOST — but it requires live data (who has joined) not static profile data. Architecturally possible in the two-phase flow. <span class="p-status open">OPEN</span></div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Q4</div>
+    <div class="p-title">When does the system get to say something about the student's relationship to adaptation itself?</div>
+    <div class="p-body">A student who has been in the system long enough — and who has experienced enough zones — begins to have a metacognitive relationship to the adaptive voice. They know the terminal changes. They may know roughly why. At some point the terminal can acknowledge this without breaking the fourth wall: something like "RADICAL again. You've been here before." This is a late-stage message (15+ sessions) that requires trajectory tracking. It is the deepest form of the adaptive voice — not just matching register, but acknowledging the relationship itself. <span class="p-status future">ERA 13+</span></div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Q5</div>
+    <div class="p-title">Should the two session 1 message variants both exist in the final system?</div>
+    <div class="p-body">"If you can adapt fast enough, you may win" (kinetic, competitive) and "Through adaptability and flexible thinking, you may win" (analytical, reflective) — these are two seeds with genuinely different orientations. Rather than choosing one, both could exist as age-axis variants: the kinetic version for early group, the analytical version for late group, the middle group gets whichever fits better based on arrival context. The point is: having both is an asset, not a redundancy. They are different entry points to the same truth. <span class="p-status open">OPEN — resolve when age data is available</span></div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>
