@@ -3287,6 +3287,8 @@ function setCOEPHeaders(_req, res, next) {
 app.get('/', setCOEPHeaders, (_req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 app.get('/other', (_req, res) => res.sendFile(path.join(__dirname, 'other.html')));
 app.get('/admin', setCOEPHeaders, (_req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
+app.get('/student',      (_req, res) => res.sendFile(path.join(__dirname, 'student-panel.html')));
+app.get('/student-next', (_req, res) => res.sendFile(path.join(__dirname, 'student-next.html')));
 // color.html is iframed inside admin.html which has COEP:require-corp —
 // the iframe document must also carry COEP or the browser blocks it as cross-origin
 app.get('/color.html', setCOEPHeaders, (_req, res) => res.sendFile(path.join(__dirname, 'color.html')));

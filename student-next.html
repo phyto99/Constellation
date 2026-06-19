@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Constellation — Student Panel</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-height:100vh}
+
+/* ── HEADER ── */
+.hdr{border-bottom:2px solid #000;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;background:#fff;position:sticky;top:0;z-index:30}
+.hdr-left{display:flex;align-items:baseline;gap:12px}
+.logo{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase}
+.hdr-sub{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#999}
+.hdr-right{display:flex;align-items:center;gap:14px}
+.conn{display:flex;align-items:center;gap:5px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#bbb}
+.dot{width:6px;height:6px;border-radius:50%;background:#bbb}
+.dot.live{background:#059669;animation:pulse 2s infinite}
+.dot.err{background:#dc2626}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.whoami{font-size:11px;color:#888}
+.whoami b{color:#111}
+.admin-lnk{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#bbb;text-decoration:none}
+.admin-lnk:hover{color:#111}
+
+/* ── LAYOUT ── */
+.wrap{max-width:740px;margin:0 auto;padding:28px 24px 100px}
+
+/* ── MODE SELECT ── */
+.mode-pick{display:grid;grid-template-columns:1fr 1fr;gap:0;border:2px solid #000;margin-bottom:28px}
+.mode-btn{padding:14px 20px;cursor:pointer;border:none;background:#fff;text-align:left;font-family:Arial,sans-serif;border-right:1px solid #000;transition:background .1s}
+.mode-btn:last-child{border-right:none}
+.mode-btn.active{background:#000;color:#fff}
+.mode-btn.active .mode-lbl{color:#fff}
+.mode-btn.active .mode-desc{color:#888}
+.mode-lbl{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:4px}
+.mode-desc{font-size:10px;color:#666;line-height:1.5;display:block}
+.mode-btn.active .mode-lbl{color:#fff}
+
+/* ── TERMINAL ── */
+.term{background:#0a0a0a;margin-bottom:24px}
+.term-hdr{border-bottom:1px solid #111;padding:7px 18px;display:flex;justify-content:space-between;align-items:center}
+.term-hdr-lbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#2a2a2a}
+.term-badge{font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:1px 6px;border:1px solid #1a1a1a;color:#333;font-weight:700}
+.term-badge.rdy{border-color:#1a3a2a;color:#059669}
+.term-badge.warn{border-color:#3a2a0a;color:#d97706}
+.term-body{padding:18px 22px;font-family:Arial,sans-serif;font-size:10.5px;line-height:2;color:#e0e0e0}
+.trow{display:flex;margin-bottom:0}
+.tk{color:#2a2a2a;min-width:120px;flex-shrink:0}
+.tv{color:#e0e0e0}.tv.a{color:#d97706}.tv.g{color:#059669}.tv.w{color:#fff;font-weight:700}.tv.r{color:#dc2626}
+.thr{border:none;border-top:1px solid #111;margin:8px 0}
+.tmsg{color:#333;line-height:2;font-size:10px}
+.tcursor::after{content:'█';animation:blink 1.2s step-end infinite;color:#444}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.term-foot{border-top:1px solid #111;padding:10px 18px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn-launch{background:#fff;color:#000;border:2px solid #fff;padding:6px 18px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-launch:hover{background:#ddd}
+.btn-launch:disabled{opacity:.3;cursor:default}
+.btn-customize{background:transparent;color:#444;border:1px solid #2a2a2a;padding:5px 12px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-customize:hover{color:#e0e0e0;border-color:#555}
+.term-aside{margin-left:auto;font-size:9px;color:#2a2a2a;font-family:Arial,sans-serif;font-style:italic}
+
+/* ── SECTION LABEL ── */
+.slbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#aaa;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.slbl::after{content:'';flex:1;height:1px;background:#f0f0f0}
+.section{margin-bottom:22px}
+
+/* ── FORM ROWS ── */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.fg label{font-size:11px;font-weight:700}
+.fg .hint{font-size:9px;color:#aaa;font-weight:400;margin-left:3px}
+.inp{padding:7px 9px;border:1px solid #ddd;font-size:12px;font-family:Arial,sans-serif;width:100%}
+.inp:focus{outline:2px solid #000}
+
+/* slider */
+.sl-row{display:flex;align-items:center;gap:10px;margin-top:4px}
+.sl-row input[type=range]{flex:1;accent-color:#000}
+.sl-val{font-size:11px;font-weight:700;min-width:36px;text-align:right;font-family:'Courier New',monospace}
+
+/* toggles */
+.tg{display:inline-flex;border:1px solid #ddd;overflow:hidden}
+.tg-opt{padding:5px 13px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;background:#fff;color:#aaa;border:none;font-family:Arial,sans-serif}
+.tg-opt.on{background:#000;color:#fff}
+.tg-opt.on-warn{background:#d97706;color:#fff}
+
+/* challenge */
+.ch{display:flex;border:1px solid #ddd;overflow:hidden}
+.ch-opt{flex:1;padding:6px 0;text-align:center;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;background:#fff;color:#aaa;border:none;font-family:Arial,sans-serif}
+.ch-opt+.ch-opt{border-left:1px solid #ddd}
+.ch-opt.on{background:#000;color:#fff}
+.ch-hint{font-size:9px;color:#bbb;margin-top:4px;font-style:italic}
+
+/* map grid */
+.map-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.mc{border:1px solid #ddd;padding:5px 10px;cursor:pointer;font-size:10px;background:#fff;white-space:nowrap}
+.mc:hover{border-color:#666}
+.mc.sel{border:2px solid #000;font-weight:700;background:#f8f8f8}
+.mc.rnd{border-style:dashed}
+
+/* teams */
+.teams-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.team-chip{border:1px solid #ddd;padding:4px 10px;cursor:pointer;font-size:10px;font-weight:700;background:#fff;font-family:'Courier New',monospace}
+.team-chip.sel{border-color:#000;border-width:2px;background:#000;color:#fff}
+
+/* actions */
+.form-actions{margin-top:24px;padding-top:16px;border-top:2px solid #000;display:flex;gap:10px;align-items:center}
+.btn-primary{padding:10px 26px;background:#000;color:#fff;border:2px solid #000;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-primary:hover{background:#222}
+.btn-primary:disabled{background:#ccc;border-color:#ccc;cursor:default}
+.act-msg{font-size:10px;color:#888;font-style:italic}
+
+/* ── ROOM STATE ── */
+.room-state{display:none;border:2px solid #000;margin-top:20px;padding:0}
+.room-state.vis{display:block}
+.rs-hdr{border-bottom:1px solid #eee;padding:12px 18px;display:flex;align-items:baseline;justify-content:space-between}
+.rs-title{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.rs-phase{font-size:9px;color:#059669;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.rs-body{padding:18px}
+.room-id{font-size:22px;font-weight:700;letter-spacing:5px;font-family:'Courier New',monospace;margin-bottom:10px}
+.link-row{display:flex;gap:6px;margin-bottom:18px}
+.link-box{flex:1;padding:6px 9px;border:1px solid #eee;font-size:11px;font-family:'Courier New',monospace;background:#f8f8f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn-copy{padding:6px 14px;background:#000;color:#fff;border:none;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-copy:hover{background:#333}
+
+/* live players */
+.players-section{margin-bottom:18px}
+.plbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#aaa;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.plbl::after{content:'';flex:1;height:1px;background:#f0f0f0}
+.pchips{display:flex;flex-wrap:wrap;gap:6px;min-height:32px}
+.pchip{border:1px solid #ddd;padding:4px 10px;font-size:11px;display:flex;align-items:center;gap:6px}
+.pchip.you{border-color:#000;font-weight:700}
+.pchip .sessions-badge{font-size:8px;color:#aaa;font-family:'Courier New',monospace}
+.pchip.new-player .sessions-badge{color:#d97706}
+.pchip.waiting{color:#ccc;border-style:dashed;font-style:italic}
+
+/* live compiler re-recommendation */
+.live-rec{background:#0a0a0a;margin-bottom:18px;padding:12px 18px;font-family:Arial,sans-serif;font-size:10px;line-height:1.8;color:#333;display:none}
+.live-rec.vis{display:block}
+.live-rec .lrt{color:#2a2a2a;min-width:100px;display:inline-block}
+.live-rec .lrv{color:#d97706}
+.live-rec .lrv.g{color:#059669}
+.live-rec .lrv.r{color:#dc2626}
+
+.rs-actions{display:flex;gap:8px;border-top:1px solid #eee;padding:14px 18px}
+.btn-go{flex:1;padding:11px;background:#000;color:#fff;border:none;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif;text-decoration:none;display:flex;align-items:center;justify-content:center}
+.btn-go:hover{background:#222}
+.btn-go:disabled{background:#ccc;cursor:default}
+.btn-close-room{padding:10px 16px;background:#fff;color:#aaa;border:1px solid #ddd;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-close-room:hover{color:#111;border-color:#111}
+
+/* ── STATUS BAR ── */
+.sb{position:fixed;bottom:0;left:0;right:0;border-top:1px solid #f0f0f0;background:#fff;padding:7px 24px;display:flex;align-items:center;gap:16px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#bbb;z-index:20}
+.sb-dot-wrap{display:flex;align-items:center;gap:5px}
+
+@media(max-width:560px){.two{grid-template-columns:1fr}.mode-pick{grid-template-columns:1fr}.mode-btn{border-right:none;border-bottom:1px solid #000}.mode-btn:last-child{border-bottom:none}}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-left">
+    <span class="logo">Constellation</span>
+    <span class="hdr-sub">Student Panel</span>
+  </div>
+  <div class="hdr-right">
+    <span class="whoami" id="whoami" style="display:none">Playing as <b id="whoamiName"></b></span>
+    <div class="conn"><div class="dot" id="connDot"></div><span id="connLbl">Connecting</span></div>
+    <a href="/admin" class="admin-lnk">Admin ↗</a>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- MODE SELECTOR -->
+  <div class="mode-pick">
+    <button class="mode-btn active" id="mode-train" onclick="setMode('train')">
+      <span class="mode-lbl">Personal Training</span>
+      <span class="mode-desc">Solo session tuned to your development. The system knows what you need.</span>
+    </button>
+    <button class="mode-btn" id="mode-host" onclick="setMode('host')">
+      <span class="mode-lbl">Host for Friends</span>
+      <span class="mode-desc">You set it up. Everyone plays. You pick the shape; the system handles the rest.</span>
+    </button>
+  </div>
+
+  <!-- TERMINAL -->
+  <div class="term">
+    <div class="term-hdr">
+      <span class="term-hdr-lbl" id="termLabel">System</span>
+      <span class="term-badge" id="termBadge">Loading</span>
+    </div>
+    <div class="term-body" id="termBody">
+      <div class="trow"><span class="tk">────────────</span></div>
+      <div class="trow" style="margin-top:4px"><span class="tv w">CONSTELLATION</span><span class="tk" style="padding-left:12px;font-size:9px;color:#1a1a1a">cognitive development system</span></div>
+      <div class="trow" style="margin-top:8px"><span class="tk">session</span><span class="tv a" id="tSess">—</span></div>
+      <div class="trow"><span class="tk">zone</span><span class="tv w" id="tZone">—</span></div>
+      <div class="trow"><span class="tk">signal</span><span class="tv g" id="tSignal">loading</span></div>
+      <div class="thr"></div>
+      <div class="tmsg" id="tMsg1"></div>
+      <div class="tmsg" id="tMsg2"></div>
+      <div class="tmsg" id="tMsg3"></div>
+      <div style="margin-top:10px"><span class="tk">────────────</span></div>
+      <div style="margin-top:2px"><span class="tk">ready when you are</span><span class="tcursor"></span></div>
+    </div>
+    <div class="term-foot">
+      <button class="btn-launch" id="btnLaunchRec" onclick="launchRecommended()" disabled>Launch Recommended</button>
+      <button class="btn-customize" onclick="scrollToConfig()">Customize ›</button>
+      <span class="term-aside" id="termAside">—</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       TRAIN CONFIG
+  ═══════════════════════════════════ -->
+  <div id="config-train">
+
+    <div class="section">
+      <div class="slbl">Map</div>
+      <div class="fg">
+        <label>Which map <span class="hint">or let the system choose for you</span></label>
+        <div class="map-grid" id="train-maps">
+          <div class="mc rnd sel" data-map="" onclick="pickMap('train','',this)">System Selects</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="slbl">Session Length</div>
+      <div class="two">
+        <div class="fg">
+          <label>Rounds</label>
+          <div class="sl-row">
+            <input type="range" id="t-rounds" min="5" max="15" value="10"
+              oninput="document.getElementById('t-rounds-v').textContent=this.value">
+            <span class="sl-val" id="t-rounds-v">10</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Round Length <span class="hint">seconds</span></label>
+          <div class="sl-row">
+            <input type="range" id="t-rt" min="15" max="60" step="5" value="30"
+              oninput="document.getElementById('t-rt-v').textContent=this.value+'s'">
+            <span class="sl-val" id="t-rt-v">30s</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="slbl">AI Opponent</div>
+      <div class="two">
+        <div class="fg">
+          <label>Include AI</label>
+          <div class="tg">
+            <button class="tg-opt" id="t-bot-off" onclick="setBot('train',false)">Off</button>
+            <button class="tg-opt on" id="t-bot-on" onclick="setBot('train',true)">On</button>
+          </div>
+        </div>
+        <div class="fg" id="t-ch-section">
+          <label>Challenge</label>
+          <div class="ch">
+            <button class="ch-opt" onclick="setCh('train','easy',this)">Easy</button>
+            <button class="ch-opt on" onclick="setCh('train','standard',this)">Standard</button>
+            <button class="ch-opt" onclick="setCh('train','hard',this)">Hard</button>
+          </div>
+          <div class="ch-hint">Opponent style is assigned at session start</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn-primary" id="btn-train" onclick="createSession('train')">Launch Training Session</button>
+      <span class="act-msg" id="train-act-msg"></span>
+    </div>
+
+    <!-- room state: train -->
+    <div class="room-state" id="rs-train">
+      <div class="rs-hdr">
+        <span class="rs-title">Session Created</span>
+        <span class="rs-phase">Ready to join</span>
+      </div>
+      <div class="rs-body">
+        <div class="room-id" id="rs-train-id">—</div>
+        <div class="link-row">
+          <div class="link-box" id="rs-train-link">—</div>
+          <button class="btn-copy" onclick="copyLink('train')">Copy</button>
+        </div>
+        <div class="players-section">
+          <div class="plbl">In the room</div>
+          <div class="pchips" id="rs-train-chips">
+            <div class="pchip waiting">Waiting for players…</div>
+          </div>
+        </div>
+      </div>
+      <div class="rs-actions">
+        <a class="btn-go" id="rs-train-join" href="#" target="_blank">Join Game →</a>
+        <button class="btn-close-room" onclick="closeRoom('train')">Close Room</button>
+      </div>
+    </div>
+
+  </div><!-- /config-train -->
+
+  <!-- ══════════════════════════════════
+       HOST CONFIG
+  ═══════════════════════════════════ -->
+  <div id="config-host" style="display:none">
+
+    <div class="section">
+      <div class="slbl">Session Identity</div>
+      <div class="fg">
+        <label>Session Name <span class="hint">shown on the join screen</span></label>
+        <input class="inp" id="h-name" type="text" placeholder="Friday practice, Period 3, etc." maxlength="50">
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="slbl">Map</div>
+      <div class="fg">
+        <label>Choose a map <span class="hint">or leave it as a surprise</span></label>
+        <div class="map-grid" id="host-maps">
+          <div class="mc rnd sel" data-map="" onclick="pickMap('host','',this)">Surprise Me</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="slbl">Session Length</div>
+      <div class="two">
+        <div class="fg">
+          <label>Rounds</label>
+          <div class="sl-row">
+            <input type="range" id="h-rounds" min="3" max="20" value="10"
+              oninput="document.getElementById('h-rounds-v').textContent=this.value">
+            <span class="sl-val" id="h-rounds-v">10</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Round Length <span class="hint">seconds</span></label>
+          <div class="sl-row">
+            <input type="range" id="h-rt" min="15" max="90" step="5" value="30"
+              oninput="document.getElementById('h-rt-v').textContent=this.value+'s'">
+            <span class="sl-val" id="h-rt-v">30s</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="slbl">Rules</div>
+      <div class="two">
+        <div class="fg">
+          <label>Teams</label>
+          <div class="teams-row" id="h-teams-row">
+            <div class="team-chip sel" data-v="2" onclick="pickTeams(2,this)">2</div>
+            <div class="team-chip" data-v="3" onclick="pickTeams(3,this)">3</div>
+            <div class="team-chip" data-v="4" onclick="pickTeams(4,this)">4</div>
+            <div class="team-chip" data-v="6" onclick="pickTeams(6,this)">6</div>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Players Pick Their Own Team</label>
+          <div class="tg">
+            <button class="tg-opt on" id="h-pts-off" onclick="setTgl('pts',false)">Off</button>
+            <button class="tg-opt" id="h-pts-on" onclick="setTgl('pts',true)">On</button>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Steals</label>
+          <div class="tg">
+            <button class="tg-opt" id="h-st-off" onclick="setTgl('steals',false)">Off</button>
+            <button class="tg-opt on" id="h-st-on" onclick="setTgl('steals',true)">On</button>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Headquarters</label>
+          <div class="tg">
+            <button class="tg-opt" id="h-hq-off" onclick="setTgl('hq',false)">Off</button>
+            <button class="tg-opt on" id="h-hq-on" onclick="setTgl('hq',true)">On</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="slbl">AI Opponent</div>
+      <div class="two">
+        <div class="fg">
+          <label>Include AI</label>
+          <div class="tg">
+            <button class="tg-opt on" id="h-bot-off" onclick="setBot('host',false)">Off</button>
+            <button class="tg-opt" id="h-bot-on" onclick="setBot('host',true)">On</button>
+          </div>
+        </div>
+        <div class="fg" id="h-ch-section" style="opacity:.35;pointer-events:none">
+          <label>Challenge</label>
+          <div class="ch">
+            <button class="ch-opt" onclick="setCh('host','easy',this)">Easy</button>
+            <button class="ch-opt on" onclick="setCh('host','standard',this)">Standard</button>
+            <button class="ch-opt" onclick="setCh('host','hard',this)">Hard</button>
+          </div>
+          <div class="ch-hint">If new players are detected, engagement mode takes over</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn-primary" id="btn-host" onclick="createSession('host')">Create Session</button>
+      <span class="act-msg" id="host-act-msg"></span>
+    </div>
+
+    <!-- room state: host — two-phase -->
+    <div class="room-state" id="rs-host">
+      <div class="rs-hdr">
+        <span class="rs-title">Session Open</span>
+        <span class="rs-phase" id="rs-host-phase">Waiting for players</span>
+      </div>
+      <div class="rs-body">
+        <div class="room-id" id="rs-host-id">—</div>
+        <div class="link-row">
+          <div class="link-box" id="rs-host-link">—</div>
+          <button class="btn-copy" onclick="copyLink('host')">Copy</button>
+        </div>
+
+        <!-- live compiler re-recommendation as players join -->
+        <div class="live-rec" id="live-rec">
+          <div><span class="lrt">optimization target</span><span class="lrv" id="lr-target">—</span></div>
+          <div><span class="lrt">new players</span><span class="lrv" id="lr-new">—</span></div>
+          <div><span class="lrt">adjustment</span><span class="lrv g" id="lr-adj">—</span></div>
+        </div>
+
+        <div class="players-section">
+          <div class="plbl">Players in room <span id="player-count-lbl" style="color:#bbb;font-size:8px;margin-left:6px;font-weight:400;text-transform:none;letter-spacing:0"></span></div>
+          <div class="pchips" id="rs-host-chips">
+            <div class="pchip waiting">Share the link above to invite players…</div>
+          </div>
+        </div>
+      </div>
+      <div class="rs-actions">
+        <a class="btn-go" id="rs-host-join" href="#" target="_blank">Join Game →</a>
+        <button class="btn-close-room" onclick="closeRoom('host')">Close Room</button>
+      </div>
+    </div>
+
+  </div><!-- /config-host -->
+
+</div><!-- /wrap -->
+
+<div class="sb">
+  <div class="sb-dot-wrap"><div class="dot" id="sbDot"></div><span id="sbLbl">Connecting</span></div>
+  <span id="sbName" style="display:none"></span>
+  <span style="margin-left:auto">Constellation · Student Panel</span>
+</div>
+
+<script src="https://unpkg.com/colyseus.js@0.15.24/dist/colyseus.js"></script>
+<script>
+const WS  = (location.protocol==='https:'?'wss':'ws')+'://'+location.host;
+const API = location.origin;
+const BOT_TYPES = ['HAL','CAESAR','ATHENA','ROBIN_HOOD','EINSTEIN','LORENZ'];
+const AGG_RANGE = {easy:[1,3],standard:[4,6],hard:[7,9]};
+
+const S = {
+  mode:'train', student:null, studentId:null,
+  compiler:null, sessionCount:0,
+  maps:[],
+  train:{ map:'', bot:true,  challenge:'standard' },
+  host: { map:'', bot:false, challenge:'standard', steals:true, hq:true, teams:2, pts:false },
+  rooms:{ train:null, host:null },
+  playerData:{ host:[] },
+};
+
+// ── BOOT
+window.addEventListener('DOMContentLoaded',()=>{
+  const name = localStorage.getItem('constellation_name')||'Guest';
+  S.student   = name;
+  S.studentId = name.toLowerCase().replace(/[^a-z0-9]/g,'-');
+  document.getElementById('whoamiName').textContent = name;
+  document.getElementById('whoami').style.display    = 'inline-flex';
+  document.getElementById('sbName').textContent      = name;
+  document.getElementById('sbName').style.display    = 'inline';
+  connect();
+  loadMaps();
+  loadCompiler();
+});
+
+function connect(){
+  try{ new Colyseus.Client(WS); setConn(true); }catch(e){ setConn(false); }
+}
+function setConn(ok){
+  ['connDot','sbDot'].forEach(id=>{
+    const d=document.getElementById(id);
+    d.className='dot'+(ok?' live':' err');
+  });
+  const lbl=ok?'Live':'Offline';
+  document.getElementById('connLbl').textContent=lbl;
+  document.getElementById('sbLbl').textContent=ok?'Server connected':'Server offline';
+}
+
+// ── MAPS
+async function loadMaps(){
+  try{
+    const r=await fetch(API+'/api/maps/topology');
+    if(!r.ok) return;
+    const d=await r.json();
+    S.maps=(d.maps||[]).slice(0,16);
+    renderMaps();
+  }catch(_){}
+}
+function renderMaps(){
+  const defs={train:{id:'train-maps',label:'System Selects'},host:{id:'host-maps',label:'Surprise Me'}};
+  Object.entries(defs).forEach(([mode,cfg])=>{
+    const grid=document.getElementById(cfg.id);
+    grid.innerHTML=`<div class="mc rnd sel" data-map="" onclick="pickMap('${mode}','',this)">${cfg.label}</div>`;
+    S.maps.forEach(m=>{
+      const name=m.name.replace(/\.json$/,'');
+      const c=document.createElement('div');
+      c.className='mc'; c.dataset.map=m.name;
+      c.textContent=name;
+      c.onclick=()=>pickMap(mode,m.name,c);
+      grid.appendChild(c);
+    });
+  });
+}
+function pickMap(mode,val,el){
+  S[mode].map=val;
+  const id=mode==='train'?'train-maps':'host-maps';
+  document.querySelectorAll('#'+id+' .mc').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+// ── COMPILER
+async function loadCompiler(){
+  try{
+    const r=await fetch(API+'/api/compiler/'+encodeURIComponent(S.studentId));
+    if(!r.ok){ fallbackCompiler(); return; }
+    S.compiler=await r.json();
+    S.sessionCount=S.compiler.session_count||0;
+    renderTerminal(S.mode);
+  }catch(_){ fallbackCompiler(); }
+}
+function fallbackCompiler(){
+  S.compiler=null; S.sessionCount=0;
+  renderTerminal(S.mode);
+}
+
+// ── TERMINAL
+function renderTerminal(mode){
+  const c=S.compiler; const n=S.sessionCount;
+  const isTrain=mode==='train';
+
+  document.getElementById('termLabel').textContent=isTrain?'System Recommendation':'Session Framing';
+
+  // badge
+  const badge=document.getElementById('termBadge');
+  if(n===0){ badge.textContent='Calibrating'; badge.className='term-badge warn'; }
+  else if(n<5){ badge.textContent=n+' sessions'; badge.className='term-badge warn'; }
+  else{ badge.textContent=n+' sessions recorded'; badge.className='term-badge rdy'; }
+
+  // data
+  document.getElementById('tSess').textContent=String(n+1).padStart(3,'0');
+  document.getElementById('tZone').textContent=(c?.zone)||'CALIBRATION';
+  document.getElementById('tSignal').textContent=(c?.signal_text)||'initializing';
+
+  let msgs;
+  if(isTrain){
+    if(n===0){
+      msgs=[
+        'The system does not know you yet.',
+        'This session is a question. The system is listening.',
+        'Play as you would play. Do not perform.'
+      ];
+    } else if(n<5){
+      msgs=[
+        `${n} session${n>1?'s':''} recorded. Early signal only.`,
+        'The system is beginning to form a picture.',
+        'It will become more specific.'
+      ];
+    } else {
+      msgs=(c?.messages)||[
+        'The system has a recommendation based on your history.',
+        'Zone: '+(c?.zone||'CALIBRATION')+'. This targets a specific dimension.',
+        'Launch or adjust below.'
+      ];
+    }
+  } else {
+    // host mode — social framing
+    msgs=[
+      'You are hosting. The system will tune for engagement.',
+      'New players get accessible sessions. Known players get pushed.',
+      'The room shapes the configuration once people join.'
+    ];
+  }
+
+  document.getElementById('tMsg1').textContent=msgs[0]||'';
+  document.getElementById('tMsg2').textContent=msgs[1]||'';
+  document.getElementById('tMsg3').textContent=msgs[2]||'';
+
+  // aside
+  const aside=document.getElementById('termAside');
+  aside.textContent=n>0?`Based on ${n} recorded session${n!==1?'s':''}`:
+    'No sessions on record — calibration mode';
+
+  // enable launch button in train mode if we have compiler data
+  document.getElementById('btnLaunchRec').disabled=!(isTrain&&n>0&&c);
+}
+
+// ── MODE
+function setMode(mode){
+  S.mode=mode;
+  const isTrain=mode==='train';
+  document.getElementById('mode-train').classList.toggle('active',isTrain);
+  document.getElementById('mode-host').classList.toggle('active',!isTrain);
+  document.getElementById('config-train').style.display=isTrain?'block':'none';
+  document.getElementById('config-host').style.display=isTrain?'none':'block';
+  renderTerminal(mode);
+}
+
+// ── CONTROLS
+function setBot(mode,on){
+  S[mode].bot=on;
+  if(mode==='train'){
+    document.getElementById('t-bot-off').classList.toggle('on',!on);
+    document.getElementById('t-bot-on').classList.toggle('on',on);
+    const s=document.getElementById('t-ch-section');
+    s.style.opacity=on?'1':'.35'; s.style.pointerEvents=on?'':'none';
+  } else {
+    document.getElementById('h-bot-off').classList.toggle('on',!on);
+    document.getElementById('h-bot-on').classList.toggle('on',on);
+    const s=document.getElementById('h-ch-section');
+    s.style.opacity=on?'1':'.35'; s.style.pointerEvents=on?'':'none';
+  }
+}
+function setCh(mode,level,btn){
+  S[mode].challenge=level;
+  const sec=mode==='train'?'t-ch-section':'h-ch-section';
+  document.querySelectorAll('#'+sec+' .ch-opt').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+function setTgl(key,on){
+  S.host[key]=on;
+  const map={steals:'h-st',hq:'h-hq',pts:'h-pts'};
+  const base=map[key];
+  if(base){
+    document.getElementById(base+'-off').classList.toggle('on',!on);
+    document.getElementById(base+'-on').classList.toggle('on',on);
+  }
+}
+function pickTeams(n,el){
+  S.host.teams=n;
+  document.querySelectorAll('#h-teams-row .team-chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+// ── SCROLL
+function scrollToConfig(){ document.getElementById('config-'+S.mode).scrollIntoView({behavior:'smooth',block:'start'}); }
+
+// ── LAUNCH RECOMMENDED (train mode)
+async function launchRecommended(){
+  const wasRec=true; // record deviation signal if student customized
+  const btn=document.getElementById('btnLaunchRec');
+  btn.disabled=true; btn.textContent='Launching…';
+  try{
+    const client=new Colyseus.Client(WS);
+    const opts=buildTrainOpts(true);
+    const room=await client.create('constellation',opts);
+    window.open(API+'/game/'+room.id,'_blank');
+    btn.textContent='Launched ✓';
+    setTimeout(()=>{ btn.disabled=false; btn.textContent='Launch Recommended'; },3000);
+  }catch(e){
+    btn.disabled=false; btn.textContent='Launch Recommended';
+    document.getElementById('train-act-msg').textContent='Failed — check server';
+  }
+}
+
+// ── CREATE SESSION
+async function createSession(mode){
+  const btnId=mode==='train'?'btn-train':'btn-host';
+  const msgId=mode==='train'?'train-act-msg':'host-act-msg';
+  const btn=document.getElementById(btnId);
+  btn.disabled=true; btn.textContent='Creating…';
+  document.getElementById(msgId).textContent='';
+  try{
+    const client=new Colyseus.Client(WS);
+    const opts=mode==='train'?buildTrainOpts(false):buildHostOpts();
+    const room=await client.create('constellation',opts);
+    S.rooms[mode]=room;
+    showRoomState(mode,room.id);
+    room.onStateChange(st=>handleState(mode,st));
+    room.onLeave(()=>{ S.rooms[mode]=null; });
+    // Q6: record panel choices as SELF signal (fire-and-forget)
+    recordPanelSignal(mode,opts);
+  }catch(e){
+    document.getElementById(msgId).textContent='Could not create session — is the server running?';
+  }
+  btn.disabled=false;
+  btn.textContent=mode==='train'?'Launch Training Session':'Create Session';
+}
+
+function buildTrainOpts(useRec){
+  const c=S.compiler; const cv=c?.config_vector||{};
+  const usedRec=useRec&&!!c;
+  return{
+    countMultiplier:       usedRec?(cv.count_mult||500):500,
+    distanceMultiplier:    usedRec?(cv.distance_mult||1):1,
+    hqMultiplier:          usedRec?(cv.hq_mult||10):10,
+    destructionMultiplier: usedRec?(cv.dest_mult||1):1,
+    rounds:                usedRec?(cv.rounds||10):+document.getElementById('t-rounds').value,
+    roundTime:             +document.getElementById('t-rt').value,
+    movesPerRound:15, stealLimit:5, hqMax:2, colorTeamCount:2,
+    mapJson:               usedRec?(c?.map_json||''):getMapJson(S.train.map),
+    playerName:            S.student,
+    aiBots:                S.train.bot?[botCfg(S.train.challenge)]:[],
+    allowPlayerTeamSelection:false,
+    _source:'student-train',_studentId:S.studentId,
+    _usedRecommendation:usedRec,
+  };
+}
+function buildHostOpts(){
+  const h=S.host;
+  // slight multiplier variation: prevents cross-session optimization memorization
+  const vary=v=>Math.round(v*(0.92+Math.random()*0.16));
+  return{
+    countMultiplier:       vary(500),
+    distanceMultiplier:    vary(1),
+    hqMultiplier:          vary(10),
+    destructionMultiplier: vary(1),
+    rounds:     +document.getElementById('h-rounds').value,
+    roundTime:  +document.getElementById('h-rt').value,
+    movesPerRound:15,
+    stealLimit: h.steals?12:0,
+    hqMax:      h.hq?2:0,
+    colorTeamCount:h.teams,
+    allowPlayerTeamSelection:h.pts,
+    mapJson:    getMapJson(h.map),
+    playerName: S.student,
+    aiBots:     h.bot?[botCfg(h.challenge)]:[],
+    _source:'student-host', _studentId:S.studentId,
+    _sessionName:document.getElementById('h-name').value.trim()||undefined,
+  };
+}
+
+function botCfg(level){
+  const [lo,hi]=AGG_RANGE[level]||[4,6];
+  return{
+    type:BOT_TYPES[Math.floor(Math.random()*BOT_TYPES.length)],
+    aggression:lo+Math.floor(Math.random()*(hi-lo+1)),
+    team:1,
+  };
+}
+function getMapJson(name){ const m=S.maps.find(x=>x.name===name); return m?.json||''; }
+
+// Q6: record panel interaction as SELF channel signal
+function recordPanelSignal(mode,opts){
+  try{
+    fetch(API+'/api/ledger/signal',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        channel:'SELF',type:'panel_config',
+        studentId:S.studentId,mode,
+        map:S[mode].map||'system',
+        bot:S[mode].bot,challenge:S[mode].challenge,
+        deviatedFromRecommendation:mode==='train'&&!!S.compiler,
+        ts:Date.now(),
+      })
+    });
+  }catch(_){}
+}
+
+// ── ROOM STATE
+function showRoomState(mode,roomId){
+  const link=API+'/game/'+roomId;
+  const p=mode==='train'?'rs-train':'rs-host';
+  document.getElementById(p+'-id').textContent=roomId;
+  document.getElementById(p+'-link').textContent=link;
+  document.getElementById(p+'-link').dataset.link=link;
+  document.getElementById(p+'-join').href=link;
+  const box=document.getElementById(p.replace('rs-','rs-')+'');
+  document.getElementById(mode==='train'?'rs-train':'rs-host').classList.add('vis');
+  document.getElementById(mode==='train'?'rs-train':'rs-host').scrollIntoView({behavior:'smooth'});
+}
+
+// ── MULTIPLAYER AWARENESS (philosophy cases 1-4)
+function handleState(mode,st){
+  if(!st?.players) return;
+  const players=[];
+  st.players.forEach((p,id)=>players.push({id,name:p.name,sessions:p._sessions||0}));
+
+  if(mode==='train'){
+    renderChips('rs-train-chips',players);
+    return;
+  }
+
+  // HOST — case detection
+  renderChips('rs-host-chips',players);
+
+  const newPlayers=players.filter(p=>p.sessions<5);
+  const hasNew=newPlayers.length>0;
+  const allKnown=players.every(p=>p.sessions>=5);
+  const maxSessions=Math.max(0,...players.map(p=>p.sessions));
+  const count=players.length;
+
+  // live compiler recommendation update
+  const lr=document.getElementById('live-rec');
+  if(count>0){ lr.classList.add('vis'); } else { lr.classList.remove('vis'); }
+
+  let target='—', newLbl='none', adj='—';
+  if(count===0){
+    target='—'; newLbl='—'; adj='—';
+  } else if(hasNew){
+    // Case 3: engagement-first
+    target='all players (new player detected)';
+    newLbl=newPlayers.length+' player'+(newPlayers.length>1?'s':'')+' with <5 sessions';
+    adj='engagement mode · more teams · kinetic scoring';
+    document.getElementById('rs-host-phase').textContent='Engagement mode active';
+  } else if(allKnown&&count>1){
+    // Case 2 or 4
+    target='highest player ('+maxSessions+' sessions)';
+    newLbl='none';
+    adj='ZPD target · all players pushed upward';
+    document.getElementById('rs-host-phase').textContent='Competitive calibration';
+  } else {
+    // Case 1: creator only
+    target='you (creator)';
+    newLbl='none detected';
+    adj='creator ZPD with engagement floor';
+    document.getElementById('rs-host-phase').textContent='Creator baseline';
+  }
+
+  document.getElementById('lr-target').textContent=target;
+  document.getElementById('lr-new').textContent=newLbl;
+  document.getElementById('lr-adj').textContent=adj;
+
+  // count label
+  document.getElementById('player-count-lbl').textContent=count>0?count+' player'+(count!==1?'s':''):'';
+}
+
+function renderChips(containerId,players){
+  const box=document.getElementById(containerId);
+  if(!players.length){
+    box.innerHTML='<div class="pchip waiting">Waiting for players…</div>';
+    return;
+  }
+  box.innerHTML='';
+  players.forEach(p=>{
+    const c=document.createElement('div');
+    const isNew=p.sessions<5;
+    c.className='pchip'+(isNew?' new-player':'');
+    c.innerHTML=`${escHtml(p.name||'Player')}<span class="sessions-badge">${p.sessions?p.sessions+'s':' new'}</span>`;
+    box.appendChild(c);
+  });
+}
+
+function closeRoom(mode){
+  if(S.rooms[mode]){ try{S.rooms[mode].leave();}catch(_){} S.rooms[mode]=null; }
+  document.getElementById(mode==='train'?'rs-train':'rs-host').classList.remove('vis');
+  if(mode==='host'){ document.getElementById('live-rec').classList.remove('vis'); }
+}
+
+function copyLink(mode){
+  const box=document.getElementById(mode==='train'?'rs-train-link':'rs-host-link');
+  const link=box.dataset.link||box.textContent;
+  navigator.clipboard.writeText(link).catch(()=>{
+    const i=document.createElement('input');i.value=link;
+    document.body.appendChild(i);i.select();document.execCommand('copy');document.body.removeChild(i);
+  });
+  const btn=box.nextElementSibling;
+  btn.textContent='Copied!';
+  setTimeout(()=>btn.textContent='Copy',1800);
+}
+
+function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>

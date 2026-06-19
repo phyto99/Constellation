@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Student Panel — Philosophy & Design Decisions</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.6}
+header{border-bottom:2px solid #000;padding:20px 28px 14px;position:sticky;top:0;background:#fff;z-index:10}
+.hd-title{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:4px}
+.hd-main{font-size:20px;font-weight:700;line-height:1.2;margin-bottom:6px}
+.hd-sub{font-size:11px;color:#555;max-width:700px;line-height:1.7}
+nav{display:flex;gap:20px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px solid #eee}
+nav a{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;text-decoration:none;padding:2px 0;border-bottom:2px solid transparent}
+nav a:hover,nav a.active{color:#000;border-bottom-color:#000}
+.content{max-width:760px;margin:0 auto;padding:36px 28px 100px}
+.section{margin-bottom:52px}
+.sec-label{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:6px}
+.sec-title{font-size:17px;font-weight:700;margin-bottom:14px;line-height:1.3}
+.body{font-size:12px;color:#333;line-height:1.9;max-width:680px}
+.body p{margin-bottom:14px}
+.body p:last-child{margin-bottom:0}
+.body strong{color:#000}
+hr.rule{border:none;border-top:1px solid #eee;margin:36px 0}
+
+/* callouts */
+.callout{border-left:3px solid #000;padding:10px 16px;margin:20px 0;font-size:11px;line-height:1.8;color:#444;background:#fafafa}
+.callout.open{border-color:#d97706;background:#fffbf0;color:#92400e}
+.callout.resolved{border-color:#059669;background:#f0fdf4;color:#065f46}
+.callout.tension{border-color:#7c3aed;background:#faf5ff;color:#4c1d95}
+
+/* decision table */
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:11px}
+th{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 10px;border-bottom:2px solid #000;text-align:left}
+td{padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top;line-height:1.6}
+tr:last-child td{border-bottom:none}
+.decided{color:#059669;font-weight:700;font-size:9px;letter-spacing:1px;text-transform:uppercase}
+.open-q{color:#d97706;font-weight:700;font-size:9px;letter-spacing:1px;text-transform:uppercase}
+.tension-q{color:#7c3aed;font-weight:700;font-size:9px;letter-spacing:1px;text-transform:uppercase}
+
+/* principle blocks */
+.principle{border:1px solid #e5e7eb;padding:14px 16px;margin:14px 0}
+.p-num{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#aaa;margin-bottom:4px}
+.p-title{font-size:12px;font-weight:700;margin-bottom:5px}
+.p-body{font-size:11px;color:#555;line-height:1.7}
+
+/* terminal preview */
+.terminal{background:#0a0a0a;color:#e0e0e0;font-family:'Courier New',monospace;font-size:10px;line-height:1.9;padding:16px 20px;margin:16px 0}
+.t-dim{color:#333}.t-a{color:#d97706}.t-w{color:#fff;font-weight:700}.t-g{color:#059669}
+
+@media(max-width:600px){header,.content{padding-left:14px;padding-right:14px}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd-title">Philosophy Development · Era 11</div>
+  <div class="hd-main">The Student Panel</div>
+  <div class="hd-sub">What happens when a student sits down to create a session — alone, or for friends. Every design decision here is a philosophical claim about development, agency, and what the system is for.</div>
+  <nav>
+    <a href="#why">Why It Exists</a>
+    <a href="#not-admin">What It Is Not</a>
+    <a href="#modes">The Two Acts</a>
+    <a href="#compiler">The Recommendation</a>
+    <a href="#multiplayer">Multiplayer</a>
+    <a href="#obscurity">What's Hidden & Why</a>
+    <a href="#agency">Agency vs Signal</a>
+    <a href="#open">Open Questions</a>
+  </nav>
+</header>
+
+<div class="content">
+
+<!-- ── WHY IT EXISTS ── -->
+<div class="section" id="why">
+  <div class="sec-label">Foundation</div>
+  <div class="sec-title">Why a student panel exists at all</div>
+  <div class="body">
+    <p>The admin panel exists for teachers and researchers: people who configure sessions on behalf of students, observe from outside, and have responsibilities the student doesn't have. The student panel exists for a completely different reason: <strong>because the act of choosing a session is itself developmental.</strong></p>
+    <p>A student who picks "play with friends tonight" is making a social and cognitive choice. A student who adjusts rounds or picks a map they haven't played is exercising preference and judgment. These choices are data — not Ledger data in the technical sense, but real information about what the student values, what they're curious about, and how they relate to the system.</p>
+    <p>If we take away those choices and let only the admin configure sessions, we lose something real. We also lose engagement: a student who built their own session has more investment in it than one who was dropped into one.</p>
+    <p>The student panel is not a restricted admin panel. It is a different instrument entirely — designed for a different actor, with a different relationship to the system. <strong>Its job is to make good sessions accessible to students while protecting the measurements the Ledger depends on.</strong></p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── WHAT IT IS NOT ── -->
+<div class="section" id="not-admin">
+  <div class="sec-label">Boundary</div>
+  <div class="sec-title">What the student panel is not</div>
+  <div class="body">
+    <p><strong>Not the admin panel with fields grayed out.</strong> That approach fails on every dimension: it feels condescending, it makes the restrictions visible and therefore gameable ("why is this grayed out? what does it do?"), and it frames the student as a lesser admin rather than as a different kind of user entirely. The student panel is built from its own first principles.</p>
+    <p><strong>Not a dashboard of the student's cognitive model.</strong> That's a separate question — what students can see about their own data — and it's answered in the progressive unlock tier system. The panel is about <em>creating sessions</em>, not about viewing data. These two concerns should not share a screen.</p>
+    <p><strong>Not a simplified toy version of the game.</strong> The sessions students create from this panel are identical in technical terms to sessions the admin creates. Same engine, same bots, same Ledger writes. The difference is in what choices the student makes and how the system frames those choices.</p>
+  </div>
+
+  <div class="callout resolved">
+    The student panel and the admin panel are parallel instruments for different actors, not a hierarchy where students get fewer controls. Students get <em>different</em> controls — the ones appropriate to their role in the system.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── THE TWO ACTS ── -->
+<div class="section" id="modes">
+  <div class="sec-label">Core Design</div>
+  <div class="sec-title">The two acts a student performs</div>
+  <div class="body">
+    <p>Every session a student creates from this panel is one of two things: <strong>personal training</strong> or <strong>hosting for others.</strong> These are genuinely different acts with different optimization targets. They should be treated as distinct, not unified under a single settings form.</p>
+  </div>
+
+  <table>
+    <thead><tr><th>Dimension</th><th>Personal Training</th><th>Hosting for Friends</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Primary goal</strong></td>
+        <td>Maximize information gain about the student's cognitive model</td>
+        <td>Maximize engagement and enjoyment for everyone in the room</td>
+      </tr>
+      <tr>
+        <td><strong>Who the compiler serves</strong></td>
+        <td>The student — their ZPD, their deficits, their trajectory</td>
+        <td>The room — all players, especially the least experienced</td>
+      </tr>
+      <tr>
+        <td><strong>Role of choice</strong></td>
+        <td>Student can customize, but system offers a specific recommendation. Deviation is noted as a signal.</td>
+        <td>Student has real freedom to set up what they want. The system offers defaults tuned for engagement, not development signal.</td>
+      </tr>
+      <tr>
+        <td><strong>Bot</strong></td>
+        <td>Compiler-selected profile targeting student's current ZPD. Type and aggression not revealed pre-session.</td>
+        <td>Student picks challenge level. Type randomized within tier. If mixed-experience room, bot calibrated to middle.</td>
+      </tr>
+      <tr>
+        <td><strong>Terminal message</strong></td>
+        <td>Personal. Speaks about the student's position in their trajectory.</td>
+        <td>Social. Speaks about the configuration the group is about to experience.</td>
+      </tr>
+      <tr>
+        <td><strong>INVERSION possible?</strong></td>
+        <td>Yes — compiler can select it. Student doesn't know unless Alpha.</td>
+        <td>No — confuses new players, breaks social experience, wrong context.</td>
+      </tr>
+      <tr>
+        <td><strong>Ledger signal</strong></td>
+        <td>Full signal. Writes to creator's ledger with normal fidelity.</td>
+        <td>Full signal for all players with Ledger records. New players begin accumulating from this session.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout tension">
+    <strong>Tension:</strong> Some students will want to do "personal training" in a multiplayer session — playing against friends while still having the compiler tune the config for them. This is philosophically coherent (the compiler can optimize for one player even when others are present) but raises questions about fairness: is it fair that one player's development is being served while others are in the room? Unresolved. See Open Questions.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── THE RECOMMENDATION ── -->
+<div class="section" id="compiler">
+  <div class="sec-label">The System's Voice</div>
+  <div class="sec-title">The compiler recommendation and what it should communicate</div>
+  <div class="body">
+    <p>The terminal is the system's voice. In the student panel it plays exactly the same role as the pre-session terminal in the game itself: it tells the student what kind of experience they're about to have, in the system's aesthetic, without revealing internal variables.</p>
+    <p>But in the panel, it has a second function: <strong>it is the compiler's recommendation, made visible as a session the student can accept or build on.</strong> The student doesn't have to use it. They can ignore it entirely and configure something different. But the recommendation is always there, and always offered first.</p>
+    <p>The recommendation is honest about its own limitations. The system does not claim omniscience. If the student has played fewer than 5 sessions, the terminal says so — "the system does not know you well enough yet to make a confident recommendation." The recommendation becomes more specific as the Ledger grows.</p>
+  </div>
+
+  <div class="terminal">
+<span class="t-dim">────────────────────────────────────────</span>
+<span class="t-w">CONSTELLATION</span>  <span class="t-dim">cognitive development system</span>
+
+<span class="t-dim">  session       </span><span class="t-a">024</span>
+<span class="t-dim">  zone          </span><span class="t-w">RADICAL</span>
+<span class="t-dim">  signal        </span><span class="t-g">new territory · gap detected</span>
+
+<span class="t-dim">  The system has been watching a gap form.</span>
+<span class="t-dim">  One dimension of your thinking has outpaced another.</span>
+<span class="t-dim">  This session addresses it directly.</span>
+
+<span class="t-dim">  This will feel different. That is the point.</span>
+
+<span class="t-dim">────────────────────────────────────────</span>
+<span class="t-dim">  23 sessions recorded · recommendation based on your data</span>
+  </div>
+
+  <div class="body">
+    <p>The terminal does not say "the compiler selected QTY mode with dest_mult=−200." It says what the student will experience. The internal variables are the system's concern, not the student's. <strong>This is not obscurity — it is the transparent medium principle.</strong> The student is the instrument. The student experiences the session. They don't need to read the instrument's calibration settings.</p>
+    <p>What the panel offers after the terminal: a one-click "launch this recommendation" button, and a separate section where they can build something different. The recommendation is never hidden, never the only option, and never imposed.</p>
+  </div>
+
+  <div class="callout open">
+    <strong>Open:</strong> If a student consistently deviates from the compiler's recommendation — always choosing familiar maps, always picking Easy bots — should the system note this as a signal? It is arguably informative: a student who avoids RADICAL sessions even when the compiler recommends them is demonstrating something real about their relationship to challenge. Not in the current implementation. Worth flagging for Era 12.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── MULTIPLAYER ── -->
+<div class="section" id="multiplayer">
+  <div class="sec-label">The Hard Problem</div>
+  <div class="sec-title">Multiplayer: whose development does the system serve?</div>
+  <div class="body">
+    <p>All games are multiplayer. This is not an edge case — it is the default. The question of whose cognitive model the compiler is optimizing for is therefore central to every session, not peripheral.</p>
+    <p>There is no clean answer. Here is the honest taxonomy:</p>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Case 1</div>
+    <div class="p-title">Creator only — no other Ledger data available</div>
+    <div class="p-body">The compiler has data on the creator. The other players are new or anonymous. The correct approach: optimize for the creator's development, but set an engagement floor tuned for newcomers. The engagement floor is a hard constraint — below it, the session produces nothing for anyone. Above it, the compiler can optimize. <strong>Decided.</strong></div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Case 2</div>
+    <div class="p-title">All players known — ZPD intersection</div>
+    <div class="p-body">The compiler has Ledger data for everyone in the room. The theoretically correct approach: find the config vector that maximizes the expected information gain summed across all players. In practice this requires knowing who's in the room before the session starts, which the two-phase flow (rough config → room → players join → live adjust → start) enables. The compiler re-runs as players join and updates the recommendation. <strong>Architecturally planned, not yet implemented.</strong></div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Case 3</div>
+    <div class="p-title">New players in the room — engagement-first</div>
+    <div class="p-body">If any player in the room has fewer than 5 sessions, the system shifts to engagement-first configuration. More teams, kinetic scoring, accessible rules, no INVERSION, no Ithkuil. The reasoning: a new player's first session is their highest-information observation — the prior uncertainty is maximum. Getting them to play naturally and enjoy it matters more than optimizing the configuration for the experienced players in the room. The experienced players' Elo impact from one non-optimal session is negligible. The new player's first impression is not. <strong>Decided.</strong></div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Case 4</div>
+    <div class="p-title">Competitive context — target the highest player</div>
+    <div class="p-body">When all players are experienced and the intent is competitive, the compiler targets the highest-Elo player's ZPD. Everyone else is stretched upward. The reasoning from the argmax E[KL] principle: the highest-Elo player has the most stable model — a session within their ZPD produces the most information about everyone's position relative to a known reference. This is philosophically consistent but potentially produces frustrating sessions for lower-Elo players who are over-challenged. <strong>Decided as default; may need a per-session override.</strong></div>
+  </div>
+
+  <div class="callout tension">
+    <strong>Deep tension:</strong> The compiler is fundamentally a single-student instrument. It optimizes argmax E[KL] for one posterior at a time. Extending it to multi-player optimization requires either (a) a summed objective across players — which is computationally tractable but philosophically questionable (whose development matters more?) — or (b) a separate multi-player compiler that treats the room as its own entity. Option (b) is the philosophically cleaner answer but significantly more complex. This is the correct framing of the problem: it's not "whose ZPD do we target" — it's "does a room of students have a joint cognitive state that the system can optimize for?" We don't know. This is an open research question, not a configuration decision.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── OBSCURITY ── -->
+<div class="section" id="obscurity">
+  <div class="sec-label">What's Hidden</div>
+  <div class="sec-title">What the panel obscures, and whether each is justified</div>
+  <div class="body">
+    <p>Every obscured element in the student panel is a claim: "revealing this would change what the measurement measures, or would produce sessions that harm the system's goals." These claims need to be evaluated individually, using the same test from the opacity model.</p>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>What's hidden</th>
+        <th>Stated reason</th>
+        <th>Is the reason sound?</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Bot type name</strong><br>(HAL, CAESAR, etc.)</td>
+        <td>Knowing the bot's named archetype creates a cognitive anchor — student plays against the label, not the game state.</td>
+        <td>Partially justified. The label itself is probably low-risk. But the strategy description ("steals from the rich") would affect opening moves. Hide the strategy description, not necessarily the name.</td>
+        <td class="open-q">Revisit</td>
+      </tr>
+      <tr>
+        <td><strong>Bot aggression exact value</strong></td>
+        <td>Knowing exact aggression (e.g. 7 of 9) allows students to pre-select counter-strategies and eliminates the first-move signal.</td>
+        <td>Justified. This is genuine prospective contamination — knowing aggression before round 1 changes opening behavior. Easy/Standard/Hard dial is the right abstraction.</td>
+        <td class="decided">Decided</td>
+      </tr>
+      <tr>
+        <td><strong>Score multiplier exact values</strong> (in Friends mode)</td>
+        <td>Students who know exact values can optimize toward whichever dimension scores highest, eliminating natural play.</td>
+        <td>Weak. The multipliers are visible in the game's scoring display anyway. A student who can see "Count ×500, Destruction ×1" during play has already derived the optimization. Hiding them pre-session is marginal. The slight variation (±10%) is the real protection — it prevents pre-memorizing values, not the viewing itself.</td>
+        <td class="open-q">Revisit</td>
+      </tr>
+      <tr>
+        <td><strong>Mode selection</strong> (in Solo Training)</td>
+        <td>Student knowing they are in QTY mode changes which cognitive skill they practice — they may perform for the mode rather than playing naturally.</td>
+        <td>Weakly justified at baseline tier. Strongly justified for INVERSION specifically. The terminal shows zone name (not mode name), which preserves the experience without exposing the internal variable. This is the correct design.</td>
+        <td class="decided">Decided</td>
+      </tr>
+      <tr>
+        <td><strong>INVERSION in Friends mode</strong></td>
+        <td>INVERSION in a social session confuses new players and damages the social experience. It is also unfair — players who understand INVERSION have a structural advantage over those who don't.</td>
+        <td>Strongly justified. INVERSION requires architectural silence to function at all, and the informed-consent problem is especially acute in social sessions where some players may understand it and others don't.</td>
+        <td class="decided">Decided</td>
+      </tr>
+      <tr>
+        <td><strong>Map topology detail</strong><br>(no JSON paste)</td>
+        <td>Students who know star positions and connectivity before the session can pre-plan opening moves, eliminating the first-encounter spatial signal.</td>
+        <td>Justified. First encounter with a map is the highest-information moment. The map list is fine — the topology details are not.</td>
+        <td class="decided">Decided</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<hr class="rule">
+
+<!-- ── AGENCY VS SIGNAL ── -->
+<div class="section" id="agency">
+  <div class="sec-label">Core Tension</div>
+  <div class="sec-title">Agency is development. Signal is development. They conflict.</div>
+  <div class="body">
+    <p>The student panel exists at a permanent tension: student agency is itself developmental (choosing, experimenting, deciding), but some student choices corrupt the signal the system needs to serve their development. You cannot fully resolve this tension. You can only manage where you draw the line and be explicit about why.</p>
+    <p>The line the current design draws: <strong>choices that affect the pre-session information state are constrained; choices about what kind of experience to have are free.</strong></p>
+    <p>What this means in practice:</p>
+    <ul style="font-size:12px;color:#333;line-height:2;padding-left:20px;margin:10px 0">
+      <li>Student can choose any map from the list — but doesn't see the topology before selecting.</li>
+      <li>Student can add a bot and choose its difficulty — but doesn't know the exact bot type assigned.</li>
+      <li>Student can set rounds, round length, steals, teams, HQ — these don't corrupt cognitive signal.</li>
+      <li>Student cannot set exact multiplier values in Friends mode — but can see and influence the range.</li>
+      <li>Student cannot toggle INVERSION in Friends mode — but can in Solo Training (where they've consented to its use against themselves).</li>
+    </ul>
+    <p>The deepest question this design has not fully answered: <strong>is restricting student choice paternalistic, or is it protective of a mechanism the student themselves would endorse if they understood it?</strong> The opacity model argues for the latter. A student who understands why INVERSION requires silence in a social session would probably agree with the restriction. But that understanding comes after the session, not before. The design asks for trust before it can offer the explanation.</p>
+  </div>
+
+  <div class="callout tension">
+    The collaborative staircase — a session type where every player is working toward their own ceiling simultaneously, with no competitive rank — is not addressed anywhere in the student panel design. It is a first-class session mode philosophically (per the Synthesis document) but has no representation in the panel's controls. This is a gap.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── OPEN QUESTIONS ── -->
+<div class="section" id="open">
+  <div class="sec-label">Unresolved</div>
+  <div class="sec-title">Open questions before this panel is philosophically complete</div>
+
+  <div class="principle">
+    <div class="p-num">Q1 — The deviation signal</div>
+    <div class="p-title">Should the system record when a student overrides the compiler's recommendation?</div>
+    <div class="p-body">A student who consistently deviates from RADICAL recommendations, always choosing ECHO instead, is showing something real: discomfort with the stretch zone, or metacognitive preference, or simply not trusting the system. Is this Ledger-worthy? It's not a cognitive performance signal — it's a metacognitive behavior signal. The evidence engine could record it as a SELF channel observation. Whether it should influence future compiler decisions is a separate question. <span class="open-q">OPEN</span></div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Q2 — Collaborative staircase</div>
+    <div class="p-title">How does the student panel handle a session where everyone is working toward their own ceiling?</div>
+    <div class="p-body">The two-mode design (Solo Training / Hosting for Friends) doesn't have a slot for the collaborative staircase. It is neither personal training (which targets one student's ZPD) nor social hosting (which targets the room's engagement). It requires per-player compiler outputs running simultaneously. No session type in the current panel enables this. Should there be a third mode? <span class="open-q">OPEN</span></div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Q3 — The joint compiler</div>
+    <div class="p-title">Is the correct multi-player model a summed objective, a joint state, or something else entirely?</div>
+    <div class="p-body">The current design answers this with heuristics (engagement floor, new-player detection, ZPD intersection). These are pragmatic but philosophically incomplete. The theoretically correct answer requires understanding whether a room of students has a jointly describable cognitive state — which we don't know yet. This question should be revisited after multi-game data accumulates and the multi-game architecture (Era 6) provides cross-player signal. <span class="open-q">OPEN — Era 12 or later</span></div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Q4 — Bot name visibility</div>
+    <div class="p-title">Does showing the bot's character name (not its strategy description) corrupt the signal?</div>
+    <div class="p-body">The current design hides the bot name entirely, substituting Easy/Standard/Hard. But "HAL" without its description ("steady, logical, dispassionate") may be low-risk — students who don't know the strategy can't exploit the label. Students who do know (because they've played many sessions) have earned that knowledge. This is analogous to zone vocabulary: the name itself is not the problem; the strategy description attached to it is. Consider showing bot name post-session. <span class="open-q">OPEN</span></div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Q5 — Multiplier transparency</div>
+    <div class="p-title">Is hiding exact multipliers in Friends mode actually doing useful work?</div>
+    <div class="p-body">The scoring weights are visible during the game anyway (or derivable from it). Pre-session knowledge of exact values may not provide meaningful additional advantage. The ±10% variation is the real protection — it prevents cross-session optimization even if students see the values. Consider showing the weights but keeping the variation. <span class="open-q">OPEN</span></div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Q6 — The panel's own signal</div>
+    <div class="p-title">Should the configuration choices students make in this panel be Ledger-recorded as behavioral observations?</div>
+    <div class="p-body">A student who always picks the longest possible sessions, always turns steals off, always picks "Surprise Me" for maps — these patterns are real. They belong in the SELF channel of the evidence engine. Currently nothing from the panel writes to the Ledger except the session itself. The panel interaction is a pre-session behavioral record that is currently being discarded. <span class="open-q">OPEN — high value, low implementation cost</span></div>
+  </div>
+
+</div>
+
+</div><!-- /content -->
+</body>
+</html>
