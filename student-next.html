@@ -52,6 +52,15 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
 .thr{border:none;border-top:1px solid #111;margin:8px 0}
 .tmsg{color:#333;line-height:2;font-size:10px}
 .tcursor::after{content:'█';animation:blink 1.2s step-end infinite;color:#444}
+
+/* ── FIRST SESSION LETTER ── */
+/* White card in black terminal — contrast does the work, no ornament needed */
+.letter-wrap{padding:4px 0 8px}
+.letter{background:#f8f8f8;color:#111;padding:28px 28px 22px;position:relative;text-align:center}
+.letter::before{content:'';display:block;position:absolute;top:0;left:0;right:0;height:2px;background:#d97706}
+.letter-line{display:block;font-size:12px;line-height:1.9;color:#111}
+.letter-blank{display:block;height:.7em}
+.letter-footer{display:block;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#aaa;margin-top:14px;padding-top:10px;border-top:1px solid #eee}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 .term-foot{border-top:1px solid #111;padding:10px 18px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .btn-launch{background:#fff;color:#000;border:2px solid #fff;padding:6px 18px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
@@ -196,11 +205,27 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
       <div class="trow" style="margin-top:4px"><span class="tv w">CONSTELLATION</span><span class="tk" style="padding-left:12px;font-size:9px;color:#1a1a1a">cognitive development system</span></div>
       <div class="trow" style="margin-top:8px" id="tZoneRow"><span class="tk">zone</span><span class="tv w" id="tZone">—</span></div>
       <div class="trow" id="tSignalRow"><span class="tk">signal</span><span class="tv g" id="tSignal">—</span></div>
-      <div class="thr"></div>
-      <div class="tmsg" id="tMsg1"></div>
-      <div class="tmsg" id="tMsg2"></div>
-      <div class="tmsg" id="tMsg3"></div>
-      <div class="tmsg" id="tMsg4"></div>
+      <div class="thr" id="tDivider"></div>
+
+      <!-- session 1: white letter card -->
+      <div class="letter-wrap" id="tLetter" style="display:none">
+        <div class="letter">
+          <span class="letter-line" id="lLine1"></span>
+          <span class="letter-blank" id="lBlank1"></span>
+          <span class="letter-line" id="lLine2"></span>
+          <span class="letter-line" id="lLine3"></span>
+          <span class="letter-footer" id="lFooter"></span>
+        </div>
+      </div>
+
+      <!-- sessions 2+: normal terminal voice -->
+      <div id="tMsgs">
+        <div class="tmsg" id="tMsg1"></div>
+        <div class="tmsg" id="tMsg2"></div>
+        <div class="tmsg" id="tMsg3"></div>
+        <div class="tmsg" id="tMsg4"></div>
+      </div>
+
       <div style="margin-top:10px"><span class="tk">────────────</span></div>
       <div style="margin-top:2px"><span class="tk" id="tFooter">ready when you are</span><span class="tcursor"></span></div>
     </div>
@@ -634,14 +659,26 @@ function renderTerminal(mode){
     document.getElementById('tSignal').textContent=(c?.signal_text)||(ZONE_POOLS[zone]?.signal||'—');
   }
 
+  // session 1 — white letter card in the black terminal
+  const isLetter = isTrain && n===0;
+  document.getElementById('tLetter').style.display  = isLetter ? 'block' : 'none';
+  document.getElementById('tMsgs').style.display    = isLetter ? 'none'  : 'block';
+  document.getElementById('tDivider').style.display = isLetter ? 'none'  : 'block';
+
+  if(isLetter){
+    document.getElementById('lLine1').textContent = 'Looks like this is your first game.';
+    document.getElementById('lLine2').textContent = 'Through adaptability and flexible thinking, you may win.';
+    document.getElementById('lLine3').textContent = 'Embrace the chaos.';
+    document.getElementById('lFooter').textContent= 'the system is listening';
+    document.getElementById('tFooter').textContent= '';
+    return;
+  }
+
   let lines, footer;
 
   if(!isTrain){
     lines=HOST_MSGS[n%HOST_MSGS.length];
     footer='create the session, then share the link';
-  } else if(n===0){
-    lines=['Looks like this is your first game.','','Through adaptability and flexible thinking, you may win.','Embrace the chaos.'];
-    footer='the system is listening';
   } else if(n<5){
     lines=STAGE2[n-1]||STAGE2[0];
     footer='calibration in progress';
