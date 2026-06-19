@@ -566,7 +566,9 @@ const ZONE_POOLS = {
   ECHO: {
     signal: 'familiar ground \xb7 consolidating',
     msgs: [
-      [ "You're in familiar territory.", "ECHO means the system recognises what you're doing.", "This session deepens something you already have." ],
+      [ 'ECHO.', '', 'You built something in this territory.', 'Now find out how deep it goes.' ],
+      [ 'ECHO. The system knows you here.', '', "The question isn't whether you can win.", "It's what you notice while doing it." ],
+      [ 'ECHO.', '', "Familiar ground isn't the same as easy ground.", "Find the parts of it you still don't fully own." ],
     ]
   },
   RADICAL: {
@@ -638,7 +640,7 @@ function renderTerminal(mode){
     lines=HOST_MSGS[n%HOST_MSGS.length];
     footer='create the session, then share the link';
   } else if(n===0){
-    lines=['Looks like this is your first game.','If you can adapt fast enough, you may win.','','Embrace the chaos.'];
+    lines=['Looks like this is your first game.','','Through adaptability and flexible thinking, you may win.','Embrace the chaos.'];
     footer='the system is listening';
   } else if(n<5){
     lines=STAGE2[n-1]||STAGE2[0];
