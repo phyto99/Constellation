@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Terminal Voice System — Developer Reference</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.6}
+header{border-bottom:2px solid #000;padding:20px 28px 14px;position:sticky;top:0;background:#fff;z-index:10}
+.hd-label{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:4px}
+.hd-main{font-size:20px;font-weight:700;line-height:1.2;margin-bottom:6px}
+.hd-sub{font-size:11px;color:#555;max-width:700px;line-height:1.7}
+nav{display:flex;gap:20px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px solid #eee}
+nav a{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;text-decoration:none;padding:2px 0;border-bottom:2px solid transparent}
+nav a:hover{color:#000;border-bottom-color:#000}
+.content{max-width:820px;margin:0 auto;padding:36px 28px 100px}
+hr.rule{border:none;border-top:1px solid #eee;margin:40px 0}
+
+/* ── TYPOGRAPHY ── */
+.sec-label{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:6px}
+.sec-title{font-size:17px;font-weight:700;margin-bottom:14px}
+.body{font-size:12px;color:#333;line-height:1.9;max-width:680px}
+.body p{margin-bottom:12px}
+.body p:last-child{margin-bottom:0}
+
+/* ── ZONE COLOR SYSTEM ── */
+/* Each zone has: a key color, a bg tint, and a border */
+:root{
+  --cal:  #6b7280; --cal-bg:  #f9fafb; --cal-border: #d1d5db; /* gray    — unknown */
+  --echo: #2563eb; --echo-bg: #eff6ff; --echo-border:#bfdbfe; /* blue    — familiar */
+  --rad:  #d97706; --rad-bg:  #fffbeb; --rad-border: #fcd34d; /* amber   — stretch  */
+  --alp:  #7c3aed; --alp-bg:  #f5f3ff; --alp-border: #c4b5fd; /* violet  — boundary */
+  --sin:  #b45309; --sin-bg:  #fef3c7; --sin-border: #fbbf24; /* gold    — uncharted*/
+  --stg1: #059669; --stg1-bg: #f0fdf4; --stg1-border:#6ee7b7; /* green   — onboard  */
+  --stg2: #9ca3af; --stg2-bg: #f3f4f6; --stg2-border:#e5e7eb; /* silver  — calibrating */
+  --host: #0891b2; --host-bg: #ecfeff; --host-border:#a5f3fc; /* cyan    — social   */
+}
+
+/* ── STAGE BADGES ── */
+.stage-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.stage-badge{padding:4px 10px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:2px solid;display:inline-flex;align-items:center;gap:5px}
+.badge-s1{ color:var(--stg1);border-color:var(--stg1);background:var(--stg1-bg)}
+.badge-s2{ color:var(--stg2);border-color:var(--stg2-border);background:var(--stg2-bg)}
+.badge-cal{color:var(--cal); border-color:var(--cal-border);background:var(--cal-bg)}
+.badge-ech{color:var(--echo);border-color:var(--echo-border);background:var(--echo-bg)}
+.badge-rad{color:var(--rad); border-color:var(--rad-border);background:var(--rad-bg)}
+.badge-alp{color:var(--alp); border-color:var(--alp-border);background:var(--alp-bg)}
+.badge-sin{color:var(--sin); border-color:var(--sin-border);background:var(--sin-bg)}
+.badge-hst{color:var(--host);border-color:var(--host-border);background:var(--host-bg)}
+
+/* ── MESSAGE CARDS ── */
+.msg-card{border-left:4px solid;padding:14px 18px;margin-bottom:10px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start}
+.msg-card.s1 {border-color:var(--stg1);background:var(--stg1-bg)}
+.msg-card.s2 {border-color:var(--stg2-border);background:var(--stg2-bg)}
+.msg-card.cal{border-color:var(--cal-border);background:var(--cal-bg)}
+.msg-card.ech{border-color:var(--echo-border);background:var(--echo-bg)}
+.msg-card.rad{border-color:var(--rad-border);background:var(--rad-bg)}
+.msg-card.alp{border-color:var(--alp-border);background:var(--alp-bg)}
+.msg-card.sin{border-color:var(--sin-border);background:var(--sin-bg)}
+.msg-card.hst{border-color:var(--host-border);background:var(--host-bg)}
+
+.msg-lines{font-family:Arial,sans-serif;font-size:11.5px;line-height:2;color:#111}
+.msg-line{display:block}
+.msg-line.blank{height:1em}
+.msg-meta{text-align:right;font-size:9px;color:#aaa;white-space:nowrap;margin-top:2px}
+.msg-idx{font-family:'Courier New',monospace;font-size:10px;color:#ccc;font-weight:700}
+
+/* ── ZONE LEGEND ── */
+.legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin:16px 0}
+.legend-item{padding:10px 12px;border:1px solid}
+.legend-item.cal{border-color:var(--cal-border);background:var(--cal-bg)}
+.legend-item.ech{border-color:var(--echo-border);background:var(--echo-bg)}
+.legend-item.rad{border-color:var(--rad-border);background:var(--rad-bg)}
+.legend-item.alp{border-color:var(--alp-border);background:var(--alp-bg)}
+.legend-item.sin{border-color:var(--sin-border);background:var(--sin-bg)}
+.legend-item.s1 {border-color:var(--stg1-border);background:var(--stg1-bg)}
+.legend-item.s2 {border-color:var(--stg2-border);background:var(--stg2-bg)}
+.legend-item.hst{border-color:var(--host-border);background:var(--host-bg)}
+.legend-name{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px}
+.legend-name.cal{color:var(--cal)}
+.legend-name.ech{color:var(--echo)}
+.legend-name.rad{color:var(--rad)}
+.legend-name.alp{color:var(--alp)}
+.legend-name.sin{color:var(--sin)}
+.legend-name.s1 {color:var(--stg1)}
+.legend-name.s2 {color:var(--stg2)}
+.legend-name.hst{color:var(--host)}
+.legend-desc{font-size:10px;color:#555;line-height:1.5}
+
+/* ── DESIGN RULES ── */
+.rule-card{border:1px solid #e5e7eb;padding:14px 16px;margin:10px 0}
+.rule-num{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#bbb;margin-bottom:3px}
+.rule-title{font-size:12px;font-weight:700;margin-bottom:5px}
+.rule-body{font-size:11px;color:#555;line-height:1.7}
+.rule-eg{font-size:10px;color:#aaa;margin-top:6px;font-style:italic}
+.rule-bad{color:#dc2626}
+.rule-good{color:#059669}
+
+/* ── CYCLING DIAGRAM ── */
+.cycle-box{background:#0a0a0a;padding:16px 20px;font-family:Arial,sans-serif;font-size:11px;line-height:1.8;margin:14px 0}
+.cy-label{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#333;margin-bottom:8px}
+.cy-row{display:flex;gap:0;margin-bottom:4px;align-items:stretch}
+.cy-sess{min-width:80px;color:#2a2a2a;font-size:10px;padding:3px 0}
+.cy-msg{color:#e0e0e0;font-size:10px;padding:3px 8px;border-left:2px solid #1a1a1a}
+.cy-msg.s1 {border-color:var(--stg1);color:#6ee7b7}
+.cy-msg.s2 {border-color:#333;color:#888}
+.cy-msg.cal{border-color:var(--cal);color:#9ca3af}
+.cy-msg.ech{border-color:var(--echo);color:#93c5fd}
+.cy-msg.rad{border-color:var(--rad);color:#fcd34d}
+
+table.ref{width:100%;border-collapse:collapse;margin:12px 0;font-size:11px}
+table.ref th{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 10px;border-bottom:2px solid #000;text-align:left;white-space:nowrap}
+table.ref td{padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top;line-height:1.6}
+table.ref tr:last-child td{border-bottom:none}
+.mono{font-family:'Courier New',monospace}
+
+.callout{border-left:3px solid #000;padding:10px 16px;margin:16px 0;font-size:11px;line-height:1.8;color:#444;background:#fafafa}
+.callout.rule{border-color:#7c3aed;background:#faf5ff;color:#4c1d95}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd-label">Philosophy Development · Era 11 — Developer Reference</div>
+  <div class="hd-main">Terminal Voice System</div>
+  <div class="hd-sub">Every message the terminal speaks, when it speaks it, and why. Color-coded by zone and stage. This is the authoritative copy reference — edit messages here first, then update student-next.html.</div>
+  <nav>
+    <a href="#legend">Color Key</a>
+    <a href="#rules">Design Rules</a>
+    <a href="#stage1">Stage 1 · First Session</a>
+    <a href="#stage2">Stage 2 · Calibrating</a>
+    <a href="#zones">Stage 3 · Zones</a>
+    <a href="#host">Host Mode</a>
+    <a href="#cycling">Cycling Logic</a>
+    <a href="#impl">Implementation</a>
+  </nav>
+</header>
+
+<div class="content">
+
+<!-- ── COLOR KEY ── -->
+<div id="legend" style="margin-bottom:40px">
+  <div class="sec-label">Color Key</div>
+  <div class="sec-title">Every color means something specific</div>
+  <div class="legend">
+    <div class="legend-item s1"><div class="legend-name s1">Stage 1</div><div class="legend-desc">Session 1 only. The onboarding moment. Never repeats.</div></div>
+    <div class="legend-item s2"><div class="legend-name s2">Stage 2</div><div class="legend-desc">Sessions 2–4. Calibrating. System is forming a picture.</div></div>
+    <div class="legend-item cal"><div class="legend-name cal">Calibration</div><div class="legend-desc">Sessions 5+ with insufficient signal. Still listening.</div></div>
+    <div class="legend-item ech"><div class="legend-name ech">Echo</div><div class="legend-desc">Familiar territory. Consolidating. Earned ground.</div></div>
+    <div class="legend-item rad"><div class="legend-name rad">Radical</div><div class="legend-desc">Gap detected. Stretch zone. Edge of model.</div></div>
+    <div class="legend-item alp"><div class="legend-name alp">Alpha</div><div class="legend-desc">Near the boundary of the current model.</div></div>
+    <div class="legend-item sin"><div class="legend-name sin">Singularity</div><div class="legend-desc">Uncharted. Rare. The model is being rewritten.</div></div>
+    <div class="legend-item hst"><div class="legend-name hst">Host Mode</div><div class="legend-desc">Social framing. Always replaces zone voice when hosting.</div></div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── DESIGN RULES ── -->
+<div id="rules">
+  <div class="sec-label">Design Rules</div>
+  <div class="sec-title">What makes the voice work — and what breaks it</div>
+
+  <div class="rule-card">
+    <div class="rule-num">Rule 1</div>
+    <div class="rule-title">Speak about the session. Never about the student as a data point.</div>
+    <div class="rule-body">The terminal is not a report card. It speaks about the space the student is about to enter, not about who they are or what was measured.</div>
+    <div class="rule-eg"><span class="rule-bad">✗ "Based on your last 12 sessions, you tend to underperform in..."</span><br><span class="rule-good">✓ "RADICAL. The system found a gap. This session goes after it."</span></div>
+  </div>
+
+  <div class="rule-card">
+    <div class="rule-num">Rule 2</div>
+    <div class="rule-title">Zone code words are used, never explained.</div>
+    <div class="rule-body">RADICAL, ECHO, CALIBRATION — these earn meaning through experience. The terminal uses them from session 5 onward without glossing them. A student who has played 20 sessions knows what RADICAL feels like. That knowledge is earned, not given.</div>
+    <div class="rule-eg"><span class="rule-bad">✗ "You are in the RADICAL zone, which means you are in a stretch state."</span><br><span class="rule-good">✓ "RADICAL. This will feel different. That is the point."</span></div>
+  </div>
+
+  <div class="rule-card">
+    <div class="rule-num">Rule 3</div>
+    <div class="rule-title">The voice gets more specific as the system knows you. Never less.</div>
+    <div class="rule-body">Session 1 is deliberately open. "Embrace the chaos." Session 40 in SINGULARITY is precise and strange. The movement is always toward specificity, never toward generic. A message that could apply to anyone is a failure.</div>
+  </div>
+
+  <div class="rule-card">
+    <div class="rule-num">Rule 4</div>
+    <div class="rule-title">Short lines. White space. Never explain yourself.</div>
+    <div class="rule-body">The terminal is not a paragraph. Every message is 2–4 lines maximum. Blank lines are real content — they give the reader space to sit with what was said. The voice never justifies itself or explains why it said something.</div>
+  </div>
+
+  <div class="rule-card">
+    <div class="rule-num">Rule 5</div>
+    <div class="rule-title">The "addictive friend" quality: genuine, not performed warmth.</div>
+    <div class="rule-body">The friend quality comes from lines that feel true and slightly surprising — not from exclamation points or emoji. "You came back. That's usually how it starts." feels like a friend because it notices something real without making a big deal of it. Performed warmth ("Great to see you again!") is the opposite of this.</div>
+    <div class="rule-eg"><span class="rule-bad">✗ "Welcome back! Ready for another great session?"</span><br><span class="rule-good">✓ "You came back. That's usually how it starts."</span></div>
+  </div>
+
+  <div class="rule-card">
+    <div class="rule-num">Rule 6 — ECHO specifically</div>
+    <div class="rule-title">ECHO must not feel like a consolation prize.</div>
+    <div class="rule-body">ECHO means consolidating familiar territory. Done wrong, this sounds like "you didn't grow enough for RADICAL." Done right, it sounds like being handed something real to work with. The energy is <em>earned, not stuck</em>. "You built something here. Now go deeper into it."</div>
+    <div class="rule-eg"><span class="rule-bad">✗ "Familiar territory. Consolidating."</span><br><span class="rule-good">✓ "ECHO. You built something in this territory. Now find out how deep it goes."</span></div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── STAGE 1 ── -->
+<div id="stage1">
+  <div class="sec-label">Stage 1</div>
+  <div class="sec-title">First session only — the onboarding moment</div>
+  <div class="body"><p>Fires exactly once, the first time a student loads the panel. Never repeats. This is the friend leaning over before the game starts — conspiratorial, warm, slightly cryptic. Not a welcome screen. Not a tutorial prompt. An invitation.</p></div>
+
+  <div class="stage-row"><span class="stage-badge badge-s1">Session 1 only · Never repeats</span></div>
+
+  <div class="msg-card s1">
+    <div>
+      <div class="msg-lines">
+        <span class="msg-line">Looks like this is your first game.</span>
+        <span class="msg-line">If you can adapt fast enough, you may win.</span>
+        <span class="msg-line blank"></span>
+        <span class="msg-line">Embrace the chaos.</span>
+      </div>
+    </div>
+    <div class="msg-meta">index 0<br>only message</div>
+  </div>
+
+  <div class="callout rule">
+    <strong>Why this exact message:</strong> It doesn't explain what the game is. It doesn't promise anything. It says "you might win" — not "you will win" — which is honest and slightly provocative. "Embrace the chaos" is a directive, not a description. It tells you how to approach what you're about to experience rather than explaining what that experience is. The warmth comes from the register: friend, not institution.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── STAGE 2 ── -->
+<div id="stage2">
+  <div class="sec-label">Stage 2</div>
+  <div class="sec-title">Sessions 2–4 — calibrating, still early</div>
+  <div class="body"><p>The student came back. That's already information. The system acknowledges it without making a ceremony of it. No zone shown yet — it's too early. The voice is quieter here than Stage 1, leaning in rather than opening a door. Cycles through these three in order.</p></div>
+
+  <div class="stage-row"><span class="stage-badge badge-s2">Sessions 2–4 · Cycles in order</span></div>
+
+  <div class="msg-card s2">
+    <div>
+      <div class="msg-lines">
+        <span class="msg-line">You came back.</span>
+        <span class="msg-line blank"></span>
+        <span class="msg-line">That's usually how it starts.</span>
+      </div>
+    </div>
+    <div class="msg-meta">index 0<br>(session 2)</div>
+  </div>
+
+  <div class="msg-card s2">
+    <div>
+      <div class="msg-lines">
+        <span class="msg-line">The chaos is designed.</span>
+        <span class="msg-line">Most people feel it as a problem.</span>
+        <span class="msg-line blank"></span>
+        <span class="msg-line">The ones who stay notice it as information.</span>
+      </div>
+    </div>
+    <div class="msg-meta">index 1<br>(session 3)</div>
+  </div>
+
+  <div class="msg-card s2">
+    <div>
+      <div class="msg-lines">
+        <span class="msg-line">The system is still listening.</span>
+        <span class="msg-line blank"></span>
+        <span class="msg-line">A few more sessions before it has</span>
+        <span class="msg-line">anything specific to say.</span>
+      </div>
+    </div>
+    <div class="msg-meta">index 2<br>(session 4)</div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── ZONE MESSAGES ── -->
+<div id="zones">
+  <div class="sec-label">Stage 3 · Sessions 5+</div>
+  <div class="sec-title">Zone-specific voice — cycles within each zone pool</div>
+  <div class="body"><p>From session 5 onward the zone code word appears in the terminal. The zone name sits in the badge and in the first line of the message. Each zone has a pool of messages that cycles in order — so the student doesn't see the same thing every session, but nothing is random. <strong>Cycling rule: <span class="mono">index = sessionCount % pool.length</span></strong></p></div>
+
+  <!-- CALIBRATION -->
+  <div class="stage-row" style="margin-top:24px"><span class="stage-badge badge-cal">CALIBRATION · Sessions 5+ with weak signal</span></div>
+  <div class="body" style="margin-bottom:12px"><p>Shouldn't persist past ~8 sessions. If it does, the student isn't playing often enough for the system to form a picture. The voice acknowledges this without guilt.</p></div>
+
+  <div class="msg-card cal">
+    <div><div class="msg-lines">
+      <span class="msg-line">CALIBRATION.</span>
+      <span class="msg-line blank"></span>
+      <span class="msg-line">The system is still forming a picture of you.</span>
+      <span class="msg-line">Give it a few more sessions.</span>
+    </div></div>
+    <div class="msg-meta">index 0</div>
+  </div>
+  <div class="msg-card cal">
+    <div><div class="msg-lines">
+      <span class="msg-line">CALIBRATION.</span>
+      <span class="msg-line blank"></span>
+      <span class="msg-line">Not enough yet to say anything worth saying.</span>
+      <span class="msg-line">Keep going.</span>
+    </div></div>
+    <div class="msg-meta">index 1</div>
+  </div>
+
+  <!-- ECHO -->
+  <div class="stage-row" style="margin-top:28px"><span class="stage-badge badge-ech">ECHO · Familiar territory · Consolidating</span></div>
+  <div class="body" style="margin-bottom:12px"><p>ECHO is not a consolation prize. It's earned ground. The voice should feel like being handed something real — not like being told you didn't grow enough. Energy: <em>you built something here, now find out how deep it goes.</em></p></div>
+
+  <div class="msg-card ech">
+    <div><div class="msg-lines">
+      <span class="msg-line">ECHO.</span>
+      <span class="msg-line blank"></span>
+      <span class="msg-line">You built something in this territory.</span>
+      <span class="msg-line">Now find out how deep it goes.</span>
+    </div></div>
+    <div class="msg-meta">index 0</div>
+  </div>
+  <div class="msg-card ech">
+    <div><div class="msg-lines">
+      <span class="msg-line">ECHO. The system knows you here.</span>
+      <span class="msg-line blank"></span>
+      <span class="msg-line">The question isn't whether you can win.</span>
+      <span class="msg-line">It's what you notice while doing it.</span>
+    </div></div>
+    <div class="msg-meta">index 1</div>
+  </div>
+  <div class="msg-card ech">
+    <div><div class="msg-lines">
+      <span class="msg-line">ECHO.</span>
+      <span class="msg-line blank"></span>
+      <span class="msg-line">Familiar ground isn't the same as easy ground.</span>
+      <span class="msg-line">Find the parts of it you still don't fully own.</span>
+    </div></div>
+    <div class="msg-meta">index 2</div>
+  </div>
+
+  <!-- RADICAL -->
+  <div class="stage-row" style="margin-top:28px"><span class="stage-badge badge-rad">RADICAL · Gap detected · Stretch zone</span></div>
+  <div class="body" style="margin-bottom:12px"><p>The system found the edge of something. This session targets it. The voice is direct, a little urgent — not scary, but honest about what's coming. "This will feel different. That is the point."</p></div>
+
+  <div class="msg-card rad">
+    <div><div class="msg-lines">
+      <span class="msg-line">RADICAL.</span>
+      <span class="msg-line blank"></span>
+      <span class="msg-line">Something outpaced something else.</span>
+      <span class="msg-line">This session goes after the gap.</span>
+    </div></div>
+    <div class="msg-meta">index 0</div>
+  </div>
+  <div class="msg-card rad">
+    <div><div class="msg-lines">
+      <span class="msg-line">RADICAL. The system found an edge.</span>
+      <span class="msg-line blank"></span>
+      <span class="msg-line">This will feel different.</span>
+      <span class="msg-line">That is the point.</span>
+    </div></div>
+    <div class="msg-meta">index 1</div>
+  </div>
+  <div class="msg-card rad">
+    <div><div class="msg-lines">
+      <span class="msg-line">RADICAL.</span>
+      <span class="msg-line blank"></span>
+      <span class="msg-line">One dimension of your thinking</span>
+      <span class="msg-line">has outpaced another.</span>
+      <span class="msg-line">This is what the gap looks like from the inside.</span>
+    </div></div>
+    <div class="msg-meta">index 2</div>
+  </div>
+
+  <!-- ALPHA -->
+  <div class="stage-row" style="margin-top:28px"><span class="stage-badge badge-alp">ALPHA · Near the boundary of the model</span></div>
+  <div class="body" style="margin-bottom:12px"><p>Rarer than RADICAL. The student is operating near the edge of what the system can model. The voice is quieter, more precise — less urgent than RADICAL, more careful.</p></div>
+
+  <div class="msg-card alp">
+    <div><div class="msg-lines">
+      <span class="msg-line">ALPHA.</span>
+      <span class="msg-line blank"></span>
+      <span class="msg-line">Near the edge of your current model.</span>
+      <span class="msg-line">What happens here is genuinely unpredictable.</span>
+    </div></div>
+    <div class="msg-meta">index 0</div>
+  </div>
+  <div class="msg-card alp">
+    <div><div class="msg-lines">
+      <span class="msg-line">ALPHA. The system is reaching.</span>
+      <span class="msg-line blank"></span>
+      <span class="msg-line">It's looking for something it hasn't seen from you before.</span>
+      <span class="msg-line">So should you.</span>
+    </div></div>
+    <div class="msg-meta">index 1</div>
+  </div>
+
+  <!-- SINGULARITY -->
+  <div class="stage-row" style="margin-top:28px"><span class="stage-badge badge-sin">SINGULARITY · Uncharted · Rare</span></div>
+  <div class="body" style="margin-bottom:12px"><p>The model is being rewritten around this student. The system has few reference points. The voice reflects this — quieter, almost deferential. Not congratulatory. More like: we're figuring this out together.</p></div>
+
+  <div class="msg-card sin">
+    <div><div class="msg-lines">
+      <span class="msg-line">SINGULARITY.</span>
+      <span class="msg-line blank"></span>
+      <span class="msg-line">The model is being rewritten.</span>
+      <span class="msg-line">There isn't a recommended configuration.</span>
+      <span class="msg-line">Build what feels right.</span>
+    </div></div>
+    <div class="msg-meta">index 0</div>
+  </div>
+  <div class="msg-card sin">
+    <div><div class="msg-lines">
+      <span class="msg-line">SINGULARITY.</span>
+      <span class="msg-line blank"></span>
+      <span class="msg-line">Not many reference points for where you are.</span>
+      <span class="msg-line">The system is learning from you now,</span>
+      <span class="msg-line">not the other way around.</span>
+    </div></div>
+    <div class="msg-meta">index 1</div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── HOST MODE ── -->
+<div id="host">
+  <div class="sec-label">Host Mode</div>
+  <div class="sec-title">Social framing — replaces zone voice entirely when hosting</div>
+  <div class="body"><p>When a student switches to Host mode, the terminal switches register entirely. It's no longer personal — it's social. It speaks about the room and what's about to happen in it. Zone doesn't appear. Cycles through these regardless of session count.</p></div>
+
+  <div class="stage-row"><span class="stage-badge badge-hst">Host Mode · Cycles · Replaces zone voice</span></div>
+
+  <div class="msg-card hst">
+    <div><div class="msg-lines">
+      <span class="msg-line">You're setting this up for others.</span>
+      <span class="msg-line blank"></span>
+      <span class="msg-line">The system will read the room as people join.</span>
+      <span class="msg-line">Build it how you want.</span>
+    </div></div>
+    <div class="msg-meta">index 0</div>
+  </div>
+  <div class="msg-card hst">
+    <div><div class="msg-lines">
+      <span class="msg-line">New players get something accessible.</span>
+      <span class="msg-line">Known players get pushed.</span>
+      <span class="msg-line blank"></span>
+      <span class="msg-line">The room shapes the configuration once people arrive.</span>
+    </div></div>
+    <div class="msg-meta">index 1</div>
+  </div>
+  <div class="msg-card hst">
+    <div><div class="msg-lines">
+      <span class="msg-line">The chaos is the same for everyone in the room.</span>
+      <span class="msg-line blank"></span>
+      <span class="msg-line">How each person meets it — that's the interesting part.</span>
+    </div></div>
+    <div class="msg-meta">index 2</div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── CYCLING LOGIC ── -->
+<div id="cycling">
+  <div class="sec-label">Cycling Logic</div>
+  <div class="sec-title">How the system chooses which message to show</div>
+
+  <div class="body"><p>Messages cycle in order within each pool. The index is derived from <span class="mono">sessionCount % pool.length</span> — so a student always progresses through the pool sequentially, never sees the same message twice in a row (unless the pool has only one message), and the sequence resets gracefully.</p>
+  <p>Stage 2 messages (sessions 2–4) are position-fixed: session 2 → index 0, session 3 → index 1, session 4 → index 2. After session 4, the zone voice takes over regardless.</p></div>
+
+  <div class="cycle-box">
+    <div class="cy-label">Example: student with 8 sessions in ECHO</div>
+    <div class="cy-row"><span class="cy-sess">Session 1</span><span class="cy-msg s1">Looks like this is your first game. If you can adapt fast enough, you may win. Embrace the chaos.</span></div>
+    <div class="cy-row"><span class="cy-sess">Session 2</span><span class="cy-msg s2">You came back. That's usually how it starts.</span></div>
+    <div class="cy-row"><span class="cy-sess">Session 3</span><span class="cy-msg s2">The chaos is designed. Most people feel it as a problem...</span></div>
+    <div class="cy-row"><span class="cy-sess">Session 4</span><span class="cy-msg s2">The system is still listening...</span></div>
+    <div class="cy-row"><span class="cy-sess">Session 5</span><span class="cy-msg ech">ECHO. You built something in this territory. Now find out how deep it goes. <span style="color:#444">[idx 0]</span></span></div>
+    <div class="cy-row"><span class="cy-sess">Session 6</span><span class="cy-msg ech">ECHO. The system knows you here... <span style="color:#444">[idx 1]</span></span></div>
+    <div class="cy-row"><span class="cy-sess">Session 7</span><span class="cy-msg ech">ECHO. Familiar ground isn't the same as easy ground... <span style="color:#444">[idx 2]</span></span></div>
+    <div class="cy-row"><span class="cy-sess">Session 8</span><span class="cy-msg ech">ECHO. You built something in this territory... <span style="color:#444">[idx 0 again]</span></span></div>
+  </div>
+
+  <div class="callout rule">
+    <strong>Note for developers:</strong> If the zone changes between sessions (ECHO → RADICAL), the index resets to 0 for the new zone pool. Track <span class="mono">lastZone</span> in localStorage and compare to current zone on load — if different, reset the zone cycle index. This means a student who bounces between zones gets the opening message for each zone they haven't visited recently.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── IMPLEMENTATION ── -->
+<div id="impl">
+  <div class="sec-label">Implementation</div>
+  <div class="sec-title">Where this lives in the codebase</div>
+
+  <table class="ref">
+    <thead><tr><th>File</th><th>What to find</th><th>What to change</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>student-next.html</strong></td>
+        <td><span class="mono">ZONE_VOICE</span> object, <span class="mono">renderTerminal()</span></td>
+        <td>All message copy lives here. Edit message arrays directly.</td>
+      </tr>
+      <tr>
+        <td><strong>This document</strong></td>
+        <td>All msg-card blocks</td>
+        <td>Edit here first — this is the authoritative copy reference. Then sync to student-next.html.</td>
+      </tr>
+      <tr>
+        <td><strong>student-panel.html</strong></td>
+        <td>Terminal block</td>
+        <td>v1 — does not implement the voice system. Intentionally simpler.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</div>
+</body>
+</html>

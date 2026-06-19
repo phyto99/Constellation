@@ -545,52 +545,70 @@ function fallbackCompiler(){
 }
 
 // ── TERMINAL VOICE SYSTEM
-// Zone code words accumulate meaning through experience — never explained, always used.
-// Session count never shown. The voice becomes more specific as the system knows you.
-// First session: warm, friend-like. Not clinical. Not surveillance.
+// Authoritative copy: philosophy development/terminal-voice.html
+// Cycling rule: index = sessionCount % pool.length
+// Zone index resets when zone changes (tracked in localStorage)
 
-const ZONE_VOICE = {
+const STAGE2 = [
+  [ 'You came back.', '', "That's usually how it starts." ],
+  [ 'The chaos is designed.', 'Most people feel it as a problem.', '', 'The ones who stay notice it as information.' ],
+  [ 'The system is still listening.', '', 'A few more sessions before it has', 'anything specific to say.' ],
+];
+
+const ZONE_POOLS = {
   CALIBRATION: {
-    signal: 'listening · forming a picture',
+    signal: 'listening \xb7 forming a picture',
     msgs: [
-      'The system doesn\'t know you well enough yet to say anything specific.',
-      'That\'s what the next few sessions are for.',
-      'Play as you would play. Not to win. Not to perform.',
+      [ 'CALIBRATION.', '', 'The system is still forming a picture of you.', 'Give it a few more sessions.' ],
+      [ 'CALIBRATION.', '', 'Not enough yet to say anything worth saying.', 'Keep going.' ],
     ]
   },
   ECHO: {
-    signal: 'familiar ground · consolidating',
+    signal: 'familiar ground \xb7 consolidating',
     msgs: [
-      'You\'re in familiar territory.',
-      'ECHO means the system recognises what you\'re doing.',
-      'This session deepens something you already have.',
+      [ 'ECHO.', '', 'You built something in this territory.', 'Now find out how deep it goes.' ],
+      [ 'ECHO. The system knows you here.', '', "The question isn't whether you can win.", "It's what you notice while doing it." ],
+      [ 'ECHO.', '', "Familiar ground isn't the same as easy ground.", "Find the parts of it you still don't fully own." ],
     ]
   },
   RADICAL: {
-    signal: 'new territory · gap detected',
+    signal: 'new territory \xb7 gap detected',
     msgs: [
-      'One dimension of your thinking has outpaced another.',
-      'RADICAL means the system has found the edge.',
-      'This will feel different. That is the point.',
+      [ 'RADICAL.', '', 'Something outpaced something else.', 'This session goes after the gap.' ],
+      [ 'RADICAL. The system found an edge.', '', 'This will feel different.', 'That is the point.' ],
+      [ 'RADICAL.', '', 'One dimension of your thinking has outpaced another.', 'This is what the gap looks like from the inside.' ],
     ]
   },
   ALPHA: {
-    signal: 'high signal · pushing limits',
+    signal: 'high signal \xb7 near the boundary',
     msgs: [
-      'The system is reaching for something it hasn\'t seen from you before.',
-      'ALPHA means you\'re near the boundary of your current model.',
-      'What happens here is genuinely unpredictable.',
+      [ 'ALPHA.', '', 'Near the edge of your current model.', 'What happens here is genuinely unpredictable.' ],
+      [ 'ALPHA. The system is reaching.', '', "It's looking for something it hasn't seen from you before.", 'So should you.' ],
     ]
   },
   SINGULARITY: {
-    signal: 'exceptional · uncharted',
+    signal: 'exceptional \xb7 uncharted',
     msgs: [
-      'The system doesn\'t have many reference points for where you are.',
-      'SINGULARITY means the model is being rewritten around your sessions.',
-      'There isn\'t a recommended configuration. Build what feels right.',
+      [ 'SINGULARITY.', '', 'The model is being rewritten.', "There isn't a recommended configuration.", 'Build what feels right.' ],
+      [ 'SINGULARITY.', '', 'Not many reference points for where you are.', 'The system is learning from you now,', 'not the other way around.' ],
     ]
   },
 };
+
+const HOST_MSGS = [
+  [ "You're setting this up for others.", '', 'The system will read the room as people join.', 'Build it how you want.' ],
+  [ 'New players get something accessible.', 'Known players get pushed.', '', 'The room shapes the configuration once people arrive.' ],
+  [ 'The chaos is the same for everyone in the room.', '', "How each person meets it — that's the interesting part." ],
+];
+
+function getZoneIndex(zone, n){
+  const stored = JSON.parse(localStorage.getItem('cx_zone_state')||'{}');
+  if(stored.zone !== zone){
+    localStorage.setItem('cx_zone_state', JSON.stringify({zone, lastSession:n}));
+    return 0;
+  }
+  return n % (ZONE_POOLS[zone]?.msgs.length||1);
+}
 
 function renderTerminal(mode){
   const c=S.compiler; const n=S.sessionCount;
@@ -599,72 +617,50 @@ function renderTerminal(mode){
 
   document.getElementById('termLabel').textContent=isTrain?'System':'Before You Start';
 
-  // badge shows zone, not session count
   const badge=document.getElementById('termBadge');
-  if(n===0){
-    badge.textContent='First session'; badge.className='term-badge';
+  if(!isTrain){
+    badge.textContent='hosting'; badge.className='term-badge';
+  } else if(n===0){
+    badge.textContent='first session'; badge.className='term-badge';
   } else {
     badge.textContent=zone; badge.className='term-badge rdy';
   }
 
-  // zone + signal rows: hidden on first session (no zone yet), visible after
-  const showZone=n>0&&isTrain;
+  const showZone=isTrain&&n>=5;
   document.getElementById('tZoneRow').style.display=showZone?'flex':'none';
   document.getElementById('tSignalRow').style.display=showZone?'flex':'none';
   if(showZone){
     document.getElementById('tZone').textContent=zone;
-    document.getElementById('tSignal').textContent=(c?.signal_text)||(ZONE_VOICE[zone]?.signal||'—');
+    document.getElementById('tSignal').textContent=(c?.signal_text)||(ZONE_POOLS[zone]?.signal||'—');
   }
 
-  let msgs, footer;
+  let lines, footer;
 
-  if(isTrain){
-    if(n===0){
-      // First session voice — warm, friend-like, not clinical
-      msgs=[
-        'Most people find their way here through someone else.',
-        'Someone who thought you\'d get it.',
-        '',
-        'Play the way you\'d play if no one was watching.',
-      ];
-      footer='the system is listening';
-    } else if(n<5){
-      // Early calibration — the system is forming a picture, quietly
-      msgs=[
-        'The system is still listening.',
-        'A few more sessions before it has anything worth saying.',
-        '',
-        ZONE_VOICE['CALIBRATION'].msgs[2],
-      ];
-      footer='calibration in progress';
-    } else {
-      // Zone-specific voice — gets more precise as sessions accumulate
-      const voice=ZONE_VOICE[zone]||ZONE_VOICE['CALIBRATION'];
-      msgs=c?.messages||voice.msgs.concat(['']);
-      footer='launch the recommendation or adjust below';
-    }
-  } else {
-    // HOST mode — social, not personal
-    msgs=[
-      'You\'re setting this up for others.',
-      'The system will read the room as people join.',
-      '',
-      'New players get something accessible. Known players get pushed.',
-    ];
+  if(!isTrain){
+    lines=HOST_MSGS[n%HOST_MSGS.length];
     footer='create the session, then share the link';
+  } else if(n===0){
+    lines=['Looks like this is your first game.','If you can adapt fast enough, you may win.','','Embrace the chaos.'];
+    footer='the system is listening';
+  } else if(n<5){
+    lines=STAGE2[n-1]||STAGE2[0];
+    footer='calibration in progress';
+  } else {
+    const pool=ZONE_POOLS[zone]||ZONE_POOLS['CALIBRATION'];
+    lines=pool.msgs[getZoneIndex(zone,n)]||pool.msgs[0];
+    footer='launch the recommendation or adjust below';
   }
 
   ['tMsg1','tMsg2','tMsg3','tMsg4'].forEach((id,i)=>{
-    document.getElementById(id).textContent=msgs[i]||'';
+    document.getElementById(id).textContent=lines[i]||'';
   });
   document.getElementById('tFooter').textContent=footer;
 
-  // aside: contextual, never a raw count
   const aside=document.getElementById('termAside');
-  if(n===0)       aside.textContent='no prior sessions';
-  else if(n<5)    aside.textContent='calibrating';
-  else if(isTrain) aside.textContent='zone · '+zone;
-  else             aside.textContent='hosting mode';
+  if(!isTrain)     aside.textContent='hosting mode';
+  else if(n===0)   aside.textContent='no prior sessions';
+  else if(n<5)     aside.textContent='calibrating';
+  else             aside.textContent='zone \xb7 '+zone;
 
   document.getElementById('btnLaunchRec').disabled=!(isTrain&&n>=5&&c);
 }
