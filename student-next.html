@@ -25,7 +25,7 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
 .admin-lnk:hover{color:#111}
 
 /* ── LAYOUT ── */
-.wrap{max-width:740px;margin:0 auto;padding:28px 24px 100px}
+.wrap{max-width:740px;margin:0 auto;padding:28px 24px 140px}
 
 /* ── MODE SELECT ── */
 .mode-pick{display:grid;grid-template-columns:1fr 1fr;gap:0;border:2px solid #000;margin-bottom:28px}
@@ -50,17 +50,16 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
 .tk{color:#2a2a2a;min-width:120px;flex-shrink:0}
 .tv{color:#e0e0e0}.tv.a{color:#d97706}.tv.g{color:#059669}.tv.w{color:#fff;font-weight:700}.tv.r{color:#dc2626}
 .thr{border:none;border-top:1px solid #111;margin:8px 0}
-.tmsg{color:#333;line-height:2;font-size:10px}
+.tmsg{color:#aaa;line-height:2;font-size:10px}
 .tcursor::after{content:'█';animation:blink 1.2s step-end infinite;color:#444}
 
-/* ── FIRST SESSION LETTER ── */
-/* White card in black terminal — contrast does the work, no ornament needed */
-.letter-wrap{padding:4px 0 8px}
-.letter{background:#f8f8f8;color:#111;padding:28px 28px 22px;position:relative;text-align:center}
-.letter::before{content:'';display:block;position:absolute;top:0;left:0;right:0;height:2px;background:#d97706}
-.letter-line{display:block;font-size:12px;line-height:1.9;color:#111}
-.letter-blank{display:block;height:.7em}
-.letter-footer{display:block;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#aaa;margin-top:14px;padding-top:10px;border-top:1px solid #eee}
+/* -- FIRST SESSION CARD (in-terminal grey rectangle) -- */
+.msg-card-wrap{padding:4px 0 8px}
+.msg-card{background:#303030;padding:26px 28px 22px;text-align:center;position:relative}
+.mc-line{display:block;font-size:11px;line-height:2;color:#ffffff}
+.mc-blank{display:block;height:.65em}
+.mc-close{position:absolute;top:8px;right:10px;background:none;border:none;color:#666;font-size:10px;cursor:pointer;padding:2px 4px;line-height:1}
+.mc-close:hover{color:#aaa}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 .term-foot{border-top:1px solid #111;padding:10px 18px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .btn-launch{background:#fff;color:#000;border:2px solid #fff;padding:6px 18px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
@@ -207,14 +206,14 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
       <div class="trow" id="tSignalRow"><span class="tk">signal</span><span class="tv g" id="tSignal">—</span></div>
       <div class="thr" id="tDivider"></div>
 
-      <!-- session 1: white letter card -->
-      <div class="letter-wrap" id="tLetter" style="display:none">
-        <div class="letter">
-          <span class="letter-line" id="lLine1"></span>
-          <span class="letter-blank" id="lBlank1"></span>
-          <span class="letter-line" id="lLine2"></span>
-          <span class="letter-line" id="lLine3"></span>
-          <span class="letter-footer" id="lFooter"></span>
+      <!-- session 1: grey card -->
+      <div class="msg-card-wrap" id="tLetter" style="display:none">
+        <div class="msg-card" id="msgCard">
+          <button class="mc-close" onclick="dismissLetterCard()" aria-label="Dismiss">&#x2715;</button>
+          <span class="mc-line" id="lLine1"></span>
+          <span class="mc-line" id="lLine2"></span>
+          <span class="mc-blank"></span>
+          <span class="mc-line" id="lLine3"></span>
         </div>
       </div>
 
@@ -230,7 +229,10 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
       <div style="margin-top:2px"><span class="tk" id="tFooter">ready when you are</span><span class="tcursor"></span></div>
     </div>
     <div class="term-foot">
-      <button class="btn-launch" id="btnLaunchRec" onclick="launchRecommended()" disabled>Launch Recommended</button>
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <button class="btn-launch" id="btnLaunchRec" onclick="launchRecommended()" disabled title="Requires 5 sessions — use DEV panel to test">Launch Recommended</button>
+        <span id="btnLaunchHint" style="font-size:8px;color:#555;letter-spacing:.5px"></span>
+      </div>
       <button class="btn-customize" onclick="scrollToConfig()">Customize ›</button>
       <span class="term-aside" id="termAside">—</span>
     </div>
@@ -659,18 +661,19 @@ function renderTerminal(mode){
     document.getElementById('tSignal').textContent=(c?.signal_text)||(ZONE_POOLS[zone]?.signal||'—');
   }
 
-  // session 1 — white letter card in the black terminal
-  const isLetter = isTrain && n===0;
-  document.getElementById('tLetter').style.display  = isLetter ? 'block' : 'none';
-  document.getElementById('tMsgs').style.display    = isLetter ? 'none'  : 'block';
-  document.getElementById('tDivider').style.display = isLetter ? 'none'  : 'block';
+  // session 1 - grey card inside terminal
+  const s1Dismissed = localStorage.getItem('cx_s1_dismissed')==='1';
+  const isFirstSession = isTrain && n===0 && !s1Dismissed;
+  document.getElementById('tLetter').style.display  = isFirstSession ? 'block' : 'none';
+  document.getElementById('tMsgs').style.display    = isFirstSession ? 'none'  : 'block';
+  document.getElementById('tDivider').style.display = isFirstSession ? 'none'  : 'block';
 
-  if(isLetter){
+  if(isFirstSession){
     document.getElementById('lLine1').textContent = 'Looks like this is your first game.';
     document.getElementById('lLine2').textContent = 'Through adaptability and flexible thinking, you may win.';
-    document.getElementById('lLine3').textContent = 'Embrace the chaos.';
-    document.getElementById('lFooter').textContent= 'the system is listening';
-    document.getElementById('tFooter').textContent= '';
+    document.getElementById('lLine3').textContent = 'Embrace the chaos!';
+    document.getElementById('tFooter').textContent = 'the system is listening';
+    document.getElementById('termAside').textContent = 'no prior sessions';
     return;
   }
 
@@ -699,7 +702,15 @@ function renderTerminal(mode){
   else if(n<5)     aside.textContent='calibrating';
   else             aside.textContent='zone \xb7 '+zone;
 
-  document.getElementById('btnLaunchRec').disabled=!(isTrain&&n>=5&&c);
+  var canLaunch=isTrain&&!!c&&(n>=5||(_devActive&&n>=1));
+  document.getElementById('btnLaunchRec').disabled=!canLaunch;
+  var _hint=document.getElementById('btnLaunchHint');
+  if(_hint){
+    if(_devActive&&n===0){_hint.textContent='set session \u2265 1 in DEV panel to enable';}
+    else if(!_devActive&&n>0&&n<5){_hint.textContent=(5-n)+' more session'+(5-n===1?'':'s')+' until recommendation ready';}
+    else if(!_devActive&&n===0){_hint.textContent='system needs data before recommending';}
+    else{_hint.textContent='';}
+  }
 }
 
 // ── MODE
@@ -753,7 +764,27 @@ function pickTeams(n,el){
 function scrollToConfig(){ document.getElementById('config-'+S.mode).scrollIntoView({behavior:'smooth',block:'start'}); }
 
 // ── LAUNCH RECOMMENDED (train mode)
+function devMockLaunch(mode){
+  var chars='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  var fakeId='';
+  for(var i=0;i<6;i++)fakeId+=chars[Math.floor(Math.random()*chars.length)];
+  var isTrain=mode==='train';
+  var launchBtn=isTrain?document.getElementById('btnLaunchRec'):document.getElementById('btn-'+mode);
+  var msgEl=document.getElementById(isTrain?'train-act-msg':'host-act-msg');
+  if(launchBtn){launchBtn.disabled=true;launchBtn.textContent='Launching…';}
+  if(msgEl)msgEl.textContent='';
+  setTimeout(function(){
+    showRoomState(isTrain?'train':'host',fakeId);
+    if(launchBtn){
+      launchBtn.textContent=isTrain?'Launched ✓':'Create Session';
+      if(isTrain)setTimeout(function(){launchBtn.disabled=false;launchBtn.textContent='Launch Recommended';},2500);
+      else launchBtn.disabled=false;
+    }
+    if(msgEl)msgEl.textContent='[DEV — no real room created — room ID is fake]';
+  },800);
+}
 async function launchRecommended(){
+  if(_devActive){devMockLaunch('train');return;}
   const wasRec=true; // record deviation signal if student customized
   const btn=document.getElementById('btnLaunchRec');
   btn.disabled=true; btn.textContent='Launching…';
@@ -772,6 +803,7 @@ async function launchRecommended(){
 
 // ── CREATE SESSION
 async function createSession(mode){
+  if(_devActive){devMockLaunch(mode);return;}
   const btnId=mode==='train'?'btn-train':'btn-host';
   const msgId=mode==='train'?'train-act-msg':'host-act-msg';
   const btn=document.getElementById(btnId);
@@ -967,5 +999,115 @@ function copyLink(mode){
 
 function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 </script>
+
+<!-- DEV PANEL -->
+<style>
+.dev-float-btn{position:fixed;bottom:10px;right:16px;background:#1a0d00;border:1px solid #5a3200;color:#d97706;font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:6px 13px;cursor:pointer;font-family:Arial,sans-serif;z-index:210;line-height:1}
+.dev-panel{position:fixed;bottom:44px;right:16px;width:186px;background:#0d0800;border:1px solid #2a1800;z-index:200;font-family:Arial,sans-serif;display:none;flex-direction:column;max-height:80vh;overflow-y:auto}
+.dev-panel.open{display:flex}
+.dev-sec{padding:8px 12px;border-bottom:1px solid #140c00}
+.dev-sec-lbl{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#5a3800;margin-bottom:6px}
+.dev-btns{display:flex;gap:3px;flex-wrap:wrap}
+.dev-btn{padding:3px 8px;font-size:9px;font-weight:700;background:transparent;border:1px solid #2a1800;color:#a06020;cursor:pointer;font-family:Arial,sans-serif}
+.dev-btn:hover,.dev-btn.on{background:#1a0d00;border-color:#d97706;color:#d97706}
+.dev-state-line{padding:6px 12px;font-size:9px;color:#5a3800;font-family:"Courier New",monospace}
+</style>
+<button class="dev-float-btn" id="devToggleBtn" onclick="toggleDevPanel()">DEV</button>
+<div class="dev-panel" id="devPanel">
+  <div class="dev-sec">
+    <div class="dev-sec-lbl">Scenario</div>
+    <div class="dev-btns">
+      <button class="dev-btn" onclick="devScenario('first')">First game</button>
+      <button class="dev-btn" onclick="devScenario('early')">Returning</button>
+      <button class="dev-btn" onclick="devScenario('zoned')">Echo zone</button>
+      <button class="dev-btn" onclick="devScenario('advanced')">Alpha zone</button>
+      <button class="dev-btn" onclick="devScenario('host')">Hosting</button>
+      <button class="dev-btn" onclick="devScenario('invitee')">New invitee</button>
+    </div>
+  </div>
+  <div class="dev-sec">
+    <div class="dev-sec-lbl" style="display:flex;justify-content:space-between">Session #<span id="devSessVal" style="color:#d97706;font-weight:700">0</span></div>
+    <input type="range" id="devSessSlider" min="0" max="60" value="0" oninput="devSetSessionSlider(this.value)" style="width:calc(100% - 24px);margin:6px 12px 2px;accent-color:#d97706;display:block">
+  </div>
+  <div class="dev-sec">
+    <div class="dev-sec-lbl">Zone</div>
+    <div class="dev-btns" id="devZoneBtns">
+      <button class="dev-btn on" onclick="devSetZone('CALIBRATION',this)">CAL</button>
+      <button class="dev-btn" onclick="devSetZone('ECHO',this)">ECHO</button>
+      <button class="dev-btn" onclick="devSetZone('RADICAL',this)">RAD</button>
+      <button class="dev-btn" onclick="devSetZone('ALPHA',this)">ALPHA</button>
+      <button class="dev-btn" onclick="devSetZone('SINGULARITY',this)">SIN</button>
+    </div>
+  </div>
+  <div class="dev-sec">
+    <div class="dev-sec-lbl">Mode</div>
+    <div class="dev-btns" id="devModeBtns">
+      <button class="dev-btn on" onclick="devSetMode('train',this)">TRAIN</button>
+      <button class="dev-btn" onclick="devSetMode('host',this)">HOST</button>
+    </div>
+  </div>
+  <div class="dev-state-line" id="devStateStr">s0 &middot; CAL &middot; train</div>
+</div>
+<script>
+function dismissLetterCard(){
+  localStorage.setItem('cx_s1_dismissed','1');
+  document.getElementById('tLetter').style.display='none';
+}
+var _devSession=0,_devZone="CALIBRATION",_devMode="train",_devActive=false;
+function toggleDevPanel(){
+  var p=document.getElementById("devPanel");
+  var b=document.getElementById("devToggleBtn");
+  var open=p.classList.toggle("open");
+  _devActive=open;
+  b.textContent=open?"DEV ▼":"DEV";
+  renderTerminal(S.mode);
+}
+function _devApply(){
+  S.sessionCount=_devSession;
+  S.compiler=_devSession===0?null:{zone:_devZone,signal_text:(typeof ZONE_POOLS!=="undefined"&&ZONE_POOLS[_devZone]?ZONE_POOLS[_devZone].signal:"--"),session_count:_devSession};
+  document.getElementById("devStateStr").textContent="s"+_devSession+" · "+_devZone.slice(0,3)+" · "+_devMode;
+}
+function devSetSessionSlider(v){
+  _devSession=+v;
+  document.getElementById('devSessVal').textContent=v;
+  _devApply();renderTerminal(_devMode);
+}
+function devSetSession(n,btn){
+  _devSession=n;
+  document.querySelectorAll("#devSessBtns .dev-btn").forEach(function(b){b.classList.remove("on");});
+  if(btn)btn.classList.add("on");
+  _devApply();renderTerminal(_devMode);
+}
+function devSetZone(z,btn){
+  _devZone=z;
+  document.querySelectorAll("#devZoneBtns .dev-btn").forEach(function(b){b.classList.remove("on");});
+  if(btn)btn.classList.add("on");
+  _devApply();renderTerminal(_devMode);
+}
+function devSetMode(m,btn){
+  _devMode=m;
+  document.querySelectorAll("#devModeBtns .dev-btn").forEach(function(b){b.classList.remove("on");});
+  if(btn)btn.classList.add("on");
+  _devApply();setMode(m);
+}
+var DEV_SCENARIOS={
+  first:{session:0,zone:"CALIBRATION",mode:"train"},
+  early:{session:2,zone:"CALIBRATION",mode:"train"},
+  zoned:{session:8,zone:"ECHO",mode:"train"},
+  advanced:{session:20,zone:"ALPHA",mode:"train"},
+  host:{session:5,zone:"ECHO",mode:"host"},
+  invitee:{session:0,zone:"CALIBRATION",mode:"host"}
+};
+function devScenario(key){
+  var sc=DEV_SCENARIOS[key];if(!sc)return;
+  _devSession=sc.session;_devZone=sc.zone;_devMode=sc.mode;
+  var sl=document.getElementById("devSessSlider");if(sl){sl.value=sc.session;}
+  var sv=document.getElementById("devSessVal");if(sv){sv.textContent=sc.session;}
+  document.querySelectorAll("#devZoneBtns .dev-btn").forEach(function(b){b.classList.remove("on");});
+  document.querySelectorAll("#devModeBtns .dev-btn").forEach(function(b){b.classList.remove("on");});
+  _devApply();setMode(sc.mode);
+}
+</script>
+
 </body>
 </html>

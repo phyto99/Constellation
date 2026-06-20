@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Constellation — Responsive Design Intelligence</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:12px;background:#0a0a0a;color:#e0e0e0;padding:40px 48px 80px;max-width:860px}
+h1{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#fff;margin-bottom:4px}
+.sub{font-size:9px;color:#2a2a2a;letter-spacing:1px;text-transform:uppercase;margin-bottom:40px}
+h2{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#059669;margin:32px 0 10px;padding-bottom:6px;border-bottom:1px solid #001a0d}
+h3{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555;margin:20px 0 8px}
+p{font-size:11px;color:#666;line-height:1.9;margin-bottom:10px}
+p strong{color:#aaa}
+.rule{font-size:10px;color:#e0e0e0;line-height:1.8;padding:10px 14px;border-left:2px solid #059669;margin:10px 0;background:#001208}
+.ex{background:#0a1a0f;border:1px solid #0d2a18;padding:14px 16px;margin:8px 0}
+.ex-ctx{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#059669;margin-bottom:6px;display:block}
+.ex-trigger{font-size:10px;color:#444;margin-bottom:4px;font-style:italic}
+.ex-response{font-size:11px;color:#aaa;line-height:1.9;border-top:1px solid #0d2a18;padding-top:8px;margin-top:8px}
+.ex-note{font-size:9px;color:#2a2a2a;margin-top:6px;font-style:italic}
+.col2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0}
+.contrast{padding:12px 14px;font-size:10px;line-height:1.8}
+.contrast .lbl{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;display:block}
+.bad{background:#0a0a0a;border:1px solid #1a1a1a}.bad .lbl{color:#333}
+.good{background:#001208;border:1px solid #0d2a18}.good .lbl{color:#059669}
+.code{font-family:'Courier New',monospace;font-size:10px;color:#059669;background:#001208;padding:12px 14px;border-left:2px solid #059669;margin:8px 0;line-height:1.9}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:10px}
+th{text-align:left;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#333;padding:6px 10px;border-bottom:1px solid #1a1a1a}
+td{padding:8px 10px;border-bottom:1px solid #0f0f0f;color:#555;line-height:1.7}
+td:first-child{color:#888}
+td:last-child{color:#444;font-style:italic}
+</style>
+</head>
+<body>
+
+<h1>Constellation — Responsive Design Intelligence</h1>
+<div class="sub">Philosophy doc · Principle + applications · The environment responds to what you actually are</div>
+
+<h2>The Principle</h2>
+<p>The inspect-element hint in the strategy game is the seed. A losing player is stuck. The system recognizes this and points toward a mode of thinking the player hadn't tried: look at how the game is built. That information is <em>genuinely useful</em>, not a collectible. Finding it doesn't earn a badge. It changes what happens next.</p>
+<p>The fast-pass link if you beat the hardest bot by an extraordinary margin: that's a real door opening because a real door should open. The game recognized something and responded with something real.</p>
+<div class="rule">The environment responds to what you actually are, not what you claim to be. Every response is real — a real door, a real note, a real door staying closed. Nothing is performed recognition. Nothing is a sticker.</div>
+<p>This is the opposite of gamification. Gamification gives everyone the same loop regardless of what they actually did. Responsive design intelligence is calibrated: the right thing, said to the right person, at the right moment. And what it says is always true.</p>
+
+<h2>The Ethical Constraint</h2>
+<p>The constraint that keeps this from becoming surveillance or manipulation:</p>
+<div class="rule">Every response is about what you did, never about what you are as a data point. "You stayed in the observation phase for three minutes" is about an action. "Based on your behavioral profile you exhibit trait cluster 7" is surveillance dressed as recognition. The first feels like being seen. The second feels like being catalogued.</div>
+<p>The response always opens something — a door, a perspective, a question. It never closes something or judges. The system is noticing in order to offer, not in order to assess.</p>
+
+<h2>Every Hidden Thing Must Be Better for the Finder</h2>
+<p>The inspect-element easter egg is the formalized version of this principle. The rule in one sentence:</p>
+<div class="rule">Every hidden thing must be better for the person who finds it. Not more content. Not a congratulation. Better — in the sense that their next action is improved by having found it.</div>
+<p>This filters out ARG-style puzzles (designed to waste time), achievement hunting (designed to inflate playtime), and creepy surveillance responses (designed to demonstrate that the system knows things). What remains is a small set of moments that feel like the environment noticed something real and decided to do something about it.</p>
+
+<h2>Applications in the Game</h2>
+
+<h3>The Strategy Game</h3>
+
+<div class="ex">
+  <span class="ex-ctx">Losing player · Inspect element</span>
+  <div class="ex-trigger">Trigger: player lost 3+ rounds by a significant margin</div>
+  <div class="ex-response">Loss screen note (the only UI pointer): "the game is more transparent than it appears. Look closer at how it's built."</div>
+  <div class="ex-note">The HTML source comment is already there. This line on the loss screen is the only hint. It's honest — the comment is actually useful. Finding it changes what happens next.</div>
+</div>
+
+<div class="code">
+&lt;!-- The chaos is designed. Most people feel it as a problem.<br>
+     The ones who stay notice it as information. --&gt;
+</div>
+
+<div class="ex">
+  <span class="ex-ctx">Extraordinary win · Fast-pass</span>
+  <div class="ex-trigger">Trigger: beat hardest bot by a margin no other player has achieved in this session configuration</div>
+  <div class="ex-response">A specific, quiet link appears in the end screen. Not announced. Not explained. The link is real — it connects to something that doesn't appear in any other flow.</div>
+  <div class="ex-note">The threshold matters. "Beat the hard bot" triggers a different message. "Beat the hard bot by an extraordinary margin in a way that indicates something specific about how you think" is the actual trigger. Ordinary excellence gets nothing extra. Extraordinary excellence gets a real door.</div>
+</div>
+
+<div class="ex">
+  <span class="ex-ctx">Loss with interesting moves</span>
+  <div class="ex-trigger">Trigger: player lost, but their move sequence showed a specific pattern — unusual opening, counter-intuitive sacrifice, long-game thinking</div>
+  <div class="ex-response">The loss screen says something different. Not "good effort." Something that names what actually happened: "You saw the long game. The bot didn't. That gap will close."</div>
+  <div class="ex-note">This requires the game to actually analyze move patterns, not just outcome. Era 6+ feature. But worth designing for now so the game architecture supports it.</div>
+</div>
+
+<h3>One-Time Toast Messages</h3>
+<table>
+  <tr><th>Trigger</th><th>Message</th><th>Frequency</th></tr>
+  <tr><td>First value-3 claim</td><td>"Good eye."</td><td>Once, ever</td></tr>
+  <tr><td>VOID takes your cell for the first time</td><td>"The board reclaims what it gives."</td><td>Once, ever</td></tr>
+  <tr><td>Leading at the midpoint (round 4 of 7)</td><td>"You're ahead. The chaos has more moves left."</td><td>Once per session</td></tr>
+  <tr><td>Player claims 5 cells in one round (dominant)</td><td>Nothing — the board state says it</td><td>—</td></tr>
+  <tr><td>Player about to lose with 1 cell remaining</td><td>"One is enough to turn it."</td><td>Once, ever</td></tr>
+</table>
+<p class="note" style="font-size:9px;color:#333;margin-top:6px">These messages must fire once and never repeat. The moment the student has seen them, they are no longer available. Their scarcity is not artificial — it is what gives them meaning.</p>
+
+<h2>Applications in the Onboarding Flow</h2>
+
+<div class="ex">
+  <span class="ex-ctx">Multiple games without stopping · Post-game popup variation</span>
+  <div class="ex-trigger">Trigger: student played 3+ sessions without visiting the post-game popup</div>
+  <div class="ex-response">Not "you played three games" — the system doesn't count out loud. Instead: "You've been here a while. There's a version of this that goes considerably deeper." The absorption is acknowledged without explaining it.</div>
+</div>
+
+<div class="ex">
+  <span class="ex-ctx">Bad first game · Immediate second game</span>
+  <div class="ex-trigger">Trigger: lost first game badly, started second game within 30 seconds</div>
+  <div class="ex-response">The system sees this. That's a more interesting signal than winning. The post-game message (if it appears at all — they might be back in a game before it fires): "The person who brought you here lost their first game too. They came back. That's why they're still here."</div>
+</div>
+
+<h2>Applications in Training Sessions</h2>
+
+<div class="ex">
+  <span class="ex-ctx">Observation phase · Extended stay</span>
+  <div class="ex-trigger">Trigger: student sits in the observation phase of a detective exercise until the last few seconds — genuinely looking, not just waiting</div>
+  <div class="ex-response">The transition to interpretation is slightly different. Not a reward. A note: "You stayed longer than almost anyone does. That's the habit."</div>
+</div>
+
+<div class="ex">
+  <span class="ex-ctx">Novel absence detection</span>
+  <div class="ex-trigger">Trigger: student identifies something absent from a scene that no other member has flagged before</div>
+  <div class="ex-response">Their observation carries a quiet visual distinction in the community view. Not a badge — a subtle mark that signals: this one found something new. Visible to others in the thread, not announced to the student directly.</div>
+</div>
+
+<div class="ex">
+  <span class="ex-ctx">Steelman stronger than original</span>
+  <div class="ex-trigger">Trigger: student's steelman of a position is rated by multiple evaluators as stronger than the original argument made by its proponents</div>
+  <div class="ex-response">The evaluation comes back with that specific note: "You argued this better than its proponents do. That's a specific kind of intelligence."</div>
+</div>
+
+<h2>Applications at Graduation</h2>
+
+<div class="ex">
+  <span class="ex-ctx">Contributions feeding Lila rather than drawing from it</span>
+  <div class="ex-trigger">Trigger: system detects that a student's contributions consistently originate from their external life rather than exercises — the quality has shifted, they are generating rather than receiving</div>
+  <div class="ex-response">A moment where they are told. Not a ceremony. One sentence that says what is true: "The work you're bringing back is better than anything we could give you. You know how to find us if you need us."</div>
+</div>
+
+<h2>What This Is Not</h2>
+
+<div class="col2">
+  <div class="contrast bad">
+    <span class="lbl">Not this — gamification</span>
+    Everyone gets a "First Win!" badge.<br>
+    Playing 10 games unlocks a new avatar frame.<br>
+    "You've completed 80% of your daily goal!"
+  </div>
+  <div class="contrast good">
+    <span class="lbl">This — responsive design intelligence</span>
+    The player who reads source code finds something worth reading.<br>
+    The player who beats the hardest bot extraordinarily well finds a real door.<br>
+    The player who loses badly and returns immediately is seen.
+  </div>
+</div>
+
+<div class="col2" style="margin-top:6px">
+  <div class="contrast bad">
+    <span class="lbl">Not this — ARG / invasive</span>
+    Hidden messages to solve across 15 platforms.<br>
+    The system "knows" you checked your email three times.<br>
+    Cryptic notifications designed to manufacture anxiety.
+  </div>
+  <div class="contrast good">
+    <span class="lbl">This — conscious design</span>
+    One comment in the source. One real link. One sentence that names what you actually did.<br>
+    The system notices in order to offer, not to demonstrate that it's watching.<br>
+    Every moment of recognition is finite and real.
+  </div>
+</div>
+
+<h2>The Design Filter</h2>
+<p>Before building any "responsive" moment, run it through these three questions:</p>
+<p><strong>1. Is it true?</strong> The message must describe what actually happened, not what we're inferring or guessing. "You stayed in the observation phase for three minutes" is true. "You seem like the kind of person who..." is inference.</p>
+<p><strong>2. Does it open something?</strong> A door, a perspective, a question. Never closes, never judges. A door that opens based on what you did is responsive design intelligence. A door that closes is a punishment system.</p>
+<p><strong>3. Is it better for the person who finds it?</strong> Not more content. Not more points. Better — their next move is improved, their next perception is sharpened, a real opportunity becomes available.</p>
+
+<h2>Era Notes</h2>
+<p>Most of the game-level applications (move pattern analysis, extraordinary margin detection) are Era 6+ because they require the game to emit structured behavioral data that the Ledger can then pattern-match. The onboarding applications (repeated play detection, time-in-phase tracking) are buildable now.</p>
+<p>The inspect-element comment is buildable in the first version. It costs one line of HTML. It is the most important thing to ship early because it sets the register for everything that follows.</p>
+
+</body>
+</html>

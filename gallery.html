@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Constellation — Gallery</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0a;color:#ccc;font-family:Arial,sans-serif;font-size:11px}
+header{padding:12px 20px;border-bottom:1px solid #1a1a1a;display:flex;align-items:baseline;gap:14px;position:sticky;top:0;background:#0a0a0a;z-index:100}
+.logo{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#555}
+.logo span{color:#fff}
+#filter{background:#111;border:1px solid #222;color:#ccc;padding:4px 10px;font-size:9px;font-family:Arial;outline:none;width:180px}
+#filter::placeholder{color:#444}
+.count{font-size:9px;color:#333;margin-left:auto}
+.open-all{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #222;color:#444;padding:3px 9px;cursor:pointer;background:transparent}
+.open-all:hover{border-color:#555;color:#888}
+section{padding:14px 20px 4px}
+.sec-lbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#333;margin-bottom:10px;border-bottom:1px solid #111;padding-bottom:4px}
+.grid{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px}
+.card{position:relative;cursor:pointer;flex-shrink:0}
+.card:hover .frame-shell{border-color:#555}
+.card:hover .card-lbl{color:#fff}
+.frame-shell{width:280px;height:200px;overflow:hidden;border:1px solid #1e1e1e;background:#111;position:relative;transition:border-color .15s}
+.frame-shell iframe{width:1120px;height:800px;transform:scale(0.25);transform-origin:0 0;pointer-events:none;border:none;background:#fff}
+.card-lbl{padding:5px 6px 0;font-size:9px;font-weight:700;letter-spacing:.5px;color:#666;transition:color .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
+.card-sub{padding:1px 6px 6px;font-size:8px;color:#333}
+.overlay{position:absolute;top:0;left:0;width:280px;height:200px}
+.badge{display:inline-block;font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #222;color:#444;padding:1px 5px;margin-right:4px;vertical-align:2px}
+.badge.live{border-color:#15803d;color:#15803d}
+.badge.phi{border-color:#2563eb;color:#2563eb}
+.badge.new{border-color:#d97706;color:#d97706}
+.deferred .frame-shell{cursor:default}
+.deferred-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#0d0d0d}
+.deferred-placeholder span{font-size:8px;color:#333;letter-spacing:.5px}
+.load-btn{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #222;color:#555;padding:4px 12px;cursor:pointer;background:transparent;transition:border-color .15s,color .15s}
+.load-btn:hover{border-color:#888;color:#ccc}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="logo"><span>Constellation</span> Gallery</span>
+  <input id="filter" type="text" placeholder="filter by name…" oninput="filterCards(this.value)">
+  <span class="count" id="count"></span>
+  <button class="open-all" onclick="openAll()">Open All ↗</button>
+</header>
+
+<div id="gallery-root"></div>
+
+<script>
+const HEAVY = new Set(['/golad/GALLERY','/centauri','/centauri-mapmaker','/geobridge','/c4d']);
+
+const GROUPS = [
+  {
+    label: 'Live Panels',
+    items: [
+      { url:'/student-next',    name:'student-next',    sub:'student panel · terminal · dev mode', badge:'live' },
+      { url:'/admin',           name:'admin',           sub:'game operator · room management', badge:'live' },
+      { url:'/student',         name:'student (v1)',    sub:'previous student panel', badge:'live' },
+      { url:'/student-dossier', name:'student-dossier', sub:'peer relationship view', badge:'live' },
+    ]
+  },
+  {
+    label: 'Games & Maps',
+    items: [
+      { url:'/golad/GALLERY',                            name:'golad',                  sub:'GOLAD game · multiplayer', badge:'live' },
+      { url:'/constellation-mapmaker/mapmaker.html',     name:'constellation-mapmaker', sub:'constellation map editor · web export', badge:'new' },
+      { url:'/constellation-mapmaker/mapmaker2.html',    name:'mapmaker2',              sub:'map editor v2', badge:'new' },
+      { url:'/constellation-mapmaker/constellation-mapmaker.html', name:'constellation-mapmaker (main)', sub:'primary mapmaker page', badge:'new' },
+      { url:'/golad-mapmaker.html',                        name:'golad-mapmaker',         sub:'GOLAD map editor', badge:'new' },
+      { url:'/centauri',                                 name:'centauri',               sub:'Centauri Godot web game', badge:'live' },
+      { url:'/centauri-mapmaker',                        name:'centauri-mapmaker',      sub:'Centauri map editor', badge:'live' },
+      { url:'/geobridge',                                name:'geobridge',              sub:'3D globe bridge tool', badge:'live' },
+      { url:'/c4d',                                      name:'c4d',                    sub:'c4d game', badge:'live' },
+    ]
+  },
+  {
+    label: 'Terminal & Voice',
+    items: [
+      { url:'/philosophy/terminal-compiler.html', name:'terminal-compiler', sub:'full compiler sandbox · per-mode state · dual terminal view', badge:'phi' },
+      { url:'/philosophy/terminal-voice.html',    name:'terminal-voice',    sub:'voice register system', badge:'phi' },
+      { url:'/philosophy/terminal-voice-meta.html', name:'terminal-voice-meta', sub:'voice meta-system', badge:'phi' },
+      { url:'/philosophy/adaptive-voice.html',    name:'adaptive-voice',    sub:'adaptive register design', badge:'phi' },
+      { url:'/philosophy/loading-text.html',      name:'loading-text',      sub:'loading screen dialogue', badge:'phi' },
+      { url:'/philosophy/induction.html',         name:'induction',         sub:'session 1 induction flow', badge:'phi' },
+    ]
+  },
+  {
+    label: 'Core Philosophy',
+    items: [
+      { url:'/philosophy/SYNTHESIS.html',         name:'SYNTHESIS',          sub:'complete written philosophy · 95% accurate', badge:'phi' },
+      { url:'/philosophy/system-complete.html',   name:'system-complete',    sub:'18-dimension state · argmax E[KL] · message library', badge:'phi' },
+      { url:'/philosophy/perfect-system.html',    name:'perfect-system',     sub:'minimum sufficient state', badge:'phi' },
+      { url:'/philosophy/opacity-model.html',     name:'opacity-model',      sub:'what to hide and why · INVERSION doctrine', badge:'phi' },
+      { url:'/philosophy/entropy-architecture.html', name:'entropy-architecture', sub:'information architecture', badge:'phi' },
+      { url:'/philosophy/bayesian.html',          name:'bayesian',           sub:'Kalman filter · I(d) formula · live demo', badge:'phi' },
+      { url:'/philosophy/evidence-engine.html',   name:'evidence-engine',    sub:'8 channels · corroboration · conundrum protocol', badge:'phi' },
+    ]
+  },
+  {
+    label: 'Architecture',
+    items: [
+      { url:'/philosophy/layer-0-ledger.html',         name:'layer-0-ledger',          sub:'append-only · 4 permanence axioms · config vector', badge:'phi' },
+      { url:'/philosophy/layer-1-approximation.html',  name:'layer-1-approximation',   sub:'Elo · velocity · ZPD · calibration scatter', badge:'phi' },
+      { url:'/philosophy/configuration-architecture.html', name:'configuration-architecture', sub:'parameter design', badge:'phi' },
+      { url:'/philosophy/design-meta-system.html',     name:'design-meta-system',      sub:'meta-system design', badge:'phi' },
+      { url:'/philosophy/responsive-design-intelligence.html', name:'responsive-design-intelligence', sub:'responsive intelligence design', badge:'phi' },
+    ]
+  },
+  {
+    label: 'Student System',
+    items: [
+      { url:'/philosophy/student-design.html',       name:'student-design',       sub:'MERGED · terminal language · unlock tiers · access matrix', badge:'phi' },
+      { url:'/philosophy/student-panel.html',        name:'student-panel',        sub:'Era 11 · two-act design · what is hidden and why', badge:'new' },
+      { url:'/philosophy/alpha-system.html',         name:'alpha-system',         sub:'zone pills · alpha track · detective framework', badge:'phi' },
+      { url:'/philosophy/student-observatory.html',  name:'student-observatory',  sub:'facilitator prototype · 4 simulated students · dual terminal', badge:'phi' },
+      { url:'/philosophy/onboarding-philosophy.html',name:'onboarding-philosophy',sub:'onboarding design', badge:'phi' },
+      { url:'/philosophy/_student-profile-beta.html',name:'_student-profile-beta',sub:'beta student profile', badge:'phi' },
+    ]
+  },
+  {
+    label: 'Observatory & Data',
+    items: [
+      { url:'/philosophy/observatory.html',   name:'observatory',   sub:'live ledger reader · real API · currently active', badge:'live' },
+      { url:'/philosophy/connections.html',   name:'connections',   sub:'system connections map', badge:'phi' },
+    ]
+  },
+  {
+    label: 'System Maps & Multi-game',
+    items: [
+      { url:'/philosophy/system-map.html',           name:'system-map',           sub:'full system map', badge:'phi' },
+      { url:'/philosophy/system-viz.html',           name:'system-viz',           sub:'system visualization', badge:'phi' },
+      { url:'/philosophy/development-diagram.html',  name:'development-diagram',  sub:'development stages diagram', badge:'phi' },
+      { url:'/philosophy/multi-game-architecture.html', name:'multi-game-architecture', sub:'multi-game framework', badge:'phi' },
+      { url:'/philosophy/map-system.html',           name:'map-system',           sub:'map design system', badge:'phi' },
+      { url:'/philosophy/challenge-meta.html',       name:'challenge-meta',       sub:'challenge design meta-system', badge:'phi' },
+      { url:'/philosophy/navigator.html',            name:'navigator',            sub:'system navigator', badge:'phi' },
+    ]
+  },
+  {
+    label: 'Strategy & Legal',
+    items: [
+      { url:'/philosophy/roadmap.html',           name:'roadmap',           sub:'development roadmap', badge:'phi' },
+      { url:'/philosophy/strategy.html',          name:'strategy',          sub:'system strategy', badge:'phi' },
+      { url:'/philosophy/identity-auth.html',     name:'identity-auth',     sub:'identity and authentication architecture', badge:'phi' },
+      { url:'/philosophy/legal-architecture.html',name:'legal-architecture',sub:'legal framework design', badge:'phi' },
+      { url:'/philosophy/legal-encounters.html',  name:'legal-encounters',  sub:'legal encounter flows', badge:'phi' },
+    ]
+  },
+];
+
+let allCards = [];
+
+function loadHeavy(url, shell) {
+  shell.innerHTML = '<iframe src="' + url + '" loading="lazy" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>';
+}
+
+function build() {
+  const root = document.getElementById('gallery-root');
+  root.innerHTML = '';
+  allCards = [];
+
+  GROUPS.forEach(g => {
+    const sec = document.createElement('section');
+    sec.innerHTML = '<div class="sec-lbl">' + g.label + '</div>';
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+
+    g.items.forEach(item => {
+      const heavy = HEAVY.has(item.url);
+      const card = document.createElement('div');
+      card.className = 'card' + (heavy ? ' deferred' : '');
+      card.dataset.name = item.name.toLowerCase();
+      card.dataset.url = item.url;
+
+      const frameInner = heavy
+        ? '<div class="deferred-placeholder"><span>heavy — not auto-loaded</span><button class="load-btn" onclick="event.stopPropagation();loadHeavy(\'' + item.url + '\',this.closest(\'.frame-shell\'))">Load preview</button></div>'
+        : '<iframe src="' + item.url + '" loading="lazy" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>';
+
+      card.innerHTML =
+        '<div class="frame-shell">' + frameInner + '</div>' +
+        '<div class="overlay" onclick="window.open(\'' + item.url + '\',\'_blank\')"></div>' +
+        '<div class="card-lbl"><span class="badge ' + item.badge + '">' + item.badge + '</span>' + item.name + '</div>' +
+        '<div class="card-sub">' + item.sub + '</div>';
+
+      grid.appendChild(card);
+      allCards.push(card);
+    });
+
+    sec.appendChild(grid);
+    root.appendChild(sec);
+  });
+
+  updateCount();
+}
+
+function filterCards(q) {
+  const term = q.toLowerCase().trim();
+  allCards.forEach(card => {
+    const match = !term || card.dataset.name.includes(term);
+    card.style.display = match ? '' : 'none';
+  });
+  updateCount();
+}
+
+function updateCount() {
+  const visible = allCards.filter(c => c.style.display !== 'none').length;
+  document.getElementById('count').textContent = visible + ' of ' + allCards.length + ' files';
+}
+
+function openAll() {
+  const visible = allCards.filter(c => c.style.display !== 'none');
+  if (visible.length > 10) {
+    if (!confirm('Open ' + visible.length + ' tabs?')) return;
+  }
+  visible.forEach(c => window.open(c.dataset.url, '_blank'));
+}
+
+build();
+</script>
+</body>
+</html>

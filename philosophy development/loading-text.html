@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Constellation — Loading Text Philosophy</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:12px;background:#0a0a0a;color:#e0e0e0;padding:40px 48px 80px;max-width:860px}
+h1{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#fff;margin-bottom:4px}
+.sub{font-size:9px;color:#2a2a2a;letter-spacing:1px;text-transform:uppercase;margin-bottom:40px}
+h2{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#d97706;margin:32px 0 10px;padding-bottom:6px;border-bottom:1px solid #1a1000}
+h3{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555;margin:20px 0 8px}
+p{font-size:11px;color:#666;line-height:1.9;margin-bottom:10px}
+p strong{color:#aaa}
+.rule{font-size:10px;color:#e0e0e0;line-height:1.8;padding:10px 14px;border-left:2px solid #d97706;margin:10px 0;background:#0f0d00}
+.msg{background:#111;border:1px solid #1a1a1a;padding:10px 14px;margin-bottom:6px;font-size:10px;color:#888;line-height:1.9;font-family:Arial,sans-serif}
+.msg .tag{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;display:inline-block;margin-bottom:4px}
+.tag.ctx{color:#d97706}
+.tag.gen{color:#059669}
+.tag.zone{color:#2563eb}
+.tag.err{color:#7c3aed}
+.col2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:10px 0}
+.ant{border-left:2px solid #333;padding:8px 12px;font-size:10px;color:#444;line-height:1.8}
+.ant .label{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#333;margin-bottom:4px;display:block}
+.good{border-left-color:#059669}.good .label{color:#059669}
+.bad{border-left-color:#444}.bad .label{color:#444}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:10px}
+th{text-align:left;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#333;padding:6px 10px;border-bottom:1px solid #1a1a1a}
+td{padding:8px 10px;border-bottom:1px solid #0f0f0f;color:#666;line-height:1.7}
+td:first-child{color:#aaa}
+</style>
+</head>
+<body>
+
+<h1>Constellation — Loading Text</h1>
+<div class="sub">Philosophy doc · Context, pools, generation rules · Era: background design, implement when loading states are built</div>
+
+<h2>What Loading Text Is</h2>
+<p>Loading text appears while the system fetches data, creates a room, connects players, or transitions between states. These are the moments when students have nothing to do but wait. They are short windows — 0.5s to 3s typically — but they are also moments of lowered resistance. The student is not actively doing anything, so the system can speak without interrupting.</p>
+<p>Loading text is <strong>not instructional</strong>. It is not a progress bar with words. It is not a tip. It is the same voice as the terminal — brief, philosophically accurate, never explaining itself — dropped into a moment of ambient attention.</p>
+<div class="rule">Loading text = terminal voice at ambient volume. Same register. Shorter. No context expected.</div>
+
+<h2>What Makes Loading Text Different from Terminal Voice</h2>
+<table>
+<tr><th>Dimension</th><th>Terminal Voice</th><th>Loading Text</th></tr>
+<tr><td>Length</td><td>3–4 lines</td><td>1–2 lines</td></tr>
+<tr><td>Context</td><td>Compiler has zone, session count, signal</td><td>System may have nothing — just an action in progress</td></tr>
+<tr><td>Purpose</td><td>Deliver session-specific signal</td><td>Hold attention without demanding it</td></tr>
+<tr><td>Tone</td><td>Addictive mysterious friend</td><td>Same voice, reduced to essence</td></tr>
+<tr><td>Repetition</td><td>Cycling pools per zone</td><td>Random pull — load events are random, not sequential</td></tr>
+<tr><td>Self-reference</td><td>Can reference the session ahead</td><td>Never reference what's loading — that breaks the spell</td></tr>
+</table>
+
+<h2>Context-Keyed Pools</h2>
+<p>Loading text is keyed to the <strong>action being performed</strong>, not the student's zone. Zone-specific loading text is possible later (Era 12+) but creates coupling complexity — the system needs zone data during the load event itself. Phase 1 uses action-keyed pools only.</p>
+
+<h3>Joining / Connecting</h3>
+<p class="msg" style="color:#555">Trigger: student hits join, room is loading</p>
+<div class="msg"><span class="tag gen">GEN</span><br>The chaos is the same for everyone who enters.</div>
+<div class="msg"><span class="tag gen">GEN</span><br>The system reads the room.<br>Give it a moment.</div>
+<div class="msg"><span class="tag gen">GEN</span><br>Adaptability starts before the round does.</div>
+<div class="msg"><span class="tag gen">GEN</span><br>Something is being assembled.</div>
+<div class="msg"><span class="tag gen">GEN</span><br>The system is finding its footing.</div>
+
+<h3>Creating a Room (Host)</h3>
+<p class="msg" style="color:#555">Trigger: host clicks Create, room is being registered</p>
+<div class="msg"><span class="tag gen">GEN</span><br>Building the room.</div>
+<div class="msg"><span class="tag gen">GEN</span><br>A space is being constructed.<br>It will take a few seconds.</div>
+<div class="msg"><span class="tag gen">GEN</span><br>The system is preparing something.<br>Share the link when it's ready.</div>
+<div class="msg"><span class="tag gen">GEN</span><br>One moment.<br>The configuration is being set.</div>
+
+<h3>Starting a Session (Both Players Ready)</h3>
+<p class="msg" style="color:#555">Trigger: all players in lobby, session is about to launch</p>
+<div class="msg"><span class="tag gen">GEN</span><br>The system has what it needs.<br>Starting.</div>
+<div class="msg"><span class="tag gen">GEN</span><br>Everyone is here.<br>Go.</div>
+<div class="msg"><span class="tag gen">GEN</span><br>Embrace the chaos.</div>
+<div class="msg"><span class="tag gen">GEN</span><br>The room is ready.<br>The rest is up to you.</div>
+
+<h3>Compiler Thinking (After Session, Before Result)</h3>
+<p class="msg" style="color:#555">Trigger: session ends, compiler is processing signal</p>
+<div class="msg"><span class="tag ctx">CTX</span><br>The system is processing what just happened.</div>
+<div class="msg"><span class="tag ctx">CTX</span><br>Calculating.</div>
+<div class="msg"><span class="tag ctx">CTX</span><br>The session is being read.</div>
+<div class="msg"><span class="tag ctx">CTX</span><br>A few seconds.<br>The system needs to look at that.</div>
+<div class="msg"><span class="tag ctx">CTX</span><br>What just happened is being written to the ledger.</div>
+
+<h3>Reconnecting (Connection Drop / Timeout)</h3>
+<p class="msg" style="color:#555">Trigger: WebSocket lost, auto-reconnect in progress</p>
+<div class="msg"><span class="tag err">RECN</span><br>Connection interrupted.<br>Reconnecting.</div>
+<div class="msg"><span class="tag err">RECN</span><br>The system lost contact for a moment.<br>It's finding its way back.</div>
+<div class="msg"><span class="tag err">RECN</span><br>Brief interruption.<br>Hold on.</div>
+
+<h2>Anti-Patterns</h2>
+<div class="col2">
+  <div class="ant bad"><span class="label">Wrong</span>Loading your game data...</div>
+  <div class="ant good"><span class="label">Right</span>The system is finding its footing.</div>
+</div>
+<div class="col2">
+  <div class="ant bad"><span class="label">Wrong</span>Please wait while we connect you to the server</div>
+  <div class="ant good"><span class="label">Right</span>Something is being assembled.</div>
+</div>
+<div class="col2">
+  <div class="ant bad"><span class="label">Wrong</span>Fun tip: Try capturing the center territories first!</div>
+  <div class="ant good"><span class="label">Right</span>Adaptability starts before the round does.</div>
+</div>
+<div class="col2">
+  <div class="ant bad"><span class="label">Wrong"</span>You're almost in! Just a few more seconds...</div>
+  <div class="ant good"><span class="label">Right</span>Give it a moment.</div>
+</div>
+
+<p>The anti-pattern in all bad examples is: <strong>explaining the wait</strong>. The system never explains the wait. It is ambient, not apologetic.</p>
+
+<h2>Phrase Origin — From Philosophy</h2>
+<p>Several loading text candidates derive directly from the core philosophy documents:</p>
+<div class="msg"><span class="tag ctx">From terminal-voice.html</span><br>"The chaos is designed." — usable as-is for session start loading</div>
+<div class="msg"><span class="tag ctx">From induction.html</span><br>"Embrace the chaos!" — exact session-start launch phrase, also usable as final loading text before game begins</div>
+<div class="msg"><span class="tag ctx">From terminal-voice-meta.html</span><br>"Adaptability starts before the round does." — derived from the adaptability theme woven through all messages</div>
+<div class="msg"><span class="tag ctx">From induction.html</span><br>"The system is listening." — already used in terminal footer for session 1; also works as compiler-thinking loading text</div>
+
+<h2>Implementation Notes</h2>
+<div class="rule">Never display the same loading text twice in one session. Randomise without replacement within the pool, then reshuffle. The student shouldn't notice the system repeating itself.</div>
+<p>Loading text should appear after a <strong>150ms delay</strong> — do not flash text for loads under 150ms. This prevents the text from appearing as visual noise on fast connections.</p>
+<p>If a load takes over 3s, cycle to a second message. If it takes over 8s, switch to the reconnect pool regardless of original context — something is wrong and the voice should match that.</p>
+<p>Text should disappear without fanfare — the transition into the loaded state is the signal that loading is done. No "Done!" or "Connected!" moments.</p>
+
+<h2>Era 12+ Extensions</h2>
+<p>Once zone data is available at load time, loading text can be keyed to zone × action. For example:</p>
+<div class="msg"><span class="tag zone">RADICAL · Joining</span><br>Something different was found for you.<br>Give it a moment to load.</div>
+<div class="msg"><span class="tag zone">ECHO · Session Start</span><br>Back in familiar territory.<br>Let's see what you do with it.</div>
+<div class="msg"><span class="tag zone">ALPHA · Compiler Thinking</span><br>The system is processing something it hasn't seen before.<br>This will take a moment.</div>
+<p>These are Era 12+ because they require the compiler to return zone data before the load event completes — a sequencing challenge not worth solving in early builds. Seeds are written here for when that constraint lifts.</p>
+
+</body>
+</html>

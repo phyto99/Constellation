@@ -3288,7 +3288,15 @@ app.get('/', setCOEPHeaders, (_req, res) => res.sendFile(path.join(__dirname, 'a
 app.get('/other', (_req, res) => res.sendFile(path.join(__dirname, 'other.html')));
 app.get('/admin', setCOEPHeaders, (_req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 app.get('/student',      (_req, res) => res.sendFile(path.join(__dirname, 'student-panel.html')));
-app.get('/student-next', (_req, res) => res.sendFile(path.join(__dirname, 'student-next.html')));
+app.get('/student-next',    (_req, res) => res.sendFile(path.join(__dirname, 'student-next.html')));
+app.get('/student-dossier', (_req, res) => res.sendFile(path.join(__dirname, 'student-dossier.html')));
+app.get('/bot-creator',    (_req, res) => res.sendFile(path.join(__dirname, 'bot-creator.html')));
+app.get('/gallery',        (_req, res) => res.sendFile(path.join(__dirname, 'gallery.html')));
+app.use('/philosophy', express.static(path.join(__dirname, 'philosophy development')));
+app.use('/constellation-mapmaker', express.static(path.join(__dirname, 'constellation-mapmaker')));
+app.get('/golad-mapmaker',     (_req, res) => res.sendFile(path.join(__dirname, 'golad-mapmaker.html')));
+app.get('/golad-mapmaker.html', (_req, res) => res.sendFile(path.join(__dirname, 'golad-mapmaker.html')));
+app.get('/ithkuil-numerals', (_req, res) => res.sendFile(path.join(__dirname, 'ithkuil-numerals.html')));
 // color.html is iframed inside admin.html which has COEP:require-corp —
 // the iframe document must also carry COEP or the browser blocks it as cross-origin
 app.get('/color.html', setCOEPHeaders, (_req, res) => res.sendFile(path.join(__dirname, 'color.html')));

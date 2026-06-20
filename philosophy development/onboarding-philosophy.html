@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Constellation — Onboarding Philosophy</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:12px;background:#0a0a0a;color:#e0e0e0;padding:40px 48px 80px;max-width:860px}
+h1{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#fff;margin-bottom:4px}
+.sub{font-size:9px;color:#2a2a2a;letter-spacing:1px;text-transform:uppercase;margin-bottom:40px}
+h2{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#d97706;margin:32px 0 10px;padding-bottom:6px;border-bottom:1px solid #1a1000}
+h3{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555;margin:20px 0 8px}
+p{font-size:11px;color:#666;line-height:1.9;margin-bottom:10px}
+p strong{color:#aaa}
+.rule{font-size:10px;color:#e0e0e0;line-height:1.8;padding:10px 14px;border-left:2px solid #d97706;margin:10px 0;background:#0f0d00}
+.copy{background:#111;border:1px solid #1a1a1a;padding:16px 18px;margin:8px 0;font-size:11px;color:#aaa;line-height:2;font-family:Arial,sans-serif;font-style:italic}
+.copy .label{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#333;display:block;margin-bottom:8px;font-style:normal}
+.copy .label.best{color:#d97706}
+.col2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:10px 0}
+.block{background:#0f0f0f;border:1px solid #1a1a1a;padding:14px 16px}
+.block-lbl{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#333;margin-bottom:8px;display:block}
+.seq{counter-reset:step}
+.step{counter-increment:step;display:flex;gap:16px;margin-bottom:14px;font-size:11px;color:#555;line-height:1.8}
+.step::before{content:counter(step);font-size:9px;font-weight:700;font-family:'Courier New',monospace;color:#2a2a2a;min-width:24px;margin-top:1px}
+.step strong{color:#888}
+.note{font-size:10px;color:#333;padding:8px 12px;border:1px solid #1a1a1a;margin:8px 0;line-height:1.7}
+</style>
+</head>
+<body>
+
+<h1>Constellation — Onboarding Philosophy</h1>
+<div class="sub">Philosophy doc · First encounter design · First game popup · Friend-introduction context · Post-game moment</div>
+
+<h2>The Context That Changes Everything</h2>
+<p>Most platforms assume the new user came to them voluntarily — they searched, they clicked, they signed up. The onboarding pattern reflects this: here is who we are, here is what you get, here is your tutorial.</p>
+<p>Constellation's new user did not do any of this. <strong>They were invited by someone who knows them.</strong> A friend — one who thought enough of this person to share something they cared about — said: try this cryptic strategy game. The new student got absorbed before they understood what was happening.</p>
+<p>That context transforms the entire first encounter. The warmth is not Constellation's to manufacture. It is already there, borrowed from the relationship that brought them in. The system's job is not to pitch them on Lila. The system's job is to be worthy of the referral.</p>
+
+<div class="rule">The first message is not marketing. It is the friend leaning over mid-game and saying: yeah, there's more of this. Don't break the register.</div>
+
+<h2>What the Pre-Game Popup Needs to Do</h2>
+<p>The popup appears on the student's first visit, before their first session. At this moment the student is already engaged — a friend brought them here, they're curious, they're about to play. They do not need persuading. They need an invitation that matches the quality of what they're about to experience.</p>
+
+<p>Three things the popup must accomplish:</p>
+<p><strong>1. Acknowledge the referral.</strong> Not because we need to thank it, but because the student knows why they're here. Ignoring it makes the message feel like it was written for a stranger. Naming it (without making it explicit) makes it feel like it was written for them.</p>
+<p><strong>2. Signal quality without explaining it.</strong> Don't pitch Lila. Don't describe what's ahead. A door ajar is more interesting than a door explained.</p>
+<p><strong>3. Send them into the chaos confident.</strong> End on something that gives them a posture — not instructions, a disposition. "Embrace the chaos" does this. It is advice from someone who has been here before.</p>
+
+<h3>Copy Variants</h3>
+
+<div class="copy">
+  <span class="label best">Current — live in student-next.html</span>
+  Someone who knows you well thought you'd be good at this.<br>
+  They're probably right.<br><br>
+  Embrace the chaos!
+</div>
+
+<div class="copy">
+  <span class="label">Variant B — more elaborated, still warm</span>
+  Most people find their way here through someone who knows them well.<br><br>
+  That person thought you'd belong in this.<br>
+  They're probably right.<br><br>
+  Embrace the chaos!
+</div>
+
+<div class="copy">
+  <span class="label">Variant C — confident, minimal</span>
+  You were brought here by someone who knows you.<br><br>
+  That means something.<br><br>
+  Embrace the chaos!
+</div>
+
+<div class="copy">
+  <span class="label">Variant D — post-philosophy, for when the system has more to say</span>
+  You were just introduced to a small piece of something much larger.<br><br>
+  We won't explain it yet. But if the chaos felt like something you could live inside<br>
+  rather than something that happened to you —<br><br>
+  you might want to stay a while.
+</div>
+
+<p class="note">Variant D is not for the pre-game popup — it belongs to the post-game moment (after first session). The pre-game popup should be confident and short. The post-game popup has earned the right to say more.</p>
+
+<h2>The Post-Game Popup (After First Session)</h2>
+<p>After the first game ends, the student has experienced the chaos. They know what this is now — not the description, the thing itself. If they're still here, if they haven't closed the tab, they are already self-selected. This is the moment to open the door slightly wider.</p>
+
+<div class="rule">The post-game popup is earned. The student played a full session before seeing it. Treat it that way — it can say more, be stranger, go deeper than the pre-game popup could.</div>
+
+<h3>What changes based on outcome</h3>
+<p>The system knows what happened in that session. A loss is more interesting than a win as a signal. Playing again immediately without the popup is more interesting than anything. The post-game message should respond to what actually happened — not with specifics (don't say "you lost"), but with a register that fits.</p>
+
+<div class="col2">
+  <div class="block">
+    <span class="block-lbl">They won the first game</span>
+    The chaos has more moves left.<br><br>
+    There's a version of this that goes considerably deeper.
+  </div>
+  <div class="block">
+    <span class="block-lbl">They lost the first game</span>
+    The person who brought you here lost their first game too.<br><br>
+    They came back. That's why they're still here.
+  </div>
+</div>
+<div class="col2" style="margin-top:10px">
+  <div class="block">
+    <span class="block-lbl">They played again immediately (no popup needed)</span>
+    You've been here a while.<br><br>
+    There's a version of this that goes considerably deeper.
+  </div>
+  <div class="block">
+    <span class="block-lbl">Default / neutral first session</span>
+    You were just introduced to a small piece of something much larger.<br><br>
+    We won't explain it yet. But if the chaos felt like something you could live inside<br>
+    rather than something that happened to you — you might want to stay a while.
+  </div>
+</div>
+
+<h2>The First Encounter Sequence</h2>
+<p>End-to-end from the moment the student clicks the link a friend sent them:</p>
+
+<div class="seq">
+  <div class="step"><strong>Link click → Loading screen.</strong> Brief, ambient loading text. Not a progress bar with words. The same voice as the terminal. <em>The chaos is designed.</em> One line, unhurried. 0.5–2 seconds.</div>
+  <div class="step"><strong>Pre-game popup appears.</strong> Grey card on black overlay. X button. Three lines maximum. Warm, referral-aware, ends with "Embrace the chaos!" Close it by clicking anywhere or the X.</div>
+  <div class="step"><strong>First game in lobby.</strong> The student is in. No tutorial. The system is listening. The terminal shows session 1 state — no zone, no zone labels. Just the beginning.</div>
+  <div class="step"><strong>Session plays out.</strong> The chaos. The map. Other players or bots. The system watching.</div>
+  <div class="step"><strong>Session ends → Post-game popup.</strong> Variant selected based on outcome (win/loss/draw) and whether they started a second game unprompted. Quieter, stranger, more daring than the first popup.</div>
+  <div class="step"><strong>The door is open.</strong> If they want more, the panel is there. The system has already started listening. The Ledger has its first entry.</div>
+</div>
+
+<h2>The Register Throughout</h2>
+<p>The voice does not change between loading text, popup, and terminal. Same person speaking. The only thing that changes is how much they say — loading text is a phrase, the pre-game popup is three lines, the post-game popup earns a paragraph.</p>
+<div class="rule">The friend who brought them in didn't pitch Lila. The system shouldn't either. The first message assumes the student belongs. Because the person who referred them already made that judgment.</div>
+
+<h2>What This Sequence Avoids</h2>
+<p><strong>No tutorial.</strong> The first session is the tutorial. Losing is information. Confusion is information. A tutorial would filter out the most interesting signal from the first session.</p>
+<p><strong>No "here's what you'll get."</strong> That's a pitch. The student is already here. What they need is a posture for what they're about to experience, not a list of features.</p>
+<p><strong>No explanation of Lila.</strong> Lila earns its explanation through experience, not copy. The first popup does not say "Constellation is a multiplayer educational system for cognitive development." That sentence belongs in an investor deck, not a first message.</p>
+<p><strong>No account creation gate.</strong> The chaos comes first. The account, if it comes, comes after the student has a reason to want one.</p>
+
+<h2>Open Questions</h2>
+<p>1. At what point does the system ask for a name? Does it? Or do students remain anonymous until they choose to identify?</p>
+<p>2. The referral link — does the system know who referred this student? If so, does that change anything about the first message? (Probably not the copy, but possibly the Ledger entry.)</p>
+<p>3. The post-game popup variants — how many do we actually need? Three outcome states (win/loss/replayed immediately) is probably sufficient for a first build.</p>
+<p>4. What does the second visit look like? The student is no longer new. The popup should never appear again. The terminal voice takes over.</p>
+
+</body>
+</html>
