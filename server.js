@@ -3699,6 +3699,8 @@ app.get('/student-dossier', (_req, res) => res.sendFile(path.join(__dirname, 'st
 app.get('/bot-creator',    (_req, res) => res.sendFile(path.join(__dirname, 'bot-creator.html')));
 app.get('/gallery',        (_req, res) => res.sendFile(path.join(__dirname, 'gallery.html')));
 app.use('/philosophy', express.static(path.join(__dirname, 'philosophy development')));
+app.get('/ledger', (_req, res) => res.sendFile(path.join(__dirname, 'philosophy development', 'layer-0-ledger.html')));
+app.get('/observatory', (_req, res) => res.sendFile(path.join(__dirname, 'philosophy development', 'observatory.html')));
 app.use('/constellation-mapmaker', express.static(path.join(__dirname, 'constellation-mapmaker')));
 app.get('/golad-mapmaker',     (_req, res) => res.sendFile(path.join(__dirname, 'golad-mapmaker.html')));
 app.get('/golad-mapmaker.html', (_req, res) => res.sendFile(path.join(__dirname, 'golad-mapmaker.html')));

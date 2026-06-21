@@ -111,7 +111,7 @@ header{border-bottom:2px solid #000;padding:8px 14px;display:flex;align-items:ba
 <div class="main" id="main-live">
   <!-- ── FEED ── -->
   <div class="feed-panel">
-    <div class="panel-hd" style="flex-wrap:wrap;gap:4px"><div class="live-dot"></div>Observation Stream<span id="data-source" style="font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #d97706;color:#d97706;padding:1px 5px">MOCK</span><span style="margin-left:auto;font-size:8px;color:#aaa" id="obs-count"></span><button onclick="loadData()" style="font-size:7px;border:1px solid #ccc;background:#fff;padding:1px 5px;cursor:pointer;font-family:Arial">↺</button></div>
+    <div class="panel-hd" style="flex-wrap:wrap;gap:4px"><div class="live-dot"></div>Observation Stream<span id="data-source" style="font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #d97706;color:#d97706;padding:1px 5px">MOCK</span><span style="margin-left:auto;font-size:8px;color:#aaa" id="obs-count"></span><button id="mock-toggle" onclick="toggleMock()" style="font-size:7px;border:1px solid #ccc;background:#fff;padding:1px 5px;cursor:pointer;font-family:Arial">DEV</button><button onclick="loadData()" style="font-size:7px;border:1px solid #ccc;background:#fff;padding:1px 5px;cursor:pointer;font-family:Arial">↺</button></div>
     <div style="padding:5px 10px;border-bottom:1px solid #f0f0f0;background:#fafafa;flex-shrink:0">
       <select id="student-filter" onchange="applyFilter()" style="width:100%;font-size:9px;border:1px solid #ddd;padding:2px 4px;font-family:Arial;background:#fff;color:#111">
         <option value="">All students</option>
@@ -288,6 +288,11 @@ function displayName(o) {
 // ── Load real data from server; fall back to mock if unavailable
 async function loadData() {
   const badge = document.getElementById('data-source');
+  if (_forceMock) {
+    OBS.length = 0; MOCK_OBS.forEach(r => OBS.push(r));
+    badge.textContent = 'MOCK'; badge.style.borderColor = '#d97706'; badge.style.color = '#d97706';
+    OBS.sort((a, b) => b.t - a.t); updateStudentFilter(); applyFilter(); return;
+  }
   try {
     const res = await fetch('/api/ledger/raw?limit=500');
     if (!res.ok) throw new Error(res.status);
@@ -302,13 +307,12 @@ async function loadData() {
       badge.textContent = 'LIVE · empty';
       badge.style.borderColor = '#15803d';
       badge.style.color = '#15803d';
-      // Populate with mock so UI is usable
-      MOCK_OBS.forEach(r => OBS.push(r));
     }
     _isLive = true;
   } catch {
-    badge.textContent = 'MOCK';
-    if (OBS.length === 0) MOCK_OBS.forEach(r => OBS.push(r));
+    badge.textContent = 'OFFLINE';
+    badge.style.borderColor = '#aaa';
+    badge.style.color = '#aaa';
     _isLive = false;
   }
   OBS.sort((a, b) => b.t - a.t);
@@ -317,7 +321,17 @@ async function loadData() {
 }
 
 let _isLive = false;
+let _forceMock = false;
 let _filterStudent = '';
+
+function toggleMock() {
+  _forceMock = !_forceMock;
+  const btn = document.getElementById('mock-toggle');
+  btn.textContent = _forceMock ? 'DEV ON' : 'DEV';
+  btn.style.borderColor = _forceMock ? '#d97706' : '#ccc';
+  btn.style.color = _forceMock ? '#d97706' : '';
+  loadData();
+}
 
 function updateStudentFilter() {
   const sel = document.getElementById('student-filter');
