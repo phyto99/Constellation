@@ -57,10 +57,12 @@ A multiplayer educational game used as a transparent medium for cognitive develo
 
 | Panel | Status | Notes |
 |---|---|---|
-| student-next.html | Phase 0 complete | Zone pools = ECHO/PARALLEL/SHIFTING/RADICAL/REMATCH/CALIBRATION. buildTrainOpts uses cv array indexing, bot profile aggression, cv[4] for moves, getMapJsonByFilename for map. |
+| student-next.html | Phase 1 complete | Terminal wired: mode, expected_rank_pct, behavioral observation from state_snapshot. 5-line zone pools supported. INVERSION mode name suppressed (silent). |
+| student-alpha.html | Phase 1 complete | Alpha application page at /alpha. 5-phase detective form. Checks eligibility via /api/alpha/status. |
 | layer-0-ledger.html | Production-ready | Live badge, MOCK fallback, student filter, scatter, inspector |
 | observatory.html | Live | Reads /api/ledger/*, per-student Elo, radar, compiler preview |
-| admin.html | Live | Game operator panel |
+| admin.html | Phase 1 complete | ◈ Alpha Track panel added: eligible students table, applications queue with review modal, active Alphas tab. |
+| student-dossier.html | Phase 1 complete | Live-wired. Sidebar loads all other students with zone badge. Dossier panel shows projected reaction via projectReaction(). Challenge system: send/accept/decline/cancel proposals. ledger/challenges.json. |
 
 ---
 
@@ -75,6 +77,11 @@ GET  /api/compiler/:studentId          ← returns {mode, zone, bot_profile, map
 GET  /api/ledger/health
 POST /api/ledger/students/merge
 POST /api/rooms/:roomId/apply-compiler
+GET  /api/dossier/partners/:studentId        ← all other students with zone + has_pending flag
+GET  /api/dossier/reaction/:studentA/:studentB ← projectReaction() output: assessment[], stats[], proposal_note
+GET  /api/dossier/challenges/:studentId      ← pending challenges involving this student
+POST /api/dossier/challenges                 ← create proposal (one active per pair enforced)
+PUT  /api/dossier/challenges/:id/respond     ← verdict: accepted | declined | cancelled
 ```
 
 **compiler.js functions live:** `compile()`, `assignZone()`, `selectMap()`, `selectBotProfile()`, `buildConfigVector()`, `toGameConfig()`
@@ -83,11 +90,14 @@ POST /api/rooms/:roomId/apply-compiler
 
 ---
 
-## WHAT IS NOT YET BUILT (Phase 1)
+## WHAT IS NOT YET BUILT (Phase 2+)
 
-1. **Terminal message wiring** — compiler outputs zone/mode/expected_rank_pct. The terminal in student-next.html needs to pull these and generate behavioral observation lines from real Ledger data, not mock/random. Message library exists in system-complete.html Messages tab.
-2. **Alpha system in admin.html** — fully designed in alpha-system.html. Detective framework, 5-phase application, eligibility criteria (>=15 sessions, all 6 modes, >=1 INV, not in REMATCH loop).
-3. **Template selection** — compiler uses MODE_DEFAULTS only; 17 archetypes exist in challenge-meta.html, 14 available now (3 need new game mechanics).
+Phase 1 is complete. Remaining work:
+
+1. **BT bridge** (Phase 2) — transfer_elo, gap signal, brain_metrics
+2. **Template selection for 3 excluded archetypes** — blind_reach (proximity-reveal engine mechanic), architect (pattern-target display), decoy (multi-wormhole active/trap). Engine changes required.
+3. **Per-round behavioral telemetry** — MSG_LIBRARY in system-complete.html has messages like "HQ network collapsed in round {N}" that need per-round game data. Ledger currently stores session-level outcomes only.
+4. **Multi-game architecture** (Phase inf)
 
 ## WHAT IS DEFERRED
 

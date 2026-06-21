@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Constellation — Alpha Track</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-height:100vh}
+
+.hdr{border-bottom:2px solid #000;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;background:#fff;position:sticky;top:0;z-index:30}
+.hdr-left{display:flex;align-items:baseline;gap:12px}
+.logo{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase}
+.hdr-sub{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#999}
+.hdr-right{display:flex;align-items:center;gap:14px}
+.whoami{font-size:11px;color:#888}
+.whoami b{color:#111}
+.back-lnk{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#bbb;text-decoration:none}
+.back-lnk:hover{color:#111}
+
+.wrap{max-width:680px;margin:0 auto;padding:36px 24px 120px}
+
+/* status states */
+.state-box{background:#f9fafb;border:1px solid #e5e7eb;padding:24px;margin-bottom:28px}
+.state-tag{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#059669;margin-bottom:8px}
+.state-tag.warn{color:#d97706}
+.state-tag.neutral{color:#999}
+.state-title{font-size:16px;font-weight:700;letter-spacing:-.3px;margin-bottom:8px}
+.state-body{font-size:11px;color:#555;line-height:1.8}
+
+/* criteria table */
+.criteria{width:100%;border-collapse:collapse;margin-top:12px;font-size:11px}
+.criteria td{padding:7px 0;border-bottom:1px solid #f3f4f6;vertical-align:top}
+.criteria td:first-child{color:#999;width:160px}
+.criteria td:last-child{color:#111}
+.crit-ok{color:#059669;font-weight:700}
+.crit-no{color:#dc2626}
+
+/* application form */
+.form-header{margin-bottom:28px}
+.form-title{font-size:18px;font-weight:700;letter-spacing:-.5px;margin-bottom:6px}
+.form-desc{font-size:11px;color:#555;line-height:1.7}
+
+.phase-block{margin-bottom:28px;border-top:1px solid #e5e7eb;padding-top:20px}
+.phase-num{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#999;margin-bottom:4px}
+.phase-title{font-size:13px;font-weight:700;margin-bottom:6px}
+.phase-desc{font-size:10px;color:#666;line-height:1.7;margin-bottom:10px}
+.phase-field{width:100%;border:1px solid #d1d5db;padding:10px 12px;font-size:11px;font-family:Arial,sans-serif;line-height:1.7;resize:vertical;min-height:90px;border-radius:2px;outline:none}
+.phase-field:focus{border-color:#111}
+
+.submit-row{border-top:2px solid #111;padding-top:20px;margin-top:8px;display:flex;align-items:center;gap:16px}
+.btn-submit{padding:12px 28px;background:#111;color:#fff;border:none;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border-radius:2px}
+.btn-submit:hover{background:#333}
+.btn-submit:disabled{background:#ccc;cursor:not-allowed}
+.submit-hint{font-size:10px;color:#999;line-height:1.5}
+.submit-err{font-size:10px;color:#dc2626;margin-top:6px}
+
+/* success state */
+.success-box{background:#f0fdf4;border:1px solid #bbf7d0;padding:24px}
+.success-tag{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#059669;margin-bottom:8px}
+.success-title{font-size:16px;font-weight:700;margin-bottom:8px}
+.success-body{font-size:11px;color:#555;line-height:1.8}
+
+/* alpha confirmed */
+.alpha-box{background:#0a0a0a;color:#e0e0e0;padding:28px;margin-bottom:28px}
+.alpha-mark{font-size:28px;letter-spacing:4px;margin-bottom:12px;color:#fff}
+.alpha-title{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#fff;margin-bottom:8px}
+.alpha-body{font-size:11px;color:#888;line-height:1.8}
+
+.loading{color:#999;font-size:11px;font-style:italic;padding:40px 0}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-left">
+    <span class="logo">Constellation</span>
+    <span class="hdr-sub">Alpha Track</span>
+  </div>
+  <div class="hdr-right">
+    <span class="whoami" id="whoami"></span>
+    <a class="back-lnk" href="/student-next">← Student Panel</a>
+  </div>
+</div>
+
+<div class="wrap">
+  <div id="view-loading" class="loading">Loading…</div>
+  <div id="view-not-found" style="display:none">
+    <div class="state-box">
+      <div class="state-tag neutral">No Student Found</div>
+      <div class="state-title">No session data detected.</div>
+      <div class="state-body">Go to the <a href="/student-next" style="color:#111">student panel</a> and play at least one session first. Your name is used to track your progress.</div>
+    </div>
+  </div>
+  <div id="view-not-eligible" style="display:none">
+    <div class="state-box">
+      <div class="state-tag warn">Not Yet Eligible</div>
+      <div class="state-title">The system does not have enough data.</div>
+      <div class="state-body">
+        Alpha eligibility requires all of the following. Current status:<br><br>
+        <table class="criteria" id="criteria-table"></table>
+      </div>
+    </div>
+  </div>
+  <div id="view-pending" style="display:none">
+    <div class="state-box">
+      <div class="state-tag warn">Application Pending</div>
+      <div class="state-title">Your application is under review.</div>
+      <div class="state-body">You will be notified through the system when a decision is made. Only one application can be pending at a time.</div>
+    </div>
+  </div>
+  <div id="view-alpha" style="display:none">
+    <div class="alpha-box">
+      <div class="alpha-mark">◈</div>
+      <div class="alpha-title">Alpha Status Active</div>
+      <div class="alpha-body">
+        The system recognises you as an Alpha.<br>
+        You have demonstrated strategic understanding that most students have not yet reached.<br><br>
+        What this unlocks:<br>
+        — Template proposals (admin-reviewed)<br>
+        — Annotated replay access with signal overlays<br>
+        — Custom bot configuration for your own sessions<br>
+        — Map submission with stated cognitive intent<br>
+        — Peer review of future Alpha applications<br><br>
+        The ◈ badge is visible to other students. You do not need to explain it to anyone.
+      </div>
+    </div>
+  </div>
+  <div id="view-form" style="display:none">
+    <div class="form-header">
+      <div class="form-title">◈ Alpha Application</div>
+      <div class="form-desc">
+        The system has seen enough of your play to know you understand what's happening.<br>
+        This application asks you to demonstrate that understanding explicitly.<br><br>
+        Reference a specific session or series of sessions you played. Write in plain language. The system is not looking for correct terminology — it is looking for evidence that you understand what the session was training.
+      </div>
+    </div>
+
+    <div class="phase-block">
+      <div class="phase-num">Phase 1</div>
+      <div class="phase-title">Pre-Session Planning</div>
+      <div class="phase-desc">What did you observe about your team's approach before the session started? Did they appear to have a shared plan? What strategy does the opening seem to suggest?</div>
+      <textarea class="phase-field" id="phase1" placeholder="Write about what you noticed before the session began…"></textarea>
+    </div>
+
+    <div class="phase-block">
+      <div class="phase-num">Phase 2</div>
+      <div class="phase-title">Round by Round</div>
+      <div class="phase-desc">Walk through the session as a detective. What decisions were made? Where did the plan hold and where did it break down? You are reading what decisions reveal about the team's model — not narrating the game.</div>
+      <textarea class="phase-field" id="phase2" placeholder="Walk through the key rounds. What did each decision reveal?"></textarea>
+    </div>
+
+    <div class="phase-block">
+      <div class="phase-num">Phase 3</div>
+      <div class="phase-title">Team Dynamics</div>
+      <div class="phase-desc">How effectively did the team coordinate? Who drove decisions? Were there moments where individual play diverged from team strategy? What did this cost?</div>
+      <textarea class="phase-field" id="phase3" placeholder="Describe how the team functioned. Who led? Where did coordination break down?"></textarea>
+    </div>
+
+    <div class="phase-block">
+      <div class="phase-num">Phase 4</div>
+      <div class="phase-title">Detective Observations</div>
+      <div class="phase-desc">What did you notice that the players probably did not notice themselves? A pattern across rounds. A resource consistently left unused. A decision that made sense locally but cost them at the session level. Something specific and verifiable.</div>
+      <textarea class="phase-field" id="phase4" placeholder="Name something the players could not have told you themselves. Be specific."></textarea>
+    </div>
+
+    <div class="phase-block">
+      <div class="phase-num">Phase 5</div>
+      <div class="phase-title">Course Correction</div>
+      <div class="phase-desc">If you could pause the session at the end of round 3 and say one thing — not after, during — what would it be? Why round 3? What did the data show by then that would have changed something if acted on?</div>
+      <textarea class="phase-field" id="phase5" placeholder="What is the one intervention that changes the session? Why round 3?"></textarea>
+    </div>
+
+    <div class="submit-row">
+      <button class="btn-submit" id="btn-submit" onclick="submitApplication()">Submit Application</button>
+      <div class="submit-hint">All five phases are required.<br>You can only have one pending application at a time.</div>
+    </div>
+    <div class="submit-err" id="submit-err"></div>
+  </div>
+  <div id="view-success" style="display:none">
+    <div class="success-box">
+      <div class="success-tag">Submitted</div>
+      <div class="success-title">Application received.</div>
+      <div class="success-body">The system has your analysis. A decision will be reflected here once it is reviewed.<br><br>You will not be notified externally — check back here.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let S = { studentId: null, studentName: null };
+
+function getStudentId() {
+  const raw = localStorage.getItem('constellation_name') || '';
+  if (!raw.trim()) return null;
+  return raw.trim().toLowerCase().replace(/\s+/g, '_');
+}
+
+async function init() {
+  const raw = localStorage.getItem('constellation_name') || '';
+  S.studentName = raw.trim() || null;
+  S.studentId   = S.studentName
+    ? S.studentName.toLowerCase().replace(/\s+/g, '_')
+    : null;
+
+  const whoami = document.getElementById('whoami');
+  if (S.studentName) whoami.innerHTML = '<b>' + S.studentName + '</b>';
+
+  hide('view-loading');
+
+  if (!S.studentId) { show('view-not-found'); return; }
+
+  let status;
+  try {
+    const r = await fetch(API + '/api/alpha/status/' + encodeURIComponent(S.studentId));
+    status = await r.json();
+  } catch {
+    show('view-not-eligible');
+    return;
+  }
+
+  if (status.alpha_status === 'alpha') { show('view-alpha'); return; }
+  if (status.has_pending_application)  { show('view-pending'); return; }
+
+  if (!status.eligible) {
+    buildCriteriaTable(status);
+    show('view-not-eligible');
+    return;
+  }
+
+  show('view-form');
+}
+
+function buildCriteriaTable(status) {
+  const rows = [
+    { label: '≥ 15 sessions', met: status.eligibility_reason !== 'fewer than 15 sessions' },
+    { label: 'All 6 modes seen', met: !status.eligibility_reason?.includes('missing modes') },
+    { label: '≥ 1 INV session', met: status.eligibility_reason !== 'no INV session recorded' },
+    { label: 'Not in REMATCH loop', met: status.eligibility_reason !== 'currently in REMATCH loop' },
+  ];
+  document.getElementById('criteria-table').innerHTML = rows.map(r =>
+    '<tr><td>' + r.label + '</td><td class="' + (r.met ? 'crit-ok' : 'crit-no') + '">' +
+    (r.met ? '✓ met' : '✗ not yet met') + '</td></tr>'
+  ).join('');
+}
+
+async function submitApplication() {
+  const phases = ['phase1','phase2','phase3','phase4','phase5'].map(id =>
+    document.getElementById(id).value.trim()
+  );
+  const empty = phases.findIndex(p => !p);
+  if (empty !== -1) {
+    document.getElementById('submit-err').textContent = 'Phase ' + (empty+1) + ' is empty. All five phases are required.';
+    return;
+  }
+  document.getElementById('submit-err').textContent = '';
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+
+  try {
+    const r = await fetch(API + '/api/alpha/applications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        student_id:   S.studentId,
+        student_name: S.studentName,
+        phase1: phases[0], phase2: phases[1], phase3: phases[2],
+        phase4: phases[3], phase5: phases[4],
+      }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Submission failed');
+    hide('view-form');
+    show('view-success');
+  } catch (err) {
+    document.getElementById('submit-err').textContent = err.message;
+    btn.disabled = false;
+    btn.textContent = 'Submit Application';
+  }
+}
+
+function show(id) { document.getElementById(id).style.display = 'block'; }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

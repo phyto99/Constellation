@@ -204,6 +204,8 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
       <div class="trow" style="margin-top:4px"><span class="tv w">CONSTELLATION</span><span class="tk" style="padding-left:12px;font-size:9px;color:#1a1a1a">cognitive development system</span></div>
       <div class="trow" style="margin-top:8px" id="tZoneRow"><span class="tk">zone</span><span class="tv w" id="tZone">—</span></div>
       <div class="trow" id="tSignalRow"><span class="tk">signal</span><span class="tv g" id="tSignal">—</span></div>
+      <div class="trow" id="tModeRow" style="display:none"><span class="tk">mode</span><span class="tv" id="tMode">—</span></div>
+      <div class="trow" id="tExpRow" style="display:none"><span class="tk">expected</span><span class="tv" id="tExp">—</span></div>
       <div class="thr" id="tDivider"></div>
 
       <!-- session 1: grey card -->
@@ -223,6 +225,8 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
         <div class="tmsg" id="tMsg2"></div>
         <div class="tmsg" id="tMsg3"></div>
         <div class="tmsg" id="tMsg4"></div>
+        <div class="tmsg" id="tMsg5"></div>
+        <div id="tBehavior" style="color:#555;margin-top:6px;font-size:9.5px;letter-spacing:.5px;line-height:2"></div>
       </div>
 
       <div style="margin-top:10px"><span class="tk">────────────</span></div>
@@ -670,6 +674,16 @@ function renderTerminal(mode){
   if(showZone){
     document.getElementById('tZone').textContent=zone;
     document.getElementById('tSignal').textContent=(c?.signal_text)||(ZONE_POOLS[zone]?.signal||'—');
+    const MODE_NAMES={QTY:'QUANTITY',SPT:'SPATIAL',FRT:'FORTRESS',DST:'DESTRUCTION',WRM:'WORMHOLE',INV:'INVERSION'};
+    const showMode=c?.mode&&c.mode!=='INV';
+    document.getElementById('tModeRow').style.display=showMode?'flex':'none';
+    if(showMode) document.getElementById('tMode').textContent=MODE_NAMES[c.mode]||c.mode;
+    const showExp=c?.expected_rank_pct!=null;
+    document.getElementById('tExpRow').style.display=showExp?'flex':'none';
+    if(showExp) document.getElementById('tExp').textContent=Math.round(c.expected_rank_pct*100)+'th percentile';
+  } else {
+    document.getElementById('tModeRow').style.display='none';
+    document.getElementById('tExpRow').style.display='none';
   }
 
   // session 1 - grey card inside terminal
@@ -681,8 +695,8 @@ function renderTerminal(mode){
 
   if(isFirstSession){
     document.getElementById('lLine1').textContent = 'Looks like this is your first game.';
-    document.getElementById('lLine2').textContent = 'Through adaptability and flexible thinking, you may win.';
-    document.getElementById('lLine3').textContent = 'Embrace the chaos!';
+    document.getElementById('lLine2').textContent = 'If you can adapt fast enough, you may win.';
+    document.getElementById('lLine3').textContent = 'Embrace the chaos.';
     document.getElementById('tFooter').textContent = 'the system is listening';
     document.getElementById('termAside').textContent = 'no prior sessions';
     return;
@@ -702,16 +716,18 @@ function renderTerminal(mode){
     footer='launch the recommendation or adjust below';
   }
 
-  ['tMsg1','tMsg2','tMsg3','tMsg4'].forEach((id,i)=>{
+  ['tMsg1','tMsg2','tMsg3','tMsg4','tMsg5'].forEach((id,i)=>{
     document.getElementById(id).textContent=lines[i]||'';
   });
+  const _bObs=document.getElementById('tBehavior');
+  if(_bObs) _bObs.textContent=showZone?getBehavioralObs():'';
   document.getElementById('tFooter').textContent=footer;
 
   const aside=document.getElementById('termAside');
   if(!isTrain)     aside.textContent='hosting mode';
   else if(n===0)   aside.textContent='no prior sessions';
   else if(n<5)     aside.textContent='calibrating';
-  else             aside.textContent='zone \xb7 '+zone;
+  else{const _mn=c?.mode&&c.mode!=='INV'?c.mode+' \xb7 ':''; aside.textContent=_mn+zone;}
 
   var canLaunch=isTrain&&!!c&&(n>=5||(_devActive&&n>=1));
   document.getElementById('btnLaunchRec').disabled=!canLaunch;
@@ -722,6 +738,23 @@ function renderTerminal(mode){
     else if(!_devActive&&n===0){_hint.textContent='system needs data before recommending';}
     else{_hint.textContent='';}
   }
+}
+
+// ── BEHAVIORAL OBSERVATION
+function getBehavioralObs(){
+  const c=S.compiler;
+  if(!c||!c.state_snapshot||!c.mode) return '';
+  const st=c.state_snapshot[c.mode];
+  if(!st) return '';
+  if(c.zone==='REMATCH'){
+    const pct=st.last_rank_pct!=null?Math.round(st.last_rank_pct*100)+'th pct':'below threshold';
+    return 'prior session \xb7 '+pct+' \xb7 retry queued';
+  }
+  if(st.since_days!==null&&st.since_days>14) return Math.round(st.since_days)+' days since last '+c.mode+' \xb7 decay applied';
+  if(st.velocity!==null&&st.velocity>2) return 'improving in '+c.mode+' \xb7 '+st.n+' session'+(st.n===1?'':'s');
+  if(st.n===1) return 'baseline established in '+c.mode;
+  if(st.n>1) return st.n+' sessions in '+c.mode+' \xb7 elo '+st.elo;
+  return '';
 }
 
 // ── MODE

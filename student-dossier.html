@@ -11,6 +11,7 @@
   --amber:#d97706;--green:#059669;--blue:#2563eb;--violet:#7c3aed;
   --white:#fff;--offwhite:#f8f8f8;
   --cal:#6b7280;--echo:#2563eb;--rad:#d97706;--alp:#7c3aed;--sin:#b45309;
+  --par:#06b6d4;--shi:#f59e0b;--rem:#dc2626;
 }
 body{font-family:Arial,sans-serif;font-size:12px;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
 
@@ -45,6 +46,9 @@ body{font-family:Arial,sans-serif;font-size:12px;background:var(--bg);color:var(
 .rel-zone.rad{color:var(--rad);border-color:#78350f}
 .rel-zone.alp{color:var(--alp);border-color:#3b1f6e}
 .rel-zone.sin{color:var(--sin);border-color:#451a03}
+.rel-zone.par{color:var(--par);border-color:#0e4f5c}
+.rel-zone.shi{color:var(--shi);border-color:#78450f}
+.rel-zone.rem{color:var(--rem);border-color:#7f1d1d}
 .rel-meta{font-size:9px;color:#2a2a2a;display:flex;gap:10px}
 .new-dot{width:6px;height:6px;border-radius:50%;background:var(--amber);position:absolute;top:14px;right:14px}
 .pending-dot{width:6px;height:6px;border-radius:50%;background:var(--blue);position:absolute;top:14px;right:14px}
@@ -63,6 +67,9 @@ body{font-family:Arial,sans-serif;font-size:12px;background:var(--bg);color:var(
 .pc-zone.cal{color:var(--cal);border-color:#374151;background:#0d0f12}
 .pc-zone.alp{color:var(--alp);border-color:#3b1f6e;background:#0f0a1a}
 .pc-zone.sin{color:var(--sin);border-color:#451a03;background:#1a0d00}
+.pc-zone.par{color:var(--par);border-color:#0e4f5c;background:#020e12}
+.pc-zone.shi{color:var(--shi);border-color:#78450f;background:#160c00}
+.pc-zone.rem{color:var(--rem);border-color:#7f1d1d;background:#150000}
 .vs{font-size:9px;font-weight:700;letter-spacing:3px;color:#2a2a2a;padding-top:18px}
 .dos-hdr-right{text-align:right}
 .dos-sessions{font-size:9px;color:#2a2a2a;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
@@ -97,6 +104,9 @@ body{font-family:Arial,sans-serif;font-size:12px;background:var(--bg);color:var(
 .rz.ech{color:var(--echo);border-color:#1e3a5f}
 .rz.rad{color:var(--rad);border-color:#78350f}
 .rz.cal{color:var(--cal);border-color:#374151}
+.rz.par{color:var(--par);border-color:#0e4f5c}
+.rz.shi{color:var(--shi);border-color:#78450f}
+.rz.rem{color:var(--rem);border-color:#7f1d1d}
 
 /* pending challenge */
 .challenge-card{border:1px solid var(--blue);background:#020812}
@@ -170,384 +180,291 @@ body{font-family:Arial,sans-serif;font-size:12px;background:var(--bg);color:var(
       <div class="sb-note">The system opens a file when it has something worth saying about how you play with someone.</div>
     </div>
     <div class="sb-list">
-
-      <div class="rel-item active" onclick="openDossier('maya')">
-        <div class="new-dot"></div>
-        <div class="rel-top">
-          <span class="rel-name">Maya R.</span>
-          <span class="rel-zone rad">Radical</span>
-        </div>
-        <div class="rel-meta">
-          <span>8 sessions together</span>
-          <span>New assessment</span>
-        </div>
-      </div>
-
-      <div class="rel-item" onclick="openDossier('james')">
-        <div class="pending-dot"></div>
-        <div class="rel-top">
-          <span class="rel-name">James K.</span>
-          <span class="rel-zone ech">Echo</span>
-        </div>
-        <div class="rel-meta">
-          <span>3 sessions together</span>
-          <span>Challenge pending</span>
-        </div>
-      </div>
-
-      <div class="rel-item" onclick="openDossier('priya')">
-        <div class="rel-top">
-          <span class="rel-name">Priya M.</span>
-          <span class="rel-zone alp">Alpha</span>
-        </div>
-        <div class="rel-meta">
-          <span>14 sessions together</span>
-          <span>Last: 3 days ago</span>
-        </div>
-      </div>
-
-      <div class="rel-item" onclick="openDossier('tom')">
-        <div class="rel-top">
-          <span class="rel-name">Tom W.</span>
-          <span class="rel-zone cal">Calibrating</span>
-        </div>
-        <div class="rel-meta">
-          <span>1 session together</span>
-          <span>Last: 2 weeks ago</span>
-        </div>
-      </div>
-
     </div>
   </div>
 
-  <!-- ── DOSSIER ── -->
+    <!-- ── DOSSIER ── -->
   <div class="dossier" id="dossier">
-
-    <!-- dossier header -->
-    <div class="dos-hdr">
-      <div class="dos-players">
-        <div class="player-card">
-          <div class="pc-name">You</div>
-          <div class="pc-zone ech">Echo</div>
-        </div>
-        <div class="vs">VS</div>
-        <div class="player-card">
-          <div class="pc-name">Maya R.</div>
-          <div class="pc-zone rad">Radical</div>
-        </div>
-      </div>
-      <div class="dos-hdr-right">
-        <div class="dos-sessions"><b>8</b> sessions together</div>
-      </div>
-    </div>
-
-    <!-- compiler assessment -->
-    <div class="compiler-card">
-      <div class="cc-label">Compiler Assessment</div>
-      <div class="cc-body">
-        <p>Playing against Maya consistently pushes you out of ECHO. Your last three joint sessions produced <strong>RADICAL signal</strong> — the gap between your zones is creating productive pressure in both directions.</p>
-        <p>Maya's RADICAL sessions are more stable when you're in the room. Your ECHO sessions are more information-dense. The system recommends a joint session this week while the differential holds.</p>
-      </div>
-      <div class="cc-stats">
-        <div class="cc-stat">
-          <span class="cc-stat-val">+2.3×</span>
-          <span class="cc-stat-lbl">Signal vs solo</span>
-        </div>
-        <div class="cc-stat">
-          <span class="cc-stat-val">6/8</span>
-          <span class="cc-stat-lbl">Sessions RADICAL</span>
-        </div>
-        <div class="cc-stat">
-          <span class="cc-stat-val">↑</span>
-          <span class="cc-stat-lbl">Trajectory</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- session record -->
-    <div class="record-block">
-      <div class="record-hdr">
-        <span class="record-hdr-lbl">Session Record</span>
-        <span style="font-size:9px;color:#222">8 sessions · 3 wins · 4 losses · 1 draw</span>
-      </div>
-      <div class="record-list">
-        <div class="record-row">
-          <span class="rr-date">Jun 14</span>
-          <span class="rr-map">Archipelago</span>
-          <span class="rr-outcome l">Loss</span>
-          <span class="rr-zone"><span class="rz rad">Radical</span></span>
-        </div>
-        <div class="record-row">
-          <span class="rr-date">Jun 10</span>
-          <span class="rr-map">Delta Nine</span>
-          <span class="rr-outcome w">Win</span>
-          <span class="rr-zone"><span class="rz rad">Radical</span></span>
-        </div>
-        <div class="record-row">
-          <span class="rr-date">Jun 07</span>
-          <span class="rr-map">System Selects</span>
-          <span class="rr-outcome d">Draw</span>
-          <span class="rr-zone"><span class="rz ech">Echo</span></span>
-        </div>
-        <div class="record-row">
-          <span class="rr-date">Jun 02</span>
-          <span class="rr-map">Cluster IV</span>
-          <span class="rr-outcome w">Win</span>
-          <span class="rr-zone"><span class="rz rad">Radical</span></span>
-        </div>
-        <div class="record-row" style="opacity:.4">
-          <span class="rr-date">+ 4 earlier</span>
-          <span class="rr-map"></span>
-          <span class="rr-outcome"></span>
-          <span class="rr-zone"></span>
-        </div>
-      </div>
-    </div>
-
-    <!-- propose session -->
-    <div class="propose-block">
-      <button class="propose-btn" onclick="togglePropose()">
-        <span>Propose a Session</span>
-        <span class="arr" id="proposeArr">›</span>
-      </button>
-      <div class="propose-form" id="proposeForm">
-        <div class="pf-grid">
-          <div class="pf-field">
-            <label>Session Type</label>
-            <div class="pf-tg">
-              <button class="pf-opt on" onclick="setPfOpt(this,'.pf-tg')">Train Together</button>
-              <button class="pf-opt" onclick="setPfOpt(this,'.pf-tg')">Competitive</button>
-            </div>
-          </div>
-          <div class="pf-field">
-            <label>Challenge</label>
-            <div class="pf-tg" id="chTg">
-              <button class="pf-opt" onclick="setPfOpt(this,'#chTg')">Easy</button>
-              <button class="pf-opt on" onclick="setPfOpt(this,'#chTg')">Standard</button>
-              <button class="pf-opt" onclick="setPfOpt(this,'#chTg')">Hard</button>
-            </div>
-          </div>
-        </div>
-        <div class="pf-note">
-          <span>Compiler note:</span> Based on your last three sessions together, Standard challenge in a joint session is likely to produce RADICAL signal for both of you. The system will tune the configuration once both players are in the room.
-        </div>
-        <button class="btn-send" onclick="sendProposal()">Send Proposal →</button>
-      </div>
-    </div>
-
   </div><!-- /dossier -->
 
 </div><!-- /layout -->
 
 <script>
-const DOSSIERS = {
-  maya: {
-    you:'Echo', them:'Maya R.', themZone:'rad', themZoneLabel:'Radical',
-    count:8, wins:3, losses:4, draws:1,
-    assessment:[
-      'Playing against Maya consistently pushes you out of ECHO. Your last three joint sessions produced <strong>Radical signal</strong> — the gap between your zones is creating productive pressure in both directions.',
-      "Maya's RADICAL sessions are more stable when you're in the room. Your ECHO sessions are more information-dense. The system recommends a joint session this week while the differential holds."
-    ],
-    stats:[{val:'+2.3×',lbl:'Signal vs solo'},{val:'6/8',lbl:'Sessions Radical'},{val:'↑',lbl:'Trajectory'}],
-    sessions:[
-      {date:'Jun 14',map:'Archipelago',outcome:'l',outLbl:'Loss',zone:'rad',zoneL:'Radical'},
-      {date:'Jun 10',map:'Delta Nine',outcome:'w',outLbl:'Win',zone:'rad',zoneL:'Radical'},
-      {date:'Jun 07',map:'System Selects',outcome:'d',outLbl:'Draw',zone:'ech',zoneL:'Echo'},
-      {date:'Jun 02',map:'Cluster IV',outcome:'w',outLbl:'Win',zone:'rad',zoneL:'Radical'},
-    ],
-    challenge:null,
-    compilerNote:"Based on your last three sessions together, Standard challenge in a joint session is likely to produce RADICAL signal for both of you. The system will tune the configuration once both players are in the room."
-  },
-  james: {
-    you:'Echo', them:'James K.', themZone:'ech', themZoneLabel:'Echo',
-    count:3, wins:1, losses:1, draws:1,
-    assessment:[
-      "Both of you are in ECHO. Joint sessions between two ECHO-zone students produce consolidation signal rather than stretch signal — useful for deepening, not for expanding.",
-      "The compiler's recommendation: if you play together, increase challenge level. Two familiar players in familiar territory need external pressure to generate useful signal."
-    ],
-    stats:[{val:'1.1×',lbl:'Signal vs solo'},{val:'3/3',lbl:'Sessions Echo'},{val:'→',lbl:'Trajectory'}],
-    sessions:[
-      {date:'Jun 12',map:'Northfield',outcome:'w',outLbl:'Win',zone:'ech',zoneL:'Echo'},
-      {date:'Jun 09',map:'System Selects',outcome:'d',outLbl:'Draw',zone:'ech',zoneL:'Echo'},
-      {date:'Jun 05',map:'Delta Nine',outcome:'l',outLbl:'Loss',zone:'ech',zoneL:'Echo'},
-    ],
-    challenge:{
-      from:'James K.',
-      type:'Competitive',
-      challenge:'Hard',
-      map:'Northfield',
-      note:"James proposed Hard difficulty. The system notes this is appropriate — two ECHO players need higher challenge to generate stretch signal. Accepting this proposal is aligned with the compiler's recommendation."
-    },
-    compilerNote:"James proposed Hard difficulty — the system agrees. Two ECHO players in Standard will just consolidate. Hard difficulty is where the signal comes from."
-  },
-  priya: {
-    you:'Echo', them:'Priya M.', themZone:'alp', themZoneLabel:'Alpha',
-    count:14, wins:4, losses:9, draws:1,
-    assessment:[
-      "Priya is significantly ahead of you in zone progression. Playing against her produces consistent RADICAL signal for you — she is currently your highest-value known opponent.",
-      "The loss rate (9/14) is expected and correct. The sessions where you've won have been ALPHA-signal sessions for Priya. The asymmetry is generating information for both of you."
-    ],
-    stats:[{val:'+3.1×',lbl:'Signal vs solo'},{val:'9/14',lbl:'RADICAL sessions'},{val:'↑↑',lbl:'Your trajectory'}],
-    sessions:[
-      {date:'Jun 16',map:'Cluster IV',outcome:'l',outLbl:'Loss',zone:'rad',zoneL:'Radical'},
-      {date:'Jun 13',map:'Archipelago',outcome:'l',outLbl:'Loss',zone:'rad',zoneL:'Radical'},
-      {date:'Jun 09',map:'System Selects',outcome:'w',outLbl:'Win',zone:'alp',zoneL:'Alpha'},
-      {date:'Jun 04',map:'Delta Nine',outcome:'l',outLbl:'Loss',zone:'rad',zoneL:'Radical'},
-    ],
-    challenge:null,
-    compilerNote:"Priya is your most valuable training partner by signal density. The system recommends regular sessions — the zone differential is still wide enough to be productive."
-  },
-  tom: {
-    you:'Echo', them:'Tom W.', themZone:'cal', themZoneLabel:'Calibrating',
-    count:1, wins:1, losses:0, draws:0,
-    assessment:[
-      "Tom has only one session recorded. The system doesn't have enough data to say anything specific about how you two play together.",
-      "If Tom continues playing, the file will update. For now the system recommends waiting — one session isn't enough to generate a joint assessment."
-    ],
-    stats:[{val:'—',lbl:'Signal vs solo'},{val:'1',lbl:'Sessions total'},{val:'?',lbl:'Trajectory'}],
-    sessions:[
-      {date:'Jun 01',map:'System Selects',outcome:'w',outLbl:'Win',zone:'cal',zoneL:'Calibrating'},
-    ],
-    challenge:null,
-    compilerNote:"Not enough sessions together for a meaningful recommendation. Play again and the system will update."
-  }
+const API = '';
+const S = {
+    myId: null, myName: null,
+    partners: [],
+    challenges: [],
+    currentPartnerId: null,
 };
 
-let currentPropose = false;
+const ZONE_CLS = {
+    CALIBRATION:'cal', ECHO:'ech', PARALLEL:'par',
+    SHIFTING:'shi', RADICAL:'rad', REMATCH:'rem',
+    ALPHA:'alp', SINGULARITY:'sin'
+};
+const ZONE_LABEL = {
+    CALIBRATION:'Calibrating', ECHO:'Echo', PARALLEL:'Parallel',
+    SHIFTING:'Shifting', RADICAL:'Radical', REMATCH:'Rematch',
+    ALPHA:'Alpha', SINGULARITY:'Singularity'
+};
 
-function openDossier(id){
-  document.querySelectorAll('.rel-item').forEach(el=>el.classList.remove('active'));
-  event.currentTarget.classList.add('active');
-  const d=DOSSIERS[id];
-  if(!d) return;
-  const dos=document.getElementById('dossier');
+function mkId(name){ return name.trim().toLowerCase().replace(/\s+/g,'_'); }
 
-  const youZone='ech';
-  const theirZoneCls=d.themZone;
+async function init(){
+    const raw = localStorage.getItem('constellation_name') || '';
+    S.myName = raw.trim() || null;
+    S.myId   = S.myName ? mkId(S.myName) : null;
+    if(!S.myId){ showEmpty('Enter your name in the student panel first.'); return; }
+    try {
+        const [pRes, cRes] = await Promise.all([
+            fetch(API + '/api/dossier/partners/' + encodeURIComponent(S.myId)),
+            fetch(API + '/api/dossier/challenges/' + encodeURIComponent(S.myId)),
+        ]);
+        S.partners   = await pRes.json();
+        S.challenges = await cRes.json();
+        renderSidebar();
+        if(S.partners.length > 0) openDossier(S.partners[0].student_id);
+        else showEmpty('No other students in the ledger yet.');
+    } catch(err){
+        showEmpty('Could not connect to server.');
+    }
+}
 
-  // build record rows
-  const rows=d.sessions.map(s=>`
-    <div class="record-row">
-      <span class="rr-date">${s.date}</span>
-      <span class="rr-map">${s.map}</span>
-      <span class="rr-outcome ${s.outcome}">${s.outLbl}</span>
-      <span class="rr-zone"><span class="rz ${s.zone}">${s.zoneL}</span></span>
-    </div>`).join('');
+function renderSidebar(){
+    const list = document.querySelector('.sb-list');
+    if(!list) return;
+    if(S.partners.length === 0){
+        list.innerHTML = '<div style="padding:16px;font-size:10px;color:#222">No other students yet.</div>';
+        return;
+    }
+    list.innerHTML = S.partners.map(p => {
+        const cls = ZONE_CLS[p.zone] || 'cal';
+        const lbl = ZONE_LABEL[p.zone] || p.zone;
+        const dot = p.has_pending ? '<div class="pending-dot"></div>' : '';
+        const pid = escHtml(p.student_id);
+        const pnm = escHtml(p.student_name || p.student_id);
+        return `<div class="rel-item" data-pid="${pid}" onclick="openDossier(this.dataset.pid)">
+            ${dot}
+            <div class="rel-top">
+                <span class="rel-name">${pnm}</span>
+                <span class="rel-zone ${cls}">${lbl}</span>
+            </div>
+            <div class="rel-meta"><span>${p.sessions} session${p.sessions===1?'':'s'}</span></div>
+        </div>`;
+    }).join('');
+}
 
-  // challenge block
-  const challengeHtml = d.challenge ? `
+async function openDossier(partnerId){
+    S.currentPartnerId = partnerId;
+    document.querySelectorAll('.rel-item').forEach(el =>
+        el.classList.toggle('active', el.dataset.pid === partnerId)
+    );
+    const dos = document.getElementById('dossier');
+    dos.innerHTML = '<div style="padding:40px;color:#222;font-size:10px;font-style:italic">Loading…</div>';
+    try {
+        const [rRes, cRes] = await Promise.all([
+            fetch(API + '/api/dossier/reaction/' + encodeURIComponent(S.myId) + '/' + encodeURIComponent(partnerId)),
+            fetch(API + '/api/dossier/challenges/' + encodeURIComponent(S.myId)),
+        ]);
+        const reaction = await rRes.json();
+        S.challenges   = await cRes.json();
+        const partner  = S.partners.find(p => p.student_id === partnerId)
+            || { student_id: partnerId, student_name: partnerId, sessions: 0, zone: reaction.zone_b };
+        renderDossier(partner, reaction);
+    } catch(err){
+        dos.innerHTML = `<div style="padding:40px;color:#555;font-size:10px">Error: ${escHtml(err.message)}</div>`;
+    }
+}
+
+let _proposalNote = '';
+
+function renderDossier(partner, reaction){
+    const dos          = document.getElementById('dossier');
+    const myZoneCls    = ZONE_CLS[reaction.zone_a] || 'cal';
+    const myZoneLbl    = ZONE_LABEL[reaction.zone_a] || reaction.zone_a;
+    const theirZoneCls = ZONE_CLS[reaction.zone_b] || 'cal';
+    const theirZoneLbl = ZONE_LABEL[reaction.zone_b] || reaction.zone_b;
+    const pname        = escHtml(partner.student_name || partner.student_id);
+    _proposalNote      = reaction.proposal_note;
+
+    const incoming = S.challenges.find(c =>
+        c.status === 'pending' && c.from_id === partner.student_id && c.to_id === S.myId
+    );
+    const outgoing = S.challenges.find(c =>
+        c.status === 'pending' && c.from_id === S.myId && c.to_id === partner.student_id
+    );
+
+    const challengeHtml = incoming ? `
     <div class="challenge-card">
-      <div class="ch-hdr">
-        <span class="ch-hdr-lbl">Pending Challenge</span>
-        <span class="ch-hdr-from">from ${escHtml(d.challenge.from)}</span>
-      </div>
-      <div class="ch-body">
-        <div class="ch-params">
-          <div class="ch-param"><div class="ch-param-lbl">Type</div><div class="ch-param-val">${d.challenge.type}</div></div>
-          <div class="ch-param"><div class="ch-param-lbl">Challenge</div><div class="ch-param-val">${d.challenge.challenge}</div></div>
-          <div class="ch-param"><div class="ch-param-lbl">Map</div><div class="ch-param-val">${d.challenge.map}</div></div>
+        <div class="ch-hdr">
+            <span class="ch-hdr-lbl">Pending Challenge</span>
+            <span class="ch-hdr-from">from ${pname}</span>
         </div>
-        <div class="ch-compiler-note"><span>Compiler:</span> ${escHtml(d.challenge.note)}</div>
-        <div class="ch-actions">
-          <button class="btn-accept" onclick="acceptChallenge()">Accept →</button>
-          <button class="btn-decline" onclick="declineChallenge()">Decline</button>
+        <div class="ch-body">
+            <div class="ch-params">
+                <div class="ch-param"><div class="ch-param-lbl">Type</div><div class="ch-param-val">${escHtml(incoming.session_type)}</div></div>
+                <div class="ch-param"><div class="ch-param-lbl">Challenge</div><div class="ch-param-val">${escHtml(incoming.challenge_level)}</div></div>
+                <div class="ch-param"><div class="ch-param-lbl">Map</div><div class="ch-param-val">${escHtml(incoming.map || 'System Selects')}</div></div>
+            </div>
+            <div class="ch-compiler-note"><span>Compiler:</span> ${escHtml(incoming.proposal_note)}</div>
+            <div class="ch-actions">
+                <button class="btn-accept" onclick="respondChallenge('${incoming.id}','accepted')">Accept →</button>
+                <button class="btn-decline" onclick="respondChallenge('${incoming.id}','declined')">Decline</button>
+            </div>
         </div>
-      </div>
     </div>` : '';
 
-  dos.innerHTML = `
+    const proposeHtml = outgoing ? `
+    <div style="border:1px solid var(--border);padding:12px 14px;font-size:10px;color:#2a2a2a;display:flex;justify-content:space-between;align-items:center;">
+        <span>Challenge sent · ${escHtml(outgoing.challenge_level)} · ${escHtml(outgoing.session_type)}</span>
+        <button onclick="respondChallenge('${outgoing.id}','cancelled')" style="background:none;border:1px solid var(--border);color:#333;padding:4px 10px;font-size:9px;cursor:pointer;font-family:Arial,sans-serif;letter-spacing:1px;text-transform:uppercase">Cancel</button>
+    </div>` : `
+    <div class="propose-block">
+        <button class="propose-btn" onclick="togglePropose()">
+            <span>Propose a Session</span>
+            <span class="arr" id="proposeArr">›</span>
+        </button>
+        <div class="propose-form" id="proposeForm">
+            <div class="pf-grid">
+                <div class="pf-field">
+                    <label>Session Type</label>
+                    <div class="pf-tg" id="typeTg">
+                        <button class="pf-opt on" onclick="setPfOpt(this,'#typeTg')">Train Together</button>
+                        <button class="pf-opt" onclick="setPfOpt(this,'#typeTg')">Competitive</button>
+                    </div>
+                </div>
+                <div class="pf-field">
+                    <label>Challenge</label>
+                    <div class="pf-tg" id="chTg">
+                        <button class="pf-opt" onclick="setPfOpt(this,'#chTg')">Easy</button>
+                        <button class="pf-opt on" onclick="setPfOpt(this,'#chTg')">Standard</button>
+                        <button class="pf-opt" onclick="setPfOpt(this,'#chTg')">Hard</button>
+                    </div>
+                </div>
+            </div>
+            <div class="pf-note"><span>Compiler note:</span> ${escHtml(reaction.proposal_note)}</div>
+            <button class="btn-send" onclick="sendProposal()">Send Proposal →</button>
+        </div>
+    </div>`;
+
+    dos.innerHTML = `
     <div class="dos-hdr">
-      <div class="dos-players">
-        <div class="player-card">
-          <div class="pc-name">You</div>
-          <div class="pc-zone ${youZone}">Echo</div>
+        <div class="dos-players">
+            <div class="player-card">
+                <div class="pc-name">${escHtml(S.myName || 'You')}</div>
+                <div class="pc-zone ${myZoneCls}">${myZoneLbl}</div>
+            </div>
+            <div class="vs">VS</div>
+            <div class="player-card">
+                <div class="pc-name">${pname}</div>
+                <div class="pc-zone ${theirZoneCls}">${theirZoneLbl}</div>
+            </div>
         </div>
-        <div class="vs">VS</div>
-        <div class="player-card">
-          <div class="pc-name">${escHtml(d.them)}</div>
-          <div class="pc-zone ${theirZoneCls}">${d.themZoneLabel}</div>
+        <div class="dos-hdr-right">
+            <div class="dos-sessions"><span style="font-size:9px;color:#2a2a2a;letter-spacing:1px;text-transform:uppercase">Projected reaction</span></div>
         </div>
-      </div>
-      <div class="dos-hdr-right">
-        <div class="dos-sessions"><b>${d.count}</b> sessions together</div>
-      </div>
     </div>
 
     <div class="compiler-card">
-      <div class="cc-label">Compiler Assessment</div>
-      <div class="cc-body">${d.assessment.map(p=>`<p>${p}</p>`).join('')}</div>
-      <div class="cc-stats">
-        ${d.stats.map(s=>`<div class="cc-stat"><span class="cc-stat-val">${s.val}</span><span class="cc-stat-lbl">${s.lbl}</span></div>`).join('')}
-      </div>
+        <div class="cc-label">Compiler Assessment</div>
+        <div class="cc-body">${reaction.assessment.map(p => '<p>' + escHtml(p) + '</p>').join('')}</div>
+        <div class="cc-stats">
+            ${reaction.stats.map(s => '<div class="cc-stat"><span class="cc-stat-val">' + escHtml(s.val) + '</span><span class="cc-stat-lbl">' + escHtml(s.lbl) + '</span></div>').join('')}
+        </div>
     </div>
 
     <div class="record-block">
-      <div class="record-hdr">
-        <span class="record-hdr-lbl">Session Record</span>
-        <span style="font-size:9px;color:#222">${d.count} sessions · ${d.wins} wins · ${d.losses} losses · ${d.draws} draws</span>
-      </div>
-      <div class="record-list">${rows}</div>
+        <div class="record-hdr">
+            <span class="record-hdr-lbl">Joint Session Record</span>
+            <span style="font-size:9px;color:#222">session co-tracking pending</span>
+        </div>
+        <div style="padding:14px;font-size:10px;color:#1a1a1a;font-style:italic">Joint session history will appear here once multi-player sessions are tracked in the ledger.</div>
     </div>
 
     ${challengeHtml}
-
-    <div class="propose-block">
-      <button class="propose-btn" onclick="togglePropose()">
-        <span>Propose a Session</span>
-        <span class="arr" id="proposeArr">›</span>
-      </button>
-      <div class="propose-form" id="proposeForm">
-        <div class="pf-grid">
-          <div class="pf-field">
-            <label>Session Type</label>
-            <div class="pf-tg">
-              <button class="pf-opt on" onclick="setPfOpt(this,'.pf-tg:first-of-type')">Train Together</button>
-              <button class="pf-opt" onclick="setPfOpt(this,'.pf-tg:first-of-type')">Competitive</button>
-            </div>
-          </div>
-          <div class="pf-field">
-            <label>Challenge</label>
-            <div class="pf-tg" id="chTg">
-              <button class="pf-opt" onclick="setPfOpt(this,'#chTg')">Easy</button>
-              <button class="pf-opt on" onclick="setPfOpt(this,'#chTg')">Standard</button>
-              <button class="pf-opt" onclick="setPfOpt(this,'#chTg')">Hard</button>
-            </div>
-          </div>
-        </div>
-        <div class="pf-note"><span>Compiler note:</span> ${escHtml(d.compilerNote)}</div>
-        <button class="btn-send" onclick="sendProposal()">Send Proposal →</button>
-      </div>
-    </div>
-  `;
-  currentPropose=false;
+    ${proposeHtml}
+    `;
 }
 
 function togglePropose(){
-  currentPropose=!currentPropose;
-  const f=document.getElementById('proposeForm');
-  const a=document.getElementById('proposeArr');
-  if(f){ f.classList.toggle('open',currentPropose); }
-  if(a){ a.textContent=currentPropose?'↓':'›'; }
+    const f = document.getElementById('proposeForm');
+    const a = document.getElementById('proposeArr');
+    if(!f) return;
+    const open = f.classList.toggle('open');
+    if(a) a.textContent = open ? '↓' : '›';
 }
 
 function setPfOpt(btn, selector){
-  const parent=btn.closest('.pf-tg');
-  if(!parent) return;
-  parent.querySelectorAll('.pf-opt').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on');
+    const parent = btn.closest('.pf-tg');
+    if(!parent) return;
+    parent.querySelectorAll('.pf-opt').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
 }
 
-function acceptChallenge(){
-  alert('Challenge accepted — session link would open here.');
+async function sendProposal(){
+    const sessionType    = document.querySelector('#typeTg .pf-opt.on')?.textContent || 'Train Together';
+    const challengeLevel = document.querySelector('#chTg .pf-opt.on')?.textContent   || 'Standard';
+    const btn = document.querySelector('.btn-send');
+    if(btn){ btn.textContent = 'Sending…'; btn.disabled = true; }
+    try {
+        const partner = S.partners.find(p => p.student_id === S.currentPartnerId);
+        const r = await fetch(API + '/api/dossier/challenges', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                from_id:         S.myId,
+                from_name:       S.myName,
+                to_id:           S.currentPartnerId,
+                to_name:         partner ? partner.student_name : S.currentPartnerId,
+                session_type:    sessionType,
+                challenge_level: challengeLevel,
+                map:             null,
+                proposal_note:   _proposalNote,
+            }),
+        });
+        if(!r.ok) throw new Error((await r.json()).error);
+        await refreshAndOpen();
+    } catch(err){
+        if(btn){ btn.textContent = 'Send Proposal →'; btn.disabled = false; }
+        alert(err.message);
+    }
 }
-function declineChallenge(){
-  document.querySelector('.challenge-card')?.remove();
+
+async function respondChallenge(id, verdict){
+    try {
+        const r = await fetch(API + '/api/dossier/challenges/' + id + '/respond', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ verdict }),
+        });
+        if(!r.ok) throw new Error((await r.json()).error);
+        await refreshAndOpen();
+    } catch(err){ alert(err.message); }
 }
-function sendProposal(){
-  const btn=document.querySelector('.btn-send');
-  if(btn){ btn.textContent='Sent.'; btn.disabled=true; }
+
+async function refreshAndOpen(){
+    const [pRes, cRes] = await Promise.all([
+        fetch(API + '/api/dossier/partners/' + encodeURIComponent(S.myId)),
+        fetch(API + '/api/dossier/challenges/' + encodeURIComponent(S.myId)),
+    ]);
+    S.partners   = await pRes.json();
+    S.challenges = await cRes.json();
+    renderSidebar();
+    if(S.currentPartnerId) await openDossier(S.currentPartnerId);
 }
+
+function showEmpty(msg){
+    document.getElementById('dossier').innerHTML = `
+    <div class="empty">
+        <div class="empty-lbl">No Data</div>
+        <div class="empty-sub">${escHtml(msg)}</div>
+    </div>`;
+}
+
 function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>

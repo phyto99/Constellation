@@ -140,10 +140,11 @@ function Kval(n) {
 }
 
 function computeState(sessions) {
-    const modeElo   = Object.fromEntries(MODES.map(m => [m, BASE_ELO]));
-    const modeN     = Object.fromEntries(MODES.map(m => [m, 0]));
-    const modeLastT = Object.fromEntries(MODES.map(m => [m, null]));
-    const modeHistory = Object.fromEntries(MODES.map(m => [m, []])); // [{t, elo}]
+    const modeElo      = Object.fromEntries(MODES.map(m => [m, BASE_ELO]));
+    const modeN        = Object.fromEntries(MODES.map(m => [m, 0]));
+    const modeLastT    = Object.fromEntries(MODES.map(m => [m, null]));
+    const modeLastRank = Object.fromEntries(MODES.map(m => [m, null]));
+    const modeHistory  = Object.fromEntries(MODES.map(m => [m, []])); // [{t, elo}]
 
     for (const obs of sessions) {
         const mode = assignMode(obs.config_vector);
@@ -154,9 +155,10 @@ function computeState(sessions) {
         const E   = 1 / (1 + Math.pow(10, (R - elo) / ASSERTED.elo_scale));
         const S   = obs.outcome?.rank_pct ?? 0.5;
         const newElo = elo + Kval(n + 1) * (S - E);
-        modeElo[mode] = newElo;
+        modeElo[mode]      = newElo;
         modeN[mode]++;
-        modeLastT[mode] = obs.t;
+        modeLastT[mode]    = obs.t;
+        modeLastRank[mode] = S;
         modeHistory[mode].push({ t: obs.t, elo: Math.round(newElo) });
     }
 
@@ -175,6 +177,7 @@ function computeState(sessions) {
             elo:             Math.round(modeElo[m]),
             n:               modeN[m],
             velocity:        velocity !== null ? Math.round(velocity * 10) / 10 : null,
+            last_rank_pct:   modeLastRank[m],
             last_t:          lastT,
             since_days:      sinceD !== null ? Math.round(sinceD * 10) / 10 : null,
             decay:           Math.round(decay * 1000) / 1000,
@@ -295,9 +298,129 @@ const MODE_DEFAULTS = {
     INV: [-100,  1,   1,    1],
 };
 
-function buildConfigVector(mode, state, gc_overrides) {
+// ─── Template registry (Phase 1: 14 of 17 archetypes) ────────────────────────
+// Excluded: blind_reach (proximity-reveal mechanic), architect (pattern-target
+//           display), decoy (multi-wormhole active/trap) — engine not yet built.
+// mults: [count_mult, dist_mult, hq_mult, dest_mult] — overrides MODE_DEFAULTS.
+// params.moves_override, rounds, steals, hq_count — override ZPD-calibrated values.
+// bot: overrides selectBotProfile() result when set.
+// INV templates have mults:null — computed at runtime by computeInvMults().
+const TEMPLATES = {
+    QTY: [
+        { id: 'flood',       mults: [500, 1, 1,    1], params: { steals: 0 } },
+        { id: 'speed_flood', mults: [500, 1, 1,    1], params: { rounds: 5 } },
+        { id: 'miser',       mults: [500, 1, 1,    1], params: { moves_override: 8 } },
+    ],
+    SPT: [
+        { id: 'reach',       mults: [1, 500, 0,    1], params: {} },
+    ],
+    FRT: [
+        { id: 'network',     mults: [50, 1, 500, -200], params: { hq_count: 4 } },
+        { id: 'siege',       mults: [50, 1, 500, -200], params: { hq_count: 4 }, bot: 'ACCELERANT' },
+        { id: 'patience',    mults: [50, 1, 500, -200], params: { hq_count: 4, moves_override: 10 } },
+    ],
+    DST: [
+        { id: 'chain',       mults: [-100, 1, 1, 500],  params: {} },
+        { id: 'hunter',      mults: [1, 1, 1, 200],     params: { steals: 50 } },
+        { id: 'scorched',    mults: [1, 1, 1, 500],     params: {} },
+    ],
+    WRM: [
+        { id: 'gate',        mults: [1, 1, 1, 1],       params: {} },
+    ],
+    INV: [
+        { id: 'hidden',         mults: null, params: {} },
+        { id: 'mirror',         mults: null, params: {} },
+        { id: 'negative_space', mults: null, params: {} },
+    ],
+};
+
+// Negative magnitude per axis — avoids symmetry, keeps signal distinct
+const INV_NEG = [-100, -50, -50, -100];
+
+function computeInvMults(templateId, sessions, state) {
+    if (templateId === 'mirror') {
+        // Invert the dominant axis of the most recent non-INV session
+        const lastNonInv = sessions.slice().reverse()
+            .find(s => s.config_vector && assignMode(s.config_vector) !== 'INV');
+        if (lastNonInv) {
+            const cv = lastNonInv.config_vector;
+            const abs = [Math.abs(cv[0]), Math.abs(cv[1]), Math.abs(cv[2]), Math.abs(cv[3])];
+            const axis = abs.indexOf(Math.max(...abs));
+            const m = [1, 1, 1, 1];
+            m[axis] = INV_NEG[axis];
+            return m;
+        }
+    }
+    if (templateId === 'negative_space') {
+        // Invert the axis of the student's strongest non-INV mode
+        const modeAxis = { QTY: 0, SPT: 1, FRT: 2, DST: 3 };
+        let bestMode = 'QTY', bestElo = 0;
+        for (const m of ['QTY', 'SPT', 'FRT', 'DST']) {
+            if ((state[m]?.elo || 0) > bestElo) { bestElo = state[m].elo; bestMode = m; }
+        }
+        const axis = modeAxis[bestMode] ?? 0;
+        const mults = [1, 1, 1, 1];
+        mults[axis] = INV_NEG[axis];
+        return mults;
+    }
+    // 'hidden': random axis — student cannot predict which objective is inverted
+    const axis = Math.floor(Math.random() * 4);
+    const mults = [1, 1, 1, 1];
+    mults[axis] = INV_NEG[axis];
+    return mults;
+}
+
+// ─── Template selection ───────────────────────────────────────────────────────
+function selectTemplate(mode, zone, sessions, state) {
+    const pool = TEMPLATES[mode];
+    if (!pool || pool.length === 0) return null;
+    if (pool.length === 1) return pool[0];
+
+    // Recent template IDs for this mode (last 3 sessions)
+    const recentIds = sessions
+        .filter(s => assignMode(s.config_vector) === mode && s.signals?.template_id)
+        .map(s => s.signals.template_id)
+        .slice(-3);
+    const lastId = recentIds[recentIds.length - 1] || null;
+
+    // REMATCH / ECHO: consolidate on same template when available
+    if ((zone === 'REMATCH' || zone === 'ECHO') && lastId) {
+        const last = pool.find(t => t.id === lastId);
+        if (last) return last;
+    }
+
+    // PARALLEL: explicitly different template within the same mode
+    if (zone === 'PARALLEL' && pool.length > 1) {
+        const notRecent = pool.filter(t => !recentIds.includes(t.id));
+        if (notRecent.length > 0) return notRecent[Math.floor(Math.random() * notRecent.length)];
+        const notLast = pool.filter(t => t.id !== lastId);
+        if (notLast.length > 0) return notLast[Math.floor(Math.random() * notLast.length)];
+    }
+
+    // SHIFTING / RADICAL / default: fresh template, avoiding recently used
+    const fresh = pool.filter(t => !recentIds.includes(t.id));
+    if (fresh.length > 0) return fresh[Math.floor(Math.random() * fresh.length)];
+
+    // All recently used — rotate away from the last one only
+    const notLast = pool.filter(t => t.id !== lastId);
+    return notLast.length > 0
+        ? notLast[Math.floor(Math.random() * notLast.length)]
+        : pool[0];
+}
+
+function buildConfigVector(mode, state, template, sessions) {
     const d = state[mode];
-    const mults = MODE_DEFAULTS[mode] || [500, 1, 10, 1];
+
+    // Multipliers: from template (computed for INV), or MODE_DEFAULTS
+    let mults;
+    if (template && template.mults !== null) {
+        mults = template.mults;
+    } else if (template && template.mults === null && mode === 'INV') {
+        mults = computeInvMults(template.id, sessions || [], state);
+    } else {
+        mults = MODE_DEFAULTS[mode] || [500, 1, 10, 1];
+    }
+
     // Difficulty calibration — moves proxy [ASSERTED thresholds]
     const zpd = d.zpd_target;
     const moves   = zpd > 700 ? 10 : zpd > 550 ? 12 : 15;
@@ -313,6 +436,16 @@ function buildConfigVector(mode, state, gc_overrides) {
         0,  // bot_type — HAL [ASSERTED]
         50, // bot_aggression×100 — overridden by toGameConfig from bot profile
     ];
+
+    // Template parameter overrides (applied after ZPD calibration)
+    if (template?.params) {
+        const p = template.params;
+        if (p.moves_override !== undefined) cv[4] = p.moves_override;
+        if (p.rounds        !== undefined) cv[6] = p.rounds;
+        if (p.steals        !== undefined) cv[7] = p.steals;
+        if (p.hq_count      !== undefined) cv[8] = p.hq_count;
+    }
+
     return cv;
 }
 
@@ -321,7 +454,14 @@ function compile(studentId, transferElo) {
     const sessions = readStudentSessions(studentId);
     const state    = computeState(sessions);
     const { mode, scores } = selectMode(state, transferElo || null);
-    const cv       = buildConfigVector(mode, state);
+
+    // Zone must be assigned before template selection (template depends on zone)
+    const zone        = assignZone(sessions, mode, state);
+
+    // Template selection — chooses one of the 14 available archetypes
+    const template    = selectTemplate(mode, zone, sessions, state);
+
+    const cv       = buildConfigVector(mode, state, template, sessions);
     const ch       = configHash(cv);
     const R        = ASSERTED.r_bot;
     const mElo     = state[mode].elo;
@@ -333,14 +473,15 @@ function compile(studentId, transferElo) {
         .filter(Boolean);
     const map_filename = selectMap(mode, recentMaps);
 
-    // Zone and bot profile
-    const zone        = assignZone(sessions, mode, state);
-    const bot_profile = selectBotProfile(sessions, state, zone, sessions.length);
+    // Bot profile — template may override (e.g. 'siege' forces ACCELERANT)
+    let bot_profile = selectBotProfile(sessions, state, zone, sessions.length);
+    if (template?.bot) bot_profile = template.bot;
 
     return {
         student_id:           studentId,
         mode,
         zone,
+        template_id:          template?.id || null,
         map_filename,
         bot_profile,
         config_vector:        cv,
@@ -404,6 +545,6 @@ function toGameConfig(compilerResult, existingConfig) {
 module.exports = {
     compile, computeState, readStudentSessions, listStudents,
     assignMode, selectMode, assignZone, selectMap, selectBotProfile,
-    buildConfigVector, toGameConfig,
-    loadTopology, BOT_PROFILES, MODES, ASSERTED,
+    buildConfigVector, selectTemplate, toGameConfig,
+    loadTopology, BOT_PROFILES, MODES, ASSERTED, TEMPLATES,
 };

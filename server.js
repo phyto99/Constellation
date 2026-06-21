@@ -432,6 +432,412 @@ app.post('/api/ledger/students/merge', (req, res) => {
     }
 });
 
+// ─── Alpha Track API ──────────────────────────────────────────────────────────
+// Persistent store: ledger/alpha.json  (kept alongside _students.json / _aliases.json)
+const ALPHA_PATH = path.join(__dirname, 'ledger', 'alpha.json');
+
+function readAlpha() {
+    try {
+        if (fs.existsSync(ALPHA_PATH)) return JSON.parse(fs.readFileSync(ALPHA_PATH, 'utf8'));
+    } catch { /* malformed — start fresh */ }
+    return { students: {}, applications: [] };
+}
+
+function writeAlpha(data) {
+    // Ensure ledger directory exists (mirrors ledger.js behaviour)
+    const dir = path.dirname(ALPHA_PATH);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(ALPHA_PATH, JSON.stringify(data, null, 2));
+}
+
+function alphaId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+// Eligibility criteria (per CLAUDE.md):
+//   ≥15 total sessions | all 6 modes seen | ≥1 INV session | not in REMATCH loop
+function checkEligibility(studentId) {
+    const sessions = compiler.readStudentSessions(studentId);
+    if (sessions.length < 15) return { eligible: false, reason: 'fewer than 15 sessions' };
+
+    const modes = new Set(sessions.map(s => compiler.assignMode(s.config_vector)).filter(Boolean));
+    const missingModes = compiler.MODES.filter(m => !modes.has(m));
+    if (missingModes.length > 0) return { eligible: false, reason: `missing modes: ${missingModes.join(', ')}` };
+
+    const hasInv = sessions.some(s => compiler.assignMode(s.config_vector) === 'INV');
+    if (!hasInv) return { eligible: false, reason: 'no INV session recorded' };
+
+    const state = compiler.computeState(sessions);
+    const zone = compiler.assignZone(sessions, compiler.MODES[0], state);
+    // Check current recommended zone — REMATCH on the most-priority mode disqualifies
+    try {
+        const compiled = compiler.compile(studentId);
+        if (compiled.zone === 'REMATCH') return { eligible: false, reason: 'currently in REMATCH loop' };
+    } catch { /* compiler error — don't block eligibility */ }
+
+    return { eligible: true, reason: null };
+}
+
+// GET /api/alpha/eligible — list all students with eligibility info
+app.get('/api/alpha/eligible', (req, res) => {
+    try {
+        const students = compiler.listStudents();
+        const alpha = readAlpha();
+        const result = students.map(s => {
+            const elig = checkEligibility(s.student_id);
+            return {
+                student_id:   s.student_id,
+                student_name: s.student_name,
+                sessions:     s.sessions,
+                alpha_status: alpha.students[s.student_id]?.status || null,
+                eligible:     elig.eligible,
+                reason:       elig.reason,
+            };
+        });
+        res.json(result);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/alpha/grant/:studentId — grant Alpha status
+app.post('/api/alpha/grant/:studentId', (req, res) => {
+    try {
+        const sid = decodeURIComponent(req.params.studentId);
+        const alpha = readAlpha();
+        alpha.students[sid] = { status: 'alpha', granted_at: Math.floor(Date.now() / 1000) };
+        writeAlpha(alpha);
+        res.json({ ok: true, student_id: sid, status: 'alpha' });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// DELETE /api/alpha/grant/:studentId — revoke Alpha status
+app.delete('/api/alpha/grant/:studentId', (req, res) => {
+    try {
+        const sid = decodeURIComponent(req.params.studentId);
+        const alpha = readAlpha();
+        delete alpha.students[sid];
+        writeAlpha(alpha);
+        res.json({ ok: true, student_id: sid, status: null });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/alpha/applications — list submitted applications
+app.get('/api/alpha/applications', (req, res) => {
+    try {
+        const alpha = readAlpha();
+        res.json(alpha.applications || []);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/alpha/applications — student submits application
+app.post('/api/alpha/applications', (req, res) => {
+    try {
+        const { student_id, student_name, phase1, phase2, phase3, phase4, phase5, session_ref } = req.body;
+        if (!student_id || !phase1 || !phase2 || !phase3 || !phase4 || !phase5) {
+            return res.status(400).json({ error: 'student_id and all 5 phases required' });
+        }
+        const alpha = readAlpha();
+        // One pending application per student
+        const existing = alpha.applications.find(a => a.student_id === student_id && a.status === 'pending');
+        if (existing) return res.status(409).json({ error: 'application already pending' });
+
+        const app_ = {
+            id: alphaId(), student_id, student_name: student_name || student_id,
+            submitted_at: Math.floor(Date.now() / 1000), session_ref: session_ref || null,
+            phase1, phase2, phase3, phase4, phase5,
+            status: 'pending', reviewed_at: null, review_notes: null,
+        };
+        alpha.applications.push(app_);
+        writeAlpha(alpha);
+        res.json({ ok: true, id: app_.id });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// PUT /api/alpha/applications/:id/review — admin reviews an application
+app.put('/api/alpha/applications/:id/review', (req, res) => {
+    try {
+        const { verdict, notes } = req.body; // verdict: 'accepted' | 'returned' | 'declined'
+        if (!['accepted', 'returned', 'declined'].includes(verdict)) {
+            return res.status(400).json({ error: 'verdict must be accepted, returned, or declined' });
+        }
+        const alpha = readAlpha();
+        const appl = alpha.applications.find(a => a.id === req.params.id);
+        if (!appl) return res.status(404).json({ error: 'application not found' });
+
+        appl.status = verdict;
+        appl.review_notes = notes || null;
+        appl.reviewed_at = Math.floor(Date.now() / 1000);
+
+        if (verdict === 'accepted') {
+            alpha.students[appl.student_id] = {
+                status: 'alpha', granted_at: appl.reviewed_at, via_application: appl.id,
+            };
+        }
+        writeAlpha(alpha);
+        res.json({ ok: true, verdict, student_id: appl.student_id });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/alpha/status/:studentId — check one student's alpha status
+app.get('/api/alpha/status/:studentId', (req, res) => {
+    try {
+        const sid = decodeURIComponent(req.params.studentId);
+        const alpha = readAlpha();
+        const record = alpha.students[sid] || null;
+        const elig = checkEligibility(sid);
+        const pendingApp = (alpha.applications || []).find(a => a.student_id === sid && a.status === 'pending');
+        res.json({
+            student_id:     sid,
+            alpha_status:   record?.status || null,
+            granted_at:     record?.granted_at || null,
+            eligible:       elig.eligible,
+            eligibility_reason: elig.reason,
+            has_pending_application: !!pendingApp,
+        });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Serve Alpha application page
+app.get('/alpha', (_req, res) => res.sendFile(path.join(__dirname, 'student-alpha.html')));
+
+// ─── Dossier / Reaction / Challenge API ──────────────────────────────────────
+
+const CHALLENGES_PATH = path.join(__dirname, 'ledger', 'challenges.json');
+
+function readChallenges() {
+    try {
+        if (fs.existsSync(CHALLENGES_PATH))
+            return JSON.parse(fs.readFileSync(CHALLENGES_PATH, 'utf8'));
+    } catch (_) { }
+    return { challenges: [] };
+}
+
+function writeChallenges(data) {
+    fs.writeFileSync(CHALLENGES_PATH, JSON.stringify(data, null, 2));
+}
+
+function challengeId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+const ZONE_RANK_DOS = {
+    CALIBRATION: 0, REMATCH: 0.5, ECHO: 1,
+    PARALLEL: 2, SHIFTING: 3, RADICAL: 4, ALPHA: 5, SINGULARITY: 6
+};
+
+function projectReaction(compiledA, compiledB) {
+    const zoneA = compiledA.session_count === 0 ? 'CALIBRATION' : compiledA.zone;
+    const zoneB = compiledB.session_count === 0 ? 'CALIBRATION' : compiledB.zone;
+    const rankA = ZONE_RANK_DOS[zoneA] ?? 1;
+    const rankB = ZONE_RANK_DOS[zoneB] ?? 1;
+    const zoneDiff = Math.abs(rankA - rankB);
+
+    const ssA  = compiledA.state_snapshot?.[compiledA.mode] || {};
+    const ssB  = compiledB.state_snapshot?.[compiledB.mode] || {};
+    const eloA = ssA.elo ?? 500;
+    const eloB = ssB.elo ?? 500;
+    const eloGap = Math.abs(eloA - eloB);
+
+    const velA = ssA.velocity ?? 0;
+    const velB = ssB.velocity ?? 0;
+    const trajectory = (velA > 0 && velB > 0) ? '↑↑'
+        : (velA > 0 || velB > 0)              ? '↑'
+        : (zoneA === 'REMATCH' || zoneB === 'REMATCH') ? '?'
+        : '→';
+
+    let signalMult;
+    if (zoneA === 'CALIBRATION' || zoneB === 'CALIBRATION') {
+        signalMult = 0;
+    } else if (zoneA === 'REMATCH' && zoneB === 'REMATCH') {
+        signalMult = 0.9;
+    } else if (zoneDiff === 0) {
+        signalMult = zoneA === 'RADICAL' ? 2.0 : 1.1;
+    } else {
+        signalMult = zoneDiff <= 1 ? 1.6 : zoneDiff <= 2 ? 2.2 : 3.1;
+    }
+
+    let assessment = [];
+    let proposalNote = '';
+
+    if (zoneA === 'CALIBRATION' || zoneB === 'CALIBRATION') {
+        const both = zoneA === 'CALIBRATION' && zoneB === 'CALIBRATION';
+        assessment = both ? [
+            'Neither player has enough sessions for a stable profile. The system cannot project a joint reaction.',
+            'Play individual sessions first. Joint sessions at this stage produce noise, not signal — there is no model to compare yet.'
+        ] : [
+            'One player is still in the calibration phase. The system does not have a stable profile for them yet.',
+            'Let them play more individual sessions first. The dossier will update once the system has something to say.'
+        ];
+        proposalNote = 'Insufficient data for a projection. Play individual sessions until both players have a stable profile.';
+    } else if (zoneA === zoneB) {
+        const z = zoneA;
+        if (z === 'REMATCH') {
+            assessment = [
+                'Both players are in REMATCH — both retrying incomplete signals. Neither can anchor the other right now.',
+                'The system does not recommend a joint session until at least one player has resolved their REMATCH state individually.'
+            ];
+            proposalNote = 'Both in REMATCH. Resolve individual REMATCH states before playing together.';
+        } else if (z === 'RADICAL') {
+            assessment = [
+                'Both players are in RADICAL. No anchor, no stable reference point. The outcome of a joint session here is genuinely unpredictable.',
+                'Joint RADICAL sessions can produce very high signal or noise. Hard challenge is the only configuration worth attempting.'
+            ];
+            proposalNote = 'Both in RADICAL. High variance expected. Hard challenge is the only productive configuration.';
+        } else {
+            assessment = [
+                `Both players are in ${z}. Joint sessions at the same zone produce consolidation signal — useful for deepening, not for expanding.`,
+                'The compiler recommends raising challenge level if you play together. Familiar players in familiar territory need external pressure for useful signal.'
+            ];
+            proposalNote = `Two ${z}-zone players in Standard will consolidate. Raise challenge level for stretch signal.`;
+        }
+    } else {
+        const aIsHigher = rankA > rankB;
+        const lowerZone  = aIsHigher ? zoneB : zoneA;
+        const higherZone = aIsHigher ? zoneA : zoneB;
+        if (zoneA === 'REMATCH' || zoneB === 'REMATCH') {
+            const otherZone = zoneA === 'REMATCH' ? zoneB : zoneA;
+            assessment = [
+                `One player is in REMATCH. The system is retrying an incomplete signal for them. A ${otherZone}-zone partner may stabilise the session — but the REMATCH will still register individually.`,
+                'This pairing can work. The REMATCH player still needs individual resolution regardless of joint outcomes.'
+            ];
+            proposalNote = 'One player in REMATCH. Joint session may anchor, but the REMATCH state requires individual resolution.';
+        } else {
+            assessment = [
+                `Zone differential: ${lowerZone} meets ${higherZone}. The gap between your zones is the source of productive pressure.`,
+                `The ${lowerZone}-zone player will experience stretch signal from the ${higherZone}-zone player's approach. Expected signal density: ${signalMult.toFixed(1)}x vs solo.`
+            ];
+            if (higherZone === 'RADICAL') {
+                assessment.push(`The RADICAL player's gap-driven play pushes the ${lowerZone} player into territory they have not fully mapped. This is the highest-value pairing configuration.`);
+            } else if (zoneDiff >= 3) {
+                assessment.push('The gap is large. The lower-zone player will find this session demanding. The higher-zone player provides the reference point that solo play cannot generate.');
+            }
+            proposalNote = `Zone differential is ${zoneDiff <= 1 ? 'moderate' : zoneDiff <= 2 ? 'significant' : 'large'}. Standard challenge is appropriate — the zone gap provides the pressure.`;
+        }
+    }
+
+    const multStr = signalMult === 0 ? '—'
+        : (signalMult >= 1.1 ? '+' : '') + signalMult.toFixed(1) + '\xd7';
+
+    return {
+        zone_a:      zoneA,
+        zone_b:      zoneB,
+        zone_diff:   zoneDiff,
+        elo_gap:     eloGap,
+        signal_mult: signalMult,
+        trajectory,
+        assessment,
+        stats: [
+            { val: multStr,               lbl: 'Signal vs solo' },
+            { val: eloGap > 0 ? String(eloGap) : '—', lbl: 'Elo gap' },
+            { val: trajectory,            lbl: 'Trajectory' },
+        ],
+        proposal_note: proposalNote,
+    };
+}
+
+// GET /api/dossier/partners/:studentId — all other students with zone + pending challenge flag
+app.get('/api/dossier/partners/:studentId', (req, res) => {
+    try {
+        const myId      = decodeURIComponent(req.params.studentId);
+        const all        = compiler.listStudents();
+        const challenges = readChallenges().challenges || [];
+        const partners   = all
+            .filter(s => s.student_id !== myId)
+            .map(s => {
+                let zone = 'CALIBRATION';
+                try {
+                    if (s.sessions > 0) {
+                        const c = compiler.compile(s.student_id);
+                        zone = c.zone || 'CALIBRATION';
+                    }
+                } catch (_) { }
+                const hasPending = challenges.some(c =>
+                    c.status === 'pending' &&
+                    ((c.from_id === myId && c.to_id === s.student_id) ||
+                     (c.from_id === s.student_id && c.to_id === myId))
+                );
+                return {
+                    student_id:   s.student_id,
+                    student_name: s.student_name || s.student_id,
+                    sessions:     s.sessions,
+                    zone,
+                    has_pending:  hasPending,
+                };
+            });
+        res.json(partners);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/dossier/reaction/:studentA/:studentB
+app.get('/api/dossier/reaction/:studentA/:studentB', (req, res) => {
+    try {
+        const idA       = decodeURIComponent(req.params.studentA);
+        const idB       = decodeURIComponent(req.params.studentB);
+        const compiledA = compiler.compile(idA);
+        const compiledB = compiler.compile(idB);
+        res.json(projectReaction(compiledA, compiledB));
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/dossier/challenges/:studentId — pending challenges involving this student
+app.get('/api/dossier/challenges/:studentId', (req, res) => {
+    try {
+        const sid  = decodeURIComponent(req.params.studentId);
+        const data = readChallenges();
+        res.json((data.challenges || []).filter(c =>
+            c.status === 'pending' && (c.from_id === sid || c.to_id === sid)
+        ));
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/dossier/challenges
+app.post('/api/dossier/challenges', (req, res) => {
+    try {
+        const { from_id, from_name, to_id, to_name,
+                session_type, challenge_level, map, proposal_note } = req.body;
+        if (!from_id || !to_id)
+            return res.status(400).json({ error: 'from_id and to_id required' });
+        const data     = readChallenges();
+        const existing = (data.challenges || []).find(c =>
+            c.status === 'pending' &&
+            ((c.from_id === from_id && c.to_id === to_id) ||
+             (c.from_id === to_id   && c.to_id === from_id))
+        );
+        if (existing)
+            return res.status(409).json({ error: 'challenge already pending between these players' });
+        const ch = {
+            id:              challengeId(),
+            from_id,         from_name: from_name || from_id,
+            to_id,           to_name:   to_name   || to_id,
+            created_at:      Math.floor(Date.now() / 1000),
+            session_type:    session_type    || 'Train Together',
+            challenge_level: challenge_level || 'Standard',
+            map:             map || null,
+            proposal_note:   proposal_note || '',
+            status:          'pending',
+            responded_at:    null,
+        };
+        data.challenges.push(ch);
+        writeChallenges(data);
+        res.json({ ok: true, id: ch.id });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// PUT /api/dossier/challenges/:id/respond
+app.put('/api/dossier/challenges/:id/respond', (req, res) => {
+    try {
+        const { verdict } = req.body;
+        if (!['accepted', 'declined', 'cancelled'].includes(verdict))
+            return res.status(400).json({ error: 'verdict must be accepted, declined, or cancelled' });
+        const data = readChallenges();
+        const ch   = (data.challenges || []).find(c => c.id === req.params.id);
+        if (!ch) return res.status(404).json({ error: 'challenge not found' });
+        ch.status       = verdict;
+        ch.responded_at = Math.floor(Date.now() / 1000);
+        writeChallenges(data);
+        res.json({ ok: true, id: ch.id, verdict });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // Schema definitions
 class Player extends Schema {
     constructor() {
