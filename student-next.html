@@ -485,6 +485,7 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
 const WS  = (location.protocol==='https:'?'wss':'ws')+'://'+location.host;
 const API = location.origin;
 const BOT_TYPES = ['HAL','CAESAR','ATHENA','ROBIN_HOOD','EINSTEIN','LORENZ'];
+const BOT_PROFILE_AGGRESSION = {TURTLER:2,STANDARD:5,CONTESTER:6,ACCELERANT:8,MIRROR:5,THEORETICIAN:5};
 const AGG_RANGE = {easy:[1,3],standard:[4,6],hard:[7,9]};
 
 const S = {
@@ -598,6 +599,22 @@ const ZONE_POOLS = {
       [ 'ECHO.', '', "Familiar ground isn't the same as easy ground.", "Find the parts of it you still don't fully own." ],
     ]
   },
+  PARALLEL: {
+    signal: 'same target \xb7 conditions shifted',
+    msgs: [
+      [ 'PARALLEL.', '', 'Same cognitive target. Different terrain.', 'What you built here still applies.', 'Not directly.' ],
+      [ 'PARALLEL.', '', 'The system has chosen a different approach to the same challenge.', 'What you learned last time is relevant.', 'Find where.' ],
+      [ 'PARALLEL.', '', 'Same destination. New route.', 'The territory has shifted. Your tools have not.' ],
+    ]
+  },
+  SHIFTING: {
+    signal: 'adjacent territory \xb7 mode change',
+    msgs: [
+      [ 'SHIFTING.', '', 'The system has moved to adjacent territory.', 'What you learned here will partially apply.', 'Find the part that does.' ],
+      [ 'SHIFTING.', '', 'Adjacent domain selected.', 'The last session is not irrelevant.', 'But it is not a map.' ],
+      [ 'SHIFTING.', '', 'Something about this session is different.', 'The system is not going to tell you what.', 'Figure it out.' ],
+    ]
+  },
   RADICAL: {
     signal: 'new territory \xb7 gap detected',
     msgs: [
@@ -606,18 +623,12 @@ const ZONE_POOLS = {
       [ 'RADICAL.', '', 'One dimension of your thinking has outpaced another.', 'This is what the gap looks like from the inside.' ],
     ]
   },
-  ALPHA: {
-    signal: 'high signal \xb7 near the boundary',
+  REMATCH: {
+    signal: 'incomplete signal \xb7 retry',
     msgs: [
-      [ 'ALPHA.', '', 'Near the edge of your current model.', 'What happens here is genuinely unpredictable.' ],
-      [ 'ALPHA. The system is reaching.', '', "It's looking for something it hasn't seen from you before.", 'So should you.' ],
-    ]
-  },
-  SINGULARITY: {
-    signal: 'exceptional \xb7 uncharted',
-    msgs: [
-      [ 'SINGULARITY.', '', 'The model is being rewritten.', "There isn't a recommended configuration.", 'Build what feels right.' ],
-      [ 'SINGULARITY.', '', 'Not many reference points for where you are.', 'The system is learning from you now,', 'not the other way around.' ],
+      [ 'REMATCH.', '', 'The signal from last time was incomplete.', 'The system requires one more attempt.' ],
+      [ 'REMATCH.', '', 'The previous session ended before the system had what it needed.', 'Same territory. Different attempt.' ],
+      [ 'REMATCH.', '', 'Close loss. The system is not finished here.', 'The system remembers the last time you were here.' ],
     ]
   },
 };
@@ -827,19 +838,27 @@ async function createSession(mode){
 }
 
 function buildTrainOpts(useRec){
-  const c=S.compiler; const cv=c?.config_vector||{};
+  const c=S.compiler; const cv=c?.config_vector||[];
   const usedRec=useRec&&!!c;
+  const botFromProfile=usedRec&&c.bot_profile?{
+    type:'HAL',
+    aggression:BOT_PROFILE_AGGRESSION[c.bot_profile]||5,
+    team:1,
+  }:null;
   return{
-    countMultiplier:       usedRec?(cv.count_mult||500):500,
-    distanceMultiplier:    usedRec?(cv.distance_mult||1):1,
-    hqMultiplier:          usedRec?(cv.hq_mult||10):10,
-    destructionMultiplier: usedRec?(cv.dest_mult||1):1,
-    rounds:                usedRec?(cv.rounds||10):+document.getElementById('t-rounds').value,
+    countMultiplier:       usedRec?(cv[0]||500):500,
+    distanceMultiplier:    usedRec?(cv[1]??1):1,
+    hqMultiplier:          usedRec?(cv[2]||10):10,
+    destructionMultiplier: usedRec?(cv[3]??1):1,
+    rounds:                usedRec?(cv[6]||10):+document.getElementById('t-rounds').value,
     roundTime:             +document.getElementById('t-rt').value,
-    movesPerRound:15, stealLimit:5, hqMax:2, colorTeamCount:2,
-    mapJson:               usedRec?(c?.map_json||''):getMapJson(S.train.map),
+    movesPerRound:         usedRec?(cv[4]||15):15,
+    stealLimit:            usedRec?(cv[7]??5):5,
+    hqMax:                 usedRec?(cv[8]||2):2,
+    colorTeamCount:2,
+    mapJson:               usedRec?getMapJsonByFilename(c.map_filename):getMapJson(S.train.map),
     playerName:            S.student,
-    aiBots:                S.train.bot?[botCfg(S.train.challenge)]:[],
+    aiBots:                S.train.bot?(botFromProfile?[botFromProfile]:[botCfg(S.train.challenge)]):[],
     allowPlayerTeamSelection:false,
     _source:'student-train',_studentId:S.studentId,
     _usedRecommendation:usedRec,
@@ -878,6 +897,7 @@ function botCfg(level){
   };
 }
 function getMapJson(name){ const m=S.maps.find(x=>x.name===name); return m?.json||''; }
+function getMapJsonByFilename(fn){ if(!fn)return ''; const n=fn.replace(/\.json$/i,''); const m=S.maps.find(x=>x.name===n||x.name===fn); return m?.json||''; }
 
 // Q6: record panel interaction as SELF channel signal
 function recordPanelSignal(mode,opts){
@@ -1034,9 +1054,10 @@ function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace
     <div class="dev-btns" id="devZoneBtns">
       <button class="dev-btn on" onclick="devSetZone('CALIBRATION',this)">CAL</button>
       <button class="dev-btn" onclick="devSetZone('ECHO',this)">ECHO</button>
+      <button class="dev-btn" onclick="devSetZone('PARALLEL',this)">PAR</button>
+      <button class="dev-btn" onclick="devSetZone('SHIFTING',this)">SHF</button>
       <button class="dev-btn" onclick="devSetZone('RADICAL',this)">RAD</button>
-      <button class="dev-btn" onclick="devSetZone('ALPHA',this)">ALPHA</button>
-      <button class="dev-btn" onclick="devSetZone('SINGULARITY',this)">SIN</button>
+      <button class="dev-btn" onclick="devSetZone('REMATCH',this)">REM</button>
     </div>
   </div>
   <div class="dev-sec">
@@ -1094,7 +1115,7 @@ var DEV_SCENARIOS={
   first:{session:0,zone:"CALIBRATION",mode:"train"},
   early:{session:2,zone:"CALIBRATION",mode:"train"},
   zoned:{session:8,zone:"ECHO",mode:"train"},
-  advanced:{session:20,zone:"ALPHA",mode:"train"},
+  advanced:{session:20,zone:"RADICAL",mode:"train"},
   host:{session:5,zone:"ECHO",mode:"host"},
   invitee:{session:0,zone:"CALIBRATION",mode:"host"}
 };

@@ -111,7 +111,12 @@ header{border-bottom:2px solid #000;padding:8px 14px;display:flex;align-items:ba
 <div class="main" id="main-live">
   <!-- ── FEED ── -->
   <div class="feed-panel">
-    <div class="panel-hd"><div class="live-dot"></div>Observation Stream<span id="data-source" style="font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #d97706;color:#d97706;padding:1px 5px">MOCK</span><span style="margin-left:auto;font-size:8px;color:#aaa" id="obs-count"></span></div>
+    <div class="panel-hd" style="flex-wrap:wrap;gap:4px"><div class="live-dot"></div>Observation Stream<span id="data-source" style="font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #d97706;color:#d97706;padding:1px 5px">MOCK</span><span style="margin-left:auto;font-size:8px;color:#aaa" id="obs-count"></span><button onclick="loadData()" style="font-size:7px;border:1px solid #ccc;background:#fff;padding:1px 5px;cursor:pointer;font-family:Arial">↺</button></div>
+    <div style="padding:5px 10px;border-bottom:1px solid #f0f0f0;background:#fafafa;flex-shrink:0">
+      <select id="student-filter" onchange="applyFilter()" style="width:100%;font-size:9px;border:1px solid #ddd;padding:2px 4px;font-family:Arial;background:#fff;color:#111">
+        <option value="">All students</option>
+      </select>
+    </div>
     <div class="feed-scroll" id="feed-scroll"></div>
   </div>
 
@@ -195,8 +200,8 @@ const BOT_NAMES   = ['HAL','CAESAR','ATHENA','ROBIN','EINSTEIN','LORENZ'];
 const MAP_NAMES   = ['AETHER','PROVIDENCE','CITADEL','DELTA'];
 const STUDENT_NAMES = {aria:'ARIA',bram:'BRAM',clio:'CLIO',dara:'DARA'};
 
-// Observation records — raw, no mode labels
-const OBS = [
+// Mock observation records — raw, no mode labels. Used as fallback when server is offline.
+const MOCK_OBS = [
   // ── ARIA (22 sessions total) — 10 representative
   {id:'a01',t:1717200000,s:'aria',c:[500,1, 5,  1,15,30, 8,15,2,0,0,50],o:0.62,sig:{rnd:[0.14,0.28,0.42,0.56,0.67,0.76,0.85,0.95]}},
   {id:'a02',t:1717286400,s:'aria',c:[500,1, 5,  1,15,30, 8,15,2,0,2,60],o:0.71,sig:{rnd:[0.16,0.31,0.49,0.63,0.73,0.82,0.89,0.96]}},
@@ -233,8 +238,8 @@ const OBS = [
   {id:'d11',t:1718582400,s:'dara',c:[  1,  1,1,360,12,30,10,40,2,0,2,80],o:0.88,sig:{rnd:[0.15,0.31,0.47,0.60,0.71,0.80,0.86,0.90,0.93,0.95]}},
 ];
 
-// ── Sort newest first
-OBS.sort((a,b) => b.t - a.t);
+// ── Live working array (populated from server or MOCK_OBS fallback)
+let OBS = [];
 
 // ── State
 let selectedId = null;
@@ -242,7 +247,20 @@ let showLabels = false;
 
 // ── Normalize a real Ledger record into the internal format used by OBS
 function fromReal(obs) {
-  const rnd = (obs.signals?.round_snapshots || []).map(r => r.score_pct ?? r.rank_pct ?? 0);
+  const snaps = obs.signals?.round_snapshots || [];
+  const teamIdx = obs.outcome?.player_team ?? 0;
+  // Real snapshots: {round, t, starsByTeam: {0:n, 1:n, ...}}
+  // Normalize to 0-1 using share of total claimed stars each round
+  const rnd = snaps.map(r => {
+    if (r.score_pct != null) return r.score_pct; // legacy mock format
+    if (r.rank_pct  != null) return r.rank_pct;
+    if (r.starsByTeam) {
+      const mine = r.starsByTeam[teamIdx] ?? 0;
+      const total = Object.values(r.starsByTeam).reduce((a, b) => a + b, 0);
+      return total > 0 ? mine / total : 0;
+    }
+    return 0;
+  });
   return {
     id: obs.id || obs.session_id || String(obs.t),
     t: obs.t,
@@ -252,6 +270,7 @@ function fromReal(obs) {
     o: obs.outcome?.rank_pct ?? 0.5,
     sig: { rnd },
     _real: true,
+    _raw: obs,
     _flags: {
       silent_inv: obs.silent_inv,
       compiler_generated: obs.compiler_generated,
@@ -270,11 +289,11 @@ function displayName(o) {
 async function loadData() {
   const badge = document.getElementById('data-source');
   try {
-    const res = await fetch('/api/ledger/raw?limit=200');
+    const res = await fetch('/api/ledger/raw?limit=500');
     if (!res.ok) throw new Error(res.status);
     const data = await res.json();
+    OBS.length = 0;
     if (data.length > 0) {
-      OBS.length = 0;
       data.forEach(r => OBS.push(fromReal(r)));
       badge.textContent = 'LIVE';
       badge.style.borderColor = '#15803d';
@@ -283,12 +302,45 @@ async function loadData() {
       badge.textContent = 'LIVE · empty';
       badge.style.borderColor = '#15803d';
       badge.style.color = '#15803d';
+      // Populate with mock so UI is usable
+      MOCK_OBS.forEach(r => OBS.push(r));
     }
+    _isLive = true;
   } catch {
     badge.textContent = 'MOCK';
-    // Keep mock data (OBS already populated)
+    if (OBS.length === 0) MOCK_OBS.forEach(r => OBS.push(r));
+    _isLive = false;
   }
+  OBS.sort((a, b) => b.t - a.t);
+  updateStudentFilter();
+  applyFilter();
 }
+
+let _isLive = false;
+let _filterStudent = '';
+
+function updateStudentFilter() {
+  const sel = document.getElementById('student-filter');
+  const current = sel.value;
+  // Unique students newest-first
+  const seen = new Set();
+  const students = [];
+  OBS.forEach(o => {
+    const key = o.s;
+    if (!seen.has(key)) { seen.add(key); students.push({ id: key, name: displayName(o) }); }
+  });
+  sel.innerHTML = '<option value="">All students (' + OBS.length + ' records)</option>' +
+    students.map(s => `<option value="${s.id}"${s.id===current?' selected':''}>${s.name}</option>`).join('');
+}
+
+function applyFilter() {
+  _filterStudent = document.getElementById('student-filter').value;
+  renderFeed();
+  drawScatter();
+}
+
+// Auto-poll every 30s when live
+setInterval(() => { if (_isLive) loadData(); }, 30000);
 
 // ── Helpers
 function fmtTime(t){
@@ -309,8 +361,9 @@ function vecStr(c){
 // ── Render Feed
 function renderFeed(){
   const el=document.getElementById('feed-scroll');
-  document.getElementById('obs-count').textContent=OBS.length+' records';
-  el.innerHTML=OBS.map(o=>{
+  const visible=_filterStudent?OBS.filter(o=>o.s===_filterStudent):OBS;
+  document.getElementById('obs-count').textContent=visible.length+(visible.length<OBS.length?'/'+OBS.length:'')+' records';
+  el.innerHTML=visible.map(o=>{
     const ol=outcomeLabel(o.o);
     const sel=selectedId===o.id;
     return `<div class="obs-row${sel?' selected':''}" onclick="selectObs('${o.id}')">
@@ -378,11 +431,29 @@ function renderInspector(o){
       <div class="traj-bar">${o.sig.rnd.map(v=>`<div class="traj-seg"><div class="traj-fill" style="height:${v*100}%"></div></div>`).join('')}</div>
       <div class="field-note">Normalized cumulative score per round. Raw signal. No interpretation.</div>
     </div>
+    ${o._raw ? `
+    <div class="inspect-field" style="border-top:1px solid #eee;margin-top:4px;padding-top:8px">
+      <div class="field-name">Signal Fields</div>
+      ${[
+        ['session_number', o._raw.session_number != null ? '#'+o._raw.session_number : '—'],
+        ['session_duration', o._raw.signals?.session_duration_s != null ? o._raw.signals.session_duration_s+'s' : '—'],
+        ['compiler_zone', o._raw.signals?.compiler_zone || '—'],
+        ['compiler_bot_profile', o._raw.signals?.compiler_bot_profile || '—'],
+        ['compiler_expected_rank', o._raw.signals?.compiler_expected_rank_pct != null ? (o._raw.signals.compiler_expected_rank_pct*100).toFixed(1)+'%' : '—'],
+        ['archetype_tag', o._raw.signals?.archetype_tag || '—'],
+        ['strategy_shift_count', o._raw.signals?.strategy_shift_count != null ? o._raw.signals.strategy_shift_count : '—'],
+        ['steals_used_by_team', o._raw.signals?.steals_used_by_team != null ? o._raw.signals.steals_used_by_team : '—'],
+        ['hq_placement_round', o._raw.signals?.hq_placement_round != null ? o._raw.signals.hq_placement_round : '—'],
+        ['r_bot (asserted)', o._raw.signals?.r_bot != null ? o._raw.signals.r_bot : '—'],
+        ['params_version', o._raw.params_version || '—'],
+        ['win_condition', o._raw.outcome?.win_condition || '—'],
+      ].map(([n,v])=>`<div class="sig-row"><div class="sig-name">${n}</div><div class="sig-val">${v}</div></div>`).join('')}
+    </div>` : ''}
     <div style="background:#111;color:#888;font-family:'Courier New',monospace;font-size:9px;padding:8px 10px;margin-top:8px;line-height:1.7">
       <span style="color:#555">// Layer 0 has no field named 'mode'</span><br>
       <span style="color:#555">// Layer 0 has no field named 'template'</span><br>
       <span style="color:#555">// Layer 0 has no field named 'elo_delta'</span><br>
-      <span style="color:#fff">config_hash</span>: <span style="color:#0f0">sha256("${o.c.join(',')}")</span><br>
+      <span style="color:#fff">config_hash</span>: <span style="color:#0f0">${o._raw?.config_hash||'sha256("'+o.c.join(',')+'")'.slice(0,20)+'…'}</span><br>
       <span style="color:#fff">record_type</span>: <span style="color:#0f0">OBSERVATION</span><br>
       <span style="color:#fff">mutable</span>: <span style="color:#dc6464">FALSE</span>
     </div>`;
@@ -448,7 +519,8 @@ function drawScatter(){
 
   // Plot points
   scatterPts=[];
-  OBS.forEach(o=>{
+  const visibleObs=_filterStudent?OBS.filter(o=>o.s===_filterStudent):OBS;
+  visibleObs.forEach(o=>{
     const xv=o.c[xi], yv=o.c[yi];
     // Map: negative values handled
     const xr=(xv+600)/(mx+600), yr=(yv+600)/(my+600);
@@ -511,7 +583,6 @@ function drawScatter(){
 
 document.addEventListener('DOMContentLoaded',()=>{
   loadData().then(()=>{
-    renderFeed();
     setTimeout(drawScatter, 80);
   });
 
