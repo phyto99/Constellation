@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Constellation — Student Panel</title>
+<script src="https://accounts.google.com/gsi/client" async></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-height:100vh}
@@ -174,6 +175,7 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
   </div>
   <div class="hdr-right">
     <span class="whoami" id="whoami" style="display:none">Playing as <b id="whoamiName"></b></span>
+    <button id="signInBtn" onclick="triggerSignIn()" style="font-size:9px;letter-spacing:1px;text-transform:uppercase;border:1px solid #ddd;background:#fff;padding:3px 9px;cursor:pointer;font-family:Arial,sans-serif;color:#888">Sign in</button>
     <div class="conn"><div class="dot" id="connDot"></div><span id="connLbl">Connecting</span></div>
     <a href="/admin" class="admin-lnk">Admin ↗</a>
   </div>
@@ -206,6 +208,8 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
       <div class="trow" id="tSignalRow"><span class="tk">signal</span><span class="tv g" id="tSignal">—</span></div>
       <div class="trow" id="tModeRow" style="display:none"><span class="tk">mode</span><span class="tv" id="tMode">—</span></div>
       <div class="trow" id="tExpRow" style="display:none"><span class="tk">expected</span><span class="tv" id="tExp">—</span></div>
+      <div class="trow" id="tCfgRow" style="display:none"><span class="tk">config</span><span class="tv" id="tCfg">—</span></div>
+      <div class="trow" id="tReasonRow" style="display:none"><span class="tk">why</span><span class="tv" style="color:#555;font-size:9.5px" id="tReason">—</span></div>
       <div class="thr" id="tDivider"></div>
 
       <!-- session 1: grey card -->
@@ -240,6 +244,7 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
       <button class="btn-customize" onclick="scrollToConfig()">Customize ›</button>
       <span class="term-aside" id="termAside">—</span>
     </div>
+    <div id="tDevNote" style="display:none;font-size:9px;color:#444;padding:8px 18px;border-top:1px solid #111;letter-spacing:.5px;line-height:1.7">The system chose this configuration for signal quality. Customize below to deviate — deviations are recorded.</div>
   </div>
 
   <!-- ══════════════════════════════════
@@ -424,7 +429,7 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
             <button class="tg-opt" id="h-bot-on" onclick="setBot('host',true)">On</button>
           </div>
         </div>
-        <div class="fg" id="h-ch-section" style="opacity:.35;pointer-events:none">
+        <div class="fg" id="h-ch-section">
           <label>Challenge</label>
           <div class="ch">
             <button class="ch-opt" onclick="setCh('host','easy',this)">Easy</button>
@@ -503,6 +508,45 @@ const S = {
 };
 
 // ── BOOT
+const GOOGLE_CLIENT_ID = ''; // Set your Google OAuth 2.0 client_id here
+
+function triggerSignIn(){
+  if(!GOOGLE_CLIENT_ID){alert('Sign-in not configured.');return;}
+  google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:handleGoogleSignIn});
+  google.accounts.id.prompt();
+}
+function handleGoogleSignIn(response){
+  try{
+    const p=JSON.parse(atob(response.credential.split('.')[1]));
+    const name=p.name||p.email;
+    const gid='g_'+p.sub;
+    localStorage.setItem('constellation_name',name);
+    S.student=name; S.studentId=gid;
+    document.getElementById('whoamiName').textContent=name;
+    document.getElementById('signInBtn').style.display='none';
+    loadCompiler();
+  }catch(e){console.error('Sign-in error',e);}
+}
+
+function buildReason(c){
+  if(!c||!c.state_snapshot||!c.mode) return '';
+  const st=c.state_snapshot[c.mode]||{};
+  const parts=[];
+  if(st.n) parts.push(st.n+' session'+(st.n===1?'':'s')+' in '+c.mode);
+  if(st.elo) parts.push('elo '+st.elo);
+  if(st.since_days>14) parts.push(Math.round(st.since_days)+'d gap · decay applied');
+  const zr={ECHO:'consolidating',RADICAL:'gap detected',REMATCH:'retry signaled',SHIFTING:'mode rotated',PARALLEL:'parameters shifted',CALIBRATION:'forming baseline'};
+  if(zr[c.zone]) parts.push(zr[c.zone]);
+  return parts.join(' · ');
+}
+
+function syncSlidersToCompiler(){
+  const c=S.compiler; if(!c||!c.config_vector) return;
+  const cv=c.config_vector;
+  if(cv[6]){document.getElementById('t-rounds').value=cv[6];document.getElementById('t-rounds-v').textContent=cv[6];}
+  if(cv[5]){document.getElementById('t-rt').value=cv[5];document.getElementById('t-rt-v').textContent=cv[5]+'s';}
+}
+
 window.addEventListener('DOMContentLoaded',()=>{
   const name = localStorage.getItem('constellation_name')||'Guest';
   S.student   = name;
@@ -568,6 +612,7 @@ async function loadCompiler(){
     if(!r.ok){ fallbackCompiler(); return; }
     S.compiler=await r.json();
     S.sessionCount=S.compiler.session_count||0;
+    syncSlidersToCompiler();
     renderTerminal(S.mode);
   }catch(_){ fallbackCompiler(); }
 }
@@ -681,9 +726,20 @@ function renderTerminal(mode){
     const showExp=c?.expected_rank_pct!=null;
     document.getElementById('tExpRow').style.display=showExp?'flex':'none';
     if(showExp) document.getElementById('tExp').textContent=Math.round(c.expected_rank_pct*100)+'th percentile';
+    if(c&&c.config_vector){
+      var cv=c.config_vector;
+      document.getElementById('tCfgRow').style.display='flex';
+      document.getElementById('tCfg').textContent=(cv[6]||10)+' rounds · '+(cv[5]||30)+'s · '+(c.bot_profile||'STANDARD');
+      document.getElementById('tReasonRow').style.display='flex';
+      document.getElementById('tReason').textContent=buildReason(c);
+      document.getElementById('tDevNote').style.display='block';
+    }
   } else {
     document.getElementById('tModeRow').style.display='none';
     document.getElementById('tExpRow').style.display='none';
+    document.getElementById('tCfgRow').style.display='none';
+    document.getElementById('tReasonRow').style.display='none';
+    document.getElementById('tDevNote').style.display='none';
   }
 
   // session 1 - grey card inside terminal
@@ -766,13 +822,9 @@ function setBot(mode,on){
   if(mode==='train'){
     document.getElementById('t-bot-off').classList.toggle('on',!on);
     document.getElementById('t-bot-on').classList.toggle('on',on);
-    const s=document.getElementById('t-ch-section');
-    s.style.opacity=on?'1':'.35'; s.style.pointerEvents=on?'':'none';
   } else {
     document.getElementById('h-bot-off').classList.toggle('on',!on);
     document.getElementById('h-bot-on').classList.toggle('on',on);
-    const s=document.getElementById('h-ch-section');
-    s.style.opacity=on?'1':'.35'; s.style.pointerEvents=on?'':'none';
   }
 }
 function setCh(mode,level,btn){
