@@ -234,7 +234,7 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
     </div>
     <div class="term-foot">
       <div style="display:flex;flex-direction:column;gap:3px">
-        <button class="btn-launch" id="btnLaunchRec" onclick="launchRecommended()" disabled title="Requires 5 sessions — use DEV panel to test">Launch Recommended</button>
+        <button class="btn-launch" id="btnLaunchRec" onclick="launchRecommended()">Launch Recommended</button>
         <span id="btnLaunchHint" style="font-size:8px;color:#555;letter-spacing:.5px"></span>
       </div>
       <button class="btn-customize" onclick="scrollToConfig()">Customize ›</button>
@@ -729,15 +729,7 @@ function renderTerminal(mode){
   else if(n<5)     aside.textContent='calibrating';
   else{const _mn=c?.mode&&c.mode!=='INV'?c.mode+' \xb7 ':''; aside.textContent=_mn+zone;}
 
-  var canLaunch=isTrain&&!!c&&(n>=5||(_devActive&&n>=1));
-  document.getElementById('btnLaunchRec').disabled=!canLaunch;
-  var _hint=document.getElementById('btnLaunchHint');
-  if(_hint){
-    if(_devActive&&n===0){_hint.textContent='set session \u2265 1 in DEV panel to enable';}
-    else if(!_devActive&&n>0&&n<5){_hint.textContent=(5-n)+' more session'+(5-n===1?'':'s')+' until recommendation ready';}
-    else if(!_devActive&&n===0){_hint.textContent='system needs data before recommending';}
-    else{_hint.textContent='';}
-  }
+
 }
 
 // ── BEHAVIORAL OBSERVATION
@@ -1118,7 +1110,14 @@ function toggleDevPanel(){
 }
 function _devApply(){
   S.sessionCount=_devSession;
-  S.compiler=_devSession===0?null:{zone:_devZone,signal_text:(typeof ZONE_POOLS!=="undefined"&&ZONE_POOLS[_devZone]?ZONE_POOLS[_devZone].signal:"--"),session_count:_devSession};
+  if(_devSession===0){
+    S.compiler=null;
+    localStorage.removeItem('cx_s1_dismissed');
+  } else {
+    var mm='SPT';
+    var ss={}; ss[mm]={elo:500+_devSession*8,n:_devSession,velocity:_devSession>3?1.5:null,last_rank_pct:0.55,since_days:2};
+    S.compiler={zone:_devZone,mode:mm,signal_text:(ZONE_POOLS[_devZone]||{}).signal||'--',session_count:_devSession,expected_rank_pct:0.55,state_snapshot:ss,config_vector:[500,1,10,1,15,90,8,5,2,0,0,50],bot_profile:'STANDARD',map_filename:'Ad Astra by Josh Dahn.json'};
+  }
   document.getElementById("devStateStr").textContent="s"+_devSession+" · "+_devZone.slice(0,3)+" · "+_devMode;
 }
 function devSetSessionSlider(v){
