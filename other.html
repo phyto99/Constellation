@@ -12,7 +12,7 @@
 
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root" style="background:#000;min-height:100vh;color:#fff;display:flex;align-items:center;justify-content:center;font-family:monospace;font-size:11px;letter-spacing:2px">LOADING…</div>
 
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
@@ -2053,7 +2053,8 @@
       );
     };
 
-    ReactDOM.render(<NakamaLobbySystem />, document.getElementById('root'));
+    const _root = ReactDOM.createRoot(document.getElementById('root'));
+    _root.render(<NakamaLobbySystem />);
   </script>
 </body>
 </html>
