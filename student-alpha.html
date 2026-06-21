@@ -79,6 +79,7 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
   </div>
   <div class="hdr-right">
     <span class="whoami" id="whoami"></span>
+    <button id="alpha-dev-btn" onclick="cycleAlphaMock()" style="font-size:9px;letter-spacing:1px;text-transform:uppercase;border:1px solid #ccc;background:#fff;padding:3px 9px;cursor:pointer;font-family:Arial,sans-serif;color:#888">DEV</button>
     <a class="back-lnk" href="/student-next">← Student Panel</a>
   </div>
 </div>
@@ -196,6 +197,36 @@ function getStudentId() {
   return raw.trim().toLowerCase().replace(/\s+/g, '_');
 }
 
+const ALPHA_MOCK_STATES = [
+  { alpha_status: null,    has_pending_application: false, eligible: false, eligibility_reason: 'fewer than 15 sessions' },
+  { alpha_status: null,    has_pending_application: false, eligible: true,  eligibility_reason: null },
+  { alpha_status: null,    has_pending_application: true,  eligible: true,  eligibility_reason: null },
+  { alpha_status: 'alpha', has_pending_application: false, eligible: true,  eligibility_reason: null },
+];
+const ALPHA_MOCK_LABELS = ['DEV · not eligible', 'DEV · eligible', 'DEV · pending', 'DEV · alpha'];
+let _alphaMockIdx = -1;
+
+function cycleAlphaMock() {
+  _alphaMockIdx = (_alphaMockIdx + 1) % ALPHA_MOCK_STATES.length;
+  const btn = document.getElementById('alpha-dev-btn');
+  btn.textContent = ALPHA_MOCK_LABELS[_alphaMockIdx];
+  btn.style.borderColor = '#d97706'; btn.style.color = '#d97706';
+  ['view-loading','view-not-found','view-not-eligible','view-pending','view-alpha','view-form','view-success']
+    .forEach(id => hide(id));
+  renderStatus(ALPHA_MOCK_STATES[_alphaMockIdx]);
+}
+
+function renderStatus(status) {
+  if (status.alpha_status === 'alpha') { show('view-alpha'); return; }
+  if (status.has_pending_application)  { show('view-pending'); return; }
+  if (!status.eligible) {
+    buildCriteriaTable(status);
+    show('view-not-eligible');
+    return;
+  }
+  show('view-form');
+}
+
 async function init() {
   const raw = localStorage.getItem('constellation_name') || '';
   S.studentName = raw.trim() || null;
@@ -219,16 +250,7 @@ async function init() {
     return;
   }
 
-  if (status.alpha_status === 'alpha') { show('view-alpha'); return; }
-  if (status.has_pending_application)  { show('view-pending'); return; }
-
-  if (!status.eligible) {
-    buildCriteriaTable(status);
-    show('view-not-eligible');
-    return;
-  }
-
-  show('view-form');
+  renderStatus(status);
 }
 
 function buildCriteriaTable(status) {

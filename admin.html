@@ -1057,7 +1057,10 @@
                     <h2 style="font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0">◈ Alpha Track</h2>
                     <p style="font-size:11px;color:#666;margin:4px 0 0">Students who have demonstrated strategic understanding of the system.</p>
                 </div>
-                <button onclick="hideAlphaPanel()" style="background:none;border:1px solid #e5e7eb;padding:6px 12px;cursor:pointer;font-size:11px;border-radius:3px;color:#666;">← Back</button>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <button id="alpha-mock-btn" onclick="toggleAlphaMock()" style="padding:4px 10px;font-size:10px;letter-spacing:1px;text-transform:uppercase;border:1px solid #e5e7eb;background:#fff;cursor:pointer;color:#666;border-radius:2px;">DEV</button>
+                    <button onclick="hideAlphaPanel()" style="background:none;border:1px solid #e5e7eb;padding:6px 12px;cursor:pointer;font-size:11px;border-radius:3px;color:#666;">← Back</button>
+                </div>
             </div>
 
             <!-- Tabs -->
@@ -4341,6 +4344,34 @@ Based on the strategy description above, generate the complete JSON configuratio
     let _reviewingAppId  = null;
     const ALPHA_API = '';  // same origin
 
+    let _alphaMock = false;
+    const ALPHA_MOCK_ELIGIBLE = [
+      { student_id:'aria', student_name:'ARIA', sessions:28, eligible:true,  reason:null,                          alpha_status:'alpha' },
+      { student_id:'bram', student_name:'BRAM', sessions:22, eligible:true,  reason:null,                          alpha_status:null    },
+      { student_id:'clio', student_name:'CLIO', sessions:8,  eligible:false, reason:'fewer than 15 sessions',      alpha_status:null    },
+      { student_id:'dara', student_name:'DARA', sessions:19, eligible:false, reason:'no INV session recorded',     alpha_status:null    },
+    ];
+    const ALPHA_MOCK_APPS = [
+      { id:'mock_01', student_id:'bram', student_name:'BRAM',
+        submitted_at: Math.floor(Date.now()/1000) - 86400,
+        status:'pending', session_ref:null,
+        phase1:'The team opened with an aggressive star spread, suggesting they planned to control territory before contesting HQs.',
+        phase2:'Rounds 1-3: territory grab. Round 4: pivot to HQ pressure after seeing opponent consolidate. Round 5: overextended.',
+        phase3:'BRAM drove decisions. CLIO followed. No coordination breakdown but a single point of failure throughout.',
+        phase4:'The team consistently left the eastern cluster unclaimed. Not obvious locally but cost them 4 stars by round 6.',
+        phase5:'At round 3 the eastern gap was already visible. One player peeling east would have changed the endgame entirely.' },
+    ];
+
+    function toggleAlphaMock() {
+      _alphaMock = !_alphaMock;
+      const btn = document.getElementById('alpha-mock-btn');
+      btn.textContent = _alphaMock ? 'DEV ON' : 'DEV';
+      btn.style.borderColor = _alphaMock ? '#d97706' : '#e5e7eb';
+      btn.style.color = _alphaMock ? '#d97706' : '#666';
+      loadAlphaEligible();
+      if (_alphaCurrentTab === 'applications') loadAlphaApplications();
+    }
+
     function showAlphaPanel() {
         document.getElementById('game-content').style.display = 'none';
         document.getElementById('no-game-selected').style.display = 'none';
@@ -4382,8 +4413,7 @@ Based on the strategy description above, generate the complete JSON configuratio
         document.getElementById('alpha-eligible-body').innerHTML = '';
         document.getElementById('alpha-active-list').innerHTML = '';
         try {
-            const r = await fetch('/api/alpha/eligible');
-            const students = await r.json();
+            const students = _alphaMock ? ALPHA_MOCK_ELIGIBLE : await (await fetch('/api/alpha/eligible')).json();
             document.getElementById('alpha-eligible-loading').style.display = 'none';
 
             const tbody = document.getElementById('alpha-eligible-body');
@@ -4458,8 +4488,7 @@ Based on the strategy description above, generate the complete JSON configuratio
         document.getElementById('alpha-apps-loading').style.display = 'block';
         document.getElementById('alpha-apps-list').innerHTML = '';
         try {
-            const r = await fetch('/api/alpha/applications');
-            const apps = await r.json();
+            const apps = _alphaMock ? ALPHA_MOCK_APPS : await (await fetch('/api/alpha/applications')).json();
             document.getElementById('alpha-apps-loading').style.display = 'none';
             const list = document.getElementById('alpha-apps-list');
 
