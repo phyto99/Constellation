@@ -8,7 +8,7 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
-    "@babel/standalone": "^8.0.2",
+    "@babel/standalone": "^7.29.7",
     "@colyseus/monitor": "^0.16.7",
     "@colyseus/schema": "^2.0.0",
     "axios": "^1.13.2",
