@@ -1445,16 +1445,46 @@ function showRoomState(mode, roomId) {
   document.getElementById(p).scrollIntoView({behavior:"smooth"});
 }
 
-function handleState(mode, st) {
+var _eloCache = {};
+async function handleState(mode, st) {
   if (!st || !st.players) return;
   var players = [];
-  st.players.forEach(function(p, id) { players.push({id:id, name:p.name, sessions:p._sessions || 0}); });
+  st.players.forEach(function(p, id) {
+    players.push({id:id, name:p.name, sessions:p._sessions || 0, elo: _eloCache[id] || null});
+  });
   if (mode === "train") { renderChips("rs-train-chips", players); return; }
 
   S.hostPlayers = players;
   renderChips("rs-host-chips", players);
   updateCohortCalibration(players);
   renderTeamAssign(players);
+
+  // Enrich new players with real Elo from ledger (fires once per sessionId)
+  var toFetch = [];
+  st.players.forEach(function(p, id) {
+    if (!_eloCache[id] && (p.studentId || p.name)) toFetch.push({id:id, sid:p.studentId, name:p.name});
+  });
+  if (toFetch.length === 0) return;
+  await Promise.all(toFetch.map(async function(pf) {
+    try {
+      var lookupId = pf.sid || pf.name;
+      var r = await fetch(API + "/api/ledger/state/" + encodeURIComponent(lookupId));
+      if (!r.ok) return;
+      var d = await r.json();
+      var modes = d.state ? Object.values(d.state) : [];
+      var active = modes.filter(function(m) { return m.n > 0; });
+      var elo = active.length > 0
+        ? Math.round(active.reduce(function(s, m) { return s + m.elo; }, 0) / active.length)
+        : (modes.length > 0 ? Math.round(modes[0].elo) : null);
+      if (elo) {
+        _eloCache[pf.id] = elo;
+        S.hostPlayers.forEach(function(hp) {
+          if (hp.id === pf.id) { hp.elo = elo; hp.sessions = d.session_count || 0; }
+        });
+        updateCohortCalibration(S.hostPlayers);
+      }
+    } catch(_) {}
+  }));
 }
 
 function buildHostOpts() {
@@ -1519,46 +1549,7 @@ function showRoomState(mode, roomId) {
   document.getElementById(p).scrollIntoView({behavior:"smooth"});
 }
 
-function handleState(mode, st) {
-  if (!st || !st.players) return;
-  var players = [];
-  st.players.forEach(function(p, id) { players.push({id:id, name:p.name, sessions:p._sessions || 0}); });
-  if (mode === "train") { renderChips("rs-train-chips", players); return; }
-
-  renderChips("rs-host-chips", players);
-  var newPlayers = players.filter(function(p) { return p.sessions < 5; });
-  var hasNew     = newPlayers.length > 0;
-  var allKnown   = players.every(function(p) { return p.sessions >= 5; });
-  var maxSess    = Math.max.apply(null, [0].concat(players.map(function(p) { return p.sessions; })));
-  var count      = players.length;
-
-  var lr = document.getElementById("live-rec");
-  if (count > 0) lr.classList.add("vis"); else lr.classList.remove("vis");
-
-  var target, newLbl, adj;
-  if (count === 0) {
-    target = "—"; newLbl = "—"; adj = "—";
-  } else if (hasNew) {
-    target = "all players (new player detected)";
-    newLbl = newPlayers.length + " player" + (newPlayers.length > 1 ? "s" : "") + " with <5 sessions";
-    adj    = "engagement mode · more teams · kinetic scoring";
-    document.getElementById("rs-host-phase").textContent = "Engagement mode active";
-  } else if (allKnown && count > 1) {
-    target = "highest player (" + maxSess + " sessions)";
-    newLbl = "none";
-    adj    = "ZPD target · all players pushed upward";
-    document.getElementById("rs-host-phase").textContent = "Competitive calibration";
-  } else {
-    target = "you (creator)";
-    newLbl = "none detected";
-    adj    = "creator ZPD with engagement floor";
-    document.getElementById("rs-host-phase").textContent = "Creator baseline";
-  }
-  document.getElementById("lr-target").textContent = target;
-  document.getElementById("lr-new").textContent    = newLbl;
-  document.getElementById("lr-adj").textContent    = adj;
-  document.getElementById("player-count-lbl").textContent = count > 0 ? count + " player" + (count !== 1 ? "s" : "") : "";
-}
+// (stale handleState removed)
 
 function renderChips(containerId, players) {
   var box = document.getElementById(containerId);
@@ -1578,7 +1569,7 @@ function closeRoom(mode) {
   document.getElementById(mode === "train" ? "rs-train" : "rs-host").classList.remove("vis");
   if (mode === "host") {
     document.getElementById("live-rec").classList.remove("vis");
-    S.hostPlayers = []; S.hostTeams = {}; S.cohortCompiler = null; _simIdx = 0;
+    S.hostPlayers = []; S.hostTeams = {}; S.cohortCompiler = null; _simIdx = 0; _eloCache = {};
     var tw = document.getElementById("ta-wrap"); if (tw) tw.classList.remove("vis");
     var tr = document.getElementById("ta-recal"); if (tr) tr.classList.remove("vis");
   }

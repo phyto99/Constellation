@@ -1468,6 +1468,7 @@ class ConstellationRoom extends Room {
             this.roundSnapshots = [];
             this.hqPlacementRounds = {};
             this.stealsUsed = {};
+            this.stealsThisRound = {};
 
             // Config
             const roundLength = (this.gameConfig.roundLength || 30) * 1000;
@@ -1812,6 +1813,7 @@ class ConstellationRoom extends Room {
                     if (!this.moveLog[sid]) this.moveLog[sid] = [];
                     this.moveLog[sid].push({ t: Date.now(), star: data.starIndex, isHQ, isSteal: true, round: this.state.game.round });
                     this.stealsUsed[teamIndex] = (this.stealsUsed[teamIndex] || 0) + 1;
+                    this.stealsThisRound[teamIndex] = (this.stealsThisRound[teamIndex] || 0) + 1;
                 }
 
                 // Check for special star activations after the move
@@ -2834,14 +2836,28 @@ class ConstellationRoom extends Room {
         console.log(`📊 Broadcast authoritative scores:`, teamScores);
     }
 
-    // Layer 0: snapshot star counts at the end of a completed round
+    // Layer 0: snapshot per-round behavioral state at end of each round
     _snapshotRound(roundNum) {
         if (!this.roundSnapshots) return;
         const starsByTeam = {};
+        const wormholesByTeam = {};
         this.state.game.stars.forEach(s => {
-            if (s.tm !== -1) starsByTeam[s.tm] = (starsByTeam[s.tm] || 0) + 1;
+            if (s.tm !== -1) {
+                starsByTeam[s.tm] = (starsByTeam[s.tm] || 0) + 1;
+                if (s.ty === 3) wormholesByTeam[s.tm] = (wormholesByTeam[s.tm] || 0) + 1;
+            }
         });
-        this.roundSnapshots.push({ round: roundNum, t: Date.now(), starsByTeam });
+        const hqByTeam = {};
+        this.state.game.teams.forEach((t, idx) => { hqByTeam[idx] = t.hqCount; });
+        this.roundSnapshots.push({
+            round:           roundNum,
+            t:               Date.now(),
+            starsByTeam,
+            hqByTeam,
+            wormholesByTeam,
+            stealsThisRound: { ...this.stealsThisRound },
+        });
+        this.stealsThisRound = {};
     }
 
     // Layer 0: write one Ledger record per human player at session end
