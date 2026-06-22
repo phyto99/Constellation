@@ -515,15 +515,20 @@ function triggerSignIn(){
   google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:handleGoogleSignIn});
   google.accounts.id.prompt();
 }
-function handleGoogleSignIn(response){
+async function handleGoogleSignIn(response){
   try{
     const p=JSON.parse(atob(response.credential.split('.')[1]));
     const name=p.name||p.email;
-    const gid='g_'+p.sub;
     localStorage.setItem('constellation_name',name);
-    S.student=name; S.studentId=gid;
+    S.student=name;
     document.getElementById('whoamiName').textContent=name;
     document.getElementById('signInBtn').style.display='none';
+    // Resolve Google name to ledger UUID (same path as name-entry login)
+    try {
+      const r = await fetch(API+'/api/ledger/resolve-name/'+encodeURIComponent(name));
+      if (r.ok) { const d = await r.json(); S.studentId = d.student_id; }
+      else { S.studentId = name.toLowerCase().replace(/[^a-z0-9]/g,'-'); }
+    } catch(e2) { S.studentId = name.toLowerCase().replace(/[^a-z0-9]/g,'-'); }
     loadCompiler();
   }catch(e){console.error('Sign-in error',e);}
 }
@@ -547,14 +552,21 @@ function syncSlidersToCompiler(){
   if(cv[5]){document.getElementById('t-rt').value=cv[5];document.getElementById('t-rt-v').textContent=cv[5]+'s';}
 }
 
-window.addEventListener('DOMContentLoaded',()=>{
+window.addEventListener('DOMContentLoaded', async ()=>{
   const name = localStorage.getItem('constellation_name')||'Guest';
-  S.student   = name;
-  S.studentId = name.toLowerCase().replace(/[^a-z0-9]/g,'-');
+  S.student = name;
   document.getElementById('whoamiName').textContent = name;
   document.getElementById('whoami').style.display    = 'inline-flex';
   document.getElementById('sbName').textContent      = name;
   document.getElementById('sbName').style.display    = 'inline';
+
+  // Resolve name -> real ledger UUID so compiler sees actual session history
+  try {
+    const r = await fetch(API+'/api/ledger/resolve-name/'+encodeURIComponent(name));
+    if (r.ok) { const d = await r.json(); S.studentId = d.student_id; }
+    else { S.studentId = name.toLowerCase().replace(/[^a-z0-9]/g,'-'); }
+  } catch(e) { S.studentId = name.toLowerCase().replace(/[^a-z0-9]/g,'-'); }
+
   connect();
   loadMaps();
   loadCompiler();
@@ -923,19 +935,16 @@ function buildTrainOpts(useRec){
     team:1,
   }:null;
   return{
-    countMultiplier:       usedRec?(cv[0]||500):500,
-    distanceMultiplier:    usedRec?(cv[1]??1):1,
-    hqMultiplier:          usedRec?(cv[2]||10):10,
-    destructionMultiplier: usedRec?(cv[3]??1):1,
-    rounds:                usedRec?(cv[6]||10):+document.getElementById('t-rounds').value,
-    roundTime:             +document.getElementById('t-rt').value,
-    movesPerRound:         usedRec?(cv[4]||15):15,
-    stealLimit:            usedRec?(cv[7]??5):5,
-    hqMax:                 usedRec?(cv[8]||2):2,
-    colorTeamCount:2,
-    mapJson:               usedRec?getMapJsonByFilename(c.map_filename):getMapJson(S.train.map),
-    playerName:            S.student,
-    aiBots:                S.train.bot?(botFromProfile?[botFromProfile]:[botCfg(S.train.challenge)]):[],
+    multipliers:     usedRec?{count:cv[0]??500,distance:cv[1]??1,hq:cv[2]??10,destruction:cv[3]??1}:{count:500,distance:1,hq:10,destruction:1},
+    rounds:          usedRec?(cv[6]||10):+document.getElementById('t-rounds').value,
+    roundLength:     +document.getElementById('t-rt').value,
+    moves:           usedRec?(cv[4]||15):15,
+    steals:          usedRec?(cv[7]??15):15,
+    headquarters:    usedRec?(cv[8]||2):2,
+    colorTeamCount:  2,
+    customMapFilename: usedRec?c.map_filename:null,
+    playerName:      S.student,
+    aiBots:          S.train.bot?(botFromProfile?[botFromProfile]:[botCfg(S.train.challenge)]):[],
     allowPlayerTeamSelection:false,
     _source:'student-train',_studentId:S.studentId,
     _usedRecommendation:usedRec,

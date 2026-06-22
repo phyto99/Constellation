@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Constellation — Student Panel</title>
+<script src="https://accounts.google.com/gsi/client" async></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-height:100vh}
+
+/* ── HEADER ── */
+.hdr{border-bottom:2px solid #000;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;background:#fff;position:sticky;top:0;z-index:30}
+.hdr-left{display:flex;align-items:baseline;gap:12px}
+.logo{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase}
+.hdr-sub{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#999}
+.hdr-right{display:flex;align-items:center;gap:14px}
+.conn{display:flex;align-items:center;gap:5px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#bbb}
+.dot{width:6px;height:6px;border-radius:50%;background:#bbb}
+.dot.live{background:#059669;animation:pulse 2s infinite}
+.dot.err{background:#dc2626}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.whoami{font-size:11px;color:#888}
+.whoami b{color:#111}
+.admin-lnk{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#bbb;text-decoration:none}
+.admin-lnk:hover{color:#111}
+
+/* ── LAYOUT ── */
+.wrap{max-width:740px;margin:0 auto;padding:28px 24px 140px}
+
+/* ── MODE SELECT ── */
+.mode-pick{display:grid;grid-template-columns:1fr 1fr;gap:0;border:2px solid #000;margin-bottom:28px}
+.mode-btn{padding:14px 20px;cursor:pointer;border:none;background:#fff;text-align:left;font-family:Arial,sans-serif;border-right:1px solid #000;transition:background .1s}
+.mode-btn:last-child{border-right:none}
+.mode-btn.active{background:#000;color:#fff}
+.mode-btn.active .mode-lbl{color:#fff}
+.mode-btn.active .mode-desc{color:#888}
+.mode-lbl{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:4px}
+.mode-desc{font-size:10px;color:#666;line-height:1.5;display:block}
+
+/* ── TERMINAL ── */
+.term{background:#0a0a0a;margin-bottom:24px}
+.term-hdr{border-bottom:1px solid #111;padding:7px 18px;display:flex;justify-content:space-between;align-items:center}
+.term-hdr-lbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#2a2a2a}
+.term-badge{font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:1px 6px;border:1px solid #1a1a1a;color:#333;font-weight:700}
+.term-badge.zone-echo{border-color:#333;color:#888}
+.term-badge.zone-parallel{border-color:#1a2a3a;color:#2563eb}
+.term-badge.zone-shifting{border-color:#3a2a0a;color:#d97706}
+.term-badge.zone-radical{border-color:#3a0a0a;color:#dc2626}
+.term-badge.zone-rematch{border-color:#0a3a1a;color:#059669}
+.term-body{padding:18px 22px 14px;font-family:Arial,sans-serif;font-size:10.5px;line-height:2;color:#e0e0e0;min-height:240px;overflow-y:auto}
+.tl{display:block;opacity:0;transition:opacity .08s}
+.tl.show{opacity:1}
+.tl-dim{color:#1a1a1a}
+.tl-obs{color:#e0e0e0}
+.tl-b{color:#fff;font-weight:700}
+.tl-zone{color:#d97706;font-weight:700}
+.tl-n{color:#555}
+.tl-meta{color:#333;font-style:italic}
+.tl-hint{color:#444}
+.tl-code{color:#fff;font-weight:700;font-size:14px;letter-spacing:3px;margin:6px 0;display:block}
+.term-foot{border-top:1px solid #111;padding:10px 18px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn-launch{background:#fff;color:#000;border:2px solid #fff;padding:6px 18px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-launch:hover{background:#ddd}
+.btn-launch:disabled{opacity:.3;cursor:default}
+.btn-customize{background:transparent;color:#444;border:1px solid #2a2a2a;padding:5px 12px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-customize:hover{color:#e0e0e0;border-color:#555}
+.term-aside{margin-left:auto;font-size:9px;color:#2a2a2a;font-family:Arial,sans-serif;font-style:italic}
+
+/* ── SECTION LABEL ── */
+.slbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#aaa;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.slbl::after{content:'';flex:1;height:1px;background:#f0f0f0}
+.section{margin-bottom:22px}
+
+/* ── FORM ROWS ── */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.fg label{font-size:11px;font-weight:700}
+.fg .hint{font-size:9px;color:#aaa;font-weight:400;margin-left:3px}
+.inp{padding:7px 9px;border:1px solid #ddd;font-size:12px;font-family:Arial,sans-serif;width:100%}
+.inp:focus{outline:2px solid #000}
+
+/* slider */
+.sl-row{display:flex;align-items:center;gap:10px;margin-top:4px}
+.sl-row input[type=range]{flex:1;accent-color:#000}
+.sl-val{font-size:11px;font-weight:700;min-width:36px;text-align:right;font-family:'Courier New',monospace}
+
+/* toggles */
+.tg{display:inline-flex;border:1px solid #ddd;overflow:hidden}
+.tg-opt{padding:5px 13px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;background:#fff;color:#aaa;border:none;font-family:Arial,sans-serif}
+.tg-opt.on{background:#000;color:#fff}
+
+/* map grid */
+.map-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.mc{border:1px solid #ddd;padding:5px 10px;cursor:pointer;font-size:10px;background:#fff;white-space:nowrap}
+.mc:hover{border-color:#666}
+.mc.sel{border:2px solid #000;font-weight:700;background:#f8f8f8}
+.mc.rnd{border-style:dashed}
+
+/* teams */
+.teams-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.team-chip{border:1px solid #ddd;padding:4px 10px;cursor:pointer;font-size:10px;font-weight:700;background:#fff;font-family:'Courier New',monospace}
+.team-chip.sel{border-color:#000;border-width:2px;background:#000;color:#fff}
+
+/* actions */
+.form-actions{margin-top:24px;padding-top:16px;border-top:2px solid #000;display:flex;gap:10px;align-items:center}
+.btn-primary{padding:10px 26px;background:#000;color:#fff;border:2px solid #000;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-primary:hover{background:#222}
+.btn-primary:disabled{background:#ccc;border-color:#ccc;cursor:default}
+.act-msg{font-size:10px;color:#888;font-style:italic}
+
+/* ── ROOM STATE ── */
+.room-state{display:none;border:2px solid #000;margin-top:20px;padding:0}
+.room-state.vis{display:block}
+.rs-hdr{border-bottom:1px solid #eee;padding:12px 18px;display:flex;align-items:baseline;justify-content:space-between}
+.rs-title{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.rs-phase{font-size:9px;color:#059669;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.rs-body{padding:18px}
+.room-id{font-size:22px;font-weight:700;letter-spacing:5px;font-family:'Courier New',monospace;margin-bottom:10px}
+.link-row{display:flex;gap:6px;margin-bottom:18px}
+.link-box{flex:1;padding:6px 9px;border:1px solid #eee;font-size:11px;font-family:'Courier New',monospace;background:#f8f8f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn-copy{padding:6px 14px;background:#000;color:#fff;border:none;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-copy:hover{background:#333}
+
+/* live players */
+.players-section{margin-bottom:18px}
+.plbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#aaa;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.plbl::after{content:'';flex:1;height:1px;background:#f0f0f0}
+.pchips{display:flex;flex-wrap:wrap;gap:6px;min-height:32px}
+.pchip{border:1px solid #ddd;padding:4px 10px;font-size:11px;display:flex;align-items:center;gap:6px}
+.pchip .sessions-badge{font-size:8px;color:#aaa;font-family:'Courier New',monospace}
+.pchip.new-player .sessions-badge{color:#d97706}
+.pchip.waiting{color:#ccc;border-style:dashed;font-style:italic}
+
+/* live rec */
+.live-rec{background:#0a0a0a;margin-bottom:18px;padding:12px 18px;font-family:Arial,sans-serif;font-size:10px;line-height:1.8;color:#333;display:none}
+.live-rec.vis{display:block}
+.live-rec .lrt{color:#2a2a2a;min-width:100px;display:inline-block}
+.live-rec .lrv{color:#d97706}
+.live-rec .lrv.g{color:#059669}
+
+.rs-actions{display:flex;gap:8px;border-top:1px solid #eee;padding:14px 18px}
+.btn-go{flex:1;padding:11px;background:#000;color:#fff;border:none;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif;text-decoration:none;display:flex;align-items:center;justify-content:center}
+.btn-go:hover{background:#222}
+.btn-go:disabled{background:#ccc;cursor:default}
+.btn-close-room{padding:10px 16px;background:#fff;color:#aaa;border:1px solid #ddd;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-close-room:hover{color:#111;border-color:#111}
+
+/* ── STATUS BAR ── */
+.sb{position:fixed;bottom:0;left:0;right:0;border-top:1px solid #f0f0f0;background:#fff;padding:7px 24px;display:flex;align-items:center;gap:16px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#bbb;z-index:20}
+.sb-dot-wrap{display:flex;align-items:center;gap:5px}
+
+@media(max-width:560px){.two{grid-template-columns:1fr}.mode-pick{grid-template-columns:1fr}.mode-btn{border-right:none;border-bottom:1px solid #000}.mode-btn:last-child{border-bottom:none}}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-left">
+    <span class="logo">Constellation</span>
+    <span class="hdr-sub">Student Panel</span>
+  </div>
+  <div class="hdr-right">
+    <span class="whoami" id="whoami" style="display:none">Playing as <b id="whoamiName"></b></span>
+    <button id="signInBtn" onclick="triggerSignIn()" style="font-size:9px;letter-spacing:1px;text-transform:uppercase;border:1px solid #ddd;background:#fff;padding:3px 9px;cursor:pointer;font-family:Arial,sans-serif;color:#888">Sign in</button>
+    <div class="conn"><div class="dot" id="connDot"></div><span id="connLbl">Connecting</span></div>
+    <a href="/admin" class="admin-lnk">Admin &#x2197;</a>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- MODE SELECTOR -->
+  <div class="mode-pick">
+    <button class="mode-btn active" id="mode-train" onclick="setMode('train')">
+      <span class="mode-lbl">Personal Training</span>
+      <span class="mode-desc">Solo session tuned to your development. The system knows what you need.</span>
+    </button>
+    <button class="mode-btn" id="mode-host" onclick="setMode('host')">
+      <span class="mode-lbl">Host for Friends</span>
+      <span class="mode-desc">You set it up. Everyone plays. You pick the shape; the system handles the rest.</span>
+    </button>
+  </div>
+
+  <!-- TERMINAL -->
+  <div class="term">
+    <div class="term-hdr">
+      <span class="term-hdr-lbl" id="termLabel">System</span>
+      <span class="term-badge" id="termBadge">Loading</span>
+    </div>
+    <div class="term-body" id="termBody">
+      <span class="tl tl-dim show">// compile to generate terminal sequence</span>
+    </div>
+    <div class="term-foot">
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <button class="btn-launch" id="btnLaunchRec" onclick="launchRecommended()">Launch Recommended</button>
+        <span id="btnLaunchHint" style="font-size:8px;color:#555;letter-spacing:.5px"></span>
+      </div>
+      <button class="btn-customize" onclick="scrollToConfig()">Customize &#xbb;</button>
+      <span class="term-aside" id="termAside">&#8212;</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       TRAIN CONFIG
+  ═══════════════════════════════════ -->
+  <div id="config-train">
+
+    <div class="section">
+      <div class="slbl">Map</div>
+      <div class="fg">
+        <label>Which map <span class="hint">or let the system choose for you</span></label>
+        <div class="map-grid" id="train-maps">
+          <div class="mc rnd sel" data-map="" onclick="pickMap('train','',this)">System Selects</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="slbl">Session Length</div>
+      <div class="two">
+        <div class="fg">
+          <label>Rounds</label>
+          <div class="sl-row">
+            <input type="range" id="t-rounds" min="5" max="15" value="10"
+              oninput="document.getElementById('t-rounds-v').textContent=this.value">
+            <span class="sl-val" id="t-rounds-v">10</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Round Length <span class="hint">seconds</span></label>
+          <div class="sl-row">
+            <input type="range" id="t-rt" min="15" max="60" step="5" value="30"
+              oninput="document.getElementById('t-rt-v').textContent=this.value+'s'">
+            <span class="sl-val" id="t-rt-v">30s</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="slbl">AI Opponent</div>
+      <div class="fg">
+        <label>Include AI</label>
+        <div class="tg">
+          <button class="tg-opt" id="t-bot-off" onclick="setBot('train',false)">Off</button>
+          <button class="tg-opt on" id="t-bot-on" onclick="setBot('train',true)">On</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn-primary" id="btn-train" onclick="createSession('train')">Launch Training Session</button>
+      <span class="act-msg" id="train-act-msg"></span>
+    </div>
+
+    <div class="room-state" id="rs-train">
+      <div class="rs-hdr">
+        <span class="rs-title">Session Created</span>
+        <span class="rs-phase">Ready to join</span>
+      </div>
+      <div class="rs-body">
+        <div class="room-id" id="rs-train-id">&#8212;</div>
+        <div class="link-row">
+          <div class="link-box" id="rs-train-link">&#8212;</div>
+          <button class="btn-copy" onclick="copyLink('train')">Copy</button>
+        </div>
+        <div class="players-section">
+          <div class="plbl">In the room</div>
+          <div class="pchips" id="rs-train-chips">
+            <div class="pchip waiting">Waiting for players&#8230;</div>
+          </div>
+        </div>
+      </div>
+      <div class="rs-actions">
+        <a class="btn-go" id="rs-train-join" href="#" target="_blank">Join Game &#x2192;</a>
+        <button class="btn-close-room" onclick="closeRoom('train')">Close Room</button>
+      </div>
+    </div>
+
+  </div><!-- /config-train -->
+
+  <!-- ══════════════════════════════════
+       HOST CONFIG
+  ═══════════════════════════════════ -->
+  <div id="config-host" style="display:none">
+
+    <div class="section">
+      <div class="slbl">Session Identity</div>
+      <div class="fg">
+        <label>Session Name <span class="hint">shown on the join screen</span></label>
+        <input class="inp" id="h-name" type="text" placeholder="Friday practice, Period 3, etc." maxlength="50">
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="slbl">Map</div>
+      <div class="fg">
+        <label>Choose a map <span class="hint">or leave it as a surprise</span></label>
+        <div class="map-grid" id="host-maps">
+          <div class="mc rnd sel" data-map="" onclick="pickMap('host','',this)">Surprise Me</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="slbl">Session Length</div>
+      <div class="two">
+        <div class="fg">
+          <label>Rounds</label>
+          <div class="sl-row">
+            <input type="range" id="h-rounds" min="3" max="20" value="10"
+              oninput="document.getElementById('h-rounds-v').textContent=this.value">
+            <span class="sl-val" id="h-rounds-v">10</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Round Length <span class="hint">seconds</span></label>
+          <div class="sl-row">
+            <input type="range" id="h-rt" min="15" max="90" step="5" value="30"
+              oninput="document.getElementById('h-rt-v').textContent=this.value+'s'">
+            <span class="sl-val" id="h-rt-v">30s</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="slbl">Rules</div>
+      <div class="two">
+        <div class="fg">
+          <label>Teams</label>
+          <div class="teams-row" id="h-teams-row">
+            <div class="team-chip sel" data-v="2" onclick="pickTeams(2,this)">2</div>
+            <div class="team-chip" data-v="3" onclick="pickTeams(3,this)">3</div>
+            <div class="team-chip" data-v="4" onclick="pickTeams(4,this)">4</div>
+            <div class="team-chip" data-v="6" onclick="pickTeams(6,this)">6</div>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Players Pick Their Own Team</label>
+          <div class="tg">
+            <button class="tg-opt on" id="h-pts-off" onclick="setTgl('pts',false)">Off</button>
+            <button class="tg-opt" id="h-pts-on" onclick="setTgl('pts',true)">On</button>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Steals</label>
+          <div class="tg">
+            <button class="tg-opt" id="h-st-off" onclick="setTgl('steals',false)">Off</button>
+            <button class="tg-opt on" id="h-st-on" onclick="setTgl('steals',true)">On</button>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Headquarters</label>
+          <div class="tg">
+            <button class="tg-opt" id="h-hq-off" onclick="setTgl('hq',false)">Off</button>
+            <button class="tg-opt on" id="h-hq-on" onclick="setTgl('hq',true)">On</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="slbl">AI Opponent</div>
+      <div class="fg">
+        <label>Include AI</label>
+        <div class="tg">
+          <button class="tg-opt on" id="h-bot-off" onclick="setBot('host',false)">Off</button>
+          <button class="tg-opt" id="h-bot-on" onclick="setBot('host',true)">On</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn-primary" id="btn-host" onclick="createSession('host')">Create Session</button>
+      <span class="act-msg" id="host-act-msg"></span>
+    </div>
+
+    <div class="room-state" id="rs-host">
+      <div class="rs-hdr">
+        <span class="rs-title">Session Open</span>
+        <span class="rs-phase" id="rs-host-phase">Waiting for players</span>
+      </div>
+      <div class="rs-body">
+        <div class="room-id" id="rs-host-id">&#8212;</div>
+        <div class="link-row">
+          <div class="link-box" id="rs-host-link">&#8212;</div>
+          <button class="btn-copy" onclick="copyLink('host')">Copy</button>
+        </div>
+        <div class="live-rec" id="live-rec">
+          <div><span class="lrt">optimization target</span><span class="lrv" id="lr-target">&#8212;</span></div>
+          <div><span class="lrt">new players</span><span class="lrv" id="lr-new">&#8212;</span></div>
+          <div><span class="lrt">adjustment</span><span class="lrv g" id="lr-adj">&#8212;</span></div>
+        </div>
+        <div class="players-section">
+          <div class="plbl">Players in room <span id="player-count-lbl" style="color:#bbb;font-size:8px;margin-left:6px;font-weight:400;text-transform:none;letter-spacing:0"></span></div>
+          <div class="pchips" id="rs-host-chips">
+            <div class="pchip waiting">Share the link above to invite players&#8230;</div>
+          </div>
+        </div>
+      </div>
+      <div class="rs-actions">
+        <a class="btn-go" id="rs-host-join" href="#" target="_blank">Join Game &#x2192;</a>
+        <button class="btn-close-room" onclick="closeRoom('host')">Close Room</button>
+      </div>
+    </div>
+
+  </div><!-- /config-host -->
+
+</div><!-- /wrap -->
+
+<div class="sb">
+  <div class="sb-dot-wrap"><div class="dot" id="sbDot"></div><span id="sbLbl">Connecting</span></div>
+  <span id="sbName" style="display:none"></span>
+  <span style="margin-left:auto">Constellation &middot; Student Panel</span>
+</div>
+
+<script src="https://unpkg.com/colyseus.js@0.15.24/dist/colyseus.js"></script>
+<script>
+// ════════════════════════════════════════════════════════════
+//  TERMINAL COMPILER — canonical port from terminal-compiler.html
+//  Client side only: builds narrative line sequence.
+//  Zone + mode are AUTHORITATIVE from /api/compiler/:id response.
+// ════════════════════════════════════════════════════════════
+
+var MODES = [
+  {id:"qty", n:"QUANTITY",    col:"#d97706"},
+  {id:"spt", n:"SPATIAL",     col:"#2563eb"},
+  {id:"frt", n:"FORTRESS",    col:"#059669"},
+  {id:"dst", n:"DESTRUCTION", col:"#dc2626"},
+  {id:"wrm", n:"WORMHOLE",    col:"#7c3aed"},
+  {id:"inv", n:"INVERSION",   col:"#0891b2"},
+];
+
+var TEMPLATES = {
+  qty:["MISER","FLOOD","SPEED FLOOD","THE DELUGE","OVERFLOW","EFFICIENCY GATE"],
+  spt:["BLIND REACH","ARCHITECT","REACH","THE PERIMETER","SIGHTLINE","FURTHEST POINT"],
+  frt:["NETWORK","SIEGE","PATIENCE","THE LATTICE","CONVERGENCE","ANCHOR POINT"],
+  dst:["SCORCHED EARTH","HUNTER","CHAIN REACTION","OBLITERATION","THE DENIAL","CLEARANCE"],
+  wrm:["DECOY","THE GATEWAY","TUNNEL VISION","SIGNAL LOCK","THE FOLD","ONE THING"],
+  inv:["MIRROR","HIDDEN OBJECTIVE","NEGATIVE SPACE","THE FLIP","WRONG CONTEXT","NULL SIGNAL"],
+};
+
+var CODENAMES = {
+  qty:["THE FLOOD","WAVE FRONT","MANIFEST DENSITY","THE SWARM","OVERFLOW","LANDGRAB","SATURATION","THE TIDE"],
+  spt:["THE EXPANSE","LONG REACH","FAR HORIZON","THE CARTOGRAPHER","BLIND REACH","DEEP SPACE","FURTHEST POINT","EDGE CASE"],
+  frt:["IRON CURTAIN","SIEGE LINES","THE CITADEL","DEEP ROOTS","BASTILLE","THE HOLD","STONEWORK","ENTRENCHED"],
+  dst:["CHAIN REACTION","SCORCHED EARTH","THE BREAKING","GHOST CIRCUIT","SHATTER","ERASURE","NULL FIELD","AFTERBURN"],
+  wrm:["THE GATEWAY","EVENT HORIZON","FOLD SPACE","THE BRIDGE","TRANSIT","SINGULARITY","THE NEEDLE","CROSSING"],
+  inv:["MIRROR LOGIC","NULL SPACE","THE FLIP","OPPOSITE DAY","DARK MATTER","REVERSAL","ANTI-PATTERN","WRONG ANSWER"],
+};
+
+var TEMPLATE_DEPTH = {
+  "MISER":2,"SPEED FLOOD":2,"FLOOD":2,"THE DELUGE":1,"OVERFLOW":1,"EFFICIENCY GATE":1,
+  "BLIND REACH":2,"ARCHITECT":2,"REACH":2,"THE PERIMETER":1,"SIGHTLINE":1,"FURTHEST POINT":1,
+  "NETWORK":3,"PATIENCE":2,"SIEGE":1,"THE LATTICE":1,"CONVERGENCE":1,"ANCHOR POINT":1,
+  "CHAIN REACTION":3,"HUNTER":2,"SCORCHED EARTH":1,"OBLITERATION":1,"THE DENIAL":1,"CLEARANCE":1,
+  "DECOY":2,"THE GATEWAY":2,"TUNNEL VISION":2,"SIGNAL LOCK":1,"THE FOLD":1,"ONE THING":1,
+  "MIRROR":2,"HIDDEN OBJECTIVE":2,"NEGATIVE SPACE":1,"THE FLIP":1,"WRONG CONTEXT":1,"NULL SIGNAL":1,
+};
+
+var STYLE_CLS = {
+  dim:"tl-dim", obs:"tl-obs", b:"tl-b", zone:"tl-zone",
+  n:"tl-n", meta:"tl-meta", hint:"tl-hint", code:"tl-code",
+};
+
+// ── Template selector
+function selectTemplate(state, modeIdx, zone) {
+  var pool = TEMPLATES[MODES[modeIdx].id];
+  var hist = (state.hist && state.hist[modeIdx]) ? state.hist[modeIdx] : [];
+  if ((zone === "ECHO" || zone === "REMATCH") && hist.length > 0) {
+    var last = hist[hist.length - 1];
+    if (pool.indexOf(last) >= 0) return last;
+  }
+  var recent = {};
+  hist.slice(-2).forEach(function(t) { recent[t] = true; });
+  var available = pool.filter(function(t) { return !recent[t]; });
+  available.sort(function(a, b) { return (TEMPLATE_DEPTH[b]||1) - (TEMPLATE_DEPTH[a]||1); });
+  return available.length > 0 ? available[0] : pool[0];
+}
+
+// ── Codename selector
+function selectCodename(modeIdx, sessions) {
+  var pool = CODENAMES[MODES[modeIdx].id];
+  return pool[sessions % pool.length];
+}
+
+// ── Template constraint suffix
+function templateConstraint(modeKey, template) {
+  var C = {
+    "MISER":           " — move budget: 12/round. Efficiency over volume.",
+    "FLOOD":           " — uncapped claim rate. Speed is the only constraint.",
+    "SPEED FLOOD":     " — claim rate halves each round. Front-loading is correct.",
+    "THE DELUGE":      " — all multipliers doubled. Calibration is off.",
+    "OVERFLOW":        " — excess stars transfer to opponent. Precision required.",
+    "EFFICIENCY GATE": " — claim rate penalized above 65th pct. Counter-intuitive ceiling.",
+    "BLIND REACH":     " — fog of war active. Distance must be estimated.",
+    "ARCHITECT":       " — HQ bonus for longest connection path.",
+    "REACH":           " — endpoint distance scored. HQs are irrelevant.",
+    "THE PERIMETER":   " — perimeter stars only. Interior stars score zero.",
+    "SIGHTLINE":       " — line-of-sight constraint. Diagonal claims blocked.",
+    "FURTHEST POINT":  " — single star. Maximum distance from origin wins.",
+    "NETWORK":         " — 4 HQs. Destruction penalized. Connectivity before aggression.",
+    "SIEGE":           " — HQ movement disabled after round 2.",
+    "PATIENCE":        " — destruction heavily penalized. Build only.",
+    "THE LATTICE":     " — grid adjacency required. No arbitrary connections.",
+    "CONVERGENCE":     " — all HQs must link before any scoring begins.",
+    "ANCHOR POINT":    " — one HQ locked at spawn. Cannot relocate.",
+    "SCORCHED EARTH":  " — no HQ connections. Destruction is the only path.",
+    "HUNTER":          " — bonus multiplier for steal rate this round.",
+    "CHAIN REACTION":  " — multi-steal chains score exponentially.",
+    "OBLITERATION":    " — destruction counts double. Acquisition is secondary.",
+    "THE DENIAL":      " — stars deplete on capture. Take to destroy, not to keep.",
+    "CLEARANCE":       " — map resets at round 4. First half score is discarded.",
+    "DECOY":           " — false wormhole visible. The system will not confirm which.",
+    "THE GATEWAY":     " — wormhole instant win. All other scores irrelevant.",
+    "TUNNEL VISION":   " — only one wormhole active. No backup objective.",
+    "SIGNAL LOCK":     " — wormhole target revealed at round 4. Wait for it.",
+    "THE FOLD":        " — wormhole pairs swap at round 3. First pair is bait.",
+    "ONE THING":       " — wormhole score only. Everything else zeroes out.",
+    "MIRROR":          " — symmetric map, asymmetric objective. Find the asymmetry.",
+    "HIDDEN OBJECTIVE":" — no further information.",
+    "NEGATIVE SPACE":  " — score what you did not claim. Restraint is the skill.",
+    "THE FLIP":        " — inversion triggers at round 3, not session start.",
+    "WRONG CONTEXT":   " — stated objective is incorrect. Discover the real one.",
+    "NULL SIGNAL":     " — no score feedback until session end. Operate blind.",
+  };
+  return C[template] || "";
+}
+
+// ── Observation picker (priority waterfall from terminal-compiler.html)
+function pickObservations(state, modeIdx, zone) {
+  var obs = [];
+  var mode = MODES[modeIdx];
+  var register = state.register || "teen-standard";
+  var sessions = state.sessions || 0;
+  var absenceDays = state.absenceDays || 0;
+  var tau = state.tau || [0,0,0,0,0,0];
+  var vel = state.vel || [0,0,0,0,0,0];
+  var zeroPctileStreak = state.zeroPctileStreak || 0;
+  var tier = state.tier || "TEEN";
+  var stagePredictions = state.stagePredictions || 0;
+  var teacherObservation = state.teacherObservation || null;
+  var engagement = state.engagement || "OK";
+  var stage = state.stage || 1;
+
+  // 1. ABSENCE
+  if (absenceDays >= 14) {
+    if (register === "gifted-compressed") {
+      obs.push("τ_gap = " + absenceDays + "d. All models stale. Recalibration session.");
+    } else if (register === "younger-warm") {
+      obs.push("The system has been waiting " + absenceDays + " days for this session. It remembered where you left off.");
+    } else {
+      obs.push(absenceDays + " days. The system kept the time.");
+      obs.push("The model of you is " + Math.round(absenceDays/7) + " week" + (absenceDays >= 14 ? "s" : "") + " old. This session updates it. Expect the system to be slightly wrong.");
+    }
+    return obs.slice(0, 2);
+  }
+
+  // 2. ZERO-PERCENTILE STREAK (gifted)
+  if (zeroPctileStreak >= 8 && tier === "GIFTED") {
+    obs.push(zeroPctileStreak + " sessions. Zero failures. The system has noticed what is missing.");
+    return obs;
+  }
+
+  // 3. STAGE 4 PREDICTION ACKNOWLEDGMENT
+  if (stage >= 4 && stagePredictions >= 3) {
+    obs.push("You predicted the last " + stagePredictions + " sessions before reading them. The system is aware that you are reading it.");
+    return obs;
+  }
+
+  // 3.5 PLATEAU DETECTION
+  if (Math.abs(vel[modeIdx]) <= 3 && tau[modeIdx] < 7 && sessions >= 8) {
+    var pLine = register === "gifted-compressed"
+      ? "ė[" + mode.id + "] ≈ 0 over recent sessions. Plateau signal. Difficulty reconfiguring."
+      : register === "younger-warm"
+        ? "Your " + mode.n.toLowerCase() + " sessions have been at a similar level lately. The system is adjusting."
+        : mode.n + ": no movement over recent sessions. The system is responding.";
+    obs.push(pLine);
+  }
+
+  // 4. TEACHER CHANNEL
+  if (teacherObservation && teacherObservation.trim() && obs.length < 2) {
+    var stuText = register === "younger-warm"
+      ? teacherObservation.trim() + " That was noticed too."
+      : register === "gifted-compressed"
+        ? "TEACHER[" + sessions + "]: " + teacherObservation.trim()
+        : teacherObservation.trim() + " The system noticed.";
+    obs.push(stuText);
+  }
+
+  // 5. MODE STALENESS
+  if (tau[modeIdx] >= 14 && obs.length < 2) {
+    if (register === "younger-warm") {
+      obs.push("Your " + mode.n.toLowerCase() + " sessions have been on pause for " + tau[modeIdx] + " days. Time to continue.");
+    } else {
+      obs.push("No " + mode.n.toLowerCase() + " engagement in " + tau[modeIdx] + " days. This changes now.");
+    }
+  }
+
+  // 6. VELOCITY SIGNAL
+  if (vel[modeIdx] > 18 && obs.length < 2) {
+    if (register !== "younger-warm") {
+      obs.push(mode.n + " trajectory: +" + vel[modeIdx] + " over three sessions. The signal is clear.");
+    }
+  } else if (vel[modeIdx] < -10 && obs.length < 2) {
+    obs.push(register === "younger-warm"
+      ? "Your last few " + mode.n.toLowerCase() + " sessions have been tougher. The system is adjusting."
+      : mode.n + ": " + vel[modeIdx] + " over three sessions. The system is responding.");
+  }
+
+  // 7. ENGAGEMENT RECOVERY
+  if (engagement === "RECOVERING" && obs.length < 2 && register === "younger-warm") {
+    obs.push("Last time was harder. This one is different. The system remembers.");
+  }
+
+  return obs.slice(0, 2);
+}
+
+// ── Hint generator
+function generateHint(modeId, zone, register, state) {
+  if (zone === "ECHO" && (state.absenceDays || 0) >= 14) {
+    return "Place your pieces the way you know how. Show the system the knowledge survived the gap.";
+  }
+  if (zone === "RADICAL" && state.tier === "GIFTED" && (state.zeroPctileStreak || 0) >= 8) {
+    return "There is no comfortable line to find here.";
+  }
+  if (modeId === "inv" && (state.stagePredictions || 0) >= 2) {
+    return "The system is also capable of saying nothing at all.";
+  }
+  var H = {
+    qty:{"teen-standard":"Cover the open space early. The edges can wait.","younger-warm":"Cover as much space as you can. Start in the middle.","gifted-compressed":"Optimal coverage. Solve it."},
+    spt:{"teen-standard":"Distance is the multiplier. Earn it before you connect.","younger-warm":"Spread your stars as far apart as you can before connecting.","gifted-compressed":"Maximize Euclidean sum. Connection is a constraint, not a target."},
+    frt:{"teen-standard":"Build the network first. The siege comes later.","younger-warm":"Connect your bases before you go for points.","gifted-compressed":"Graph connectivity precedes point optimization. Order matters."},
+    dst:{"teen-standard":"Score nothing. Take everything.","younger-warm":"Try to stop the other team more than you score for yourself.","gifted-compressed":"Inhibitory priority. Acquisition is secondary."},
+    wrm:{"teen-standard":"Score nothing. Do one thing.","younger-warm":"Only the wormhole matters this time. Everything else can wait.","gifted-compressed":"Single objective. Remove all secondary considerations."},
+    inv:{"teen-standard":"What you learned in the last session may cost you here.","younger-warm":"This one might surprise you. That is the point.","gifted-compressed":"What you learned in the last session may cost you here."},
+  };
+  var pool = H[modeId] || H.qty;
+  var reg = register || "teen-standard";
+  return pool[reg] || pool["teen-standard"];
+}
+
+// ── Line generator
+// modeIdx === 5 (INV): mode name line is suppressed — INVERSION always silent.
+// Returns [{t, s, x}, ...] where t = cumulative ms offset.
+function generateLines(state, zone, modeIdx, template, codename, observations) {
+  var mode = MODES[modeIdx];
+  var register = state.register || "teen-standard";
+  var sessions = state.sessions || 0;
+  var tau = state.tau || [0,0,0,0,0,0];
+  var tier = state.tier || "TEEN";
+  var zeroPctileStreak = state.zeroPctileStreak || 0;
+  var moveConstraint = state.moveConstraint || 0;
+  var absenceDays = state.absenceDays || 0;
+
+  var lines = [];
+  var t = 0;
+  function push(s, x, dt) {
+    lines.push({t: t, s: s, x: x || ""});
+    t += dt || 600;
+  }
+
+  // FRAME
+  if (register === "younger-warm") {
+    push("dim", "// SESSION " + (sessions + 1), 400);
+  } else {
+    push("dim", "// SESSION " + (sessions + 1) + " — CHALLENGE COMPILER v2", 400);
+    push("dim", "Scanning behavioral history...", 700);
+  }
+
+  // OBSERVATIONS
+  observations.forEach(function(o) { push("obs", o, 850); });
+
+  // ZONE
+  push("zone", "Spectrum zone: " + zone, 750);
+
+  // MODE — suppress if INVERSION (index 5)
+  if (modeIdx !== 5) {
+    push("b", "Mode selected: " + mode.n, 550);
+  }
+
+  // TEMPLATE
+  push("n", "Template: " + template + templateConstraint(mode.id, template), 550);
+
+  // DIFFICULTY
+  if (absenceDays >= 14) {
+    push("n", "Difficulty: recalibrated. Expect the session to feel slightly off.", 650);
+  } else if (tier === "GIFTED" && zeroPctileStreak >= 8) {
+    push("n", "Difficulty: above ceiling. Proceed.", 650);
+    if (moveConstraint > 0) push("n", "Move budget: " + moveConstraint + " per round.", 450);
+  } else if (tau[modeIdx] > 10) {
+    push("n", "Difficulty: recalibrated downward. The system will not say by how much.", 650);
+  }
+
+  // BLANK
+  push("blank", "", 450);
+
+  // CODENAME
+  push("code", "SESSION " + (sessions + 1) + ": " + codename, 650);
+
+  // HINT
+  var hint = generateHint(mode.id, zone, register, state);
+  push("hint", "> " + hint, 650);
+
+  return lines;
+}
+
+// ── Build compiler state from API response
+function buildCompilerState(compiler, sessionCount) {
+  var snap = (compiler && compiler.state_snapshot) ? compiler.state_snapshot : {};
+  var MKEYS = ["QTY","SPT","FRT","DST","WRM","INV"];
+  var elo  = MKEYS.map(function(m) { return snap[m] ? (snap[m].elo || 0) : 0; });
+  var vel  = MKEYS.map(function(m) { return snap[m] ? (snap[m].velocity || 0) : 0; });
+  var tau  = MKEYS.map(function(m) { return snap[m] ? (snap[m].since_days || 0) : 0; });
+  var modeMap = {QTY:0,SPT:1,FRT:2,DST:3,WRM:4,INV:5};
+  var modeIdx = (compiler && compiler.mode && modeMap[compiler.mode] !== undefined) ? modeMap[compiler.mode] : 0;
+  var modeSnap = (compiler && compiler.mode && snap[compiler.mode]) ? snap[compiler.mode] : {};
+  var activeTaus = MKEYS.filter(function(m) { return snap[m] && snap[m].n > 0; }).map(function(m) { return snap[m].since_days || 0; });
+  var absenceDays = activeTaus.length > 0 ? Math.min.apply(null, activeTaus) : 0;
+
+  return {
+    sessions:sessionCount, stage:1, tier:"TEEN", track:"COMPETITIVE",
+    register:"teen-standard", engagement:"OK",
+    elo:elo, vel:vel, tau:tau,
+    hist:MKEYS.map(function() { return []; }),
+    lastModeIdx:modeIdx, lastRank:modeSnap.last_rank_pct != null ? Math.round(modeSnap.last_rank_pct * 100) : 50,
+    comfortableWinStreak:0, absenceDays:absenceDays, zeroPctileStreak:0,
+    stagePredictions:0, teacherObservation:null, engagement:"OK", moveConstraint:0,
+    plannedSilentOverlay:(compiler && compiler.mode === "INV"),
+  };
+}
+
+// ── Static sequences for edge cases
+
+function firstSessionLines() {
+  var t = 0; var lines = [];
+  function push(s, x, dt) { lines.push({t:t,s:s,x:x||""}); t += dt||600; }
+  push("dim",  "// SESSION 1 — CHALLENGE COMPILER v2", 400);
+  push("dim",  "No prior history. Initializing.", 700);
+  push("obs",  "The system does not know you yet.", 900);
+  push("obs",  "This session is a question, not an assessment.", 800);
+  push("blank","", 500);
+  push("code", "SESSION 1: CALIBRATION", 650);
+  push("hint", "> Play as you would play.", 650);
+  return {lines:lines, zone:"CALIBRATION", codename:"CALIBRATION"};
+}
+
+function calibrationLines(n) {
+  var t = 0; var lines = [];
+  function push(s, x, dt) { lines.push({t:t,s:s,x:x||""}); t += dt||600; }
+  var pool = [
+    "The system is still forming a picture of you.",
+    "Signal is accumulating. A few more sessions.",
+    "Not enough yet to say anything specific.",
+    "The system is listening.",
+  ];
+  push("dim",  "// SESSION " + (n + 1) + " — CHALLENGE COMPILER v2", 400);
+  push("dim",  "Scanning behavioral history...", 700);
+  push("obs",  pool[(n - 1) % pool.length], 900);
+  push("obs",  "Give it a few more sessions.", 800);
+  push("zone", "Spectrum zone: CALIBRATION", 750);
+  push("blank","", 450);
+  push("code", "SESSION " + (n + 1) + ": SIGNAL", 650);
+  push("hint", "> The system is watching for what makes you different.", 650);
+  return {lines:lines, zone:"CALIBRATION", codename:"SIGNAL"};
+}
+
+function hostLines(n) {
+  var t = 0; var lines = [];
+  function push(s, x, dt) { lines.push({t:t,s:s,x:x||""}); t += dt||600; }
+  var pool = [
+    ["You are setting this up for others.","The system will read the room as people join.","Build it how you want."],
+    ["New players get something accessible.","Known players get pushed.","The room shapes the configuration once people arrive."],
+    ["The chaos is the same for everyone in the room.","How each person meets it — that is the interesting part."],
+  ];
+  var msgs = pool[n % pool.length];
+  push("dim", "// HOST SESSION", 400);
+  msgs.forEach(function(m) { push("obs", m, 800); });
+  push("blank","", 450);
+  push("hint", "> Create the session, then share the link.", 600);
+  return {lines:lines, zone:null, codename:null};
+}
+
+// ── Master builder: returns {lines, zone, codename}
+function buildTerminalLines(compiler, sessionCount, isHost) {
+  if (isHost) return hostLines(sessionCount);
+  if (!compiler || sessionCount === 0) return firstSessionLines();
+
+  var zone = compiler.zone || "CALIBRATION";
+  if (zone === "CALIBRATION" || sessionCount < 5) return calibrationLines(sessionCount);
+
+  var modeMap = {QTY:0,SPT:1,FRT:2,DST:3,WRM:4,INV:5};
+  var modeIdx = (compiler.mode && modeMap[compiler.mode] !== undefined) ? modeMap[compiler.mode] : 0;
+  var state   = buildCompilerState(compiler, sessionCount);
+  var template = selectTemplate(state, modeIdx, zone);
+  var codename = selectCodename(modeIdx, sessionCount);
+  var observations = pickObservations(state, modeIdx, zone);
+  var lines = generateLines(state, zone, modeIdx, template, codename, observations);
+
+  return {lines:lines, zone:zone, codename:codename, mode:MODES[modeIdx], template:template};
+}
+
+// ════════════════════════════════════════════════════════════
+//  TERMINAL RENDERER
+// ════════════════════════════════════════════════════════════
+
+var _termTimers = [];
+function clearTermTimers() { _termTimers.forEach(function(id) { clearTimeout(id); }); _termTimers = []; }
+
+function animateLines(result) {
+  clearTermTimers();
+  var body = document.getElementById("termBody");
+  body.innerHTML = "";
+  result.lines.forEach(function(l) {
+    _termTimers.push(setTimeout(function() {
+      if (l.s === "blank") {
+        var br = document.createElement("span");
+        br.className = "tl show";
+        br.style.cssText = "display:block;height:0.5em";
+        body.appendChild(br);
+        return;
+      }
+      var el = document.createElement("span");
+      el.className = "tl " + (STYLE_CLS[l.s] || "tl-n");
+      el.style.display = "block";
+      el.textContent = l.x;
+      body.appendChild(el);
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() { el.classList.add("show"); });
+      });
+      body.scrollTop = body.scrollHeight;
+    }, l.t));
+  });
+}
+
+function renderTerminal(mode) {
+  var isTrain = (mode === "train");
+  var c = _devActive ? _devCompiler : S.compiler;
+  var n = S.sessionCount;
+
+  document.getElementById("termLabel").textContent = isTrain ? "System" : "Before You Start";
+
+  var badge = document.getElementById("termBadge");
+  if (!isTrain) {
+    badge.textContent = "hosting";
+    badge.className = "term-badge";
+  } else if (!c || n === 0) {
+    badge.textContent = "first session";
+    badge.className = "term-badge";
+  } else {
+    var zone = c.zone || "CALIBRATION";
+    badge.textContent = zone;
+    badge.className = "term-badge zone-" + zone.toLowerCase();
+  }
+
+  var aside = document.getElementById("termAside");
+  if (!isTrain) {
+    aside.textContent = "hosting mode";
+  } else if (!c || n === 0) {
+    aside.textContent = "no prior sessions";
+  } else if (n < 5) {
+    aside.textContent = "calibrating";
+  } else {
+    var modeLabel = (c.mode && c.mode !== "INV") ? (c.mode + " · ") : "";
+    aside.textContent = modeLabel + (c.zone || "");
+  }
+
+  var hint = document.getElementById("btnLaunchHint");
+  if (isTrain && c && c.map_filename) {
+    hint.textContent = c.map_filename.replace(/\.json$/i, "");
+  } else {
+    hint.textContent = "";
+  }
+
+  var result = buildTerminalLines(c, n, !isTrain);
+  animateLines(result);
+}
+
+// ════════════════════════════════════════════════════════════
+//  APP
+// ════════════════════════════════════════════════════════════
+
+var WS  = (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host;
+var API = location.origin;
+var BOT_TYPES = ["HAL","CAESAR","ATHENA","ROBIN_HOOD","EINSTEIN","LORENZ"];
+var BOT_PROFILE_AGGRESSION = {TURTLER:2,STANDARD:5,CONTESTER:6,ACCELERANT:8,MIRROR:5,THEORETICIAN:5};
+var AGG_RANGE = {easy:[1,3],standard:[4,6],hard:[7,9]};
+
+var S = {
+  mode:"train", student:null, studentId:null,
+  compiler:null, sessionCount:0,
+  maps:[],
+  train:{map:"", bot:true},
+  host:{map:"", bot:false, steals:true, hq:true, teams:2, pts:false},
+  rooms:{train:null, host:null},
+};
+
+var GOOGLE_CLIENT_ID = "";
+
+function triggerSignIn() {
+  if (!GOOGLE_CLIENT_ID) { alert("Sign-in not configured."); return; }
+  google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID, callback:handleGoogleSignIn});
+  google.accounts.id.prompt();
+}
+async function handleGoogleSignIn(response) {
+  try {
+    var p = JSON.parse(atob(response.credential.split(".")[1]));
+    var name = p.name || p.email;
+    localStorage.setItem("constellation_name", name);
+    S.student = name;
+    document.getElementById("whoamiName").textContent = name;
+    document.getElementById("signInBtn").style.display = "none";
+    try {
+      var rr = await fetch(API + "/api/ledger/resolve-name/" + encodeURIComponent(name));
+      if (rr.ok) { var dd = await rr.json(); S.studentId = dd.student_id; }
+      else { S.studentId = name.toLowerCase().replace(/[^a-z0-9]/g, "-"); }
+    } catch(e2) { S.studentId = name.toLowerCase().replace(/[^a-z0-9]/g, "-"); }
+    loadCompiler();
+  } catch(e) { console.error("Sign-in error", e); }
+}
+
+function syncSlidersToCompiler() {
+  var c = S.compiler; if (!c || !c.config_vector) return;
+  var cv = c.config_vector;
+  if (cv[6]) { document.getElementById("t-rounds").value = cv[6]; document.getElementById("t-rounds-v").textContent = cv[6]; }
+  if (cv[5]) { document.getElementById("t-rt").value = cv[5]; document.getElementById("t-rt-v").textContent = cv[5] + "s"; }
+}
+
+window.addEventListener("DOMContentLoaded", async function() {
+  var name = localStorage.getItem("constellation_name") || "Guest";
+  S.student = name;
+  document.getElementById("whoamiName").textContent = name;
+  document.getElementById("whoami").style.display = "inline-flex";
+  document.getElementById("sbName").textContent = name;
+  document.getElementById("sbName").style.display = "inline";
+  try {
+    var rr = await fetch(API + "/api/ledger/resolve-name/" + encodeURIComponent(name));
+    if (rr.ok) { var dd = await rr.json(); S.studentId = dd.student_id; }
+    else { S.studentId = name.toLowerCase().replace(/[^a-z0-9]/g, "-"); }
+  } catch(e) { S.studentId = name.toLowerCase().replace(/[^a-z0-9]/g, "-"); }
+  connect();
+  loadMaps();
+  loadCompiler();
+});
+
+function connect() {
+  try { new Colyseus.Client(WS); setConn(true); } catch(e) { setConn(false); }
+}
+function setConn(ok) {
+  ["connDot","sbDot"].forEach(function(id) {
+    document.getElementById(id).className = "dot" + (ok ? " live" : " err");
+  });
+  document.getElementById("connLbl").textContent = ok ? "Live" : "Offline";
+  document.getElementById("sbLbl").textContent   = ok ? "Server connected" : "Server offline";
+}
+
+// ── MAPS
+async function loadMaps() {
+  try {
+    var r = await fetch(API + "/api/maps/topology");
+    if (!r.ok) return;
+    var d = await r.json();
+    S.maps = (d.maps || []).slice(0, 16);
+    renderMaps();
+  } catch(_) {}
+}
+function renderMaps() {
+  var defs = {
+    train:{id:"train-maps", label:"System Selects"},
+    host: {id:"host-maps",  label:"Surprise Me"},
+  };
+  Object.entries(defs).forEach(function(e) {
+    var modeKey = e[0]; var cfg = e[1];
+    var grid = document.getElementById(cfg.id);
+    grid.innerHTML = '<div class="mc rnd sel" data-map="" onclick="pickMap(\'' + modeKey + '\',\'\',this)">' + cfg.label + '</div>';
+    S.maps.forEach(function(m) {
+      var name = m.name.replace(/\.json$/, "");
+      var c = document.createElement("div");
+      c.className = "mc"; c.dataset.map = m.name; c.textContent = name;
+      c.onclick = (function(mk, mn, el) { return function() { pickMap(mk, mn, el); }; })(modeKey, m.name, c);
+      grid.appendChild(c);
+    });
+  });
+}
+function pickMap(mode, val, el) {
+  S[mode].map = val;
+  var id = mode === "train" ? "train-maps" : "host-maps";
+  document.querySelectorAll("#" + id + " .mc").forEach(function(c) { c.classList.remove("sel"); });
+  el.classList.add("sel");
+}
+
+// ── COMPILER
+async function loadCompiler() {
+  try {
+    var r = await fetch(API + "/api/compiler/" + encodeURIComponent(S.studentId));
+    if (!r.ok) { fallbackCompiler(); return; }
+    S.compiler = await r.json();
+    S.sessionCount = S.compiler.session_count || 0;
+    syncSlidersToCompiler();
+    renderTerminal(S.mode);
+  } catch(_) { fallbackCompiler(); }
+}
+function fallbackCompiler() {
+  S.compiler = null; S.sessionCount = 0;
+  renderTerminal(S.mode);
+}
+
+// ── MODE SWITCH
+function setMode(mode) {
+  S.mode = mode;
+  var isTrain = (mode === "train");
+  document.getElementById("mode-train").classList.toggle("active", isTrain);
+  document.getElementById("mode-host").classList.toggle("active", !isTrain);
+  document.getElementById("config-train").style.display = isTrain ? "block" : "none";
+  document.getElementById("config-host").style.display  = isTrain ? "none" : "block";
+  renderTerminal(mode);
+}
+
+// ── CONTROLS
+function setBot(mode, on) {
+  S[mode].bot = on;
+  var pre = mode === "train" ? "t" : "h";
+  document.getElementById(pre + "-bot-off").classList.toggle("on", !on);
+  document.getElementById(pre + "-bot-on").classList.toggle("on",  on);
+}
+function setTgl(key, on) {
+  S.host[key] = on;
+  var base = {steals:"h-st", hq:"h-hq", pts:"h-pts"}[key];
+  if (base) {
+    document.getElementById(base + "-off").classList.toggle("on", !on);
+    document.getElementById(base + "-on").classList.toggle("on",  on);
+  }
+}
+function pickTeams(n, el) {
+  S.host.teams = n;
+  document.querySelectorAll("#h-teams-row .team-chip").forEach(function(c) { c.classList.remove("sel"); });
+  el.classList.add("sel");
+}
+function scrollToConfig() {
+  document.getElementById("config-" + S.mode).scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+// ── LAUNCH / CREATE
+function devMockLaunch(mode) {
+  var chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  var fakeId = "";
+  for (var i = 0; i < 6; i++) fakeId += chars[Math.floor(Math.random() * chars.length)];
+  var isTrain = (mode === "train");
+  var launchBtn = isTrain ? document.getElementById("btnLaunchRec") : document.getElementById("btn-" + mode);
+  var msgEl = document.getElementById(isTrain ? "train-act-msg" : "host-act-msg");
+  if (launchBtn) { launchBtn.disabled = true; launchBtn.textContent = "Launching…"; }
+  if (msgEl) msgEl.textContent = "";
+  setTimeout(function() {
+    showRoomState(isTrain ? "train" : "host", fakeId);
+    if (launchBtn) {
+      launchBtn.textContent = isTrain ? "Launched ✓" : "Create Session";
+      if (isTrain) setTimeout(function() { launchBtn.disabled = false; launchBtn.textContent = "Launch Recommended"; }, 2500);
+      else launchBtn.disabled = false;
+    }
+    if (msgEl) msgEl.textContent = "[DEV — no real room created]";
+  }, 800);
+}
+
+async function launchRecommended() {
+  if (_devActive) { devMockLaunch("train"); return; }
+  var btn = document.getElementById("btnLaunchRec");
+  btn.disabled = true; btn.textContent = "Launching…";
+  try {
+    var client = new Colyseus.Client(WS);
+    var opts = buildTrainOpts(true);
+    var room = await client.create("constellation", opts);
+    window.open(API + "/game/" + room.id, "_blank");
+    btn.textContent = "Launched ✓";
+    setTimeout(function() { btn.disabled = false; btn.textContent = "Launch Recommended"; }, 3000);
+  } catch(e) {
+    btn.disabled = false; btn.textContent = "Launch Recommended";
+    document.getElementById("train-act-msg").textContent = "Failed — check server";
+  }
+}
+
+async function createSession(mode) {
+  if (_devActive) { devMockLaunch(mode); return; }
+  var btnId = mode === "train" ? "btn-train" : "btn-host";
+  var msgId = mode === "train" ? "train-act-msg" : "host-act-msg";
+  var btn   = document.getElementById(btnId);
+  btn.disabled = true; btn.textContent = "Creating…";
+  document.getElementById(msgId).textContent = "";
+  try {
+    var client = new Colyseus.Client(WS);
+    var opts   = mode === "train" ? buildTrainOpts(false) : buildHostOpts();
+    var room   = await client.create("constellation", opts);
+    S.rooms[mode] = room;
+    showRoomState(mode, room.id);
+    room.onStateChange(function(st) { handleState(mode, st); });
+    room.onLeave(function() { S.rooms[mode] = null; });
+    recordPanelSignal(mode, opts);
+  } catch(e) {
+    document.getElementById(msgId).textContent = "Could not create session — is the server running?";
+  }
+  btn.disabled = false;
+  btn.textContent = mode === "train" ? "Launch Training Session" : "Create Session";
+}
+
+function buildTrainOpts(useRec) {
+  var c = S.compiler; var cv = (c && c.config_vector) ? c.config_vector : [];
+  var usedRec = useRec && !!c;
+  var botFromProfile = (usedRec && c.bot_profile) ? {
+    type:"HAL", aggression:BOT_PROFILE_AGGRESSION[c.bot_profile] || 5, team:1
+  } : null;
+  return {
+    multipliers:     usedRec ? {count:cv[0]!=null?cv[0]:500, distance:cv[1]!=null?cv[1]:1, hq:cv[2]!=null?cv[2]:10, destruction:cv[3]!=null?cv[3]:1} : {count:500, distance:1, hq:10, destruction:1},
+    rounds:          usedRec ? (cv[6] || 10) : +document.getElementById("t-rounds").value,
+    roundLength:     +document.getElementById("t-rt").value,
+    moves:           usedRec ? (cv[4] || 15) : 15,
+    steals:          usedRec ? (cv[7] != null ? cv[7] : 15) : 15,
+    headquarters:    usedRec ? (cv[8] || 2) : 2,
+    colorTeamCount:  2,
+    customMapFilename: usedRec ? c.map_filename : null,
+    playerName:      S.student,
+    aiBots:          S.train.bot ? (botFromProfile ? [botFromProfile] : [botCfg("standard")]) : [],
+    allowPlayerTeamSelection: false,
+    _source:"student-train", _studentId:S.studentId, _usedRecommendation:usedRec,
+  };
+}
+function buildHostOpts() {
+  var h = S.host;
+  var vary = function(v) { return Math.round(v * (0.92 + Math.random() * 0.16)); };
+  return {
+    multipliers:     {count:vary(500), distance:vary(1), hq:vary(10), destruction:vary(1)},
+    rounds:          +document.getElementById("h-rounds").value,
+    roundLength:     +document.getElementById("h-rt").value,
+    moves:           15,
+    steals:          h.steals ? 12 : 0,
+    headquarters:    h.hq ? 2 : 0,
+    colorTeamCount:  h.teams,
+    allowPlayerTeamSelection: h.pts,
+    customMapFilename: null,
+    playerName:      S.student,
+    aiBots:          h.bot ? [botCfg("standard")] : [],
+    _source:"student-host", _studentId:S.studentId,
+    _sessionName:    document.getElementById("h-name").value.trim() || undefined,
+  };
+}
+function botCfg(level) {
+  var r = AGG_RANGE[level] || [4,6];
+  return {type:BOT_TYPES[Math.floor(Math.random()*BOT_TYPES.length)], aggression:r[0]+Math.floor(Math.random()*(r[1]-r[0]+1)), team:1};
+}
+function getMapJson(name) { var m = S.maps.find(function(x) { return x.name === name; }); return m ? m.json : ""; }
+function getMapJsonByFilename(fn) {
+  if (!fn) return "";
+  var n = fn.replace(/\.json$/i, "");
+  var m = S.maps.find(function(x) { return x.name === n || x.name === fn; });
+  return m ? m.json : "";
+}
+function recordPanelSignal(mode, opts) {
+  try {
+    fetch(API + "/api/ledger/signal", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({channel:"SELF", type:"panel_config", studentId:S.studentId, mode:mode, ts:Date.now()})
+    });
+  } catch(_) {}
+}
+
+// ── ROOM STATE
+function showRoomState(mode, roomId) {
+  var link = API + "/game/" + roomId;
+  var p    = mode === "train" ? "rs-train" : "rs-host";
+  document.getElementById(p + "-id").textContent = roomId;
+  document.getElementById(p + "-link").textContent  = link;
+  document.getElementById(p + "-link").dataset.link = link;
+  document.getElementById(p + "-join").href          = link;
+  document.getElementById(p).classList.add("vis");
+  document.getElementById(p).scrollIntoView({behavior:"smooth"});
+}
+
+function handleState(mode, st) {
+  if (!st || !st.players) return;
+  var players = [];
+  st.players.forEach(function(p, id) { players.push({id:id, name:p.name, sessions:p._sessions || 0}); });
+  if (mode === "train") { renderChips("rs-train-chips", players); return; }
+
+  renderChips("rs-host-chips", players);
+  var newPlayers = players.filter(function(p) { return p.sessions < 5; });
+  var hasNew     = newPlayers.length > 0;
+  var allKnown   = players.every(function(p) { return p.sessions >= 5; });
+  var maxSess    = Math.max.apply(null, [0].concat(players.map(function(p) { return p.sessions; })));
+  var count      = players.length;
+
+  var lr = document.getElementById("live-rec");
+  if (count > 0) lr.classList.add("vis"); else lr.classList.remove("vis");
+
+  var target, newLbl, adj;
+  if (count === 0) {
+    target = "—"; newLbl = "—"; adj = "—";
+  } else if (hasNew) {
+    target = "all players (new player detected)";
+    newLbl = newPlayers.length + " player" + (newPlayers.length > 1 ? "s" : "") + " with <5 sessions";
+    adj    = "engagement mode · more teams · kinetic scoring";
+    document.getElementById("rs-host-phase").textContent = "Engagement mode active";
+  } else if (allKnown && count > 1) {
+    target = "highest player (" + maxSess + " sessions)";
+    newLbl = "none";
+    adj    = "ZPD target · all players pushed upward";
+    document.getElementById("rs-host-phase").textContent = "Competitive calibration";
+  } else {
+    target = "you (creator)";
+    newLbl = "none detected";
+    adj    = "creator ZPD with engagement floor";
+    document.getElementById("rs-host-phase").textContent = "Creator baseline";
+  }
+  document.getElementById("lr-target").textContent = target;
+  document.getElementById("lr-new").textContent    = newLbl;
+  document.getElementById("lr-adj").textContent    = adj;
+  document.getElementById("player-count-lbl").textContent = count > 0 ? count + " player" + (count !== 1 ? "s" : "") : "";
+}
+
+function renderChips(containerId, players) {
+  var box = document.getElementById(containerId);
+  if (!players.length) { box.innerHTML = '<div class="pchip waiting">Waiting for players…</div>'; return; }
+  box.innerHTML = "";
+  players.forEach(function(p) {
+    var c = document.createElement("div");
+    var isNew = p.sessions < 5;
+    c.className = "pchip" + (isNew ? " new-player" : "");
+    c.innerHTML = escHtml(p.name || "Player") + '<span class="sessions-badge">' + (p.sessions ? p.sessions + "s" : " new") + '</span>';
+    box.appendChild(c);
+  });
+}
+
+function closeRoom(mode) {
+  if (S.rooms[mode]) { try { S.rooms[mode].leave(); } catch(_) {} S.rooms[mode] = null; }
+  document.getElementById(mode === "train" ? "rs-train" : "rs-host").classList.remove("vis");
+  if (mode === "host") document.getElementById("live-rec").classList.remove("vis");
+}
+
+function copyLink(mode) {
+  var box  = document.getElementById(mode === "train" ? "rs-train-link" : "rs-host-link");
+  var link = box.dataset.link || box.textContent;
+  navigator.clipboard.writeText(link).catch(function() {
+    var i = document.createElement("input"); i.value = link;
+    document.body.appendChild(i); i.select(); document.execCommand("copy"); document.body.removeChild(i);
+  });
+  var btn = box.nextElementSibling;
+  btn.textContent = "Copied!";
+  setTimeout(function() { btn.textContent = "Copy"; }, 1800);
+}
+
+function escHtml(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+</script>
+
+<!-- ═══════════════════════════════════════
+     DEV PANEL
+═══════════════════════════════════════ -->
+<style>
+.dev-float-btn{position:fixed;bottom:10px;right:16px;background:#1a0d00;border:1px solid #5a3200;color:#d97706;font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:6px 13px;cursor:pointer;font-family:Arial,sans-serif;z-index:210;line-height:1}
+.dev-panel{position:fixed;bottom:44px;right:16px;width:200px;background:#0d0800;border:1px solid #2a1800;z-index:200;font-family:Arial,sans-serif;display:none;flex-direction:column;max-height:82vh;overflow-y:auto}
+.dev-panel.open{display:flex}
+.dev-sec{padding:8px 12px;border-bottom:1px solid #140c00}
+.dev-sec-lbl{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#5a3800;margin-bottom:6px}
+.dev-btns{display:flex;gap:3px;flex-wrap:wrap}
+.dev-btn{padding:3px 7px;font-size:9px;font-weight:700;background:transparent;border:1px solid #2a1800;color:#a06020;cursor:pointer;font-family:Arial,sans-serif}
+.dev-btn:hover,.dev-btn.on{background:#1a0d00;border-color:#d97706;color:#d97706}
+.dev-state-line{padding:6px 12px;font-size:9px;color:#5a3800;font-family:'Courier New',monospace}
+</style>
+<button class="dev-float-btn" id="devToggleBtn" onclick="toggleDevPanel()">DEV</button>
+<div class="dev-panel" id="devPanel">
+  <div class="dev-sec">
+    <div class="dev-sec-lbl">Scenario</div>
+    <div class="dev-btns">
+      <button class="dev-btn" onclick="devScenario('first')">First</button>
+      <button class="dev-btn" onclick="devScenario('early')">Early</button>
+      <button class="dev-btn" onclick="devScenario('echo')">Echo</button>
+      <button class="dev-btn" onclick="devScenario('parallel')">Parallel</button>
+      <button class="dev-btn" onclick="devScenario('shifting')">Shifting</button>
+      <button class="dev-btn" onclick="devScenario('radical')">Radical</button>
+      <button class="dev-btn" onclick="devScenario('rematch')">Rematch</button>
+      <button class="dev-btn" onclick="devScenario('absence')">Absence</button>
+      <button class="dev-btn" onclick="devScenario('host')">Host</button>
+    </div>
+  </div>
+  <div class="dev-sec">
+    <div class="dev-sec-lbl" style="display:flex;justify-content:space-between">Session #<span id="devSessVal" style="color:#d97706;font-weight:700">0</span></div>
+    <input type="range" id="devSessSlider" min="0" max="60" value="0"
+      oninput="devSetSessionSlider(this.value)"
+      style="width:calc(100% - 24px);margin:6px 12px 2px;accent-color:#d97706;display:block">
+  </div>
+  <div class="dev-sec">
+    <div class="dev-sec-lbl">Zone</div>
+    <div class="dev-btns" id="devZoneBtns">
+      <button class="dev-btn on" onclick="devSetZone('CALIBRATION',this)">CAL</button>
+      <button class="dev-btn" onclick="devSetZone('ECHO',this)">ECHO</button>
+      <button class="dev-btn" onclick="devSetZone('PARALLEL',this)">PAR</button>
+      <button class="dev-btn" onclick="devSetZone('SHIFTING',this)">SHF</button>
+      <button class="dev-btn" onclick="devSetZone('RADICAL',this)">RAD</button>
+      <button class="dev-btn" onclick="devSetZone('REMATCH',this)">REM</button>
+    </div>
+  </div>
+  <div class="dev-sec">
+    <div class="dev-sec-lbl">Mode</div>
+    <div class="dev-btns" id="devModeBtns">
+      <button class="dev-btn" onclick="devSetCompilerMode('QTY',this)">QTY</button>
+      <button class="dev-btn on" onclick="devSetCompilerMode('SPT',this)">SPT</button>
+      <button class="dev-btn" onclick="devSetCompilerMode('FRT',this)">FRT</button>
+      <button class="dev-btn" onclick="devSetCompilerMode('DST',this)">DST</button>
+      <button class="dev-btn" onclick="devSetCompilerMode('WRM',this)">WRM</button>
+      <button class="dev-btn" onclick="devSetCompilerMode('INV',this)">INV</button>
+    </div>
+  </div>
+  <div class="dev-sec">
+    <div class="dev-sec-lbl">Panel mode</div>
+    <div class="dev-btns" id="devPanelBtns">
+      <button class="dev-btn on" onclick="devSetPanelMode('train',this)">TRAIN</button>
+      <button class="dev-btn" onclick="devSetPanelMode('host',this)">HOST</button>
+    </div>
+  </div>
+  <div class="dev-state-line" id="devStateStr">s0 &middot; CAL &middot; SPT &middot; train</div>
+</div>
+<script>
+var _devSession = 0, _devZone = "CALIBRATION", _devCMode = "SPT", _devPMode = "train";
+var _devActive = false, _devCompiler = null;
+
+function toggleDevPanel() {
+  var p = document.getElementById("devPanel");
+  var b = document.getElementById("devToggleBtn");
+  var open = p.classList.toggle("open");
+  _devActive = open;
+  b.textContent = open ? "DEV ▼" : "DEV";
+  renderTerminal(S.mode);
+}
+
+function _devApply() {
+  S.sessionCount = _devSession;
+  if (_devSession === 0) {
+    S.compiler = null; _devCompiler = null;
+  } else {
+    var modeMap = {QTY:0,SPT:1,FRT:2,DST:3,WRM:4,INV:5};
+    var mi = modeMap[_devCMode] || 0;
+    var snap = {};
+    snap[_devCMode] = {elo:500+_devSession*8, n:_devSession, velocity:_devSession>3?1.5:0, last_rank_pct:0.55, since_days:2};
+    _devCompiler = {
+      zone:_devZone, mode:_devCMode, session_count:_devSession,
+      expected_rank_pct:0.55, state_snapshot:snap,
+      config_vector:[500,1,10,1,15,30,8,5,2,0,0,50],
+      bot_profile:"STANDARD", map_filename:"Ad Astra by Josh Dahn.json",
+    };
+    S.compiler = _devCompiler;
+  }
+  document.getElementById("devStateStr").textContent = "s" + _devSession + " · " + _devZone.slice(0,3) + " · " + _devCMode + " · " + _devPMode;
+}
+
+function devSetSessionSlider(v) {
+  _devSession = +v;
+  document.getElementById("devSessVal").textContent = v;
+  _devApply(); renderTerminal(_devPMode);
+}
+function devSetZone(z, btn) {
+  _devZone = z;
+  document.querySelectorAll("#devZoneBtns .dev-btn").forEach(function(b) { b.classList.remove("on"); });
+  if (btn) btn.classList.add("on");
+  _devApply(); renderTerminal(_devPMode);
+}
+function devSetCompilerMode(m, btn) {
+  _devCMode = m;
+  document.querySelectorAll("#devModeBtns .dev-btn").forEach(function(b) { b.classList.remove("on"); });
+  if (btn) btn.classList.add("on");
+  _devApply(); renderTerminal(_devPMode);
+}
+function devSetPanelMode(m, btn) {
+  _devPMode = m;
+  document.querySelectorAll("#devPanelBtns .dev-btn").forEach(function(b) { b.classList.remove("on"); });
+  if (btn) btn.classList.add("on");
+  _devApply(); setMode(m);
+}
+
+var DEV_SCENARIOS = {
+  first:    {session:0,  zone:"CALIBRATION", mode:"SPT", panel:"train"},
+  early:    {session:2,  zone:"CALIBRATION", mode:"SPT", panel:"train"},
+  echo:     {session:10, zone:"ECHO",        mode:"QTY", panel:"train"},
+  parallel: {session:12, zone:"PARALLEL",    mode:"SPT", panel:"train"},
+  shifting: {session:15, zone:"SHIFTING",    mode:"FRT", panel:"train"},
+  radical:  {session:20, zone:"RADICAL",     mode:"DST", panel:"train"},
+  rematch:  {session:18, zone:"REMATCH",     mode:"WRM", panel:"train"},
+  absence:  {session:14, zone:"ECHO",        mode:"SPT", panel:"train", absenceDays:21},
+  host:     {session:8,  zone:"ECHO",        mode:"SPT", panel:"host"},
+};
+
+function devScenario(key) {
+  var sc = DEV_SCENARIOS[key]; if (!sc) return;
+  _devSession = sc.session; _devZone = sc.zone; _devCMode = sc.mode; _devPMode = sc.panel;
+  var sl = document.getElementById("devSessSlider"); if (sl) sl.value = sc.session;
+  var sv = document.getElementById("devSessVal");   if (sv) sv.textContent = sc.session;
+  document.querySelectorAll("#devZoneBtns .dev-btn, #devModeBtns .dev-btn, #devPanelBtns .dev-btn").forEach(function(b) { b.classList.remove("on"); });
+  _devApply();
+  if (sc.absenceDays && _devCompiler && _devCompiler.state_snapshot) {
+    var snap = _devCompiler.state_snapshot;
+    Object.keys(snap).forEach(function(m) { snap[m].since_days = sc.absenceDays; });
+  }
+  setMode(sc.panel);
+}
+</script>
+</body>
+</html>
