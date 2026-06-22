@@ -24,10 +24,17 @@
 <script>
 // ── Map Registry Panel ─────────────────────────────────────────────────────
 let _mrTopology = null;
+let _mrAirtableMeta = {};
 let _mrActiveFilter = null;
 
-const MODE_COLORS = { qty:'#3b82f6', spt:'#10b981', frt:'#f59e0b', dst:'#ef4444', wrm:'#8b5cf6', inv:'#ec4899' };
+const MODE_COLORS = { qty:'#4a6fa5', spt:'#2d7a5e', frt:'#8a6d20', dst:'#944040', wrm:'#5e4080', inv:'#8a3f64' };
 const MODE_LABELS = { qty:'QTY', spt:'SPT', frt:'FRT', dst:'DST', wrm:'WRM', inv:'INV' };
+
+const STATUS_STYLE = {
+    'Done':        'background:#e8f0e9;color:#2d6a35;',
+    'In Progress': 'background:#fef3e2;color:#8a5a10;',
+    'Not Done':    'background:#f3f3f3;color:#666;',
+};
 
 async function loadMapRegistry() {
     const loadingEl = document.getElementById('map-registry-loading');
@@ -35,8 +42,12 @@ async function loadMapRegistry() {
     loadingEl.style.display = 'block';
     gridEl.innerHTML = '';
     try {
-        const topo = await fetch('/api/maps/topology').then(r => r.json());
+        const [topo, airtable] = await Promise.all([
+            fetch('/api/maps/topology').then(r => r.json()),
+            fetch('/api/maps/airtable-meta').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+        ]);
         _mrTopology = topo;
+        _mrAirtableMeta = airtable;
         renderMapRegistry();
     } catch (e) {
         loadingEl.textContent = 'Failed to load topology: ' + e.message;
@@ -78,13 +89,13 @@ function renderMapRegistry() {
         const affinityBars = ['qty','spt','frt','dst','wrm','inv'].map(m => {
             const val = t.mode_affinity?.[m] || 0;
             const pct = Math.round(val * 100);
-            const color = val >= 0.65 ? MODE_COLORS[m] : (val >= 0.4 ? '#d1d5db' : '#f3f4f6');
+            const color = val >= 0.65 ? MODE_COLORS[m] : (val >= 0.4 ? '#c4c8ce' : '#e8eaed');
             const label = MODE_LABELS[m];
             const viable = val >= 0.65 ? ' font-weight:700;' : '';
             return `<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">
                 <span style="width:24px;font-size:10px;color:#6b7280;${viable}">${label}</span>
-                <div style="flex:1;height:6px;background:#f3f4f6;border-radius:3px;overflow:hidden;">
-                    <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;"></div>
+                <div style="flex:1;height:5px;background:#e8eaed;border-radius:2px;overflow:hidden;">
+                    <div style="width:${pct}%;height:100%;background:${color};border-radius:2px;"></div>
                 </div>
                 <span style="width:28px;font-size:10px;text-align:right;color:${val>=0.65?MODE_COLORS[m]:'#9ca3af'};${viable}">${pct}%</span>
             </div>`;
@@ -96,23 +107,44 @@ function renderMapRegistry() {
             ? `<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:3px;margin-left:4px;">${t.hq_count} HQ</span>`
             : `<span style="font-size:10px;background:#f0fdf4;color:#166534;padding:1px 6px;border-radius:3px;margin-left:4px;">dyn HQ</span>`;
 
-        return `<div style="border:1px solid #e5e7eb;border-radius:6px;padding:14px;background:#fff;">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
-                <div>
-                    <div style="font-size:13px;font-weight:700;color:#111;">${name}${hqBadge}</div>
-                    ${author ? `<div style="font-size:10px;color:#9ca3af;margin-top:1px;">${author}</div>` : ''}
+        // Match airtable record by name or filename (case-insensitive)
+        const nameKey = filename.replace('.json','');
+        const atMeta = _mrAirtableMeta[name] || _mrAirtableMeta[nameKey]
+            || _mrAirtableMeta[name.toLowerCase()] || _mrAirtableMeta[nameKey.toLowerCase()] || null;
+        const thumbUrl = atMeta?.thumbnail_url || atMeta?.image_url || null;
+        const status = atMeta?.status || null;
+        const statusStyle = STATUS_STYLE[status] || 'background:#f3f3f3;color:#666;';
+
+        const imageBlock = thumbUrl
+            ? `<div style="margin-bottom:10px;border-radius:4px;overflow:hidden;line-height:0;">
+                <img src="${thumbUrl}" alt="${name}" style="width:100%;max-height:120px;object-fit:cover;display:block;" loading="lazy">
+               </div>`
+            : '';
+        const statusBadge = status
+            ? `<span style="font-size:10px;${statusStyle}padding:1px 7px;border-radius:3px;">${status}</span>`
+            : '';
+
+        return `<div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;background:#fff;">
+            ${imageBlock}
+            <div style="padding:14px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+                    <div>
+                        <div style="font-size:13px;font-weight:700;color:#111;">${name}${hqBadge}</div>
+                        ${author ? `<div style="font-size:10px;color:#9ca3af;margin-top:1px;">${author}</div>` : ''}
+                    </div>
+                    <button onclick="mrLoadMap('${filename.replace(/'/g,"\\'")}','${name.replace(/'/g,"\\'")}');"
+                        style="padding:4px 10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:3px;cursor:pointer;font-size:10px;font-weight:600;white-space:nowrap;">Load ↗</button>
                 </div>
-                <button onclick="mrLoadMap('${filename.replace(/'/g,"\\'")}','${name.replace(/'/g,"\\'")}');"
-                    style="padding:4px 10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:3px;cursor:pointer;font-size:10px;font-weight:600;white-space:nowrap;">Load ↗</button>
+                <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
+                    ${statusBadge}
+                    <span style="font-size:10px;color:#9ca3af;">${t.star_count} stars</span>
+                    <span style="font-size:10px;color:#9ca3af;">— ${t.connection_count} edges</span>
+                    <span style="font-size:10px;color:#9ca3af;">∅ ${t.avg_degree} deg</span>
+                    <span style="font-size:10px;color:#9ca3af;">⧖ ${t.chokepoint_count} chokes</span>
+                </div>
+                ${affinityBars}
+                <div style="margin-top:8px;font-size:10px;color:#c4c8ce;font-style:italic;">${filename}</div>
             </div>
-            <div style="display:flex;gap:12px;font-size:11px;color:#6b7280;margin-bottom:10px;flex-wrap:wrap;">
-                <span>⭐ ${t.star_count} stars</span>
-                <span>— ${t.connection_count} edges</span>
-                <span>∅ ${t.avg_degree} deg</span>
-                <span>⧖ ${t.chokepoint_count} chokes</span>
-            </div>
-            ${affinityBars}
-            <div style="margin-top:8px;font-size:10px;color:#9ca3af;font-style:italic;">${filename}</div>
         </div>`;
     }).join('');
 

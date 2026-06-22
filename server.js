@@ -248,6 +248,33 @@ app.get('/api/maps/topology', (req, res) => {
     catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Airtable metadata for map registry — images + status tags keyed by record Name
+app.get('/api/maps/airtable-meta', async (req, res) => {
+    try {
+        const records = await fetchAirtableRecords();
+        const meta = {};
+        for (const rec of records) {
+            const name = rec.fields[AIRTABLE_NAME_FIELD];
+            if (!name) continue;
+            // Find image: first attachment array field with a url
+            let image_url = null, thumbnail_url = null;
+            for (const val of Object.values(rec.fields)) {
+                if (Array.isArray(val) && val.length > 0 && val[0]?.url) {
+                    image_url = val[0].url;
+                    thumbnail_url = val[0].thumbnails?.large?.url || val[0].url;
+                    break;
+                }
+            }
+            // Status: check common field names
+            const status = rec.fields['Status'] || rec.fields['Tags'] || rec.fields['Progress'] || null;
+            meta[name] = { image_url, thumbnail_url, status };
+        }
+        res.json(meta);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.get('/api/maps', async (req, res) => {
     try {
         // Read all JSON files from the maps folder
