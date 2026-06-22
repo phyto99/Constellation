@@ -411,6 +411,17 @@ app.get('/api/ledger/health', (req, res) => {
     catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Name → UUID resolution. Creates a stable UUID on first call; idempotent after.
+// student-next.html calls this on load to get the real ledger ID for a given name.
+app.get('/api/ledger/resolve-name/:name', (req, res) => {
+    try {
+        const name = decodeURIComponent(req.params.name).trim();
+        if (!name) return res.status(400).json({ error: 'name required' });
+        const { id, confirmed } = ledger.resolveStudentId(name);
+        res.json({ student_id: id, confirmed, name });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // Merge two student IDs (append-only: records a merge event + updates alias map)
 // Apply compiler config to a specific room (presence-based push)
 // Loads map file, publishes config_apply event to the room
@@ -1003,6 +1014,8 @@ class ConstellationRoom extends Room {
             moves: options.moves || 15,
             multipliers: options.multipliers || { count: 500, distance: 1, hq: 10, destruction: 1 },
             aiBots: options.aiBots || [],
+            customMap: null,
+            customMapFilename: options.customMapFilename || null,
             sessionNumber: this.sessionNumber, // Add session number to config
             // Allow players to select their own team from the game client
             allowPlayerTeamSelection: options.allowPlayerTeamSelection !== undefined ? options.allowPlayerTeamSelection : false,
@@ -1022,6 +1035,16 @@ class ConstellationRoom extends Room {
                 { color: 0x006400, name: 'dark green', displayName: 'Dark Green' }
             ]
         };
+
+        // Load map from filesystem if a filename was provided (e.g. from student-next compiler launch)
+        if (this.gameConfig.customMapFilename) {
+            try {
+                const mapPath = path.join(MAPS_FOLDER, this.gameConfig.customMapFilename);
+                if (fs.existsSync(mapPath)) {
+                    this.gameConfig.customMap = JSON.parse(fs.readFileSync(mapPath, 'utf8'));
+                }
+            } catch (e) { console.error('[onCreate] map load error:', e.message); }
+        }
 
         this.setMetadata({
             name: this.gameConfig.name,
@@ -3748,9 +3771,11 @@ app.use('/vendor/babel',        express.static(path.join(__dirname, 'node_module
 app.get('/admin', setCOEPHeaders, (_req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 app.get('/student',      (_req, res) => res.sendFile(path.join(__dirname, 'student-panel.html')));
 app.get('/student-next',    (_req, res) => res.sendFile(path.join(__dirname, 'student-next.html')));
+app.get('/student-next-v2', (_req, res) => res.sendFile(path.join(__dirname, 'student-next-v2.html')));
 app.get('/student-dossier', (_req, res) => res.sendFile(path.join(__dirname, 'student-dossier.html')));
 app.get('/bot-creator',    (_req, res) => res.sendFile(path.join(__dirname, 'bot-creator.html')));
 app.get('/gallery',        (_req, res) => res.sendFile(path.join(__dirname, 'gallery.html')));
+app.get('/hub',            (_req, res) => res.sendFile(path.join(__dirname, 'hub.html')));
 app.use('/philosophy', express.static(path.join(__dirname, 'philosophy development')));
 app.get('/ledger', (_req, res) => res.sendFile(path.join(__dirname, 'philosophy development', 'layer-0-ledger.html')));
 app.get('/observatory', (_req, res) => res.sendFile(path.join(__dirname, 'philosophy development', 'observatory.html')));
