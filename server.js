@@ -3692,6 +3692,7 @@ function setCOEPHeaders(_req, res, next) {
 }
 app.get('/', setCOEPHeaders, (_req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 app.get('/other', (_req, res) => res.sendFile(path.join(__dirname, 'other.html')));
+app.get('/admin-demos', (_req, res) => res.sendFile(path.join(__dirname, 'admin-demos.html')));
 app.use('/vendor/react',        express.static(path.join(__dirname, 'node_modules/react/umd')));
 app.use('/vendor/react-dom',    express.static(path.join(__dirname, 'node_modules/react-dom/umd')));
 app.use('/vendor/babel',        express.static(path.join(__dirname, 'node_modules/@babel/standalone')));
