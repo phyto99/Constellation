@@ -1,0 +1,136 @@
+<div id="map-registry-panel" class="admin-panel" style="display:none;padding:20px;max-width:1100px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;border-bottom:2px solid #111;padding-bottom:12px;">
+        <div>
+            <h2 style="font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0">▦ Map Registry</h2>
+            <p style="font-size:11px;color:#666;margin:4px 0 0">Topology records for all maps. Mode affinity ≥ 0.65 = viable for that mode.</p>
+        </div>
+        <button onclick="AdminShell.back()" style="background:none;border:1px solid #e5e7eb;padding:6px 12px;cursor:pointer;font-size:11px;border-radius:3px;color:#666;">← Back</button>
+    </div>
+    <!-- Mode filter -->
+    <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+        <span style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-right:4px;">Filter:</span>
+        <button onclick="filterMapRegistry(null)" id="mrfilter-all" class="mr-filter-btn active" style="padding:4px 10px;border:1px solid #111;background:#111;color:#fff;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">All</button>
+        <button onclick="filterMapRegistry('qty')" id="mrfilter-qty" class="mr-filter-btn" style="padding:4px 10px;border:1px solid #e5e7eb;background:#fff;color:#374151;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">QTY</button>
+        <button onclick="filterMapRegistry('spt')" id="mrfilter-spt" class="mr-filter-btn" style="padding:4px 10px;border:1px solid #e5e7eb;background:#fff;color:#374151;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">SPT</button>
+        <button onclick="filterMapRegistry('frt')" id="mrfilter-frt" class="mr-filter-btn" style="padding:4px 10px;border:1px solid #e5e7eb;background:#fff;color:#374151;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">FRT</button>
+        <button onclick="filterMapRegistry('dst')" id="mrfilter-dst" class="mr-filter-btn" style="padding:4px 10px;border:1px solid #e5e7eb;background:#fff;color:#374151;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">DST</button>
+        <button onclick="filterMapRegistry('wrm')" id="mrfilter-wrm" class="mr-filter-btn" style="padding:4px 10px;border:1px solid #e5e7eb;background:#fff;color:#374151;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">WRM</button>
+        <button onclick="filterMapRegistry('inv')" id="mrfilter-inv" class="mr-filter-btn" style="padding:4px 10px;border:1px solid #e5e7eb;background:#fff;color:#374151;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">INV</button>
+        <span id="mr-count" style="font-size:11px;color:#999;margin-left:8px;"></span>
+    </div>
+    <div id="map-registry-loading" style="font-size:12px;color:#999;padding:20px 0;">Loading maps…</div>
+    <div id="map-registry-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;"></div>
+</div>
+<script>
+// ── Map Registry Panel ─────────────────────────────────────────────────────
+let _mrTopology = null;
+let _mrActiveFilter = null;
+
+const MODE_COLORS = { qty:'#3b82f6', spt:'#10b981', frt:'#f59e0b', dst:'#ef4444', wrm:'#8b5cf6', inv:'#ec4899' };
+const MODE_LABELS = { qty:'QTY', spt:'SPT', frt:'FRT', dst:'DST', wrm:'WRM', inv:'INV' };
+
+async function loadMapRegistry() {
+    const loadingEl = document.getElementById('map-registry-loading');
+    const gridEl    = document.getElementById('map-registry-grid');
+    loadingEl.style.display = 'block';
+    gridEl.innerHTML = '';
+    try {
+        const topo = await fetch('/api/maps/topology').then(r => r.json());
+        _mrTopology = topo;
+        renderMapRegistry();
+    } catch (e) {
+        loadingEl.textContent = 'Failed to load topology: ' + e.message;
+    }
+}
+
+function filterMapRegistry(mode) {
+    _mrActiveFilter = mode;
+    document.querySelectorAll('.mr-filter-btn').forEach(btn => {
+        const isActive = (mode === null && btn.id === 'mrfilter-all') ||
+                         (mode !== null && btn.id === 'mrfilter-' + mode);
+        btn.style.background = isActive ? '#111' : '#fff';
+        btn.style.color      = isActive ? '#fff' : '#374151';
+        btn.style.borderColor= isActive ? '#111' : '#e5e7eb';
+    });
+    renderMapRegistry();
+}
+
+function renderMapRegistry() {
+    if (!_mrTopology) return;
+    const loadingEl = document.getElementById('map-registry-loading');
+    const gridEl    = document.getElementById('map-registry-grid');
+    loadingEl.style.display = 'none';
+
+    const entries = Object.entries(_mrTopology);
+    const filtered = _mrActiveFilter
+        ? entries.filter(([, t]) => (t.mode_affinity?.[_mrActiveFilter] || 0) >= 0.65)
+        : entries;
+    filtered.sort((a, b) => {
+        if (_mrActiveFilter) {
+            return (b[1].mode_affinity?.[_mrActiveFilter] || 0) - (a[1].mode_affinity?.[_mrActiveFilter] || 0);
+        }
+        return a[0].localeCompare(b[0]);
+    });
+
+    document.getElementById('mr-count').textContent = filtered.length + ' of ' + entries.length + ' maps';
+
+    gridEl.innerHTML = filtered.map(([filename, t]) => {
+        const affinityBars = ['qty','spt','frt','dst','wrm','inv'].map(m => {
+            const val = t.mode_affinity?.[m] || 0;
+            const pct = Math.round(val * 100);
+            const color = val >= 0.65 ? MODE_COLORS[m] : (val >= 0.4 ? '#d1d5db' : '#f3f4f6');
+            const label = MODE_LABELS[m];
+            const viable = val >= 0.65 ? ' font-weight:700;' : '';
+            return `<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">
+                <span style="width:24px;font-size:10px;color:#6b7280;${viable}">${label}</span>
+                <div style="flex:1;height:6px;background:#f3f4f6;border-radius:3px;overflow:hidden;">
+                    <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;"></div>
+                </div>
+                <span style="width:28px;font-size:10px;text-align:right;color:${val>=0.65?MODE_COLORS[m]:'#9ca3af'};${viable}">${pct}%</span>
+            </div>`;
+        }).join('');
+
+        const name = t.title || filename.replace('.json','');
+        const author = (t.author && t.author !== 'Creator' && t.author !== 'unknown') ? t.author : '';
+        const hqBadge = t.hq_count > 0
+            ? `<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:3px;margin-left:4px;">${t.hq_count} HQ</span>`
+            : `<span style="font-size:10px;background:#f0fdf4;color:#166534;padding:1px 6px;border-radius:3px;margin-left:4px;">dyn HQ</span>`;
+
+        return `<div style="border:1px solid #e5e7eb;border-radius:6px;padding:14px;background:#fff;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+                <div>
+                    <div style="font-size:13px;font-weight:700;color:#111;">${name}${hqBadge}</div>
+                    ${author ? `<div style="font-size:10px;color:#9ca3af;margin-top:1px;">${author}</div>` : ''}
+                </div>
+                <button onclick="mrLoadMap('${filename.replace(/'/g,"\\'")}','${name.replace(/'/g,"\\'")}');"
+                    style="padding:4px 10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:3px;cursor:pointer;font-size:10px;font-weight:600;white-space:nowrap;">Load ↗</button>
+            </div>
+            <div style="display:flex;gap:12px;font-size:11px;color:#6b7280;margin-bottom:10px;flex-wrap:wrap;">
+                <span>⭐ ${t.star_count} stars</span>
+                <span>— ${t.connection_count} edges</span>
+                <span>∅ ${t.avg_degree} deg</span>
+                <span>⧖ ${t.chokepoint_count} chokes</span>
+            </div>
+            ${affinityBars}
+            <div style="margin-top:8px;font-size:10px;color:#9ca3af;font-style:italic;">${filename}</div>
+        </div>`;
+    }).join('');
+
+    if (filtered.length === 0) gridEl.innerHTML = '<div style="color:#9ca3af;font-size:12px;padding:20px 0;">No maps match this filter (affinity ≥ 0.65)</div>';
+}
+
+function mrLoadMap(filename, displayName) {
+    if (!selectedRoomId || !currentRoom) {
+        alert('No game selected. Select a game first, then use Load to set the map.');
+        return;
+    }
+    currentRoom.send('update_settings', { roomId: selectedRoomId, settings: { customMapFilename: filename } });
+    showNotification('Map set: ' + displayName);
+}
+
+AdminShell.register('map-registry', {
+    panelId: 'map-registry-panel',
+    navBtnId: 'map-registry-nav-btn',
+    onShow: loadMapRegistry,
+});
+</script>
