@@ -120,6 +120,7 @@ table.mt tr:hover td{background:#f8f8f8}
   <span class="hd-warn">APPROXIMATION — every value has a refutation condition</span>
   <span id="health-badge" style="font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #ddd;color:#888;padding:2px 8px;cursor:pointer" title="Ledger integrity" onclick="checkHealth()">HEALTH ↻</span>
   <button class="admin-toggle" id="admin-toggle-btn" onclick="toggleAdmin()">STUDENT VIEW</button>
+  <button id="dev-btn" onclick="toggleDev()" style="font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:2px 10px;border:1px solid #ddd;cursor:pointer;background:#fff;color:#888;font-family:Arial,sans-serif">DEV</button>
   <a class="hd-link" href="/philosophy/layer-1-approximation.html" target="_blank">← Mock prototype</a>
   <a class="hd-link" href="/ledger" target="_blank">Layer 0 →</a>
 </header>
@@ -254,8 +255,137 @@ let isAdmin = false;
 let myStudentId = localStorage.getItem('constellation_me') || null;
 let zoneCache = {};
 
+// ── DEV MOCK ───────────────────────────────────────────────────────────────
+let _devMock = false;
+
+// Same students/sessions as layer-0-ledger MOCK_OBS — consistent dataset
+const MOCK_STUDENTS = [
+  {student_id:'aria', student_name:'ARIA', sessions:22, last_t:1719014400, student_id_confirmed:true},
+  {student_id:'clio', student_name:'CLIO', sessions:51, last_t:1717804800, student_id_confirmed:true},
+  {student_id:'dara', student_name:'DARA', sessions:11, last_t:1718582400, student_id_confirmed:true},
+  {student_id:'bram', student_name:'BRAM', sessions:5,  last_t:1718150400, student_id_confirmed:false},
+];
+
+const MOCK_STATES = {
+  aria:{state:{
+    QTY:{elo:562,velocity: 1.2,zpd_target:477,n:4, since_days:5, decay:0.70},
+    SPT:{elo:683,velocity: 2.1,zpd_target:581,n:14,since_days:1, decay:0.93},
+    FRT:{elo:511,velocity:null,zpd_target:104,n:2, since_days:21,decay:0.22},
+    DST:{elo:494,velocity:null,zpd_target: 59,n:1, since_days:30,decay:0.12},
+    WRM:{elo:  0,velocity:null,zpd_target:  0,n:0, since_days:null,decay:0},
+    INV:{elo:521,velocity:null,zpd_target:291,n:1, since_days:8, decay:0.56},
+  }},
+  clio:{state:{
+    QTY:{elo:724,velocity: 0.8,zpd_target:615,n:8, since_days:3, decay:0.81},
+    SPT:{elo:862,velocity: 1.4,zpd_target:733,n:22,since_days:1, decay:0.93},
+    FRT:{elo:793,velocity: 1.9,zpd_target:674,n:12,since_days:2, decay:0.86},
+    DST:{elo:711,velocity: 0.5,zpd_target:604,n:6, since_days:7, decay:0.61},
+    WRM:{elo:602,velocity:null,zpd_target:408,n:2, since_days:18,decay:0.28},
+    INV:{elo:749,velocity:null,zpd_target:419,n:1, since_days:12,decay:0.42},
+  }},
+  dara:{state:{
+    QTY:{elo:522,velocity:-0.5,zpd_target:386,n:2, since_days:9, decay:0.53},
+    SPT:{elo:476,velocity:-1.2,zpd_target:352,n:2, since_days:7, decay:0.61},
+    FRT:{elo:508,velocity:null,zpd_target:199,n:1, since_days:14,decay:0.37},
+    DST:{elo:698,velocity: 3.4,zpd_target:594,n:5, since_days:2, decay:0.86},
+    WRM:{elo:503,velocity:null,zpd_target:198,n:1, since_days:16,decay:0.32},
+    INV:{elo:  0,velocity:null,zpd_target:  0,n:0, since_days:null,decay:0},
+  }},
+  bram:{state:{
+    QTY:{elo:521,velocity: 0.3,zpd_target:391,n:2, since_days:11,decay:0.46},
+    SPT:{elo:513,velocity: 0.1,zpd_target:384,n:2, since_days:9, decay:0.53},
+    FRT:{elo:500,velocity:null,zpd_target:  0,n:0, since_days:null,decay:0},
+    DST:{elo:506,velocity:null,zpd_target:379,n:1, since_days:13,decay:0.40},
+    WRM:{elo:500,velocity:null,zpd_target:  0,n:0, since_days:null,decay:0},
+    INV:{elo:  0,velocity:null,zpd_target:  0,n:0, since_days:null,decay:0},
+  }},
+};
+
+// Sessions in /api/ledger/sessions shape: {session_id,t,config_vector,outcome:{rank_pct},silent_inv,student_id_confirmed,compiler_generated,signals:{r_bot}}
+const MOCK_SESSIONS = {
+  aria:[
+    {session_id:'a01',t:1717200000,config_vector:[500,1,5,1,15,30,8,15,2,0,0,50],  outcome:{rank_pct:0.62},silent_inv:false,student_id_confirmed:true, compiler_generated:false,signals:{r_bot:520}},
+    {session_id:'a02',t:1717286400,config_vector:[500,1,5,1,15,30,8,15,2,0,2,60],  outcome:{rank_pct:0.71},silent_inv:false,student_id_confirmed:true, compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'a05',t:1717545600,config_vector:[1,500,1,1,15,32,10,5,0,1,5,40],  outcome:{rank_pct:0.58},silent_inv:false,student_id_confirmed:true, compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'a08',t:1717804800,config_vector:[1,500,1,1,12,32,10,5,0,1,1,60],  outcome:{rank_pct:0.73},silent_inv:false,student_id_confirmed:true, compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'a12',t:1718150400,config_vector:[50,1,500,-200,15,30,10,3,4,2,0,50],outcome:{rank_pct:0.48},silent_inv:false,student_id_confirmed:true, compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'a16',t:1718496000,config_vector:[1,500,1,1,12,35,10,5,0,1,1,70],  outcome:{rank_pct:0.76},silent_inv:false,student_id_confirmed:true, compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'a18',t:1718668800,config_vector:[-100,1,1,1,15,30,10,15,2,0,5,40],outcome:{rank_pct:0.31},silent_inv:true, student_id_confirmed:true, compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'a20',t:1718841600,config_vector:[1,500,1,1,12,35,10,5,0,1,1,70],  outcome:{rank_pct:0.79},silent_inv:false,student_id_confirmed:true, compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'a21',t:1718928000,config_vector:[500,1,5,1,15,30,10,15,2,0,0,50], outcome:{rank_pct:0.64},silent_inv:false,student_id_confirmed:true, compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'a22',t:1719014400,config_vector:[1,500,1,1,10,35,10,5,0,1,1,70],  outcome:{rank_pct:0.82},silent_inv:false,student_id_confirmed:true, compiler_generated:true, signals:{r_bot:520}},
+  ],
+  clio:[
+    {session_id:'c44',t:1716940800,config_vector:[1,500,1,1,10,32,10,5,0,1,1,70],    outcome:{rank_pct:0.89},silent_inv:false,student_id_confirmed:true,compiler_generated:true,signals:{r_bot:520}},
+    {session_id:'c46',t:1717113600,config_vector:[50,1,500,-200,10,30,10,3,4,2,2,80],outcome:{rank_pct:0.92},silent_inv:false,student_id_confirmed:true,compiler_generated:true,signals:{r_bot:520}},
+    {session_id:'c48',t:1717286400,config_vector:[1,-300,1,-200,15,30,10,15,2,0,5,40],outcome:{rank_pct:0.78},silent_inv:true, student_id_confirmed:true,compiler_generated:true,signals:{r_bot:520}},
+    {session_id:'c49',t:1717372800,config_vector:[500,1,5,1,10,25,8,15,2,0,1,70],    outcome:{rank_pct:0.91},silent_inv:false,student_id_confirmed:true,compiler_generated:true,signals:{r_bot:520}},
+    {session_id:'c50',t:1717459200,config_vector:[50,1,500,-200,10,30,10,3,4,2,0,60],outcome:{rank_pct:0.94},silent_inv:false,student_id_confirmed:true,compiler_generated:true,signals:{r_bot:520}},
+    {session_id:'c51',t:1717545600,config_vector:[1,1,1,1,10,30,10,10,1,3,4,90],     outcome:{rank_pct:0.88},silent_inv:false,student_id_confirmed:true,compiler_generated:true,signals:{r_bot:520}},
+    {session_id:'c52',t:1717718400,config_vector:[1,500,1,1,8,35,10,5,0,1,1,80],     outcome:{rank_pct:0.93},silent_inv:false,student_id_confirmed:true,compiler_generated:true,signals:{r_bot:520}},
+    {session_id:'c53',t:1717804800,config_vector:[50,1,500,-200,8,30,10,3,4,2,0,80], outcome:{rank_pct:0.95},silent_inv:false,student_id_confirmed:true,compiler_generated:true,signals:{r_bot:520}},
+  ],
+  dara:[
+    {session_id:'d01',t:1717718400,config_vector:[500,1,5,1,15,30,8,15,2,0,0,50],   outcome:{rank_pct:0.55},silent_inv:false,student_id_confirmed:true,compiler_generated:false,signals:{r_bot:520}},
+    {session_id:'d03',t:1717891200,config_vector:[1,500,1,1,15,32,10,5,0,1,5,40],   outcome:{rank_pct:0.37},silent_inv:false,student_id_confirmed:true,compiler_generated:false,signals:{r_bot:520}},
+    {session_id:'d05',t:1718064000,config_vector:[1,1,1,320,15,30,10,40,2,0,3,60],  outcome:{rank_pct:0.84},silent_inv:false,student_id_confirmed:true,compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'d07',t:1718236800,config_vector:[50,1,500,-200,15,30,10,3,4,2,0,50],outcome:{rank_pct:0.43},silent_inv:false,student_id_confirmed:true,compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'d09',t:1718409600,config_vector:[1,1,1,360,15,30,10,45,2,0,3,80],  outcome:{rank_pct:0.91},silent_inv:false,student_id_confirmed:true,compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'d10',t:1718496000,config_vector:[1,500,1,1,15,32,10,5,0,1,1,50],   outcome:{rank_pct:0.39},silent_inv:false,student_id_confirmed:true,compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'d11',t:1718582400,config_vector:[1,1,1,360,12,30,10,40,2,0,2,80],  outcome:{rank_pct:0.88},silent_inv:false,student_id_confirmed:true,compiler_generated:true, signals:{r_bot:520}},
+  ],
+  bram:[
+    {session_id:'b01',t:1717545600,config_vector:[500,1,5,1,15,30,8,15,2,0,0,50],  outcome:{rank_pct:0.44},silent_inv:false,student_id_confirmed:false,compiler_generated:false,signals:{r_bot:520}},
+    {session_id:'b02',t:1717632000,config_vector:[1,500,1,1,15,32,10,5,0,1,5,40],  outcome:{rank_pct:0.52},silent_inv:false,student_id_confirmed:false,compiler_generated:false,signals:{r_bot:520}},
+    {session_id:'b03',t:1717804800,config_vector:[50,1,500,-200,15,30,10,3,4,2,0,50],outcome:{rank_pct:0.29},silent_inv:false,student_id_confirmed:false,compiler_generated:false,signals:{r_bot:520}},
+    {session_id:'b04',t:1717977600,config_vector:[1,1,1,200,15,30,10,40,2,0,3,60],  outcome:{rank_pct:0.58},silent_inv:false,student_id_confirmed:false,compiler_generated:false,signals:{r_bot:520}},
+    {session_id:'b05',t:1718150400,config_vector:[1,1,1,1,12,30,10,10,1,3,4,90],    outcome:{rank_pct:0.49},silent_inv:false,student_id_confirmed:false,compiler_generated:false,signals:{r_bot:520}},
+  ],
+};
+
+const MOCK_COMPILERS = {
+  aria:{mode:'SPT',zone:'ECHO',      bot_profile:'STANDARD',    map_filename:'Ad Astra by Josh Dahn.json',  config_vector:[1,500,1,1,12,35,10,5,0,1,1,70],     config_hash:'a3f2b1c9',expected_rank_pct:0.52,r_bot:520,params_version:'v1.0'},
+  clio:{mode:'FRT',zone:'ALPHA',     bot_profile:'ACCELERANT',  map_filename:'Cluster IV.json',             config_vector:[50,1,500,-200,10,28,10,3,4,2,0,80],  config_hash:'c8e4d7a2',expected_rank_pct:0.67,r_bot:520,params_version:'v1.0'},
+  dara:{mode:'DST',zone:'PARALLEL',  bot_profile:'CONTESTER',   map_filename:'Archipelago.json',            config_vector:[1,1,1,360,12,30,10,40,2,0,3,80],     config_hash:'d1f9c3b5',expected_rank_pct:0.55,r_bot:520,params_version:'v1.0'},
+  bram:{mode:'QTY',zone:'CALIBRATION',bot_profile:'TURTLER',    map_filename:'Delta Nine.json',             config_vector:[500,1,5,1,15,30,8,15,2,0,0,50],      config_hash:'b7a4e2f1',expected_rank_pct:0.50,r_bot:520,params_version:'v1.0'},
+};
+
+const MOCK_RAW = MOCK_STUDENTS.flatMap(s =>
+  (MOCK_SESSIONS[s.student_id]||[]).map(r => ({
+    hash: r.session_id, ts: r.t,
+    student_id: s.student_id, student_name: s.student_name,
+    config_vector: r.config_vector,
+    outcome: r.outcome.rank_pct >= 0.65 ? 'win' : r.outcome.rank_pct < 0.40 ? 'loss' : 'draw',
+  }))
+).sort((a,b) => b.ts - a.ts);
+
+function mockFetch(url) {
+  if (url.includes('/api/ledger/students'))    return JSON.parse(JSON.stringify(MOCK_STUDENTS));
+  if (url.includes('/api/ledger/health'))       return {valid:35,invalid:0,files:[{file:'2026-06-21.jsonl',valid:35,invalid:0}]};
+  if (url.includes('/api/ledger/raw'))          return MOCK_RAW.slice(0,100);
+  const sid = url.match(/\/api\/(?:ledger\/state|ledger\/sessions|compiler)\/(.+)/)?.[1];
+  const id  = sid ? decodeURIComponent(sid) : null;
+  if (url.includes('/api/ledger/state/'))      return MOCK_STATES[id] || {state:{}};
+  if (url.includes('/api/ledger/sessions/'))   return MOCK_SESSIONS[id] || [];
+  if (url.includes('/api/compiler/'))          return MOCK_COMPILERS[id] || {};
+  return {};
+}
+
+function toggleDev() {
+  _devMock = !_devMock;
+  const btn = document.getElementById('dev-btn');
+  btn.textContent  = _devMock ? 'DEV ON' : 'DEV';
+  btn.style.borderColor = _devMock ? '#d97706' : '#ddd';
+  btn.style.color       = _devMock ? '#d97706' : '#888';
+  document.getElementById('live-badge').textContent = _devMock ? 'MOCK' : 'LIVE';
+  currentStudent = null; currentSessions = []; currentState = null; currentCompiler = null; zoneCache = {};
+  refresh();
+}
+// ── END DEV MOCK ───────────────────────────────────────────────────────────
+
 // ── API
 async function apiFetch(url) {
+  if (_devMock) return mockFetch(url);
   const r = await fetch(url);
   if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
   return r.json();

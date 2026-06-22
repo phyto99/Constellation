@@ -1161,6 +1161,16 @@ function dismissLetterCard(){
   document.getElementById('tLetter').style.display='none';
 }
 var _devSession=0,_devZone="CALIBRATION",_devMode="train",_devActive=false;
+// Per-zone compiler shapes — mode, config_vector, bot, map match what the real compiler would assign
+var DEV_COMPILERS={
+  CALIBRATION:{mode:'QTY',config_vector:[500,1,10,1,15,90,8,5,2,0,0,50], bot_profile:'TURTLER',      map_filename:'Ad Astra by Josh Dahn.json', expected_rank_pct:0.50},
+  ECHO:       {mode:'SPT',config_vector:[1,500,1,1,12,35,10,5,0,1,1,70],  bot_profile:'STANDARD',     map_filename:'Northfield.json',           expected_rank_pct:0.52},
+  PARALLEL:   {mode:'SPT',config_vector:[1,500,1,1,10,32,10,5,0,1,5,60],  bot_profile:'CONTESTER',    map_filename:'Delta Nine.json',           expected_rank_pct:0.48},
+  SHIFTING:   {mode:'FRT',config_vector:[50,1,500,-200,15,30,10,3,4,2,0,50],bot_profile:'STANDARD',   map_filename:'Cluster IV.json',           expected_rank_pct:0.45},
+  RADICAL:    {mode:'DST',config_vector:[1,1,1,320,15,30,10,40,2,0,3,60],  bot_profile:'ACCELERANT',  map_filename:'Archipelago.json',          expected_rank_pct:0.42},
+  REMATCH:    {mode:'QTY',config_vector:[500,1,5,1,15,30,8,15,2,0,2,80],   bot_profile:'CONTESTER',   map_filename:'Ad Astra by Josh Dahn.json',expected_rank_pct:0.38},
+  ALPHA:      {mode:'INV',config_vector:[-100,1,1,1,15,30,10,15,2,0,5,40], bot_profile:'MIRROR',      map_filename:'Cluster IV.json',           expected_rank_pct:0.55},
+};
 function toggleDevPanel(){
   var p=document.getElementById("devPanel");
   var b=document.getElementById("devToggleBtn");
@@ -1175,11 +1185,12 @@ function _devApply(){
     S.compiler=null;
     localStorage.removeItem('cx_s1_dismissed');
   } else {
-    var mm='SPT';
-    var ss={}; ss[mm]={elo:500+_devSession*8,n:_devSession,velocity:_devSession>3?1.5:null,last_rank_pct:0.55,since_days:2};
-    S.compiler={zone:_devZone,mode:mm,signal_text:(ZONE_POOLS[_devZone]||{}).signal||'--',session_count:_devSession,expected_rank_pct:0.55,state_snapshot:ss,config_vector:[500,1,10,1,15,90,8,5,2,0,0,50],bot_profile:'STANDARD',map_filename:'Ad Astra by Josh Dahn.json'};
+    var dc=DEV_COMPILERS[_devZone]||DEV_COMPILERS.CALIBRATION;
+    var mm=dc.mode;
+    var ss={}; ss[mm]={elo:500+_devSession*8,n:_devSession,velocity:_devSession>3?1.5:null,last_rank_pct:dc.expected_rank_pct,since_days:2};
+    S.compiler={zone:_devZone,mode:mm,signal_text:(ZONE_POOLS[_devZone]||{}).signal||'--',session_count:_devSession,expected_rank_pct:dc.expected_rank_pct,state_snapshot:ss,config_vector:dc.config_vector,bot_profile:dc.bot_profile,map_filename:dc.map_filename};
   }
-  document.getElementById("devStateStr").textContent="s"+_devSession+" · "+_devZone.slice(0,3)+" · "+_devMode;
+  document.getElementById("devStateStr").textContent="s"+_devSession+" · "+_devZone.slice(0,3)+" · "+mm+" · "+_devMode;
 }
 function devSetSessionSlider(v){
   _devSession=+v;
