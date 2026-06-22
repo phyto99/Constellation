@@ -157,7 +157,7 @@ const GROUPS = [
 let allCards = [];
 
 function loadHeavy(url, shell) {
-  shell.innerHTML = '<iframe src="' + url + '" loading="lazy" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>';
+  shell.innerHTML = '<iframe src="' + url + '" loading="lazy" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" tabindex="-1" onload="neutraliseIframeFocus(this)"></iframe>';
 }
 
 function build() {
@@ -180,7 +180,7 @@ function build() {
 
       const frameInner = heavy
         ? '<div class="deferred-placeholder"><span>heavy — not auto-loaded</span><button class="load-btn" onclick="event.stopPropagation();loadHeavy(\'' + item.url + '\',this.closest(\'.frame-shell\'))">Load preview</button></div>'
-        : '<iframe src="' + item.url + '" loading="lazy" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>';
+        : '<iframe src="' + item.url + '" loading="lazy" sandbox="allow-scripts allow-same-origin allow-forms" tabindex="-1" onload="neutraliseIframeFocus(this)"></iframe>';
 
       card.innerHTML =
         '<div class="frame-shell">' + frameInner + '</div>' +
@@ -222,6 +222,33 @@ function openAll() {
 }
 
 build();
+
+// Prevent iframes from hijacking the gallery scroll position.
+// Root cause: pages inside iframes auto-focus elements, which causes the
+// browser to scroll the parent page to reveal the iframe.
+// Fix: after each iframe loads, (1) override HTMLElement.prototype.focus in
+// that frame to always pass preventScroll:true, and (2) blur anything that
+// already auto-focused during parsing before we could intercept it.
+function neutraliseIframeFocus(iframe) {
+  try {
+    const iwin = iframe.contentWindow;
+    const idoc = iframe.contentDocument;
+
+    // Override focus so future calls never scroll the parent.
+    const orig = iwin.HTMLElement.prototype.focus;
+    iwin.HTMLElement.prototype.focus = function(opts) {
+      return orig.call(this, Object.assign({}, opts, { preventScroll: true }));
+    };
+
+    // Blur any element that auto-focused before we could intercept.
+    const active = idoc.activeElement;
+    if (active && active !== idoc.body) {
+      active.blur();
+    }
+  } catch (e) {
+    // Cross-origin frames (shouldn't happen here) — silently skip.
+  }
+}
 </script>
 </body>
 </html>
