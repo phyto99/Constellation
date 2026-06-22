@@ -168,6 +168,7 @@ body{font-family:Arial,sans-serif;font-size:12px;background:var(--bg);color:var(
     <a href="/student-next" class="hdr-link">Panel</a>
     <a href="/admin" class="hdr-link">Admin</a>
     <a href="/student-dossier" class="hdr-link active">Relationships</a>
+    <button id="mock-btn" onclick="toggleMock()" style="font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:3px 10px;border:1px solid #1a1a1a;background:transparent;color:#333;cursor:pointer;font-family:Arial,sans-serif">MOCK</button>
   </div>
 </div>
 
@@ -260,6 +261,18 @@ async function openDossier(partnerId){
     document.querySelectorAll('.rel-item').forEach(el =>
         el.classList.toggle('active', el.dataset.pid === partnerId)
     );
+    if (useMock) {
+        const reaction = MOCK_REACTIONS[partnerId] || {
+            zone_a:'CALIBRATION', zone_b:'CALIBRATION',
+            assessment:['No mock reaction data for this student.'],
+            stats:[{val:'—',lbl:'Elo Gap'},{val:'—',lbl:'Exp. Rank'},{val:'—',lbl:'Proj. Zone'}],
+            proposal_note:'No data.',
+        };
+        const partner = MOCK_PARTNERS.find(p => p.student_id === partnerId)
+            || { student_id:partnerId, student_name:partnerId, sessions:0, zone:'CALIBRATION' };
+        renderDossier(partner, reaction);
+        return;
+    }
     const dos = document.getElementById('dossier');
     dos.innerHTML = '<div style="padding:40px;color:#222;font-size:10px;font-style:italic">Loading…</div>';
     try {
@@ -463,6 +476,107 @@ function showEmpty(msg){
 }
 
 function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── MOCK DATA ──────────────────────────────────────────────────────────────
+let useMock = false;
+
+const MOCK_ME = { id: 'mock_you', name: 'You (Demo)' };
+
+const MOCK_PARTNERS = [
+  { student_id:'mock_aria',  student_name:'Aria',   sessions:14, zone:'ECHO',        has_pending:true  },
+  { student_id:'mock_felix', student_name:'Felix',  sessions:7,  zone:'RADICAL',     has_pending:false },
+  { student_id:'mock_sam',   student_name:'Sam',    sessions:3,  zone:'PARALLEL',    has_pending:false },
+  { student_id:'mock_nova',  student_name:'Nova',   sessions:21, zone:'SHIFTING',    has_pending:true  },
+  { student_id:'mock_cole',  student_name:'Cole',   sessions:0,  zone:'CALIBRATION', has_pending:false },
+];
+
+const MOCK_CHALLENGES = [
+  {
+    id:'mock_ch_1', status:'pending',
+    from_id:'mock_aria', to_id:'mock_you',
+    session_type:'Competitive', challenge_level:'Hard', map:'bridge_district',
+    proposal_note:'Your SPT deficit is widening. This session targets spatial routing under pressure. Bot: CONTESTER.',
+  },
+  {
+    id:'mock_ch_2', status:'pending',
+    from_id:'mock_you', to_id:'mock_nova',
+    session_type:'Train Together', challenge_level:'Standard', map:null,
+    proposal_note:'Nova is in SHIFTING. A cooperative WRM session would align your ZPD targets.',
+  },
+];
+
+const MOCK_REACTIONS = {
+  mock_aria: {
+    zone_a:'ECHO', zone_b:'ECHO',
+    assessment:[
+      'You and Aria share the ECHO zone — both consolidating familiar territory. The system predicts high stability across SPT and FRT modes.',
+      'Elo gap: +12 (you trail Aria). Expected rank_pct at current config: 0.43. A session now would classify as PARALLEL zone.',
+      'Proposal window is open. Aria\'s recent velocity is positive (+3.2/session over last 3). Competitive format is appropriate — expect a meaningful signal.',
+    ],
+    stats:[{val:'+12',lbl:'Elo Gap'},{val:'43%',lbl:'Exp. Rank'},{val:'PARALLEL',lbl:'Proj. Zone'}],
+    proposal_note:'Aria\'s SPT velocity is climbing. A competitive SPT session targets the right gap. CONTESTER bot suggested.',
+  },
+  mock_felix: {
+    zone_a:'ECHO', zone_b:'RADICAL',
+    assessment:[
+      'Felix is in RADICAL — maximum novelty assignment, large deficit across all modes. The gap between profiles is significant.',
+      'Elo differential: −88 (you lead). Expected rank_pct: 0.71. A joint session classifies as SHIFTING zone for you, RADICAL for Felix.',
+      'System recommends Train Together format. Felix needs FRT exposure; your Elo there is highest. A cooperative session accelerates their calibration without burning your variance.',
+    ],
+    stats:[{val:'−88',lbl:'Elo Gap'},{val:'71%',lbl:'Exp. Rank'},{val:'SHIFTING',lbl:'Proj. Zone'}],
+    proposal_note:'Felix is in maximum-novelty territory. A cooperative FRT session will accelerate their signal without wasting your calibration.',
+  },
+  mock_sam: {
+    zone_a:'ECHO', zone_b:'PARALLEL',
+    assessment:[
+      'Sam is in PARALLEL — same mode as their last session, parameters shifted. You and Sam are closely matched in FRT.',
+      'Elo gap: −4 (you lead by a small margin). Expected rank_pct: 0.52. Near-symmetric matchup. High signal potential.',
+      'Either format is appropriate. Sam\'s staleness clock on DST is at 9 days — a DST session would serve both profiles.',
+    ],
+    stats:[{val:'−4',lbl:'Elo Gap'},{val:'52%',lbl:'Exp. Rank'},{val:'PARALLEL',lbl:'Proj. Zone'}],
+    proposal_note:'Nearly symmetric Elo. Either a competitive or cooperative DST session generates high signal for both students.',
+  },
+  mock_nova: {
+    zone_a:'ECHO', zone_b:'SHIFTING',
+    assessment:[
+      'Nova is in SHIFTING — a mode change is incoming in their next session. Your WRM Elo is substantially higher.',
+      'Elo differential: −61 (you lead). Expected rank_pct: 0.68. The system would classify this as SHIFTING zone for Nova, ECHO for you.',
+      'Train Together format recommended. Nova\'s WRM is underdeveloped (n=2). Your WRM experience creates a useful asymmetry — you model, they calibrate.',
+    ],
+    stats:[{val:'−61',lbl:'Elo Gap'},{val:'68%',lbl:'Exp. Rank'},{val:'SHIFTING',lbl:'Proj. Zone'}],
+    proposal_note:'Nova needs WRM exposure. Your experience there creates a productive asymmetry. Train Together — your patterns become signal for them.',
+  },
+  mock_cole: {
+    zone_a:'ECHO', zone_b:'CALIBRATION',
+    assessment:[
+      'Cole is in CALIBRATION — fewer than the threshold sessions needed for reliable Elo estimates. The compiler is still forming their model.',
+      'No Elo differential is meaningful yet. Expected rank_pct: 0.50 (prior only). Any session with Cole generates disproportionate signal for the system.',
+      'Either format is appropriate. The system has low confidence in Cole\'s mode profile. A competitive QTY session would resolve the highest-entropy parameter first.',
+    ],
+    stats:[{val:'n/a',lbl:'Elo Gap'},{val:'50%',lbl:'Exp. Rank'},{val:'CALIBRATION',lbl:'Proj. Zone'}],
+    proposal_note:'Cole is pre-calibration. Any session generates disproportionate signal. QTY mode resolves the highest-entropy parameter first.',
+  },
+};
+
+function toggleMock(){
+  useMock = !useMock;
+  const btn = document.getElementById('mock-btn');
+  btn.textContent = useMock ? 'LIVE' : 'MOCK';
+  btn.style.borderColor  = useMock ? '#d97706' : '#1a1a1a';
+  btn.style.color        = useMock ? '#d97706' : '#333';
+  if (useMock) loadMock();
+  else init();
+}
+
+function loadMock(){
+  S.myId      = MOCK_ME.id;
+  S.myName    = MOCK_ME.name;
+  S.partners  = MOCK_PARTNERS;
+  S.challenges = MOCK_CHALLENGES;
+  renderSidebar();
+  openDossier(MOCK_PARTNERS[0].student_id);
+}
+
 
 document.addEventListener('DOMContentLoaded', init);
 </script>
