@@ -483,78 +483,57 @@ let useMock = false;
 const MOCK_ME = { id: 'mock_you', name: 'You (Demo)' };
 
 const MOCK_PARTNERS = [
-  { student_id:'mock_aria',  student_name:'Aria',   sessions:14, zone:'ECHO',        has_pending:true  },
-  { student_id:'mock_felix', student_name:'Felix',  sessions:7,  zone:'RADICAL',     has_pending:false },
-  { student_id:'mock_sam',   student_name:'Sam',    sessions:3,  zone:'PARALLEL',    has_pending:false },
-  { student_id:'mock_nova',  student_name:'Nova',   sessions:21, zone:'SHIFTING',    has_pending:true  },
-  { student_id:'mock_cole',  student_name:'Cole',   sessions:0,  zone:'CALIBRATION', has_pending:false },
+  { student_id:'mock_maya',  student_name:'Maya R.',  sessions:8,  zone:'RADICAL',     has_pending:true  },
+  { student_id:'mock_james', student_name:'James K.', sessions:3,  zone:'ECHO',        has_pending:true  },
+  { student_id:'mock_priya', student_name:'Priya M.', sessions:14, zone:'ALPHA',       has_pending:false },
+  { student_id:'mock_tom',   student_name:'Tom W.',   sessions:1,  zone:'CALIBRATION', has_pending:false },
 ];
 
 const MOCK_CHALLENGES = [
   {
     id:'mock_ch_1', status:'pending',
-    from_id:'mock_aria', to_id:'mock_you',
-    session_type:'Competitive', challenge_level:'Hard', map:'bridge_district',
-    proposal_note:'Your SPT deficit is widening. This session targets spatial routing under pressure. Bot: CONTESTER.',
-  },
-  {
-    id:'mock_ch_2', status:'pending',
-    from_id:'mock_you', to_id:'mock_nova',
-    session_type:'Train Together', challenge_level:'Standard', map:null,
-    proposal_note:'Nova is in SHIFTING. A cooperative WRM session would align your ZPD targets.',
+    from_id:'mock_james', to_id:'mock_you',
+    session_type:'Competitive', challenge_level:'Hard', map:'Northfield',
+    proposal_note:'James proposed Hard difficulty. The system notes this is appropriate — two ECHO players need higher challenge to generate stretch signal. Accepting this proposal is aligned with the compiler\'s recommendation.',
   },
 ];
 
 const MOCK_REACTIONS = {
-  mock_aria: {
-    zone_a:'ECHO', zone_b:'ECHO',
-    assessment:[
-      'You and Aria share the ECHO zone — both consolidating familiar territory. The system predicts high stability across SPT and FRT modes.',
-      'Elo gap: +12 (you trail Aria). Expected rank_pct at current config: 0.43. A session now would classify as PARALLEL zone.',
-      'Proposal window is open. Aria\'s recent velocity is positive (+3.2/session over last 3). Competitive format is appropriate — expect a meaningful signal.',
-    ],
-    stats:[{val:'+12',lbl:'Elo Gap'},{val:'43%',lbl:'Exp. Rank'},{val:'PARALLEL',lbl:'Proj. Zone'}],
-    proposal_note:'Aria\'s SPT velocity is climbing. A competitive SPT session targets the right gap. CONTESTER bot suggested.',
-  },
-  mock_felix: {
+  mock_maya: {
     zone_a:'ECHO', zone_b:'RADICAL',
     assessment:[
-      'Felix is in RADICAL — maximum novelty assignment, large deficit across all modes. The gap between profiles is significant.',
-      'Elo differential: −88 (you lead). Expected rank_pct: 0.71. A joint session classifies as SHIFTING zone for you, RADICAL for Felix.',
-      'System recommends Train Together format. Felix needs FRT exposure; your Elo there is highest. A cooperative session accelerates their calibration without burning your variance.',
+      'Playing against Maya consistently pushes you out of ECHO. Your last three joint sessions produced RADICAL signal — the gap between your zones is creating productive pressure in both directions.',
+      'Maya\'s RADICAL sessions are more stable when you\'re in the room. Your ECHO sessions are more information-dense. The system recommends a joint session this week while the differential holds.',
     ],
-    stats:[{val:'−88',lbl:'Elo Gap'},{val:'71%',lbl:'Exp. Rank'},{val:'SHIFTING',lbl:'Proj. Zone'}],
-    proposal_note:'Felix is in maximum-novelty territory. A cooperative FRT session will accelerate their signal without wasting your calibration.',
+    stats:[{val:'+2.3×',lbl:'Signal vs solo'},{val:'6/8',lbl:'Sessions Radical'},{val:'↑',lbl:'Trajectory'}],
+    proposal_note:'Based on your last three sessions together, Standard challenge in a joint session is likely to produce RADICAL signal for both of you. The system will tune the configuration once both players are in the room.',
   },
-  mock_sam: {
-    zone_a:'ECHO', zone_b:'PARALLEL',
+  mock_james: {
+    zone_a:'ECHO', zone_b:'ECHO',
     assessment:[
-      'Sam is in PARALLEL — same mode as their last session, parameters shifted. You and Sam are closely matched in FRT.',
-      'Elo gap: −4 (you lead by a small margin). Expected rank_pct: 0.52. Near-symmetric matchup. High signal potential.',
-      'Either format is appropriate. Sam\'s staleness clock on DST is at 9 days — a DST session would serve both profiles.',
+      'Both of you are in ECHO. Joint sessions between two ECHO-zone students produce consolidation signal rather than stretch signal — useful for deepening, not for expanding.',
+      'The compiler\'s recommendation: if you play together, increase challenge level. Two familiar players in familiar territory need external pressure to generate useful signal.',
     ],
-    stats:[{val:'−4',lbl:'Elo Gap'},{val:'52%',lbl:'Exp. Rank'},{val:'PARALLEL',lbl:'Proj. Zone'}],
-    proposal_note:'Nearly symmetric Elo. Either a competitive or cooperative DST session generates high signal for both students.',
+    stats:[{val:'1.1×',lbl:'Signal vs solo'},{val:'3/3',lbl:'Sessions Echo'},{val:'→',lbl:'Trajectory'}],
+    proposal_note:'James proposed Hard difficulty — the system agrees. Two ECHO players in Standard will just consolidate. Hard difficulty is where the signal comes from.',
   },
-  mock_nova: {
-    zone_a:'ECHO', zone_b:'SHIFTING',
+  mock_priya: {
+    zone_a:'ECHO', zone_b:'ALPHA',
     assessment:[
-      'Nova is in SHIFTING — a mode change is incoming in their next session. Your WRM Elo is substantially higher.',
-      'Elo differential: −61 (you lead). Expected rank_pct: 0.68. The system would classify this as SHIFTING zone for Nova, ECHO for you.',
-      'Train Together format recommended. Nova\'s WRM is underdeveloped (n=2). Your WRM experience creates a useful asymmetry — you model, they calibrate.',
+      'Priya is significantly ahead of you in zone progression. Playing against her produces consistent RADICAL signal for you — she is currently your highest-value known opponent.',
+      'The loss rate (9/14) is expected and correct. The sessions where you\'ve won have been ALPHA-signal sessions for Priya. The asymmetry is generating information for both of you.',
     ],
-    stats:[{val:'−61',lbl:'Elo Gap'},{val:'68%',lbl:'Exp. Rank'},{val:'SHIFTING',lbl:'Proj. Zone'}],
-    proposal_note:'Nova needs WRM exposure. Your experience there creates a productive asymmetry. Train Together — your patterns become signal for them.',
+    stats:[{val:'+3.1×',lbl:'Signal vs solo'},{val:'9/14',lbl:'RADICAL sessions'},{val:'↑↑',lbl:'Your trajectory'}],
+    proposal_note:'Priya is your most valuable training partner by signal density. The system recommends regular sessions — the zone differential is still wide enough to be productive.',
   },
-  mock_cole: {
+  mock_tom: {
     zone_a:'ECHO', zone_b:'CALIBRATION',
     assessment:[
-      'Cole is in CALIBRATION — fewer than the threshold sessions needed for reliable Elo estimates. The compiler is still forming their model.',
-      'No Elo differential is meaningful yet. Expected rank_pct: 0.50 (prior only). Any session with Cole generates disproportionate signal for the system.',
-      'Either format is appropriate. The system has low confidence in Cole\'s mode profile. A competitive QTY session would resolve the highest-entropy parameter first.',
+      'Tom has only one session recorded. The system doesn\'t have enough data to say anything specific about how you two play together.',
+      'If Tom continues playing, the file will update. For now the system recommends waiting — one session isn\'t enough to generate a joint assessment.',
     ],
-    stats:[{val:'n/a',lbl:'Elo Gap'},{val:'50%',lbl:'Exp. Rank'},{val:'CALIBRATION',lbl:'Proj. Zone'}],
-    proposal_note:'Cole is pre-calibration. Any session generates disproportionate signal. QTY mode resolves the highest-entropy parameter first.',
+    stats:[{val:'—',lbl:'Signal vs solo'},{val:'1',lbl:'Sessions total'},{val:'?',lbl:'Trajectory'}],
+    proposal_note:'Not enough sessions together for a meaningful recommendation. Play again and the system will update.',
   },
 };
 
