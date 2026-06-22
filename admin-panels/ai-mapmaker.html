@@ -1,0 +1,302 @@
+<div id="ai-mapmaker-panel" class="admin-panel" style="display:none;padding:20px;max-width:1000px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;border-bottom:2px solid #111;padding-bottom:12px;">
+        <div>
+            <h2 style="font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0">✧ AI Map Maker</h2>
+            <p style="font-size:11px;color:#666;margin:4px 0 0">Describe a map and Claude generates valid Constellation JSON. Optionally upload an image for spatial inspiration.</p>
+        </div>
+        <button onclick="AdminShell.back()" style="background:none;border:1px solid #e5e7eb;padding:6px 12px;cursor:pointer;font-size:11px;border-radius:3px;color:#666;">← Back</button>
+    </div>
+
+    <!-- Input form -->
+    <div style="display:grid;grid-template-columns:1fr 320px;gap:16px;margin-bottom:16px;">
+        <div>
+            <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;">Directive</label>
+            <textarea id="aim-directive" rows="5" placeholder="Describe the map you want. Examples:&#10;&#10;A dense star field with many chokepoints, good for SPT mode.&#10;&#10;Two HQ clusters in opposite corners with a contested central bridge, for FRT.&#10;&#10;A wormhole-like mesh with high connectivity and 6 HQ nodes."
+                style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:inherit;resize:vertical;line-height:1.5;"></textarea>
+
+            <!-- Quick mode presets -->
+            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center;">
+                <span style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;">Quick:</span>
+                <button onclick="aimPreset('qty')" style="padding:3px 9px;border:1px solid #e5e7eb;background:#fff;border-radius:3px;cursor:pointer;font-size:10px;font-weight:600;color:#3b82f6;">QTY</button>
+                <button onclick="aimPreset('spt')" style="padding:3px 9px;border:1px solid #e5e7eb;background:#fff;border-radius:3px;cursor:pointer;font-size:10px;font-weight:600;color:#10b981;">SPT</button>
+                <button onclick="aimPreset('frt')" style="padding:3px 9px;border:1px solid #e5e7eb;background:#fff;border-radius:3px;cursor:pointer;font-size:10px;font-weight:600;color:#f59e0b;">FRT</button>
+                <button onclick="aimPreset('dst')" style="padding:3px 9px;border:1px solid #e5e7eb;background:#fff;border-radius:3px;cursor:pointer;font-size:10px;font-weight:600;color:#ef4444;">DST</button>
+                <button onclick="aimPreset('wrm')" style="padding:3px 9px;border:1px solid #e5e7eb;background:#fff;border-radius:3px;cursor:pointer;font-size:10px;font-weight:600;color:#8b5cf6;">WRM</button>
+                <button onclick="aimPreset('inv')" style="padding:3px 9px;border:1px solid #e5e7eb;background:#fff;border-radius:3px;cursor:pointer;font-size:10px;font-weight:600;color:#ec4899;">INV</button>
+            </div>
+        </div>
+
+        <!-- Image upload -->
+        <div>
+            <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;">Image Inspiration <span style="font-weight:400;text-transform:none;color:#9ca3af;">(optional)</span></label>
+            <div id="aim-drop-zone" onclick="document.getElementById('aim-file-input').click()"
+                style="border:2px dashed #e5e7eb;border-radius:6px;padding:12px;cursor:pointer;text-align:center;background:#f9fafb;height:120px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;transition:border-color .2s;"
+                ondragover="event.preventDefault();this.style.borderColor='#111'"
+                ondragleave="this.style.borderColor='#e5e7eb'"
+                ondrop="aimHandleDrop(event)">
+                <div id="aim-drop-label" style="font-size:11px;color:#9ca3af;">Drop image or click to upload</div>
+                <img id="aim-img-preview" src="" alt="" style="display:none;max-height:90px;max-width:100%;border-radius:3px;object-fit:contain;">
+            </div>
+            <input type="file" id="aim-file-input" accept="image/*" style="display:none;" onchange="aimHandleFileSelect(event)">
+            <button id="aim-clear-img" onclick="aimClearImage()" style="display:none;margin-top:6px;padding:3px 8px;border:1px solid #e5e7eb;background:#fff;border-radius:3px;cursor:pointer;font-size:10px;color:#666;">✕ Remove image</button>
+        </div>
+    </div>
+
+    <button id="aim-generate-btn" onclick="aimGenerate()"
+        style="padding:10px 24px;background:#111;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">
+        Generate Map
+    </button>
+    <div id="aim-status" style="display:inline-block;margin-left:12px;font-size:11px;color:#9ca3af;"></div>
+
+    <!-- Preview section (hidden until generated) -->
+    <div id="aim-preview-section" style="display:none;margin-top:20px;border-top:1px solid #e5e7eb;padding-top:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Generated Preview</div>
+            <div id="aim-stats-line" style="font-size:11px;color:#6b7280;"></div>
+        </div>
+
+        <!-- Canvas -->
+        <div style="border:2px solid #e5e7eb;border-radius:4px;overflow:hidden;background:#0a0a1a;display:inline-block;margin-bottom:12px;">
+            <canvas id="aim-canvas" width="800" height="450" style="display:block;"></canvas>
+        </div>
+
+        <!-- Save actions -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;max-width:600px;">
+            <div>
+                <label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Map Title</label>
+                <input id="aim-save-title" type="text" style="width:100%;padding:7px 10px;border:1px solid #e5e7eb;border-radius:3px;font-size:12px;">
+            </div>
+            <div>
+                <label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Filename</label>
+                <input id="aim-save-filename" type="text" placeholder="my-ai-map.json" style="width:100%;padding:7px 10px;border:1px solid #e5e7eb;border-radius:3px;font-size:12px;">
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:8px;">
+                <button onclick="aimExport()" style="flex:1;padding:8px 10px;background:#374151;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">Export</button>
+                <button onclick="aimSave()" style="flex:1;padding:8px 10px;background:#059669;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">Save</button>
+            </div>
+        </div>
+        <div id="aim-save-status" style="margin-top:8px;font-size:11px;display:none;"></div>
+    </div>
+</div>
+<script>
+// ── AI Mapmaker Panel ──────────────────────────────────────────────────────
+const AIM_SCALE = 800 / 320;
+
+const AIM_PRESETS = {
+    qty: 'Generate a dense, wide-spread star field optimized for QTY (Quantity) mode. Use 150-250 stars spread across the full canvas with moderate connectivity (avg_degree 2.5-3.5). No HQ nodes needed.',
+    spt: 'Generate a map for SPT (Support) mode with clear strategic chokepoints. Create distinct star clusters connected by narrow bridges or single-path bottlenecks. 80-140 stars.',
+    frt: 'Generate a FRT (Frontier) mode map. Place 4-8 HQ nodes: half clustered near the left edge, half near the right edge. Create a contested central territory between them. 100-180 stars.',
+    dst: 'Generate a DST (Destiny) mode map. Place exactly 2 HQ nodes: one near coordinates (20,20) and one near (300,160). Create a long winding path of stars connecting them. 80-150 stars.',
+    wrm: 'Generate a WRM (Wormhole) mode map — a dense mesh with high connectivity. avg_degree should be 4.0 or higher. Create many parallel routes between any two regions. 100-200 stars, no HQs.',
+    inv: 'Generate an INV (Inversion) mode map with an unusual, asymmetric, or counterintuitive topology. Surprise me — avoid conventional symmetric layouts. 80-160 stars.',
+};
+
+let _aimMap = null;
+let _aimImageB64 = null;
+let _aimImageMediaType = null;
+
+function aimPreset(mode) {
+    document.getElementById('aim-directive').value = AIM_PRESETS[mode];
+}
+
+function aimHandleFileSelect(e) {
+    const file = e.target.files[0];
+    if (file) aimLoadImage(file);
+}
+
+function aimHandleDrop(e) {
+    e.preventDefault();
+    document.getElementById('aim-drop-zone').style.borderColor = '#e5e7eb';
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) aimLoadImage(file);
+}
+
+function aimLoadImage(file) {
+    _aimImageMediaType = file.type || 'image/jpeg';
+    const reader = new FileReader();
+    reader.onload = ev => {
+        _aimImageB64 = ev.target.result;
+        const img = document.getElementById('aim-img-preview');
+        img.src = ev.target.result;
+        img.style.display = 'block';
+        document.getElementById('aim-drop-label').style.display = 'none';
+        document.getElementById('aim-clear-img').style.display = 'inline-block';
+    };
+    reader.readAsDataURL(file);
+}
+
+function aimClearImage() {
+    _aimImageB64 = null;
+    _aimImageMediaType = null;
+    document.getElementById('aim-img-preview').style.display = 'none';
+    document.getElementById('aim-img-preview').src = '';
+    document.getElementById('aim-drop-label').style.display = 'block';
+    document.getElementById('aim-clear-img').style.display = 'none';
+    document.getElementById('aim-file-input').value = '';
+}
+
+async function aimGenerate() {
+    const directive = document.getElementById('aim-directive').value.trim();
+    if (!directive) { alert('Enter a directive first.'); return; }
+
+    const btn = document.getElementById('aim-generate-btn');
+    const status = document.getElementById('aim-status');
+    btn.disabled = true;
+    btn.textContent = 'Generating...';
+    status.textContent = 'Calling Claude...';
+    document.getElementById('aim-preview-section').style.display = 'none';
+
+    try {
+        const body = { directive };
+        if (_aimImageB64) {
+            body.imageBase64 = _aimImageB64;
+            body.imageMediaType = _aimImageMediaType;
+        }
+
+        const r = await fetch('/api/mapmaker/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const json = await r.json();
+        if (!r.ok) throw new Error(json.error || 'Generation failed');
+
+        _aimMap = json.map;
+        const stats = json.stats;
+
+        // Populate save fields from generated title
+        const titleInput = document.getElementById('aim-save-title');
+        const filenameInput = document.getElementById('aim-save-filename');
+        titleInput.value = _aimMap.title || 'AI Map';
+        if (!filenameInput.value) {
+            filenameInput.value = (_aimMap.title || 'ai-map').replace(/[^a-zA-Z0-9 _-]/g, '').trim().replace(/\s+/g, '-').toLowerCase() + '.json';
+        }
+
+        document.getElementById('aim-stats-line').textContent =
+            `${stats.starCount} stars · ${stats.edgeCount} edges · avg degree ${stats.avgDegree} · ${stats.hqCount} HQ`;
+
+        document.getElementById('aim-preview-section').style.display = 'block';
+        aimDraw();
+
+        status.style.color = '#059669';
+        status.textContent = 'Map generated.';
+    } catch (e) {
+        status.style.color = '#ef4444';
+        status.textContent = 'Error: ' + e.message;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate Map';
+    }
+}
+
+function aimDraw() {
+    if (!_aimMap) return;
+    const canvas = document.getElementById('aim-canvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const S = AIM_SCALE;
+
+    ctx.clearRect(0, 0, W, H);
+
+    // Grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.lineWidth = 1;
+    for (let gx = 0; gx <= 320; gx += 16) { ctx.beginPath(); ctx.moveTo(gx*S,0); ctx.lineTo(gx*S,H); ctx.stroke(); }
+    for (let gy = 0; gy <= 180; gy += 9)  { ctx.beginPath(); ctx.moveTo(0,gy*S); ctx.lineTo(W,gy*S); ctx.stroke(); }
+
+    const stars = _aimMap.stars;
+    const lines = _aimMap.lines;
+
+    // Edges
+    ctx.strokeStyle = 'rgba(180,200,255,0.35)';
+    ctx.lineWidth = 1.2;
+    for (const l of lines) {
+        const [a, b] = Array.isArray(l) ? l : [l.a, l.b];
+        const sa = stars[a], sb = stars[b];
+        if (!sa || !sb) continue;
+        const ax = Array.isArray(sa) ? sa[0] : sa.x;
+        const ay = Array.isArray(sa) ? sa[1] : sa.y;
+        const bx = Array.isArray(sb) ? sb[0] : sb.x;
+        const by = Array.isArray(sb) ? sb[1] : sb.y;
+        ctx.beginPath();
+        ctx.moveTo(ax*S, ay*S);
+        ctx.lineTo(bx*S, by*S);
+        ctx.stroke();
+    }
+
+    // Stars
+    for (const s of stars) {
+        const x = Array.isArray(s) ? s[0] : s.x;
+        const y = Array.isArray(s) ? s[1] : s.y;
+        const type = Array.isArray(s) ? s[2] : s.type;
+        const cx = x * S, cy = y * S;
+
+        if (type === 2) {
+            const r = 7;
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(Math.PI / 4);
+            ctx.beginPath();
+            ctx.rect(-r, -r, r*2, r*2);
+            ctx.fillStyle = '#f59e0b';
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1.5;
+            ctx.fill(); ctx.stroke();
+            ctx.restore();
+        } else {
+            ctx.beginPath();
+            ctx.arc(cx, cy, 3.5, 0, Math.PI*2);
+            ctx.fillStyle = '#c7d2fe';
+            ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+            ctx.lineWidth = 1;
+            ctx.fill(); ctx.stroke();
+        }
+    }
+}
+
+function aimExport() {
+    if (!_aimMap) return;
+    const title = document.getElementById('aim-save-title').value.trim() || _aimMap.title || 'AI Map';
+    const fn = (document.getElementById('aim-save-filename').value.trim() || title.replace(/\s+/g,'-')) ;
+    const data = { ..._aimMap, title };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fn.endsWith('.json') ? fn : fn + '.json'; a.click();
+    URL.revokeObjectURL(url);
+}
+
+async function aimSave() {
+    if (!_aimMap) return;
+    const title = document.getElementById('aim-save-title').value.trim() || _aimMap.title || 'AI Map';
+    let filename = document.getElementById('aim-save-filename').value.trim() || title.replace(/[^a-zA-Z0-9 _-]/g,'').trim().replace(/\s+/g,'-').toLowerCase();
+    if (!filename.endsWith('.json')) filename += '.json';
+
+    const data = { ..._aimMap, title };
+    const statusEl = document.getElementById('aim-save-status');
+    statusEl.style.display = 'block';
+    statusEl.style.color = '#9ca3af';
+    statusEl.textContent = 'Saving...';
+
+    try {
+        const r = await fetch('/api/maps', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename, data }),
+        });
+        const json = await r.json();
+        if (!r.ok) throw new Error(json.error);
+        statusEl.style.color = '#059669';
+        statusEl.textContent = `Saved as "${filename}" (${json.stars} stars, ${json.lines} edges). Reload Map Registry to see it.`;
+    } catch (e) {
+        statusEl.style.color = '#ef4444';
+        statusEl.textContent = 'Error: ' + e.message;
+    }
+}
+
+AdminShell.register('ai-mapmaker', {
+    panelId: 'ai-mapmaker-panel',
+    navBtnId: 'ai-mapmaker-nav-btn',
+    onShow: () => {},
+});
+</script>
