@@ -1002,7 +1002,17 @@
                 </div>
             </div>
         </div>
-        <div class="sidebar-alpha-nav" style="padding:12px 16px;border-top:1px solid #e5e7eb;">
+        <div style="padding:8px 16px;border-top:1px solid #e5e7eb;display:flex;flex-direction:column;gap:4px;">
+            <button onclick="showMapRegistryPanel()" id="map-registry-nav-btn"
+                style="width:100%;padding:8px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;letter-spacing:1px;text-align:left;color:#374151;text-transform:uppercase;">
+                ▦ Map Registry
+            </button>
+            <button onclick="showMapMakerPanel()" id="map-maker-nav-btn"
+                style="width:100%;padding:8px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;letter-spacing:1px;text-align:left;color:#374151;text-transform:uppercase;">
+                ✦ Map Maker
+            </button>
+        </div>
+        <div class="sidebar-alpha-nav" style="padding:4px 16px 12px;border-top:none;">
             <button onclick="showAlphaPanel()" id="alpha-nav-btn"
                 style="width:100%;padding:8px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;letter-spacing:1px;text-align:left;color:#374151;text-transform:uppercase;">
                 ◈ Alpha Track
@@ -1136,6 +1146,96 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Map Registry Panel -->
+        <div id="map-registry-panel" style="display:none;padding:20px;max-width:1100px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;border-bottom:2px solid #111;padding-bottom:12px;">
+                <div>
+                    <h2 style="font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0">▦ Map Registry</h2>
+                    <p style="font-size:11px;color:#666;margin:4px 0 0">Topology records for all maps. Mode affinity ≥ 0.65 = viable for that mode.</p>
+                </div>
+                <button onclick="hideMapRegistryPanel()" style="background:none;border:1px solid #e5e7eb;padding:6px 12px;cursor:pointer;font-size:11px;border-radius:3px;color:#666;">← Back</button>
+            </div>
+            <!-- Mode filter -->
+            <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+                <span style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-right:4px;">Filter:</span>
+                <button onclick="filterMapRegistry(null)" id="mrfilter-all" class="mr-filter-btn active" style="padding:4px 10px;border:1px solid #111;background:#111;color:#fff;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">All</button>
+                <button onclick="filterMapRegistry('qty')" id="mrfilter-qty" class="mr-filter-btn" style="padding:4px 10px;border:1px solid #e5e7eb;background:#fff;color:#374151;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">QTY</button>
+                <button onclick="filterMapRegistry('spt')" id="mrfilter-spt" class="mr-filter-btn" style="padding:4px 10px;border:1px solid #e5e7eb;background:#fff;color:#374151;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">SPT</button>
+                <button onclick="filterMapRegistry('frt')" id="mrfilter-frt" class="mr-filter-btn" style="padding:4px 10px;border:1px solid #e5e7eb;background:#fff;color:#374151;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">FRT</button>
+                <button onclick="filterMapRegistry('dst')" id="mrfilter-dst" class="mr-filter-btn" style="padding:4px 10px;border:1px solid #e5e7eb;background:#fff;color:#374151;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">DST</button>
+                <button onclick="filterMapRegistry('wrm')" id="mrfilter-wrm" class="mr-filter-btn" style="padding:4px 10px;border:1px solid #e5e7eb;background:#fff;color:#374151;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">WRM</button>
+                <button onclick="filterMapRegistry('inv')" id="mrfilter-inv" class="mr-filter-btn" style="padding:4px 10px;border:1px solid #e5e7eb;background:#fff;color:#374151;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">INV</button>
+                <span id="mr-count" style="font-size:11px;color:#999;margin-left:8px;"></span>
+            </div>
+            <div id="map-registry-loading" style="font-size:12px;color:#999;padding:20px 0;">Loading maps…</div>
+            <div id="map-registry-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;"></div>
+        </div>
+
+        <!-- Map Maker Panel -->
+        <div id="map-maker-panel" style="display:none;padding:20px;max-width:1000px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;border-bottom:2px solid #111;padding-bottom:12px;">
+                <div>
+                    <h2 style="font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0">✦ Map Maker</h2>
+                    <p style="font-size:11px;color:#666;margin:4px 0 0">Click canvas to place stars. Switch to EDGE mode to connect them. Canvas = 320×180 coordinate space.</p>
+                </div>
+                <button onclick="hideMapMakerPanel()" style="background:none;border:1px solid #e5e7eb;padding:6px 12px;cursor:pointer;font-size:11px;border-radius:3px;color:#666;">← Back</button>
+            </div>
+
+            <!-- Controls row -->
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+                <div style="display:flex;gap:0;border:1px solid #e5e7eb;border-radius:4px;overflow:hidden;">
+                    <button id="mm-mode-star" onclick="setMMMode('star')" style="padding:6px 14px;border:none;background:#111;color:#fff;cursor:pointer;font-size:11px;font-weight:600;">★ STAR</button>
+                    <button id="mm-mode-edge" onclick="setMMMode('edge')" style="padding:6px 14px;border:none;background:#f9fafb;color:#374151;cursor:pointer;font-size:11px;font-weight:600;border-left:1px solid #e5e7eb;">— EDGE</button>
+                    <button id="mm-mode-delete" onclick="setMMMode('delete')" style="padding:6px 14px;border:none;background:#f9fafb;color:#374151;cursor:pointer;font-size:11px;font-weight:600;border-left:1px solid #e5e7eb;">✕ DELETE</button>
+                </div>
+                <div style="display:flex;gap:0;border:1px solid #e5e7eb;border-radius:4px;overflow:hidden;margin-left:8px;">
+                    <button id="mm-type-1" onclick="setMMStarType(1)" style="padding:6px 14px;border:none;background:#111;color:#fff;cursor:pointer;font-size:11px;font-weight:600;">○ Star</button>
+                    <button id="mm-type-2" onclick="setMMStarType(2)" style="padding:6px 14px;border:none;background:#f9fafb;color:#374151;cursor:pointer;font-size:11px;font-weight:600;border-left:1px solid #e5e7eb;">⬟ HQ</button>
+                </div>
+                <div style="margin-left:auto;display:flex;gap:6px;">
+                    <button onclick="mmClear()" style="padding:6px 12px;border:1px solid #e5e7eb;background:#fff;color:#666;border-radius:3px;cursor:pointer;font-size:11px;">Clear</button>
+                    <button onclick="mmUndo()" style="padding:6px 12px;border:1px solid #e5e7eb;background:#fff;color:#666;border-radius:3px;cursor:pointer;font-size:11px;">Undo</button>
+                </div>
+            </div>
+
+            <!-- Stats + validation bar -->
+            <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:8px;padding:8px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;">
+                <span>Stars: <strong id="mm-stat-stars">0</strong></span>
+                <span>Edges: <strong id="mm-stat-edges">0</strong></span>
+                <span>Avg degree: <strong id="mm-stat-degree">0.00</strong></span>
+                <span>HQ stars: <strong id="mm-stat-hq">0</strong></span>
+                <span id="mm-validation" style="margin-left:auto;font-size:11px;color:#999;"></span>
+            </div>
+
+            <!-- Canvas -->
+            <div style="border:2px solid #e5e7eb;border-radius:4px;overflow:hidden;position:relative;background:#0a0a1a;cursor:crosshair;display:inline-block;">
+                <canvas id="mm-canvas" width="800" height="450" style="display:block;"></canvas>
+                <div id="mm-edge-hint" style="position:absolute;top:8px;left:8px;font-size:10px;color:rgba(255,255,255,0.5);display:none;">Click first star, then second star to connect</div>
+            </div>
+            <div style="font-size:10px;color:#999;margin-top:4px;">320×180 coordinate space · rendered at 800×450 · right-click star to toggle HQ type</div>
+
+            <!-- Metadata + actions -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;">
+                <div>
+                    <label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Map Title</label>
+                    <input id="mm-title" type="text" placeholder="e.g. Spiral Reach" style="width:100%;padding:7px 10px;border:1px solid #e5e7eb;border-radius:3px;font-size:12px;">
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Author</label>
+                    <input id="mm-author" type="text" placeholder="Your name" style="width:100%;padding:7px 10px;border:1px solid #e5e7eb;border-radius:3px;font-size:12px;">
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Filename</label>
+                    <input id="mm-filename" type="text" placeholder="my-map.json" style="width:100%;padding:7px 10px;border:1px solid #e5e7eb;border-radius:3px;font-size:12px;">
+                </div>
+                <div style="display:flex;align-items:flex-end;gap:8px;">
+                    <button onclick="mmExportJSON()" style="flex:1;padding:8px 14px;background:#374151;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;font-weight:600;">Export JSON</button>
+                    <button onclick="mmSaveToServer()" style="flex:1;padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;font-weight:600;">Save to Server</button>
+                </div>
+            </div>
+            <div id="mm-save-status" style="margin-top:8px;font-size:11px;color:#059669;display:none;"></div>
         </div>
 
         <!-- Security Activity Log - Fixed at bottom -->
@@ -4570,6 +4670,457 @@ Based on the strategy description above, generate the complete JSON configuratio
             loadAlphaApplications();
             if (verdict === 'accepted') loadAlphaEligible();
         } catch (err) { alert('Error: ' + err.message); }
+    }
+    </script>
+
+    <script>
+    // ── Map Registry ────────────────────────────────────────────────────────────
+    let _mrTopology = null;
+    let _mrActiveFilter = null;
+
+    const MODE_COLORS = { qty:'#3b82f6', spt:'#10b981', frt:'#f59e0b', dst:'#ef4444', wrm:'#8b5cf6', inv:'#ec4899' };
+    const MODE_LABELS = { qty:'QTY', spt:'SPT', frt:'FRT', dst:'DST', wrm:'WRM', inv:'INV' };
+
+    function showMapRegistryPanel() {
+        document.getElementById('game-content').style.display = 'none';
+        document.getElementById('no-game-selected').style.display = 'none';
+        document.getElementById('alpha-panel').style.display = 'none';
+        document.getElementById('map-maker-panel').style.display = 'none';
+        document.getElementById('map-registry-panel').style.display = 'block';
+        document.getElementById('map-registry-nav-btn').style.background = '#111';
+        document.getElementById('map-registry-nav-btn').style.color = '#fff';
+        document.getElementById('map-maker-nav-btn').style.background = '#f9fafb';
+        document.getElementById('map-maker-nav-btn').style.color = '#374151';
+        document.getElementById('alpha-nav-btn').style.background = '#f9fafb';
+        document.getElementById('alpha-nav-btn').style.color = '#374151';
+        loadMapRegistry();
+    }
+
+    function hideMapRegistryPanel() {
+        document.getElementById('map-registry-panel').style.display = 'none';
+        document.getElementById('no-game-selected').style.display = 'flex';
+        document.getElementById('map-registry-nav-btn').style.background = '#f9fafb';
+        document.getElementById('map-registry-nav-btn').style.color = '#374151';
+    }
+
+    async function loadMapRegistry() {
+        const loadingEl = document.getElementById('map-registry-loading');
+        const gridEl    = document.getElementById('map-registry-grid');
+        loadingEl.style.display = 'block';
+        gridEl.innerHTML = '';
+        try {
+            const topo = await fetch('/api/maps/topology').then(r => r.json());
+            _mrTopology = topo;
+            renderMapRegistry();
+        } catch (e) {
+            loadingEl.textContent = 'Failed to load topology: ' + e.message;
+        }
+    }
+
+    function filterMapRegistry(mode) {
+        _mrActiveFilter = mode;
+        document.querySelectorAll('.mr-filter-btn').forEach(btn => {
+            const isActive = (mode === null && btn.id === 'mrfilter-all') ||
+                             (mode !== null && btn.id === 'mrfilter-' + mode);
+            btn.style.background = isActive ? '#111' : '#fff';
+            btn.style.color      = isActive ? '#fff' : '#374151';
+            btn.style.borderColor= isActive ? '#111' : '#e5e7eb';
+        });
+        renderMapRegistry();
+    }
+
+    function renderMapRegistry() {
+        if (!_mrTopology) return;
+        const loadingEl = document.getElementById('map-registry-loading');
+        const gridEl    = document.getElementById('map-registry-grid');
+        loadingEl.style.display = 'none';
+
+        const entries = Object.entries(_mrTopology);
+        const filtered = _mrActiveFilter
+            ? entries.filter(([, t]) => (t.mode_affinity?.[_mrActiveFilter] || 0) >= 0.65)
+            : entries;
+        filtered.sort((a, b) => {
+            if (_mrActiveFilter) {
+                return (b[1].mode_affinity?.[_mrActiveFilter] || 0) - (a[1].mode_affinity?.[_mrActiveFilter] || 0);
+            }
+            return a[0].localeCompare(b[0]);
+        });
+
+        document.getElementById('mr-count').textContent = filtered.length + ' of ' + entries.length + ' maps';
+
+        gridEl.innerHTML = filtered.map(([filename, t]) => {
+            const affinityBars = ['qty','spt','frt','dst','wrm','inv'].map(m => {
+                const val = t.mode_affinity?.[m] || 0;
+                const pct = Math.round(val * 100);
+                const color = val >= 0.65 ? MODE_COLORS[m] : (val >= 0.4 ? '#d1d5db' : '#f3f4f6');
+                const label = MODE_LABELS[m];
+                const viable = val >= 0.65 ? ' font-weight:700;' : '';
+                return `<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">
+                    <span style="width:24px;font-size:10px;color:#6b7280;${viable}">${label}</span>
+                    <div style="flex:1;height:6px;background:#f3f4f6;border-radius:3px;overflow:hidden;">
+                        <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;"></div>
+                    </div>
+                    <span style="width:28px;font-size:10px;text-align:right;color:${val>=0.65?MODE_COLORS[m]:'#9ca3af'};${viable}">${pct}%</span>
+                </div>`;
+            }).join('');
+
+            const name = t.title || filename.replace('.json','');
+            const author = (t.author && t.author !== 'Creator' && t.author !== 'unknown') ? t.author : '';
+            const hqBadge = t.hq_count > 0
+                ? `<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:3px;margin-left:4px;">${t.hq_count} HQ</span>`
+                : `<span style="font-size:10px;background:#f0fdf4;color:#166534;padding:1px 6px;border-radius:3px;margin-left:4px;">dyn HQ</span>`;
+
+            return `<div style="border:1px solid #e5e7eb;border-radius:6px;padding:14px;background:#fff;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+                    <div>
+                        <div style="font-size:13px;font-weight:700;color:#111;">${name}${hqBadge}</div>
+                        ${author ? `<div style="font-size:10px;color:#9ca3af;margin-top:1px;">${author}</div>` : ''}
+                    </div>
+                    <button onclick="mrLoadMap('${filename.replace(/'/g,"\\'")}','${name.replace(/'/g,"\\'")}');"
+                        style="padding:4px 10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:3px;cursor:pointer;font-size:10px;font-weight:600;white-space:nowrap;">Load ↗</button>
+                </div>
+                <div style="display:flex;gap:12px;font-size:11px;color:#6b7280;margin-bottom:10px;flex-wrap:wrap;">
+                    <span>⭐ ${t.star_count} stars</span>
+                    <span>— ${t.connection_count} edges</span>
+                    <span>∅ ${t.avg_degree} deg</span>
+                    <span>⧖ ${t.chokepoint_count} chokes</span>
+                </div>
+                ${affinityBars}
+                <div style="margin-top:8px;font-size:10px;color:#9ca3af;font-style:italic;">${filename}</div>
+            </div>`;
+        }).join('');
+
+        if (filtered.length === 0) gridEl.innerHTML = '<div style="color:#9ca3af;font-size:12px;padding:20px 0;">No maps match this filter (affinity ≥ 0.65)</div>';
+    }
+
+    function mrLoadMap(filename, displayName) {
+        if (!selectedRoomId || !currentRoom) {
+            alert('No game selected. Select a game first, then use Load to set the map.');
+            return;
+        }
+        currentRoom.send('update_settings', { roomId: selectedRoomId, settings: { customMapFilename: filename } });
+        showNotification('Map set: ' + displayName);
+    }
+
+    // ── Map Maker ───────────────────────────────────────────────────────────────
+    let _mm = {
+        stars: [],   // [{x, y, type}]  type 1=regular, 2=HQ
+        lines: [],   // [{a, b}]  indices
+        mode: 'star',
+        starType: 1,
+        edgePending: null,  // index of first star clicked in edge mode
+        history: [],  // undo stack snapshots
+    };
+
+    function showMapMakerPanel() {
+        document.getElementById('game-content').style.display = 'none';
+        document.getElementById('no-game-selected').style.display = 'none';
+        document.getElementById('alpha-panel').style.display = 'none';
+        document.getElementById('map-registry-panel').style.display = 'none';
+        document.getElementById('map-maker-panel').style.display = 'block';
+        document.getElementById('map-maker-nav-btn').style.background = '#111';
+        document.getElementById('map-maker-nav-btn').style.color = '#fff';
+        document.getElementById('map-registry-nav-btn').style.background = '#f9fafb';
+        document.getElementById('map-registry-nav-btn').style.color = '#374151';
+        document.getElementById('alpha-nav-btn').style.background = '#f9fafb';
+        document.getElementById('alpha-nav-btn').style.color = '#374151';
+        mmInitCanvas();
+        mmDraw();
+        mmUpdateStats();
+    }
+
+    function hideMapMakerPanel() {
+        document.getElementById('map-maker-panel').style.display = 'none';
+        document.getElementById('no-game-selected').style.display = 'flex';
+        document.getElementById('map-maker-nav-btn').style.background = '#f9fafb';
+        document.getElementById('map-maker-nav-btn').style.color = '#374151';
+    }
+
+    const MM_SCALE = 800 / 320;   // canvas display px / map coord
+    const MM_SNAP  = 6 / MM_SCALE;  // snap radius in map coords
+
+    function mmCanvasToMap(cx, cy) {
+        const canvas = document.getElementById('mm-canvas');
+        const rect   = canvas.getBoundingClientRect();
+        const px = (cx - rect.left) * (canvas.width  / rect.width);
+        const py = (cy - rect.top)  * (canvas.height / rect.height);
+        return { x: Math.round(px / MM_SCALE), y: Math.round(py / MM_SCALE) };
+    }
+
+    function mmFindNearestStar(mx, my, radiusMapCoords) {
+        let best = -1, bestD = Infinity;
+        for (let i = 0; i < _mm.stars.length; i++) {
+            const s = _mm.stars[i];
+            const d = Math.hypot(s.x - mx, s.y - my);
+            if (d < radiusMapCoords && d < bestD) { bestD = d; best = i; }
+        }
+        return best;
+    }
+
+    function mmEdgeExists(a, b) {
+        return _mm.lines.some(l => (l.a === a && l.b === b) || (l.a === b && l.b === a));
+    }
+
+    function mmInitCanvas() {
+        const canvas = document.getElementById('mm-canvas');
+        canvas.onclick      = mmOnClick;
+        canvas.oncontextmenu = mmOnRightClick;
+        canvas.onmousemove  = mmOnMouseMove;
+        canvas._lastHover   = null;
+    }
+
+    function mmOnMouseMove(e) {
+        const { x, y } = mmCanvasToMap(e.clientX, e.clientY);
+        const idx = mmFindNearestStar(x, y, MM_SNAP * 3);
+        const canvas = document.getElementById('mm-canvas');
+        canvas._lastHover = idx;
+        canvas.style.cursor = (idx >= 0 && (_mm.mode === 'edge' || _mm.mode === 'delete')) ? 'pointer' : 'crosshair';
+        mmDraw();
+    }
+
+    function mmOnClick(e) {
+        const { x, y } = mmCanvasToMap(e.clientX, e.clientY);
+        const snapR = MM_SNAP * 3;
+        if (_mm.mode === 'star') {
+            if (mmFindNearestStar(x, y, snapR) >= 0) return;  // too close
+            mmSaveHistory();
+            _mm.stars.push({ x: Math.max(0, Math.min(319, x)), y: Math.max(0, Math.min(179, y)), type: _mm.starType });
+            mmDraw(); mmUpdateStats();
+        } else if (_mm.mode === 'edge') {
+            const idx = mmFindNearestStar(x, y, snapR);
+            if (idx < 0) { _mm.edgePending = null; mmDraw(); return; }
+            if (_mm.edgePending === null) {
+                _mm.edgePending = idx;
+                document.getElementById('mm-edge-hint').style.display = 'block';
+                mmDraw();
+            } else {
+                if (idx !== _mm.edgePending && !mmEdgeExists(_mm.edgePending, idx)) {
+                    mmSaveHistory();
+                    _mm.lines.push({ a: _mm.edgePending, b: idx });
+                }
+                _mm.edgePending = null;
+                document.getElementById('mm-edge-hint').style.display = 'none';
+                mmDraw(); mmUpdateStats();
+            }
+        } else if (_mm.mode === 'delete') {
+            const idx = mmFindNearestStar(x, y, snapR);
+            if (idx >= 0) {
+                mmSaveHistory();
+                _mm.lines = _mm.lines.filter(l => l.a !== idx && l.b !== idx)
+                    .map(l => ({
+                        a: l.a > idx ? l.a - 1 : l.a,
+                        b: l.b > idx ? l.b - 1 : l.b,
+                    }));
+                _mm.stars.splice(idx, 1);
+                if (_mm.edgePending === idx) _mm.edgePending = null;
+                else if (_mm.edgePending > idx) _mm.edgePending--;
+                mmDraw(); mmUpdateStats();
+            }
+        }
+    }
+
+    function mmOnRightClick(e) {
+        e.preventDefault();
+        const { x, y } = mmCanvasToMap(e.clientX, e.clientY);
+        const idx = mmFindNearestStar(x, y, MM_SNAP * 3);
+        if (idx >= 0) {
+            mmSaveHistory();
+            _mm.stars[idx].type = _mm.stars[idx].type === 1 ? 2 : 1;
+            mmDraw(); mmUpdateStats();
+        }
+    }
+
+    function mmSaveHistory() {
+        _mm.history.push({ stars: JSON.parse(JSON.stringify(_mm.stars)), lines: JSON.parse(JSON.stringify(_mm.lines)) });
+        if (_mm.history.length > 50) _mm.history.shift();
+    }
+
+    function mmUndo() {
+        if (_mm.history.length === 0) return;
+        const snap = _mm.history.pop();
+        _mm.stars = snap.stars;
+        _mm.lines = snap.lines;
+        _mm.edgePending = null;
+        mmDraw(); mmUpdateStats();
+    }
+
+    function mmClear() {
+        if (_mm.stars.length === 0 && _mm.lines.length === 0) return;
+        mmSaveHistory();
+        _mm.stars = []; _mm.lines = []; _mm.edgePending = null;
+        mmDraw(); mmUpdateStats();
+    }
+
+    function setMMMode(mode) {
+        _mm.mode = mode;
+        _mm.edgePending = null;
+        document.getElementById('mm-edge-hint').style.display = 'none';
+        ['star','edge','delete'].forEach(m => {
+            const btn = document.getElementById('mm-mode-' + m);
+            btn.style.background = m === mode ? '#111' : '#f9fafb';
+            btn.style.color      = m === mode ? '#fff' : '#374151';
+        });
+        mmDraw();
+    }
+
+    function setMMStarType(t) {
+        _mm.starType = t;
+        document.getElementById('mm-type-1').style.background = t === 1 ? '#111' : '#f9fafb';
+        document.getElementById('mm-type-1').style.color      = t === 1 ? '#fff' : '#374151';
+        document.getElementById('mm-type-2').style.background = t === 2 ? '#111' : '#f9fafb';
+        document.getElementById('mm-type-2').style.color      = t === 2 ? '#fff' : '#374151';
+    }
+
+    function mmDraw() {
+        const canvas = document.getElementById('mm-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        const S = MM_SCALE;
+        const hover = canvas._lastHover;
+
+        ctx.clearRect(0, 0, W, H);
+
+        // Background grid
+        ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+        ctx.lineWidth = 1;
+        for (let gx = 0; gx <= 320; gx += 16) { ctx.beginPath(); ctx.moveTo(gx*S,0); ctx.lineTo(gx*S,H); ctx.stroke(); }
+        for (let gy = 0; gy <= 180; gy += 9)  { ctx.beginPath(); ctx.moveTo(0,gy*S); ctx.lineTo(W,gy*S); ctx.stroke(); }
+
+        // Edges
+        ctx.strokeStyle = 'rgba(180,200,255,0.45)';
+        ctx.lineWidth = 1.5;
+        for (const l of _mm.lines) {
+            const a = _mm.stars[l.a], b = _mm.stars[l.b];
+            if (!a || !b) continue;
+            ctx.beginPath();
+            ctx.moveTo(a.x*S, a.y*S);
+            ctx.lineTo(b.x*S, b.y*S);
+            ctx.stroke();
+        }
+
+        // Edge-mode pending line
+        if (_mm.edgePending !== null && hover !== null && hover !== _mm.edgePending) {
+            const a = _mm.stars[_mm.edgePending];
+            const b = _mm.stars[hover];
+            if (a && b) {
+                ctx.strokeStyle = 'rgba(100,200,255,0.7)';
+                ctx.setLineDash([4,4]);
+                ctx.beginPath(); ctx.moveTo(a.x*S,a.y*S); ctx.lineTo(b.x*S,b.y*S); ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+
+        // Stars
+        for (let i = 0; i < _mm.stars.length; i++) {
+            const s = _mm.stars[i];
+            const cx = s.x * S, cy = s.y * S;
+            const isHover   = i === hover;
+            const isPending = i === _mm.edgePending;
+            const r = s.type === 2 ? 7 : 4.5;
+
+            if (s.type === 2) {
+                // HQ: diamond
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(Math.PI / 4);
+                ctx.beginPath();
+                ctx.rect(-r, -r, r*2, r*2);
+                ctx.fillStyle   = isPending ? '#facc15' : (isHover ? '#fbbf24' : '#f59e0b');
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth   = 1.5;
+                ctx.fill(); ctx.stroke();
+                ctx.restore();
+            } else {
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI*2);
+                ctx.fillStyle   = isPending ? '#60a5fa' : (isHover ? '#93c5fd' : '#e0e7ff');
+                ctx.strokeStyle = isPending ? '#3b82f6' : (isHover ? '#60a5fa' : 'rgba(255,255,255,0.3)');
+                ctx.lineWidth   = 1.5;
+                ctx.fill(); ctx.stroke();
+            }
+        }
+
+        // Show index of pending star
+        if (_mm.edgePending !== null) {
+            const s = _mm.stars[_mm.edgePending];
+            if (s) {
+                ctx.fillStyle = 'rgba(250,204,21,0.9)';
+                ctx.font = '10px monospace';
+                ctx.fillText('1st', s.x*S+8, s.y*S-6);
+            }
+        }
+    }
+
+    function mmUpdateStats() {
+        const ns = _mm.stars.length;
+        const ne = _mm.lines.length;
+        const deg = ns > 0 ? (2 * ne / ns).toFixed(2) : '0.00';
+        const hq  = _mm.stars.filter(s => s.type === 2).length;
+        document.getElementById('mm-stat-stars').textContent  = ns;
+        document.getElementById('mm-stat-edges').textContent  = ne;
+        document.getElementById('mm-stat-degree').textContent = deg;
+        document.getElementById('mm-stat-hq').textContent     = hq;
+
+        const issues = [];
+        if (ns < 20) issues.push(`Need ${20-ns} more stars (min 20)`);
+        if (parseFloat(deg) < 2.0 && ns >= 3) issues.push('avg_degree < 2.0 — add edges');
+        if (hq % 2 !== 0 && hq > 0) issues.push('Odd HQ count — asymmetric HQ advantage');
+        const v = document.getElementById('mm-validation');
+        if (issues.length === 0 && ns >= 20) {
+            v.style.color = '#059669'; v.textContent = '✓ Map passes structural checks';
+        } else if (issues.length > 0) {
+            v.style.color = '#d97706'; v.textContent = '⚠ ' + issues.join(' · ');
+        } else {
+            v.style.color = '#9ca3af'; v.textContent = '';
+        }
+    }
+
+    function mmBuildJSON() {
+        const title  = document.getElementById('mm-title').value.trim()  || 'Untitled Map';
+        const author = document.getElementById('mm-author').value.trim() || 'Map Maker';
+        return {
+            author,
+            title,
+            dimensions: [320, 180],
+            stars: _mm.stars.map(s => [s.x, s.y, s.type]),
+            lines: _mm.lines.map(l => [l.a, l.b]),
+        };
+    }
+
+    function mmExportJSON() {
+        const data = mmBuildJSON();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        const fn   = (document.getElementById('mm-filename').value.trim() || data.title.replace(/\s+/g,'-')) + '.json';
+        a.href = url; a.download = fn; a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    async function mmSaveToServer() {
+        const data     = mmBuildJSON();
+        const rawName  = document.getElementById('mm-filename').value.trim();
+        const filename = (rawName || data.title.replace(/[^a-zA-Z0-9 _-]/g,'').trim().replace(/\s+/g,' ')) + '.json';
+        if (data.stars.length < 20) { alert('Cannot save: fewer than 20 stars.'); return; }
+        const statusEl = document.getElementById('mm-save-status');
+        statusEl.style.display = 'block';
+        statusEl.style.color   = '#9ca3af';
+        statusEl.textContent   = 'Saving…';
+        try {
+            const r = await fetch('/api/maps', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ filename, data }),
+            });
+            const json = await r.json();
+            if (!r.ok) throw new Error(json.error);
+            statusEl.style.color   = '#059669';
+            statusEl.textContent   = `✓ Saved as "${filename}" (${json.stars} stars, ${json.lines} edges). Reload Map Registry to see it.`;
+        } catch (e) {
+            statusEl.style.color   = '#ef4444';
+            statusEl.textContent   = 'Error: ' + e.message;
+        }
     }
     </script>
 </body>

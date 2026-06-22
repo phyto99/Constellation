@@ -299,6 +299,28 @@ app.get('/api/maps/:filename', async (req, res) => {
     }
 });
 
+// Save a new map file (from Map Maker)
+app.post('/api/maps', (req, res) => {
+    try {
+        const { filename, data } = req.body;
+        if (!filename || typeof filename !== 'string') return res.status(400).json({ error: 'filename required' });
+        if (!filename.endsWith('.json') || filename.includes('..') || filename.includes('/') || filename.includes('\\'))
+            return res.status(400).json({ error: 'Invalid filename' });
+        if (!data || typeof data !== 'object') return res.status(400).json({ error: 'data required' });
+        // Basic structural validation
+        if (!Array.isArray(data.stars) || !Array.isArray(data.lines))
+            return res.status(400).json({ error: 'data must have stars[] and lines[]' });
+        if (data.stars.length < 20) return res.status(400).json({ error: 'Minimum 20 stars required' });
+        const filePath = path.join(MAPS_FOLDER, filename);
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+        console.log(`📍 Map saved: ${filename} (${data.stars.length} stars, ${data.lines.length} edges)`);
+        res.json({ ok: true, filename, stars: data.stars.length, lines: data.lines.length });
+    } catch (err) {
+        console.error('Error saving map:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Deployment timestamp endpoint - returns server start time
 app.get('/api/deployment-info', (req, res) => {
     res.json({ deployedAt: SERVER_START_TIME.toISOString() });
