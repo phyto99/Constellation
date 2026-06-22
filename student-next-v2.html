@@ -151,6 +151,41 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
 .sb-dot-wrap{display:flex;align-items:center;gap:5px}
 
 @media(max-width:560px){.two{grid-template-columns:1fr}.mode-pick{grid-template-columns:1fr}.mode-btn{border-right:none;border-bottom:1px solid #000}.mode-btn:last-child{border-bottom:none}}
+/* ── SESSION ENERGY ── */
+.energy-chips{display:flex;gap:0;border:1px solid #ddd;overflow:hidden;margin-top:4px}
+.ec{flex:1;padding:9px 10px;cursor:pointer;border:none;background:#fff;text-align:left;font-family:Arial,sans-serif;border-right:1px solid #ddd;transition:background .1s}
+.ec:last-child{border-right:none}
+.ec:hover{background:#f5f5f5}
+.ec.sel{background:#000;color:#fff}
+.ec-name{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:2px}
+.ec-desc{font-size:9px;color:#aaa;line-height:1.4;display:block}
+.ec.sel .ec-name{color:#fff}
+.ec.sel .ec-desc{color:#666}
+.ec.sel:hover{background:#222}
+/* ── TEAM ASSIGNMENT ── */
+.ta-wrap{margin-top:14px;border-top:1px solid #111;padding-top:12px;display:none}
+.ta-wrap.vis{display:block}
+.ta-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.ta-lbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#555}
+.btn-sim{background:transparent;color:#444;border:1px solid #2a2a2a;padding:4px 10px;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-sim:hover{color:#ccc;border-color:#777}
+.ta-cols{display:grid;gap:6px;margin-bottom:8px}
+.ta-col{border:1px solid #1a1a1a;padding:7px 10px;min-height:46px}
+.ta-col-lbl{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#444;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #111}
+.ta-slots{display:flex;flex-wrap:wrap;gap:4px;min-height:20px}
+.ta-empty{font-size:9px;color:#2a2a2a;font-style:italic}
+.ta-chip{border:1px solid #333;padding:3px 9px;font-size:10px;cursor:pointer;background:#111;color:#ccc;display:inline-flex;align-items:center;gap:5px;font-family:Arial,sans-serif}
+.ta-chip:hover{border-color:#666;background:#1a1a1a}
+.ta-chip .ta-sess{font-size:8px;color:#444;font-family:monospace}
+.ta-unassigned{border-top:1px solid #111;padding-top:8px;margin-top:6px}
+.ta-un-lbl{font-size:8px;color:#444;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
+.ta-un-chips{display:flex;flex-wrap:wrap;gap:4px}
+.ta-un-chip{border:1px dashed #2a2a2a;padding:3px 9px;font-size:10px;cursor:pointer;background:transparent;color:#555;font-family:Arial,sans-serif;display:inline-flex;align-items:center;gap:5px}
+.ta-un-chip:hover{border-color:#777;color:#aaa}
+.ta-un-chip .ta-sess{font-size:8px;color:#2a2a2a;font-family:monospace}
+.ta-recal{margin-top:8px;font-size:9px;color:#059669;font-style:italic;display:none}
+.ta-recal.vis{display:block}
+
 </style>
 </head>
 <body>
@@ -293,6 +328,7 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
       </div>
     </div>
 
+
     <div class="section">
       <div class="slbl">Map</div>
       <div class="fg">
@@ -362,15 +398,48 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
     </div>
 
     <div class="section">
-      <div class="slbl">AI Opponent</div>
-      <div class="fg">
-        <label>Include AI</label>
-        <div class="tg">
-          <button class="tg-opt on" id="h-bot-off" onclick="setBot('host',false)">Off</button>
-          <button class="tg-opt" id="h-bot-on" onclick="setBot('host',true)">On</button>
+      <div class="slbl">Bots</div>
+      <div class="fg" style="margin-bottom:10px">
+        <label>Bot Count</label>
+        <div class="teams-row" id="h-bot-count-row">
+          <div class="team-chip sel" data-v="0" onclick="pickBotCount(0,this)">0</div>
+          <div class="team-chip" data-v="1" onclick="pickBotCount(1,this)">1</div>
+          <div class="team-chip" data-v="2" onclick="pickBotCount(2,this)">2</div>
+          <div class="team-chip" data-v="3" onclick="pickBotCount(3,this)">3</div>
+          <div class="team-chip" data-v="4" onclick="pickBotCount(4,this)">4</div>
+        </div>
+      </div>
+      <div class="two" id="bot-sliders" style="opacity:.3;pointer-events:none">
+        <div class="fg">
+          <label>Bot Aggression</label>
+          <div class="sl-row">
+            <input type="range" id="h-bot-agg" min="1" max="9" value="5"
+              oninput="document.getElementById('h-bot-agg-v').textContent=this.value;S.host.botAggression=+this.value">
+            <span class="sl-val" id="h-bot-agg-v">5</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Bot Variety <span class="hint">1 = same type, 9 = all different</span></label>
+          <div class="sl-row">
+            <input type="range" id="h-bot-var" min="1" max="9" value="3"
+              oninput="document.getElementById('h-bot-var-v').textContent=this.value;S.host.botVariety=+this.value">
+            <span class="sl-val" id="h-bot-var-v">3</span>
+          </div>
         </div>
       </div>
     </div>
+
+    <div class="section">
+      <div class="slbl">Elo Weight</div>
+      <div class="fg">
+        <label>Social Session <span class="hint">records go to ledger at 25% Elo weight</span></label>
+        <div class="tg">
+          <button class="tg-opt on" id="h-social-off" onclick="setTgl('social',false)">Full (100%)</button>
+          <button class="tg-opt" id="h-social-on" onclick="setTgl('social',true)">Social (25%)</button>
+        </div>
+      </div>
+    </div>
+
 
     <div class="form-actions">
       <button class="btn-primary" id="btn-host" onclick="createSession('host')">Create Session</button>
@@ -389,7 +458,7 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
           <button class="btn-copy" onclick="copyLink('host')">Copy</button>
         </div>
         <div class="live-rec" id="live-rec">
-          <div><span class="lrt">optimization target</span><span class="lrv" id="lr-target">&#8212;</span></div>
+          <div><span class="lrt">calibrated to</span><span class="lrv" id="lr-calibrated">&#8212;</span></div>
           <div><span class="lrt">new players</span><span class="lrv" id="lr-new">&#8212;</span></div>
           <div><span class="lrt">adjustment</span><span class="lrv g" id="lr-adj">&#8212;</span></div>
         </div>
@@ -397,6 +466,18 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
           <div class="plbl">Players in room <span id="player-count-lbl" style="color:#bbb;font-size:8px;margin-left:6px;font-weight:400;text-transform:none;letter-spacing:0"></span></div>
           <div class="pchips" id="rs-host-chips">
             <div class="pchip waiting">Share the link above to invite players&#8230;</div>
+          </div>
+          <div class="ta-wrap" id="ta-wrap">
+            <div class="ta-hdr">
+              <span class="ta-lbl">Team Assignment</span>
+              <button class="btn-sim" onclick="simJoin()">+ Simulate Join</button>
+            </div>
+            <div class="ta-cols" id="ta-cols"></div>
+            <div class="ta-unassigned" id="ta-unassigned" style="display:none">
+              <div class="ta-un-lbl">Unassigned</div>
+              <div class="ta-un-chips" id="ta-un-chips"></div>
+            </div>
+            <div class="ta-recal" id="ta-recal">Session config will recalibrate to match this cohort.</div>
           </div>
         </div>
       </div>
@@ -893,7 +974,8 @@ var S = {
   compiler:null, sessionCount:0,
   maps:[],
   train:{map:"", bot:true},
-  host:{map:"", bot:false, steals:true, hq:true, teams:2, pts:false},
+  host:{map:"", steals:true, hq:true, teams:2, pts:false, botCount:0, botAggression:5, botVariety:3, social:false},
+  hostPlayers:[], hostTeams:{}, cohortCompiler:null,
   rooms:{train:null, host:null},
 };
 
@@ -1027,7 +1109,7 @@ function setBot(mode, on) {
 }
 function setTgl(key, on) {
   S.host[key] = on;
-  var base = {steals:"h-st", hq:"h-hq", pts:"h-pts"}[key];
+  var base = {steals:"h-st", hq:"h-hq", pts:"h-pts", social:"h-social"}[key];
   if (base) {
     document.getElementById(base + "-off").classList.toggle("on", !on);
     document.getElementById(base + "-on").classList.toggle("on",  on);
@@ -1124,11 +1206,269 @@ function buildTrainOpts(useRec) {
     _source:"student-train", _studentId:S.studentId, _usedRecommendation:usedRec,
   };
 }
+// ── SIMULATE JOIN
+var _SIM_NAMES = ["Alex","Jordan","Morgan","Riley","Quinn","Sam","Casey","Devon","Avery","Blake"];
+var _SIM_ELOS  = [280,340,390,450,510,560,620,680,740,800];
+var _simIdx = 0;
+function simJoin() {
+  var name = _SIM_NAMES[_simIdx % _SIM_NAMES.length];
+  var elo  = _SIM_ELOS[_simIdx % _SIM_ELOS.length];
+  _simIdx++;
+  var p = {id:"sim-" + Date.now(), name:name, sessions:Math.floor(Math.random()*25), elo:elo};
+  S.hostPlayers.push(p);
+  renderChips("rs-host-chips", S.hostPlayers);
+  updateCohortCalibration(S.hostPlayers);
+  renderTeamAssign(S.hostPlayers);
+}
+
+// ── BOT COUNT
+function pickBotCount(n, el) {
+  S.host.botCount = n;
+  document.querySelectorAll("#h-bot-count-row .team-chip").forEach(function(c) { c.classList.remove("sel"); });
+  el.classList.add("sel");
+  var sliders = document.getElementById("bot-sliders");
+  sliders.style.opacity = n > 0 ? "1" : ".3";
+  sliders.style.pointerEvents = n > 0 ? "auto" : "none";
+}
+
+
+// ── TEAM ASSIGNMENT
+var TEAM_COLORS = ["#059669","#2563eb","#dc2626","#d97706","#7c3aed","#0891b2"];
+function renderTeamAssign(players) {
+  var wrap = document.getElementById("ta-wrap");
+  if (!players || players.length === 0) { wrap.classList.remove("vis"); return; }
+  wrap.classList.add("vis");
+  var numTeams = S.host.teams || 2;
+  var cols = document.getElementById("ta-cols");
+  cols.style.gridTemplateColumns = "repeat(" + numTeams + ", 1fr)";
+  var playerTeam = {};
+  Object.keys(S.hostTeams).forEach(function(t) {
+    (S.hostTeams[t] || []).forEach(function(pid) { playerTeam[pid] = +t; });
+  });
+  cols.innerHTML = "";
+  for (var t = 1; t <= numTeams; t++) {
+    var col = document.createElement("div"); col.className = "ta-col";
+    var lbl = document.createElement("div"); lbl.className = "ta-col-lbl";
+    lbl.style.color = TEAM_COLORS[(t - 1) % TEAM_COLORS.length];
+    lbl.textContent = "Team " + t;
+    col.appendChild(lbl);
+    var slots = document.createElement("div"); slots.className = "ta-slots";
+    var teamPlayers = players.filter(function(p) { return playerTeam[p.id] === t; });
+    if (teamPlayers.length === 0) {
+      var emp = document.createElement("span"); emp.className = "ta-empty"; emp.textContent = "empty";
+      slots.appendChild(emp);
+    } else {
+      teamPlayers.forEach(function(p) {
+        var chip = document.createElement("div"); chip.className = "ta-chip";
+        chip.innerHTML = escHtml(p.name) + "<span class='ta-sess'>" + (p.sessions || 0) + "s</span>";
+        chip.title = "Click to unassign";
+        chip.onclick = (function(pid) { return function() { unassignPlayer(pid); }; })(p.id);
+        slots.appendChild(chip);
+      });
+    }
+    col.appendChild(slots); cols.appendChild(col);
+  }
+  var unassigned = players.filter(function(p) { return !playerTeam[p.id]; });
+  var unDiv = document.getElementById("ta-unassigned");
+  var unChips = document.getElementById("ta-un-chips");
+  if (unassigned.length === 0) { unDiv.style.display = "none"; }
+  else {
+    unDiv.style.display = "block"; unChips.innerHTML = "";
+    unassigned.forEach(function(p) {
+      for (var t = 1; t <= numTeams; t++) {
+        var chip = document.createElement("div"); chip.className = "ta-un-chip";
+        chip.innerHTML = escHtml(p.name) + "<span class='ta-sess'>&#x2192; T" + t + "</span>";
+        chip.title = "Assign to Team " + t;
+        chip.onclick = (function(pid, team) { return function() { assignPlayer(pid, team); }; })(p.id, t);
+        unChips.appendChild(chip);
+      }
+    });
+  }
+  var recal = document.getElementById("ta-recal");
+  if (recal) recal.classList.add("vis");
+}
+function assignPlayer(playerId, team) {
+  Object.keys(S.hostTeams).forEach(function(t) {
+    S.hostTeams[t] = (S.hostTeams[t] || []).filter(function(id) { return id !== playerId; });
+  });
+  if (!S.hostTeams[team]) S.hostTeams[team] = [];
+  S.hostTeams[team].push(playerId);
+  renderTeamAssign(S.hostPlayers);
+}
+function unassignPlayer(playerId) {
+  Object.keys(S.hostTeams).forEach(function(t) {
+    S.hostTeams[t] = (S.hostTeams[t] || []).filter(function(id) { return id !== playerId; });
+  });
+  renderTeamAssign(S.hostPlayers);
+}
+
+// ── COHORT CALIBRATION — runs whenever players change
+function updateCohortCalibration(players) {
+  var lr = document.getElementById("live-rec");
+  var count = players.length;
+  document.getElementById("player-count-lbl").textContent = count > 0 ? count + " player" + (count !== 1 ? "s" : "") : "";
+  if (count === 0) { lr.classList.remove("vis"); return; }
+  lr.classList.add("vis");
+
+  var newPlayers = players.filter(function(p) { return p.sessions < 5; });
+  var hasNew = newPlayers.length > 0;
+
+  // Weakest player by Elo (or sessions as proxy if no Elo)
+  var withElo = players.filter(function(p) { return p.elo; });
+  var weakest = withElo.length > 0
+    ? withElo.reduce(function(m, p) { return p.elo < m.elo ? p : m; }, withElo[0])
+    : null;
+  var strongest = withElo.length > 0
+    ? withElo.reduce(function(m, p) { return p.elo > m.elo ? p : m; }, withElo[0])
+    : null;
+
+  // Calibrated to label
+  var calLbl = weakest
+    ? weakest.name + " (lowest · Elo " + weakest.elo + ")"
+    : "cohort (no Elo data yet)";
+  document.getElementById("lr-calibrated").textContent = calLbl;
+
+  // New player flag
+  var newLbl = hasNew
+    ? newPlayers.length + " player" + (newPlayers.length > 1 ? "s" : "") + " with <5 sessions"
+    : "none";
+  document.getElementById("lr-new").textContent = newLbl;
+
+  // Spread descriptor
+  var adj = "";
+  if (withElo.length > 1 && weakest && strongest) {
+    var spread = strongest.elo - weakest.elo;
+    adj = spread < 100 ? "tight cohort · uniform calibration"
+        : spread < 250 ? "mixed cohort · calibrated to floor"
+        : "wide spread · floor protection active";
+  } else {
+    adj = hasNew ? "beginner floor active" : "single-player calibration";
+  }
+  document.getElementById("lr-adj").textContent = adj;
+
+  // Phase label
+  var phase = hasNew ? "Engagement mode active"
+    : (withElo.length > 1 && strongest && strongest.elo > 600) ? "Competitive calibration"
+    : "Cohort baseline";
+  document.getElementById("rs-host-phase").textContent = phase;
+
+  // Fetch cohort compiler from weakest real player
+  if (weakest && !weakest.id.startsWith("sim-")) {
+    fetch(API + "/api/compiler/" + encodeURIComponent(weakest.id))
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) { if (d) S.cohortCompiler = d; })
+      .catch(function() {});
+  } else if (weakest && weakest.id.startsWith("sim-") && weakest.elo) {
+    // Simulate cohort compiler from Elo: build a plausible config_vector
+    S.cohortCompiler = {config_vector: [500,1,10,1,
+      Math.round(20 - (weakest.elo/999)*14),  // moves
+      Math.round(60 - (weakest.elo/999)*30),  // roundLength
+      10, 12, 2, 0, 0, Math.round(weakest.elo/111)
+    ]};
+  }
+}
+
 function buildHostOpts() {
   var h = S.host;
-  var vary = function(v) { return Math.round(v * (0.92 + Math.random() * 0.16)); };
+  // Use cohort compiler (weakest player) if available, else host's own compiler, else defaults
+  var cc = S.cohortCompiler || S.compiler;
+  var cv = (cc && cc.config_vector) ? cc.config_vector : null;
+  var mults = cv
+    ? {count:cv[0]!=null?cv[0]:500, distance:cv[1]!=null?cv[1]:1, hq:cv[2]!=null?cv[2]:10, destruction:cv[3]!=null?cv[3]:1}
+    : {count:500, distance:1, hq:10, destruction:1};
   return {
-    multipliers:     {count:vary(500), distance:vary(1), hq:vary(10), destruction:vary(1)},
+    multipliers:          mults,
+    rounds:               +document.getElementById("h-rounds").value,
+    roundLength:          +document.getElementById("h-rt").value,
+    moves:                cv ? (cv[4] || 15) : 15,
+    steals:               h.steals ? (cv ? (cv[7] != null ? cv[7] : 12) : 12) : 0,
+    headquarters:         h.hq ? (cv ? (cv[8] || 2) : 2) : 0,
+    colorTeamCount:       h.teams,
+    allowPlayerTeamSelection: h.pts,
+    customMapFilename:    cc ? (cc.map_filename || null) : null,
+    playerName:           S.student,
+    aiBots:               buildBotList(h.botCount, h.botAggression, h.botVariety),
+    _source:              "student-host",
+    _studentId:           S.studentId,
+    _teamAssignments:     S.hostTeams,
+    _socialSession:       h.social,
+    _kMultiplier:         h.social ? 0.25 : 1.0,
+    _sessionName:         document.getElementById("h-name").value.trim() || undefined,
+  };
+}
+
+function buildBotList(count, aggression, variety) {
+  if (!count || count === 0) return [];
+  var TYPES = ["HAL","CAESAR","ATHENA","ROBIN_HOOD","EINSTEIN","LORENZ"];
+  var numDistinct = Math.max(1, Math.round((variety / 9) * Math.min(count, TYPES.length)));
+  var shuffled = TYPES.slice().sort(function() { return Math.random() - 0.5; });
+  var pool = shuffled.slice(0, numDistinct);
+  var bots = [];
+  for (var i = 0; i < count; i++) {
+    bots.push({type:pool[i % pool.length], aggression:aggression, team:1});
+  }
+  return bots;
+}
+function botCfg(level) {
+  var r = AGG_RANGE[level] || [4,6];
+  return {type:BOT_TYPES[Math.floor(Math.random()*BOT_TYPES.length)], aggression:r[0]+Math.floor(Math.random()*(r[1]-r[0]+1)), team:1};
+}
+function getMapJson(name) { var m = S.maps.find(function(x) { return x.name === name; }); return m ? m.json : ""; }
+function getMapJsonByFilename(fn) {
+  if (!fn) return "";
+  var n = fn.replace(/\.json$/i, "");
+  var m = S.maps.find(function(x) { return x.name === n || x.name === fn; });
+  return m ? m.json : "";
+}
+function recordPanelSignal(mode, opts) {
+  try {
+    fetch(API + "/api/ledger/signal", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({channel:"SELF", type:"panel_config", studentId:S.studentId, mode:mode, ts:Date.now()})
+    });
+  } catch(_) {}
+}
+
+// ── ROOM STATE
+function showRoomState(mode, roomId) {
+  var link = API + "/game/" + roomId;
+  var p    = mode === "train" ? "rs-train" : "rs-host";
+  document.getElementById(p + "-id").textContent = roomId;
+  document.getElementById(p + "-link").textContent  = link;
+  document.getElementById(p + "-link").dataset.link = link;
+  document.getElementById(p + "-join").href          = link;
+  document.getElementById(p).classList.add("vis");
+  document.getElementById(p).scrollIntoView({behavior:"smooth"});
+}
+
+function handleState(mode, st) {
+  if (!st || !st.players) return;
+  var players = [];
+  st.players.forEach(function(p, id) { players.push({id:id, name:p.name, sessions:p._sessions || 0}); });
+  if (mode === "train") { renderChips("rs-train-chips", players); return; }
+
+  S.hostPlayers = players;
+  renderChips("rs-host-chips", players);
+  updateCohortCalibration(players);
+  renderTeamAssign(players);
+}
+
+function buildHostOpts() {
+  var h = S.host;
+  var EV = {MEASURED:0, STANDARD:0.08, CHARGED:0.30, VOLATILE:0.70};
+  var ev = EV[h.energy] || 0.08;
+  var vary = function(v) { return Math.max(1, Math.round(v * (1 - ev + Math.random() * ev * 2))); };
+  var mults;
+  if (h.energy === "VOLATILE") {
+    var keys = ["count","distance","hq","destruction"];
+    var dom = keys[Math.floor(Math.random() * keys.length)];
+    mults = {count:vary(200), distance:vary(1), hq:vary(10), destruction:vary(1)};
+    mults[dom] = Math.round(300 + Math.random() * 400);
+  } else {
+    mults = {count:vary(500), distance:vary(1), hq:vary(10), destruction:vary(1)};
+  }
+  return {
+    multipliers:     mults,
     rounds:          +document.getElementById("h-rounds").value,
     roundLength:     +document.getElementById("h-rt").value,
     moves:           15,
@@ -1139,7 +1479,7 @@ function buildHostOpts() {
     customMapFilename: null,
     playerName:      S.student,
     aiBots:          h.bot ? [botCfg("standard")] : [],
-    _source:"student-host", _studentId:S.studentId,
+    _source:"student-host", _studentId:S.studentId, _energy:h.energy, _teamAssignments:S.hostTeams,
     _sessionName:    document.getElementById("h-name").value.trim() || undefined,
   };
 }
@@ -1232,7 +1572,12 @@ function renderChips(containerId, players) {
 function closeRoom(mode) {
   if (S.rooms[mode]) { try { S.rooms[mode].leave(); } catch(_) {} S.rooms[mode] = null; }
   document.getElementById(mode === "train" ? "rs-train" : "rs-host").classList.remove("vis");
-  if (mode === "host") document.getElementById("live-rec").classList.remove("vis");
+  if (mode === "host") {
+    document.getElementById("live-rec").classList.remove("vis");
+    S.hostPlayers = []; S.hostTeams = {}; S.cohortCompiler = null; _simIdx = 0;
+    var tw = document.getElementById("ta-wrap"); if (tw) tw.classList.remove("vis");
+    var tr = document.getElementById("ta-recal"); if (tr) tr.classList.remove("vis");
+  }
 }
 
 function copyLink(mode) {
