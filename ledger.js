@@ -10,6 +10,7 @@ const R_BOT_DEFAULT = 520; // [ASSERTED] baseline bot Elo — store in every rec
 // Persistent files inside LEDGER_DIR (not JSONL — JSON, writable)
 const REGISTRY_PATH = path.join(LEDGER_DIR, '_students.json'); // name → { id, created_at }
 const ALIASES_PATH  = path.join(LEDGER_DIR, '_aliases.json');  // secondaryId → primaryId
+const LAMBDA_PATH   = path.join(LEDGER_DIR, '_lambda.json');   // studentId → { mode: lambda }
 
 const BOT_TYPE_IDX = {
     HAL: 0, CAESAR: 1, ATHENA: 2, ROBIN: 3, 'ROBIN HOOD': 3,
@@ -179,9 +180,24 @@ function rawRecords(limit = 200, dateFilter = null) {
     return records;
 }
 
+// ─── Per-student forgetting rate storage (Layer 1 — writable JSON) ───────────
+// Stores fitted λ per student × mode. Starts empty; populated by compiler after
+// each return event (tau ≥ 7d) via estimateLambda(). Read at compile time.
+function readLambdas() {
+    try { return JSON.parse(fs.readFileSync(LAMBDA_PATH, 'utf8')); }
+    catch { return {}; }
+}
+
+function writeLambda(studentId, mode, lambda) {
+    const all = readLambdas();
+    if (!all[studentId]) all[studentId] = {};
+    all[studentId][mode] = lambda;
+    fs.writeFileSync(LAMBDA_PATH, JSON.stringify(all, null, 2), 'utf8');
+}
+
 module.exports = {
     append, configHash, extractConfigVector, mapIndex, nameToId,
     resolveStudentId, readAliases, resolveAlias, mergeStudents,
-    verify, rawRecords,
+    verify, rawRecords, readLambdas, writeLambda,
     PARAMS_VERSION, R_BOT_DEFAULT, LEDGER_DIR
 };

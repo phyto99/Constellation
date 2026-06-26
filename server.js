@@ -377,7 +377,7 @@ app.get('/api/ledger/state/:studentId', (req, res) => {
     try {
         const sid = decodeURIComponent(req.params.studentId);
         const sessions = compiler.readStudentSessions(sid);
-        const state = compiler.computeState(sessions);
+        const { state } = compiler.computeState(sessions);
         res.json({ student_id: sid, state, session_count: sessions.length });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -527,7 +527,7 @@ function checkEligibility(studentId) {
     const hasInv = sessions.some(s => compiler.assignMode(s.config_vector) === 'INV');
     if (!hasInv) return { eligible: false, reason: 'no INV session recorded' };
 
-    const state = compiler.computeState(sessions);
+    const { state } = compiler.computeState(sessions);
     const zone = compiler.assignZone(sessions, compiler.MODES[0], state);
     // Check current recommended zone — REMATCH on the most-priority mode disqualifies
     try {

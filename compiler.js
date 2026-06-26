@@ -1,7 +1,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { configHash, nameToId, LEDGER_DIR, R_BOT_DEFAULT, PARAMS_VERSION, readAliases } = require('./ledger');
+const { configHash, nameToId, LEDGER_DIR, R_BOT_DEFAULT, PARAMS_VERSION, readAliases, readLambdas, writeLambda } = require('./ledger');
 
 // ─── Topology registry ────────────────────────────────────────────────────────
 const TOPOLOGY_PATH = path.join(__dirname, 'maps', 'topology.json');
@@ -91,6 +91,39 @@ function predict(mu, sigma2, lambda, tau) {
 function kalmanUpdate(mu_pred, sigma2_pred, y, R) {
     const K = sigma2_pred / (sigma2_pred + R);
     return { mu_new: mu_pred + K * (y - mu_pred), sigma2_new: (1 - K) * sigma2_pred, K };
+}
+
+// Adaptive Elo gain — smooth replacement for the step-function K∈{40,20,10}.
+// R_KGAIN calibrated so kGain(0)≈40, kGain(20)≈20, kGain(50)≈10. [ASSERTED]
+// Derivation: match K_high/K_mid/K_low at their n thresholds; solve for R_KGAIN.
+// Phase 2: replace with proper EKF gain once R_OBS is fitted from repeated-session data.
+const R_KGAIN = 182;   // [ASSERTED] calibrated to historical K thresholds
+const K_SCALE = 40.3;  // [ASSERTED] same calibration
+function kGain(n) {
+    const s = sigma2FromN(n);
+    return K_SCALE * s / (s + R_KGAIN);
+}
+
+// Per-student forgetting rate bounds and return-event threshold.
+const LAMBDA_MIN        = 1 / 180; // [ASSERTED] ~6-month half-life floor
+const LAMBDA_MAX        = 1 / 3;   // [ASSERTED] ~3-day half-life ceiling
+const RETURN_THRESHOLD  = 7;       // [ASSERTED] days away to count as a return event
+
+// Estimate λ from a single return event. Uses exponential smoothing toward the
+// lambda implied by the gap: exp(−λ·τ) ≈ (mu_obs − μ∞) / (mu_prev − μ∞).
+// lr decreases with n_returns so the estimate stabilises over time.
+// Returns current lambda unchanged when the signal is too noisy to trust.
+function estimateLambda(lambda_current, mu_prev, mu_obs, tau, n_returns) {
+    const delta_prev = mu_prev - MU_PRIOR;
+    const delta_obs  = mu_obs  - MU_PRIOR;
+    if (Math.abs(delta_prev) < 20) return lambda_current;           // student near prior — no signal
+    if (Math.sign(delta_prev) !== Math.sign(delta_obs)) return lambda_current; // sign flip — noise
+    const ratio = delta_obs / delta_prev;
+    if (ratio <= 0 || ratio >= 1) return lambda_current;            // outside model range
+    const lambda_implied = -Math.log(ratio) / tau;
+    if (lambda_implied < LAMBDA_MIN || lambda_implied > LAMBDA_MAX) return lambda_current;
+    const lr = 0.3 / (1 + n_returns);
+    return lambda_current * (1 - lr) + lambda_implied * lr;
 }
 
 // Expected KL(posterior ‖ prior) from one session on this dimension.
@@ -244,28 +277,50 @@ function listStudents() {
 }
 
 // ─── State computation ────────────────────────────────────────────────────────
-function Kval(n) {
-    if (n <= 5)  return ASSERTED.K_high;  // [ASSERTED] thresholds
-    if (n <= 20) return ASSERTED.K_mid;
-    return ASSERTED.K_low;
-}
+// lambdas: optional { mode: lambda } map from _lambda.json (per-student fitted values).
+//          When absent, LAMBDA_0 is used for all modes.
+// Returns { state, lambdaUpdates } — lambdaUpdates has new lambda values for any mode
+// where a return event was processed; compile() writes these back to _lambda.json.
+function computeState(sessions, lambdas) {
+    const lambdaFor = (m) => {
+        const l = lambdas && lambdas[m] != null ? lambdas[m] : LAMBDA_0;
+        return Math.max(LAMBDA_MIN, Math.min(LAMBDA_MAX, l));
+    };
 
-function computeState(sessions) {
-    const modeElo      = Object.fromEntries(MODES.map(m => [m, BASE_ELO]));
-    const modeN        = Object.fromEntries(MODES.map(m => [m, 0]));
-    const modeLastT    = Object.fromEntries(MODES.map(m => [m, null]));
-    const modeLastRank = Object.fromEntries(MODES.map(m => [m, null]));
-    const modeHistory  = Object.fromEntries(MODES.map(m => [m, []])); // [{t, elo}]
+    const modeElo       = Object.fromEntries(MODES.map(m => [m, BASE_ELO]));
+    const modeN         = Object.fromEntries(MODES.map(m => [m, 0]));
+    const modeLastT     = Object.fromEntries(MODES.map(m => [m, null]));
+    const modeLastRank  = Object.fromEntries(MODES.map(m => [m, null]));
+    const modeHistory   = Object.fromEntries(MODES.map(m => [m, []]));
+    const lambdaCurrent = Object.fromEntries(MODES.map(m => [m, lambdaFor(m)]));
+    const modeNReturns  = Object.fromEntries(MODES.map(m => [m, 0]));
+    const lambdaUpdates = {};  // mode → new lambda; written to _lambda.json by compile()
 
     for (const obs of sessions) {
         const mode = assignMode(obs.config_vector);
         if (!mode || !MODES.includes(mode)) continue;
-        const n   = modeN[mode];
-        const elo = modeElo[mode];
-        const R   = (obs.signals?.r_bot) ?? ASSERTED.r_bot;
-        const E   = 1 / (1 + Math.pow(10, (R - elo) / ASSERTED.elo_scale));
-        const S   = obs.outcome?.rank_pct ?? 0.5;
-        const newElo = elo + Kval(n + 1) * (S - E);
+
+        const n      = modeN[mode];
+        const elo    = modeElo[mode];
+        const lastT  = modeLastT[mode];
+        const lambda = lambdaCurrent[mode];
+        const R      = (obs.signals?.r_bot) ?? ASSERTED.r_bot;
+        const tau    = lastT ? (obs.t - lastT) / 86400 : 0;
+        const E      = 1 / (1 + Math.pow(10, (R - elo) / ASSERTED.elo_scale));
+        const S      = obs.outcome?.rank_pct ?? 0.5;
+        const newElo = elo + kGain(n + 1) * (S - E);  // adaptive gain — replaces K∈{40,20,10}
+
+        // Return-event lambda learning: if student was away long enough and has enough
+        // history, refine their forgetting rate from the observed performance vs OU prediction.
+        if (n >= 3 && tau >= RETURN_THRESHOLD) {
+            const newLambda = estimateLambda(lambda, elo, newElo, tau, modeNReturns[mode]);
+            if (newLambda !== lambda) {
+                lambdaCurrent[mode] = newLambda;
+                lambdaUpdates[mode] = newLambda;
+            }
+            modeNReturns[mode]++;
+        }
+
         modeElo[mode]      = newElo;
         modeN[mode]++;
         modeLastT[mode]    = obs.t;
@@ -276,39 +331,38 @@ function computeState(sessions) {
     const nowS = Date.now() / 1000;
     const state = {};
     for (const m of MODES) {
-        const lastT = modeLastT[m];
+        const lastT  = modeLastT[m];
         const sinceD = lastT ? (nowS - lastT) / 86400 : null;
-        const decay = sinceD !== null ? Math.exp(-sinceD / ASSERTED.forgetting_tau_d) : 1.0;
-        const hist = modeHistory[m];
+        const lambda = lambdaCurrent[m];
+        const decay  = sinceD !== null ? Math.exp(-sinceD * lambda) : 1.0;  // uses fitted λ
+        const hist   = modeHistory[m];
         let velocity = null;
         if (hist.length >= 4) {
             velocity = (hist[hist.length - 1].elo - hist[Math.max(0, hist.length - 4)].elo) / 3;
         }
-        // Bayesian posterior — derived from history; stored directly in Phase 2
-        const mu_now    = Math.round(modeElo[m]);
+        const mu_now     = Math.round(modeElo[m]);
         const sigma2_now = sigma2FromN(modeN[m]);
-        const tau_now   = sinceD ?? 0;
-        const { sigma2_pred: sigma2_fwd } = predict(mu_now, sigma2_now, LAMBDA_0, tau_now);
+        const tau_now    = sinceD ?? 0;
+        const { sigma2_pred: sigma2_fwd } = predict(mu_now, sigma2_now, lambda, tau_now);
 
         state[m] = {
-            elo:             mu_now,
-            n:               modeN[m],
-            velocity:        velocity !== null ? Math.round(velocity * 10) / 10 : null,
-            last_rank_pct:   modeLastRank[m],
-            last_t:          lastT,
-            since_days:      sinceD !== null ? Math.round(sinceD * 10) / 10 : null,
-            decay:           Math.round(decay * 1000) / 1000,
-            zpd_target:      Math.round(modeElo[m] * ASSERTED.zpd_coeff * decay),
-            history:         hist,
-            // Bayesian fields
-            mu:        mu_now,
-            sigma2:    Math.round(sigma2_now),
-            lambda:    LAMBDA_0,
-            tau:       Math.round(tau_now * 10) / 10,
-            info_gain: parseFloat(informationGain(sigma2_fwd, R_OBS).toFixed(4)),
+            elo:           mu_now,
+            n:             modeN[m],
+            velocity:      velocity !== null ? Math.round(velocity * 10) / 10 : null,
+            last_rank_pct: modeLastRank[m],
+            last_t:        lastT,
+            since_days:    sinceD !== null ? Math.round(sinceD * 10) / 10 : null,
+            decay:         Math.round(decay * 1000) / 1000,
+            zpd_target:    Math.round(modeElo[m] * ASSERTED.zpd_coeff * decay),
+            history:       hist,
+            mu:            mu_now,
+            sigma2:        Math.round(sigma2_now),
+            lambda,                                // per-student fitted value
+            tau:           Math.round(tau_now * 10) / 10,
+            info_gain:     parseFloat(informationGain(sigma2_fwd, R_OBS).toFixed(4)),
         };
     }
-    return state;
+    return { state, lambdaUpdates };
 }
 
 // ─── Mode selection ───────────────────────────────────────────────────────────
@@ -595,7 +649,12 @@ function buildConfigVector(mode, state, template, sessions) {
 // ─── Main compile function ────────────────────────────────────────────────────
 function compile(studentId, transferElo) {
     const sessions = readStudentSessions(studentId);
-    const state    = computeState(sessions);
+    const allLambdas = readLambdas();
+    const { state, lambdaUpdates } = computeState(sessions, allLambdas[studentId] || {});
+    // Persist any lambda estimates learned from return events in this session history.
+    for (const [mode, newLambda] of Object.entries(lambdaUpdates)) {
+        writeLambda(studentId, mode, newLambda);
+    }
     // Two-level selection: game first, then dimension within game.
     // Phase 1: selectGame always returns 'constellation' (only available game).
     // Phase N: multiple games compete — same criterion, no special-casing.
@@ -696,6 +755,7 @@ module.exports = {
     buildConfigVector, selectTemplate, toGameConfig,
     loadTopology, BOT_PROFILES, MODES, ASSERTED, TEMPLATES,
     // Bayesian primitives — used by Observatory, admin, future game adapters
-    selectGame, informationGain, predict, kalmanUpdate, sigma2FromN,
-    GAME_REGISTRY, SIGMA2_PRIOR, MU_PRIOR, LAMBDA_0, R_OBS,
+    selectGame, informationGain, predict, kalmanUpdate, sigma2FromN, kGain, estimateLambda,
+    GAME_REGISTRY, SIGMA2_PRIOR, MU_PRIOR, LAMBDA_0, R_OBS, R_KGAIN, K_SCALE,
+    LAMBDA_MIN, LAMBDA_MAX, RETURN_THRESHOLD,
 };
