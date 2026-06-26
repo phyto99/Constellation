@@ -233,6 +233,7 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
         <span id="btnLaunchHint" style="font-size:8px;color:#555;letter-spacing:.5px"></span>
       </div>
       <button class="btn-customize" onclick="scrollToConfig()">Customize &#xbb;</button>
+      <button class="btn-customize" id="btnReplayVis" onclick="devReplayAnim()" style="display:none;font-size:8px;padding:4px 10px;letter-spacing:.5px" title="Replay compiler visualization">&#9654; vis</button>
       <span class="term-aside" id="termAside">&#8212;</span>
     </div>
   </div>
@@ -1923,6 +1924,8 @@ function toggleDevPanel() {
   var open = p.classList.toggle("open");
   _devActive = open;
   b.textContent = open ? "DEV ▼" : "DEV";
+  var rb = document.getElementById("btnReplayVis");
+  if (rb) rb.style.display = open ? "inline-block" : "none";
   renderTerminal(S.mode);
 }
 
@@ -1931,19 +1934,37 @@ function _devApply() {
   if (_devSession === 0) {
     S.compiler = null; _devCompiler = null;
   } else {
-    var modeMap = {QTY:0,SPT:1,FRT:2,DST:3,WRM:4,INV:5};
-    var mi = modeMap[_devCMode] || 0;
+    // Rich 6-mode mock — exercises every visual dimension of the animation.
+    // Selected mode gets the strongest profile; others span the full visual range.
+    var MKEYS = ["QTY","SPT","FRT","DST","WRM","INV"];
+    var selIdx = MKEYS.indexOf(_devCMode);
+    var profiles = [
+      {elo:622, vel:+16, n:9,  rank:0.74, since:2 },
+      {elo:484, vel:-7,  n:6,  rank:0.43, since:6 },
+      {elo:396, vel:+3,  n:4,  rank:0.36, since:11},
+      {elo:541, vel:+2,  n:5,  rank:0.52, since:9 },
+      {elo:318, vel:0,   n:2,  rank:0.26, since:24},
+      {elo:438, vel:0,   n:1,  rank:0.40, since:19},
+    ];
     var snap = {};
-    snap[_devCMode] = {elo:500+_devSession*8, n:_devSession, velocity:_devSession>3?1.5:0, last_rank_pct:0.55, since_days:2};
+    var eloScale = Math.max(0.7, 1 + (_devSession - 10) * 0.004);
+    MKEYS.forEach(function(m, i) {
+      var p = profiles[(i - selIdx + 6) % 6];
+      snap[m] = {
+        elo: Math.round(p.elo * eloScale), n: Math.max(1, Math.round(p.n * (_devSession / 10))),
+        velocity: p.vel, last_rank_pct: p.rank, since_days: p.since,
+      };
+    });
     _devCompiler = {
-      zone:_devZone, mode:_devCMode, session_count:_devSession,
-      expected_rank_pct:0.55, state_snapshot:snap,
-      config_vector:[500,1,10,1,15,30,8,5,2,0,0,50],
-      bot_profile:"STANDARD", map_filename:"Ad Astra by Josh Dahn.json",
+      zone: _devZone, mode: _devCMode, session_count: _devSession,
+      expected_rank_pct: 0.55, state_snapshot: snap,
+      config_vector: [500,1,10,1,15,30,8,5,2,0,0,50],
+      bot_profile: "STANDARD", map_filename: "Ad Astra by Josh Dahn.json",
+      generated_at: Math.floor(Date.now() / 1000),
     };
     S.compiler = _devCompiler;
   }
-  document.getElementById("devStateStr").textContent = "s" + _devSession + " · " + _devZone.slice(0,3) + " · " + _devCMode + " · " + _devPMode;
+  document.getElementById("devStateStr").textContent = "s" + _devSession + " \xb7 " + _devZone.slice(0,3) + " \xb7 " + _devCMode + " \xb7 " + _devPMode;
 }
 
 function devSetSessionSlider(v) {
@@ -1994,6 +2015,11 @@ function devScenario(key) {
     Object.keys(snap).forEach(function(m) { snap[m].since_days = sc.absenceDays; });
   }
   setMode(sc.panel);
+}
+
+function devReplayAnim() {
+  if (_devCompiler) _devCompiler.generated_at = Math.floor(Date.now() / 1000);
+  renderTerminal(_devActive ? _devPMode : S.mode, true);
 }
 </script>
 </body>
