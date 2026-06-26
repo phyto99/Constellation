@@ -29,11 +29,17 @@ section{padding:14px 20px 4px}
 .badge.live{border-color:#15803d;color:#15803d}
 .badge.phi{border-color:#2563eb;color:#2563eb}
 .badge.new{border-color:#d97706;color:#d97706}
+.badge.mock{border-color:#0d9488;color:#0d9488}
 .deferred .frame-shell{cursor:default}
 .deferred-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#0d0d0d}
 .deferred-placeholder span{font-size:8px;color:#333;letter-spacing:.5px}
 .load-btn{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #222;color:#555;padding:4px 12px;cursor:pointer;background:transparent;transition:border-color .15s,color .15s}
 .load-btn:hover{border-color:#888;color:#ccc}
+.desc-panel{position:absolute;top:0;left:0;width:280px;height:200px;background:rgba(5,5,8,0.94);padding:10px 12px;opacity:0;transition:opacity .18s;pointer-events:none;z-index:6;overflow:hidden}
+.card:hover .desc-panel{opacity:1}
+.desc-head{display:block;color:#e0e0e0;font-size:9px;font-weight:700;margin-bottom:7px;line-height:1.3}
+.desc-item{display:block;color:#888;font-size:8px;line-height:1.6;padding-left:6px}
+.desc-item::before{content:'· ';color:#444}
 </style>
 </head>
 <body>
@@ -52,104 +58,119 @@ const HEAVY = new Set(['/golad/GALLERY','/centauri','/centauri-mapmaker','/geobr
 
 const GROUPS = [
   {
+    label: 'student-next-v2 Ecosystem',
+    items: [
+      { url:'/student-next-v2',                          name:'student-next-v2',       sub:'THE STUDENT TERMINAL (MVP target) · GAP: stage/tier/engagement hardcoded to TEEN/1/OK — compiler does not return these yet · GAP: loading text pool not wired during compiler fetch · GAP: panel config choices not recorded to ledger · CONFIRMED WORKING: identity UUID loop, compiler state_snapshot, velocity+staleness observations, INVERSION silence, buildTrainOpts field names, session recording on game end', badge:'live', mock:true },
+      { url:'/philosophy/terminal-voice.html',           name:'terminal-voice (spec)',  sub:'AUTHORITATIVE message pools · what student-next-v2 SHOULD render at each stage and zone · Stage 1: single message no signature · Stage 2 sessions 2-4: 3-message position-fixed cycle · Stage 3+ session 5+: zone pools CALIBRATION=2 ECHO=3 RADICAL=3 ALPHA=2 SINGULARITY=2 · compare v2 actual output against this to detect drift', badge:'phi' },
+      { url:'/philosophy/terminal-compiler.html',        name:'terminal-compiler (sandbox)', sub:'BUILT FULL COMPILER UI · input any student state and see terminal render with provenance · use to verify v2 output is correct before fixing · Zone vocab: REMATCH=previous session ended before system had what it needed, ECHO=familiar territory, PARALLEL=same terrain different parameters, SHIFTING=mode change, RADICAL=maximum novelty', badge:'phi' },
+      { url:'/observatory',                              name:'observatory (verify)',   sub:'LIVE: shows real compiler output per student including mode_scores, velocity, ZPD, staleness · use to verify what /api/compiler/:id returns for a real student · calibration scatter shows whether expected_rank_pct is accurate · if session_count=0 for a real student the identity loop is broken', badge:'live', mock:true },
+      { url:'/ledger',                                   name:'ledger (layer 0)',       sub:'LIVE: shows what is actually recorded per session · confirm student_id_confirmed=true for real students · confirm config_vector[12] matches what v2 sent · if silent_inv=true in a record the game ran INVERSION correctly · config scatter shows behavioral history feeding compiler', badge:'live', mock:true },
+      { url:'/philosophy/configuration-architecture.html', name:'config-arch (field names)', sub:'IMPLEMENTATION BRIDGE · exact server.js field names for all 12 config_vector positions · multipliers:{count,distance,hq,destruction}, roundLength, moves, steals, headquarters, customMapFilename · consult when buildTrainOpts/buildHostOpts break · Budget levels explain what config values mean at each session count tier', badge:'phi' },
+      { url:'/philosophy/adaptive-voice.html',           name:'adaptive-voice (gap)',   sub:'ARCHITECTURE DESIGNED NOT BUILT · 5 personalization axes including age, arrival context, trajectory stage · currently v2 uses register=teen-standard always · when built: axis weighting changes at session 5 toward zone+trajectory · seed messages in v2 must remain valid standalone fallbacks', badge:'phi' },
+      { url:'/philosophy/responsive-design-intelligence.html', name:'responsive-intelligence (gap)', sub:'DESIGNED NOT BUILT · system should respond to specific student actions with real doors not praise · 3-question filter for any response: true? opens something? better for finder? · post-game popup logic belongs here · inspect-element easter egg buildable now without Era 6 move analysis', badge:'phi' },
+      { url:'/terminal-test',                            name:'terminal-test (NEW)',    sub:'DOES NOT EXIST YET · proposed new file · enter student name + session count + zone + mode override · calls live /api/compiler/:id · renders terminal exactly as student-next-v2 would · shows provenance per line · lets you verify any student state without opening v2 directly · HIGH VALUE for debugging stage/tier gaps', badge:'new' },
+    ]
+  },
+  {
     label: 'Live Panels',
     items: [
-      { url:'/student-next',    name:'student-next',    sub:'student panel · terminal · dev mode', badge:'live' },
-      { url:'/admin',           name:'admin',           sub:'game operator · room management', badge:'live' },
-      { url:'/alpha',           name:'alpha',           sub:'alpha track application · 5-phase detective form', badge:'live' },
-      { url:'/student-dossier', name:'student-dossier', sub:'peer relationship view', badge:'live' },
-      { url:'/ledger',          name:'ledger',          sub:'layer-0 live ledger · scatter · inspector · DEV toggle', badge:'live' },
-      { url:'/observatory',     name:'observatory',     sub:'per-student elo · radar · compiler preview', badge:'live' },
-      { url:'/other',           name:'other',           sub:'nakama lobby system · colyseus room browser', badge:'live' },
-      { url:'/admin-demos',     name:'admin-demos',     sub:'mobile support approaches · 5 interactive demos', badge:'new' },
-      { url:'/student',         name:'student (v1)',    sub:'previous student panel', badge:'live' },
+      { url:'/student-next',    name:'student-next',    sub:'student terminal · resolves name to ledger UUID via /api/ledger/resolve-name · calls /api/compiler/:id · renders zone+mode+expected_rank+behavioral obs · launches game with full compiler config vector applied', badge:'live', mock:true },
+      { url:'/student-next-v2', name:'student-next-v2', sub:'student terminal v2 · same compiler loop · DEV scenario panel: simulate any session count + zone without real data · use for testing terminal rendering at any stage', badge:'live', mock:true },
+      { url:'/admin',           name:'admin',           sub:'game operator · create/select rooms · apply compiler output to room via presence push · bot controls · cohort calibration · Alpha Track panel (eligible students, application queue, active Alphas) · map registry subpanel', badge:'live' },
+      { url:'/hub',             name:'hub',             sub:'navigation hub · links to all live panels · primary entry point for operators', badge:'live' },
+      { url:'/alpha',           name:'alpha',           sub:'student-facing Alpha application · eligibility gate via /api/alpha/status · 5-phase detective form: game mechanics, scoring, strategy analysis, cross-session pattern, self-model · requires 15+ sessions + all 6 modes + 1 INV session', badge:'live', mock:true },
+      { url:'/student-dossier', name:'student-dossier', sub:'peer comparison view · sidebar lists all students with zone badge · projectReaction() predicts cognitive chemistry · challenge system: send/accept/decline proposals, one active challenge per pair · wired to /api/dossier/* endpoints', badge:'live', mock:true },
+      { url:'/ledger',          name:'ledger',          sub:'Layer 0 live viewer · reads /api/ledger/raw · config space scatter (12 selectable axes, brightness=outcome, shape=dest_mult sign) · record inspector shows full 12-element config vector · 4 permanence axioms · DEV toggle switches to 30-record mock dataset', badge:'live', mock:true },
+      { url:'/observatory',     name:'observatory',     sub:'LIVE admin instrument · reads real JSONL via /api/ledger/students + /state/:id + /compiler/:id · per-student mode Elo/velocity/ZPD/staleness · radar · compiler preview with mode priority scores · calibration scatter: predicted vs actual rank_pct, MAE, bias verdict · goes OFFLINE when server not running', badge:'live', mock:true },
+      { url:'/other',           name:'other',           sub:'nakama lobby system · colyseus room browser · room state inspector', badge:'live' },
+      { url:'/admin-demos',     name:'admin-demos',     sub:'5 interactive layout demos for mobile admin support', badge:'new' },
+      { url:'/student',         name:'student (v1)',    sub:'previous student panel · superseded by student-next', badge:'live' },
     ]
   },
   {
     label: 'Games & Maps',
     items: [
-      { url:'/golad/GALLERY',                            name:'golad',                  sub:'GOLAD game · multiplayer', badge:'live' },
-      { url:'/constellation-mapmaker/mapmaker.html',     name:'constellation-mapmaker', sub:'constellation map editor · web export', badge:'new' },
+      { url:'/golad/GALLERY',                            name:'golad',                  sub:'GOLAD multiplayer cellular automaton · registered in SERVER_GAME_TYPES as golad · BaseGameRoom subclass', badge:'live' },
+      { url:'/constellation-mapmaker/mapmaker.html',     name:'constellation-mapmaker', sub:'constellation map editor · place stars, wormholes, black holes · exports JSON for Constellation maps 2/', badge:'new' },
       { url:'/constellation-mapmaker/mapmaker2.html',    name:'mapmaker2',              sub:'map editor v2', badge:'new' },
-      { url:'/constellation-mapmaker/constellation-mapmaker.html', name:'constellation-mapmaker (main)', sub:'primary mapmaker page', badge:'new' },
-      { url:'/golad-mapmaker.html',                        name:'golad-mapmaker',         sub:'GOLAD map editor', badge:'new' },
-      { url:'/centauri',                                 name:'centauri',               sub:'Centauri Godot web game', badge:'live' },
-      { url:'/centauri-mapmaker',                        name:'centauri-mapmaker',      sub:'Centauri map editor', badge:'live' },
-      { url:'/geobridge',                                name:'geobridge',              sub:'3D globe bridge tool', badge:'live' },
-      { url:'/c4d',                                      name:'c4d',                    sub:'c4d game', badge:'live' },
+      { url:'/constellation-mapmaker/constellation-mapmaker.html', name:'constellation-mapmaker (main)', sub:'primary mapmaker · full feature set', badge:'new' },
+      { url:'/golad-mapmaker.html',                        name:'golad-mapmaker',         sub:'GOLAD map editor · cellular automaton grid editor', badge:'new' },
+      { url:'/centauri',                                 name:'centauri',               sub:'Centauri audio-visual game · Godot web export', badge:'live' },
+      { url:'/centauri-mapmaker',                        name:'centauri-mapmaker',      sub:'Centauri map editor · audio worklet driven', badge:'live' },
+      { url:'/geobridge',                                name:'geobridge',              sub:'3D globe bridge-building game · sessionCode matchmaking', badge:'live' },
+      { url:'/c4d',                                      name:'c4d',                    sub:'4D polytope visualization game · registered in SERVER_GAME_TYPES', badge:'live' },
     ]
   },
   {
     label: 'Terminal & Voice',
     items: [
-      { url:'/philosophy/terminal-compiler.html', name:'terminal-compiler', sub:'full compiler sandbox · per-mode state · dual terminal view', badge:'phi' },
-      { url:'/philosophy/terminal-voice.html',    name:'terminal-voice',    sub:'voice register system', badge:'phi' },
-      { url:'/philosophy/terminal-voice-meta.html', name:'terminal-voice-meta', sub:'voice meta-system', badge:'phi' },
-      { url:'/philosophy/adaptive-voice.html',    name:'adaptive-voice',    sub:'adaptive register design', badge:'phi' },
-      { url:'/philosophy/loading-text.html',      name:'loading-text',      sub:'loading screen dialogue', badge:'phi' },
-      { url:'/philosophy/induction.html',         name:'induction',         sub:'session 1 induction flow', badge:'phi' },
+      { url:'/philosophy/terminal-compiler.html', name:'terminal-compiler', sub:'BUILT FULL COMPILER UI · Session generator: mode selection, config vector, zone assignment, template preview, codename generation · ZONE_VOCAB (canonical terminal descriptions per zone): REMATCH=previous session ended before system had what it needed, ECHO=familiar territory, PARALLEL=same terrain different parameters, SHIFTING=mode change, RADICAL=maximum novelty · TERMINAL OUTPUT structure: 4 lines (line 1=zone vocab, lines 2-4=context and challenge statement) · Layer 1 disclosed to student: mode+zone+template name · Layer 2 shown: zone vocabulary · Layer 3 hidden admin only: zone reasons weights provenance · adaptive voice variants NOT BUILT (seed only) · post-session terminal NOT BUILT', badge:'phi' },
+      { url:'/philosophy/terminal-voice.html',    name:'terminal-voice',    sub:'AUTHORITATIVE message pools · Stage 1 (session 1 only): single message, NO signature (permanent constraint) · Stage 2 (sessions 2-4): 3-message position-fixed sequence, cycling rule index = sessionCount % pool.length · Stage 3+ (session 5+): zone-driven pools CALIBRATION=2, ECHO=3, RADICAL=3, ALPHA=2, SINGULARITY=2 · HOST mode: 3-message pool replaces zone voice entirely · INVERSION mode name suppressed in terminal label · copy verbatim into student-next', badge:'phi' },
+      { url:'/philosophy/terminal-voice-meta.html', name:'terminal-voice-meta', sub:'Pre-session terminal architecture · sessions 1-4 fixed sequence then zone-driven · 3-4 lines max, zero signature line · HOST mode terminal should update when players join room before session starts (NOT YET BUILT) · INVERSION mode name suppressed confirmed in Phase 1', badge:'phi' },
+      { url:'/philosophy/adaptive-voice.html',    name:'adaptive-voice',    sub:'ARCHITECTURE DESIGNED NOT BUILT · 5 personalization axes: (1) age at registration, (2) arrival context friend-referral/teacher-referral/organic, (3) cognitive stage, (4) temporal patterns, (5) session trajectory · axes shift at session 5 toward zone+trajectory · constraint: seed always valid fallback if variant fails · variant generation system NOT YET BUILT · adaptation must be undetectable to student', badge:'phi' },
+      { url:'/philosophy/loading-text.html',      name:'loading-text',      sub:'ACTION-KEYED loading text pools · 5 contexts: joining, creating room, compiler thinking, session start, game loading · random pull NOT sequential like terminal · 1-2 lines NOT 3-4 like terminal · never reference what is loading · Era 12+ zone-keyed pools written as seeds but NOT BUILT · any implementation NOT YET BUILT', badge:'phi' },
+      { url:'/philosophy/induction.html',         name:'induction',         sub:'session 1 induction flow · first contact design · no signature rule originated here', badge:'phi' },
     ]
   },
   {
     label: 'Core Philosophy',
     items: [
-      { url:'/philosophy/SYNTHESIS.html',         name:'SYNTHESIS',          sub:'complete written philosophy · 95% accurate', badge:'phi' },
-      { url:'/philosophy/system-complete.html',   name:'system-complete',    sub:'18-dimension state · argmax E[KL] · message library', badge:'phi' },
-      { url:'/philosophy/perfect-system.html',    name:'perfect-system',     sub:'minimum sufficient state', badge:'phi' },
-      { url:'/philosophy/opacity-model.html',     name:'opacity-model',      sub:'what to hide and why · INVERSION doctrine', badge:'phi' },
-      { url:'/philosophy/entropy-architecture.html', name:'entropy-architecture', sub:'information architecture', badge:'phi' },
-      { url:'/philosophy/bayesian.html',          name:'bayesian',           sub:'Kalman filter · I(d) formula · live demo', badge:'phi' },
-      { url:'/philosophy/evidence-engine.html',   name:'evidence-engine',    sub:'8 channels · corroboration · conundrum protocol', badge:'phi' },
+      { url:'/philosophy/SYNTHESIS.html',         name:'SYNTHESIS',          sub:'MOST COMPLETE WRITTEN DOCUMENT 95% · core thesis: game is transparent medium · singularity trajectory: consumer to architect · 18 unwritten insights: collaborative staircase as first-class track, within-session round-by-round signal, system obsolescence as terminal objective · Concurrent Group Architecture: asymmetric sessions for mixed classrooms via team composition', badge:'phi' },
+      { url:'/philosophy/system-complete.html',   name:'system-complete',    sub:'92% combined system · 18 STATE DIMENSIONS: e[6] mode_elo, e_dot[6] velocity, tau[6] recency, o last_outcome, h[6] template_history · SELECTION: argmax(KL divergence) subject to ZPD + hypercube + no-repeat · ZPD: d_target = e[mode]/999 x 0.85 x exp(-tau/lambda) where lambda=14 days ASSERTED WRONG DOMAIN · Elo weight: e^0.7 x 1/(sess+1) x velocity_bonus · difficulty peak 30-40th percentile · FULL terminal MSG_LIBRARY with per-round behavioral strings: HQ network collapsed in round N, strategy_shift_count etc · these strings need per-round Ledger data which is NOT YET STORED', badge:'phi' },
+      { url:'/philosophy/perfect-system.html',    name:'perfect-system',     sub:'90% · minimum sufficient state audit · which variables include or exclude and why · adds elo_velocity and sessions_since_last · first formal 3-layer architecture specification', badge:'phi' },
+      { url:'/philosophy/opacity-model.html',     name:'opacity-model',      sub:'DOCTRINE · measurement-corruption test: opacity justified ONLY when disclosure changes what is measured · INVERSION silence is the only opacity that passes this test · zone vocabulary must be shared for community formation · NDA wrong instrument for Alphas · 6 design principles for what to withhold', badge:'phi' },
+      { url:'/philosophy/entropy-architecture.html', name:'entropy-architecture', sub:'90% ASSERTED unified principle · single equation: next_session = argmax_S E[KL(posterior_student || prior_student) | session S] subject to ZPD · DERIVED layer mapping: mode selection = highest entropy dimension, difficulty = peak information gain at 30-40th percentile elo x 0.85 x exp(-tau/14), template = most constrained eliminates most hypotheses, spectrum zone = step size of model update PARALLEL=max stable rate, overlays = collapse structure to force rebuild · information gain curve asymmetric: overwhelm kills signal faster than boredom · continuous field optimization NOT BUILT (pipeline compiler only)', badge:'phi' },
+      { url:'/philosophy/bayesian.html',          name:'bayesian',           sub:'PHASE 3 TARGET ARCHITECTURE · replaces all [ASSERTED] heuristics with Kalman filter · I(d) = sigma_pred_squared / (sigma_pred_squared + R) · R decreases with template depth, increases with contamination · velocity falls out of posterior naturally · live interactive demo', badge:'phi' },
+      { url:'/philosophy/evidence-engine.html',   name:'evidence-engine',    sub:'95% DOCTRINE · Evidence Axiom: record observations not interpretations · 8 simultaneous validation channels: SELF/BEHAVIORAL/PEER/TEACHER/BT/SOCIAL/TEMPORAL/CONUNDRUM · Conundrum Protocol: 5-step boundary-case lifecycle · Parameter Registry with pre-registered refutation conditions · Reaction Library as cognitive chemistry record', badge:'phi' },
     ]
   },
   {
     label: 'Architecture',
     items: [
-      { url:'/philosophy/layer-0-ledger.html',         name:'layer-0-ledger',          sub:'append-only · 4 permanence axioms · config vector', badge:'phi' },
-      { url:'/philosophy/layer-1-approximation.html',  name:'layer-1-approximation',   sub:'Elo · velocity · ZPD · calibration scatter', badge:'phi' },
-      { url:'/philosophy/configuration-architecture.html', name:'configuration-architecture', sub:'parameter design', badge:'phi' },
-      { url:'/philosophy/design-meta-system.html',     name:'design-meta-system',      sub:'meta-system design', badge:'phi' },
-      { url:'/philosophy/responsive-design-intelligence.html', name:'responsive-design-intelligence', sub:'responsive intelligence design', badge:'phi' },
+      { url:'/philosophy/layer-0-ledger.html',         name:'layer-0-ledger',          sub:'Layer 0 prototype · 30 mock observations across 4 students · 4 permanence axioms: no mode label, no template label, no elo_delta, no interpretation at Layer 0 · config_hash as join key · Inspector shows full 12-element config vector · observatory.html is the live-wired version', badge:'phi' },
+      { url:'/philosophy/layer-1-approximation.html',  name:'layer-1-approximation',   sub:'Layer 1 prototype 90% accurate · 18 STATE DIMENSIONS per student: 6 game_elo +/- CI (QTY/SPT/FRT/DST/WRM/INV), 6 velocity (elo delta last 3 sessions), 6 transfer_elo (BT scores placeholder), mode_sessions, sessions_since · FORMULAS ALL ASSERTED: E = 1/(1+10^((R_bot-R_student)/400)), delta_Elo = K x (S - E) where K=40/20/10 at n=5/20, velocity[m] = (elo_N - elo_{N-3})/3, decay = exp(-sessions_since/14), zpd_target[m] = elo[m] x 0.85 x decay, ci_95 = elo +/- 1.96 x se x 400 · all constants pre-registered for Phase 3 Bayesian replacement · Bayesian fitting NOT BUILT', badge:'phi' },
+      { url:'/philosophy/configuration-architecture.html', name:'configuration-architecture', sub:'IMPLEMENTATION BRIDGE · complete compiler decision sequence: mode then template then difficulty then mode-specific then overlay · exact server.js field names for all 12 config_vector positions · Budget levels ZERO/EMERGING/DEVELOPED/MATURE/EXPERT · terminal output at each budget · Student Model pipeline steps 1-4 · all 17 template archetypes with UX labels · build order Phase -1 through 3', badge:'phi' },
+      { url:'/philosophy/design-meta-system.html',     name:'design-meta-system',      sub:'generative framework for designing games · 6 design steps: identify cognitive situation one sentence, find mechanic that forces it, run 4 tests, design for edge not mean, conscious asymmetry, write Ledger entry format before building · 4 MECHANIC TESTS must all pass: (1) can you win by accident, (2) is hardest moment the target cognitive situation, (3) does mechanic produce different experiences for different profiles, (4) is it genuine doing not performed doing · Ledger entries: what you did not what happened · mechanic testing automation NOT BUILT', badge:'phi' },
+      { url:'/philosophy/responsive-design-intelligence.html', name:'responsive-design-intelligence', sub:'system responds to specific actions with real doors not praise · 3-QUESTION FILTER before building any response: (1) Is it true? describe what happened no inference, (2) Does it open something? door/perspective/question never close or judge, (3) Is it better for finder? next move improved not more content · EXAMPLES: losing 3+ times triggers inspect-element hint, extraordinary win margin reveals quiet link, first value-3 claim gets one-time toast Good eye · inspect-element comment buildable now · most features require Era 6+ move pattern analysis · signal extraction and pattern matching NOT BUILT', badge:'phi' },
     ]
   },
   {
     label: 'Student System',
     items: [
-      { url:'/philosophy/student-design.html',       name:'student-design',       sub:'MERGED · terminal language · unlock tiers · access matrix', badge:'phi' },
-      { url:'/philosophy/student-panel.html',        name:'student-panel',        sub:'Era 11 · two-act design · what is hidden and why', badge:'new' },
-      { url:'/philosophy/alpha-system.html',         name:'alpha-system',         sub:'zone pills · alpha track · detective framework', badge:'phi' },
-      { url:'/philosophy/student-observatory.html',  name:'student-observatory',  sub:'facilitator prototype · 4 simulated students · dual terminal', badge:'phi' },
-      { url:'/philosophy/onboarding-philosophy.html',name:'onboarding-philosophy',sub:'onboarding design', badge:'phi' },
-      { url:'/philosophy/_student-profile-beta.html',name:'_student-profile-beta',sub:'beta student profile', badge:'phi' },
+      { url:'/philosophy/student-design.html',       name:'student-design',       sub:'100% ACCURATE MERGED DOC · Part I: terminal language examples by student type, 5 zone cards with exact descriptions, mystery vs transparency calibration, 6 chemical reaction pairings between student types · Part II: Ledger boundary diagram, 4 testing integrity principles, Progressive Unlock Tiers BASELINE/DEVELOPING/ALPHA/SINGULARITY, access matrix 8 rows x 3 actors, 6 bot opacity rules, admin sandbox', badge:'phi' },
+      { url:'/philosophy/student-panel.html',        name:'student-panel',        sub:'Phase 1 complete · compiler recommendation shown first not required · opacity rules: bot aggression hidden (Easy/Standard/Hard abstract dial) · mode name suppressed for INVERSION · score multipliers visible during game · INVERSION forbidden in Friends mode but allowed in Solo Training · terminal shows zone + expected_rank_pct · if sessions less than 5 shows system does not know you yet · panel interaction choices NOT recorded to Ledger (known gap Q6)', badge:'new' },
+      { url:'/philosophy/alpha-system.html',         name:'alpha-system',         sub:'95% · zone pill terminal previews · 5-phase detective framework rubric · BASELINE/DEVELOPING/ALPHA/SINGULARITY criteria · eligibility: 15+ sessions, all 6 modes, 1 INV, not in REMATCH loop · reviewed by admin + existing Alphas', badge:'phi' },
+      { url:'/philosophy/student-observatory.html',  name:'student-observatory',  sub:'90% PROTOTYPE simulated data · students ARIA/BRAM/CLIO/DARA spanning all tiers · corroboration matrix: how many channels agree per mode · evidence feed with provenance · Layer 3 compiler preview · dual terminal: student render + per-line provenance · design spec for admin.html student view', badge:'phi' },
+      { url:'/philosophy/onboarding-philosophy.html',name:'onboarding-philosophy',sub:'first encounter design · pre-game popup: one sentence no feature list no welcome · first session IS the tutorial confusion and loss are data · post-game popup responds to actual outcome not generic encouragement · account creation is post-session gate not pre-session · post-game popup logic NOT YET BUILT', badge:'phi' },
+      { url:'/philosophy/_student-profile-beta.html',name:'_student-profile-beta',sub:'SCRAPPED PROTOTYPE · kept for inspiration only · do not reference as canon', badge:'phi' },
     ]
   },
   {
     label: 'Observatory & Data',
     items: [
-      { url:'/philosophy/observatory.html',   name:'observatory',   sub:'live ledger reader · real API · currently active', badge:'live' },
-      { url:'/philosophy/connections.html',   name:'connections',   sub:'system connections map', badge:'phi' },
+      { url:'/philosophy/connections.html',   name:'connections',   sub:'account connections UI · External: Clever (school, cannot self-remove), Google, Discord, Spotify, Steam · 10 sessions threshold: model confidence becomes Low improving · Discord role syncs with tier Baseline/Developing/Alpha/Singularity · badges show eligibility state not achievement · Discord role sync API NOT BUILT · eligibility tier calculation NOT BUILT', badge:'phi' },
     ]
   },
   {
     label: 'System Maps & Multi-game',
     items: [
-      { url:'/philosophy/system-map.html',           name:'system-map',           sub:'full system map', badge:'phi' },
-      { url:'/philosophy/system-viz.html',           name:'system-viz',           sub:'system visualization', badge:'phi' },
-      { url:'/philosophy/development-diagram.html',  name:'development-diagram',  sub:'development stages diagram', badge:'phi' },
-      { url:'/philosophy/multi-game-architecture.html', name:'multi-game-architecture', sub:'multi-game framework', badge:'phi' },
-      { url:'/philosophy/map-system.html',           name:'map-system',           sub:'map design system', badge:'phi' },
-      { url:'/philosophy/challenge-meta.html',       name:'challenge-meta',       sub:'challenge design meta-system', badge:'phi' },
-      { url:'/philosophy/navigator.html',            name:'navigator',            sub:'system navigator', badge:'phi' },
+      { url:'/philosophy/system-map.html',           name:'system-map',           sub:'95% MOST HONEST DOC · 8 OPEN QUESTIONS: Q1 P0=Elo measures game not cognitive skill needs BT transfer_elo, Q2 P0=INVERSION was announced wrong signal now FIXED (silent), Q3 P1=modes not orthogonal FRT uses DST inhibitory control, Q4 P1=forgetting tau=14 days from verbal memory wrong domain probably 30-60 for procedural, Q5 P2=social dimension absent, Q6 P2=all params asserted none validated, Q7 P1=gifted track defined by speed not need, Q8 P0=brain_metrics excluded until validated · BT bridge architecture · orbital confidence diagram', badge:'phi' },
+      { url:'/philosophy/system-viz.html',           name:'system-viz',           sub:'Session type validity table: competitive+mode = full analytics + Elo, competitive+no-mode = global Elo only, staircase = target-delta no Elo, freeplay = nothing · 7 foundational axioms · entropy budget ladder 1-5 · 6 bot archetypes with cognitive proxies and validity conditions · collaborative staircase uses individual targets not rank', badge:'phi' },
+      { url:'/philosophy/development-diagram.html',  name:'development-diagram',  sub:'85% accurate · development priority formula: dev_priority(m) = (mode_elo[m]/999)^0.7 x 1/(mode_sessions[m]+1) · template depth ranking by locked axes count: MISER=2, BLIND_REACH=2, ARCHITECT=2, REACH=2 (lower depth = less constrained = less informative) · spectrum zones ordered by similarity: REMATCH ECHO PARALLEL SHIFTING RADICAL · difficulty target: base(elo/999) x 0.85 to 30-40th percentile · superseded by system-complete for most purposes', badge:'phi' },
+      { url:'/philosophy/multi-game-architecture.html', name:'multi-game-architecture', sub:'PHASE INFINITY CANONICAL ASSERTED · 8 cognitive dimensions: SIM (forward prediction), COM (commitment), OPP (opponent modeling), TOP (topological reasoning), ADP (rule induction), OPT (quantity optimization), MOS (multi-objective synthesis), KNW (knowledge integration) · composition matrix: Constellation primary for ADP/OPT/MOS, GOLAD for SIM/OPP/ADP, C4D for TOP/COM/SIM, Geobridge monopoly on KNW · game selection logic NOT BUILT · transfer model NOT BUILT · revisit when multi-game data exists', badge:'phi' },
+      { url:'/philosophy/map-system.html',           name:'map-system',           sub:'95% MERGED DOC · Part I: topology registry (14 maps with mode affinity scores in maps/topology.json), 6 bot profiles with exact aggression values, student x map x bot composition, Ledger signals archetype_tag + strategy_shift_count + tempo_delta · Part II: mapmaker pipeline, 8-type strategic catalogue, 3-layer map validation, legibility spectrum TRANSPARENT to DISCOVERY', badge:'phi' },
+      { url:'/philosophy/challenge-meta.html',       name:'challenge-meta',       sub:'100% FOUNDATION BUILT · 6-LAYER PIPELINE: Intent then Template then Difficulty then Resolver then Validator then Narrative · 3 INVARIANTS: (1) cognitive isolation one target per challenge, (2) difficulty-target independence free vs locked axes, (3) signal purity · TEMPLATES by mode: QTY=FLOOD/SPEED_FLOOD/MISER, SPT=REACH/BLIND_REACH/ARCHITECT, FRT=NETWORK/SIEGE/PATIENCE, DST=CHAIN/HUNTER/SCORCHED, WRM=GATEWAY/DECOY, INV=HIDDEN/MIRROR/NEGATIVE_SPACE · 3 excluded: BLIND_REACH (proximity-reveal engine), ARCHITECT (pattern-target display), DECOY (multi-wormhole trap) · CODENAME POOLS: 8 per mode separate from template names e.g. QTY=THE FLOOD/WAVE FRONT/MANIFEST DENSITY/THE SWARM · WRM incompatible with any other mode composition, INV+any always composable · LOADING SEQUENCE 6 steps', badge:'phi' },
+      { url:'/philosophy/navigator.html',            name:'navigator',            sub:'cross-document navigation index · status labels: FUNCTIONAL/CURRENT/MERGED/ARCHIVE · live panels: student-next, student-alpha, layer-0-ledger, observatory, admin, student-dossier · Phase 1 complete: terminal voice, terminal compiler, challenge meta, student design, map system · use to find which doc covers a specific decision', badge:'phi' },
     ]
   },
   {
     label: 'Strategy & Legal',
     items: [
-      { url:'/philosophy/roadmap.html',           name:'roadmap',           sub:'development roadmap', badge:'phi' },
-      { url:'/philosophy/strategy.html',          name:'strategy',          sub:'system strategy', badge:'phi' },
-      { url:'/philosophy/identity-auth.html',     name:'identity-auth',     sub:'identity and authentication architecture', badge:'phi' },
-      { url:'/philosophy/legal-architecture.html',name:'legal-architecture',sub:'legal framework design', badge:'phi' },
-      { url:'/philosophy/legal-encounters.html',  name:'legal-encounters',  sub:'legal encounter flows', badge:'phi' },
+      { url:'/philosophy/roadmap.html',           name:'roadmap',           sub:'Phase 1 active · ASSERTED CONSTANTS (all pre-registered for Phase 3 replacement): K=40/20/10 at n=5/20 sessions, elo_scale=400, r_bot=520, zpd_coeff=0.85, forgetting_tau=14 days, w_deficit=0.50 w_staleness=0.30 w_gap=0.20, velocity_window=3 sessions · each constant has specific empirical refutation condition · Phase 3 replaces all with Bayesian posterior · refutation condition automation NOT BUILT', badge:'phi' },
+      { url:'/philosophy/strategy.html',          name:'strategy',          sub:'COMPANY STRATEGY · Phase map: Foundation now-Month3, Community Month3-9, Credibility Month9-24, School Adoption Month24+ · Ledger MUST be recording (P0 urgent) · awards by ROI: Common Sense Media free first, SIIA CODiE unlocks school procurement (~500 schools), ESSA Tier3 unlocks Title IV-A funding · virality: zone vocabulary as community formation · 14 prioritized action items · non-technical scope', badge:'phi' },
+      { url:'/philosophy/identity-auth.html',     name:'identity-auth',     sub:'IDENTITY ARCHITECTURE · 4 tiers: Tier 0 Anonymous session token, Tier 1 Named Guest current default localStorage name, Tier 2 Registered Google OAuth2, Tier 3 School SSO Clever/ClassLink · N-player rank_pct: each player ranked independently regardless of consent tier · anonymous players sharpen ranking signal for others · one player anonymity never blocks another player Elo update · Clever first in auth stack (70% US K-12) · only Tier 1 currently built', badge:'phi' },
+      { url:'/philosophy/legal-architecture.html',name:'legal-architecture',sub:'DESIGNED NOT PRODUCTION · full privacy policy text · age gate flow · student onboarding · student data view tiered by Progressive Unlock · DPA with responsibility table + signature block · deletion receipt flow · 3 consent flow variants', badge:'phi' },
+      { url:'/philosophy/legal-encounters.html',  name:'legal-encounters',  sub:'DESIGNED NOT PRODUCTION · LILA-derived interactive consent encounters · Short Form with legal validity table mapping each section to applicable law · First Contact, Layer 3 schema reveal, Erasure, Parent Investigation flows · moments fire based on what user actually reads', badge:'phi' },
     ]
   },
 ];
@@ -182,11 +203,15 @@ function build() {
         ? '<div class="deferred-placeholder"><span>heavy — not auto-loaded</span><button class="load-btn" onclick="event.stopPropagation();loadHeavy(\'' + item.url + '\',this.closest(\'.frame-shell\'))">Load preview</button></div>'
         : '<iframe src="' + item.url + '" loading="lazy" sandbox="allow-scripts allow-same-origin allow-forms" tabindex="-1" onload="neutraliseIframeFocus(this)"></iframe>';
 
+      const parts = item.sub.split(' · ');
+      const descHtml = '<span class="desc-head">' + parts[0] + '</span>' +
+        parts.slice(1).map(p => '<span class="desc-item">' + p + '</span>').join('');
+
       card.innerHTML =
-        '<div class="frame-shell">' + frameInner + '</div>' +
+        '<div class="frame-shell">' + frameInner + '<div class="desc-panel">' + descHtml + '</div></div>' +
         '<div class="overlay" onclick="window.open(\'' + item.url + '\',\'_blank\')"></div>' +
-        '<div class="card-lbl"><span class="badge ' + item.badge + '">' + item.badge + '</span>' + item.name + '</div>' +
-        '<div class="card-sub">' + item.sub + '</div>';
+        '<div class="card-lbl"><span class="badge ' + item.badge + '">' + item.badge + '</span>' + (item.mock ? '<span class="badge mock">◎</span>' : '') + item.name + '</div>' +
+        '<div class="card-sub" style="display:none">' + item.sub + '</div>';
 
       grid.appendChild(card);
       allCards.push(card);
@@ -218,7 +243,7 @@ function openAll() {
   if (visible.length > 10) {
     if (!confirm('Open ' + visible.length + ' tabs?')) return;
   }
-  visible.forEach(c => window.open(c.dataset.url, '_blank'));
+  visible.forEach((c, i) => setTimeout(() => window.open(c.dataset.url, '_blank'), i * 80));
 }
 
 build();

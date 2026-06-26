@@ -1078,7 +1078,21 @@ function pickMap(mode, val, el) {
 }
 
 // ── COMPILER
+var LOADING_MSGS = [
+  "Reading your history.",
+  "Scanning prior sessions.",
+  "The system is thinking.",
+  "Compiling.",
+  "Looking for the right configuration.",
+  "Cross-referencing behavioral signals.",
+  "Model is loading.",
+];
+function showLoadingState() {
+  var aside = document.getElementById("termAside");
+  if (aside) aside.textContent = LOADING_MSGS[Math.floor(Math.random() * LOADING_MSGS.length)];
+}
 async function loadCompiler() {
+  showLoadingState();
   try {
     var r = await fetch(API + "/api/compiler/" + encodeURIComponent(S.studentId));
     if (!r.ok) { fallbackCompiler(); return; }
@@ -1207,7 +1221,7 @@ function buildTrainOpts(useRec) {
     playerName:      S.student,
     aiBots:          S.train.bot ? (botFromProfile ? [botFromProfile] : [botCfg("standard")]) : [],
     allowPlayerTeamSelection: false,
-    _source:"student-train", _studentId:S.studentId, _usedRecommendation:usedRec,
+    _source:"student-train", studentId:S.studentId, _usedRecommendation:usedRec,
   };
 }
 // ── SIMULATE JOIN
@@ -1513,7 +1527,7 @@ function buildHostOpts() {
     customMapFilename: null,
     playerName:      S.student,
     aiBots:          h.bot ? [botCfg("standard")] : [],
-    _source:"student-host", _studentId:S.studentId, _energy:h.energy, _teamAssignments:S.hostTeams,
+    _source:"student-host", studentId:S.studentId, _energy:h.energy, _teamAssignments:S.hostTeams,
     _sessionName:    document.getElementById("h-name").value.trim() || undefined,
   };
 }
