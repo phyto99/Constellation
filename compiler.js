@@ -49,6 +49,117 @@ const ASSERTED = {
     since_max_d:       30,
 };
 
+// ─── Bayesian posterior (μ, σ², λ) per dimension ──────────────────────────────
+// Every student has a posterior over their true skill on each dimension.
+// μ   = posterior mean       (currently ≡ Elo — same concept, explicit name)
+// σ²  = posterior variance   (high = uncertain, shrinks with sessions, grows with time)
+// λ   = forgetting rate      (how fast μ/σ² revert to prior between sessions)
+//
+// Migration path:
+//   Phase 1 (now):  σ² derived from n via closed form; λ asserted at 1/30d.
+//   Phase 2:        σ² stored in ledger after each session (Kalman update live).
+//   Phase 3:        λ fitted per student × dimension from return-session residuals.
+const SIGMA2_PRIOR = 22500;  // prior variance [ASSERTED] — σ₀ = 150 Elo points
+const MU_PRIOR     = 500;    // prior mean [ASSERTED]
+const LAMBDA_0     = 1 / 30; // forgetting rate per day [ASSERTED → fitted from return residuals]
+const R_OBS        = 3600;   // observation noise variance [ASSERTED] — σ_obs = 60 Elo
+
+// σ²(n): posterior variance after n sessions. Closed-form approximation of iterative
+// Kalman updates at constant R. Derivation: σ²_n = σ²_0 / (1 + n·σ²_0/R_OBS).
+// Converges to R_OBS/n for large n. At n=0: σ²_0 (full prior uncertainty).
+function sigma2FromN(n) {
+    return SIGMA2_PRIOR / (1 + n * SIGMA2_PRIOR / R_OBS);
+}
+
+// Ornstein-Uhlenbeck forgetting: project posterior forward τ days.
+// μ_pred  = μ_∞ + exp(−λτ) · (μ − μ_∞)
+// σ²_pred = σ²_∞ + exp(−2λτ) · (σ² − σ²_∞)
+// At τ=0: identity. At τ→∞: reverts to prior (MU_PRIOR, SIGMA2_PRIOR).
+function predict(mu, sigma2, lambda, tau) {
+    const decay = Math.exp(-lambda * tau);
+    return {
+        mu_pred:     MU_PRIOR + decay * (mu - MU_PRIOR),
+        sigma2_pred: SIGMA2_PRIOR + decay * decay * (sigma2 - SIGMA2_PRIOR),
+    };
+}
+
+// Kalman update: incorporate observation y (Elo-equivalent) with noise R.
+// K   = σ²_pred / (σ²_pred + R)   — optimal gain (replaces fixed K=40/20/10 [ASSERTED])
+// μ'  = μ_pred + K · (y − μ_pred)
+// σ²' = (1 − K) · σ²_pred
+// Exported for use by game adapters and the BT bridge (Phase 2).
+function kalmanUpdate(mu_pred, sigma2_pred, y, R) {
+    const K = sigma2_pred / (sigma2_pred + R);
+    return { mu_new: mu_pred + K * (y - mu_pred), sigma2_new: (1 - K) * sigma2_pred, K };
+}
+
+// Expected KL(posterior ‖ prior) from one session on this dimension.
+// I(d) = ½ log(1 + σ²_pred / R)
+// This IS the selection objective. All other criteria are approximations of this.
+// Higher σ²_pred = more uncertain = more to learn = higher priority.
+function informationGain(sigma2_pred, R) {
+    return 0.5 * Math.log(1 + sigma2_pred / R);
+}
+
+// ─── Game registry ─────────────────────────────────────────────────────────────
+// One entry per game in the suite. dimensions[] names the cognitive axes it probes.
+// available:true iff the game server is built and this compiler can emit configs for it.
+// Constellation's adapter IS compiler.js. Future adapters: golad.js, geobridge.js, c4d.js.
+// To enable a game: (1) set available:true, (2) create adapter module, (3) wire compile().
+const GAME_REGISTRY = {
+    constellation: {
+        id:          'constellation',
+        name:        'Constellation',
+        dimensions:  MODES,                     // ['QTY','SPT','FRT','DST','WRM','INV']
+        available:   true,
+        description: 'Spatial resource optimization. Primary probe: OPT, MOS.',
+    },
+    golad: {
+        id:          'golad',
+        name:        'GOLAD',
+        dimensions:  ['SIM', 'ADP'],
+        available:   false,
+        description: 'Cellular automaton strategy. Primary probe: SIM, ADP.',
+    },
+    geobridge: {
+        id:          'geobridge',
+        name:        'Geobridge',
+        dimensions:  ['COM', 'OPP', 'KNW'],
+        available:   false,
+        description: 'Bidding and category reasoning. Primary probe: COM, OPP, KNW.',
+    },
+    c4d: {
+        id:          'c4d',
+        name:        'C4D',
+        dimensions:  ['TOP'],
+        available:   false,
+        description: 'Four-dimensional spatial reasoning. Primary probe: TOP.',
+    },
+};
+
+// Select the available game maximizing total expected information gain.
+// I(game) = Σ_{d ∈ game.dimensions} I(σ²_pred[d], R_OBS)
+// Phase 1: always 'constellation' (only available game).
+// Phase N: games compete on the same criterion — no special-casing, no bias.
+function selectGame(state) {
+    let best = null, bestScore = -Infinity;
+    for (const [gameId, game] of Object.entries(GAME_REGISTRY)) {
+        if (!game.available) continue;
+        let score = 0;
+        for (const d of game.dimensions) {
+            const dim    = state[d];
+            const mu     = dim ? dim.mu     : MU_PRIOR;
+            const sigma2 = dim ? dim.sigma2 : SIGMA2_PRIOR;
+            const lambda = dim ? dim.lambda : LAMBDA_0;
+            const tau    = dim ? dim.tau    : 0;
+            const { sigma2_pred } = predict(mu, sigma2, lambda, tau);
+            score += informationGain(sigma2_pred, R_OBS);
+        }
+        if (score > bestScore) { bestScore = score; best = gameId; }
+    }
+    return best || 'constellation';
+}
+
 // ─── Mode assignment (Layer 1 view over Layer 0) ─────────────────────────────
 // Mode label derived from config_vector — never stored in Layer 0.
 function assignMode(cv) {
@@ -173,8 +284,14 @@ function computeState(sessions) {
         if (hist.length >= 4) {
             velocity = (hist[hist.length - 1].elo - hist[Math.max(0, hist.length - 4)].elo) / 3;
         }
+        // Bayesian posterior — derived from history; stored directly in Phase 2
+        const mu_now    = Math.round(modeElo[m]);
+        const sigma2_now = sigma2FromN(modeN[m]);
+        const tau_now   = sinceD ?? 0;
+        const { sigma2_pred: sigma2_fwd } = predict(mu_now, sigma2_now, LAMBDA_0, tau_now);
+
         state[m] = {
-            elo:             Math.round(modeElo[m]),
+            elo:             mu_now,
             n:               modeN[m],
             velocity:        velocity !== null ? Math.round(velocity * 10) / 10 : null,
             last_rank_pct:   modeLastRank[m],
@@ -183,24 +300,50 @@ function computeState(sessions) {
             decay:           Math.round(decay * 1000) / 1000,
             zpd_target:      Math.round(modeElo[m] * ASSERTED.zpd_coeff * decay),
             history:         hist,
+            // Bayesian fields
+            mu:        mu_now,
+            sigma2:    Math.round(sigma2_now),
+            lambda:    LAMBDA_0,
+            tau:       Math.round(tau_now * 10) / 10,
+            info_gain: parseFloat(informationGain(sigma2_fwd, R_OBS).toFixed(4)),
         };
     }
     return state;
 }
 
 // ─── Mode selection ───────────────────────────────────────────────────────────
+// argmax I(d) — select the dimension with highest expected information gain.
+// I(d) = ½ log(1 + σ²_pred / R_OBS)
+//
+// Why this is correct: the system objective is argmax E[KL(posterior ‖ prior)].
+// I(d) is the closed-form expected KL for a Gaussian observation. Selecting
+// the dimension with highest σ²_pred maximizes information learned per session.
+//
+// transferElo (BT bridge, Phase 2) inflates σ²: if the game model and BT model
+// disagree on a dimension, we're more uncertain than n alone suggests.
+// α_transfer [ASSERTED 0.001] scales gap² contribution. Dormant until BT is live.
 function selectMode(state, transferElo) {
+    const ALPHA_TRANSFER = 0.001; // [ASSERTED] gap² → σ² bonus. Dormant: BT not built.
     let best = null, bestScore = -Infinity;
     const scores = {};
     for (const m of MODES) {
         const d = state[m];
-        const deficit  = (1 - d.elo / ASSERTED.elo_max) * ASSERTED.w_deficit;
-        const staleness = (Math.min(d.since_days ?? ASSERTED.since_max_d, ASSERTED.since_max_d) / ASSERTED.since_max_d) * ASSERTED.w_staleness;
-        const gapRaw   = (transferElo && transferElo[m]) ? (d.elo - transferElo[m]) : 0;
-        const gapScore = transferElo ? (gapRaw / ASSERTED.elo_max) * ASSERTED.w_gap : 0;
-        const score = deficit + staleness + gapScore;
-        scores[m] = { score: Math.round(score * 1000) / 1000, deficit, staleness, gapScore };
-        if (score > bestScore) { bestScore = score; best = m; }
+        const { mu_pred, sigma2_pred: sigma2_base } = predict(d.mu, d.sigma2, d.lambda, d.tau);
+        // Cross-channel discrepancy (BT vs game) adds uncertainty to this dimension
+        const gap = (transferElo && transferElo[m]) ? Math.abs(d.mu - transferElo[m]) : 0;
+        const sigma2_eff = sigma2_base + ALPHA_TRANSFER * gap * gap;
+        const I = informationGain(sigma2_eff, R_OBS);
+        scores[m] = {
+            info_gain:   parseFloat(I.toFixed(4)),
+            mu_pred:     Math.round(mu_pred),
+            sigma2_pred: Math.round(sigma2_eff),
+            // Legacy fields kept for Observatory/admin panels
+            score:    parseFloat(I.toFixed(4)),
+            deficit:  parseFloat((1 - d.mu / ASSERTED.elo_max).toFixed(4)),
+            staleness: parseFloat(Math.min(d.tau / ASSERTED.since_max_d, 1).toFixed(4)),
+            gapScore:  gap > 0 ? parseFloat((gap / ASSERTED.elo_max).toFixed(4)) : 0,
+        };
+        if (I > bestScore) { bestScore = I; best = m; }
     }
     return { mode: best, scores };
 }
@@ -453,6 +596,10 @@ function buildConfigVector(mode, state, template, sessions) {
 function compile(studentId, transferElo) {
     const sessions = readStudentSessions(studentId);
     const state    = computeState(sessions);
+    // Two-level selection: game first, then dimension within game.
+    // Phase 1: selectGame always returns 'constellation' (only available game).
+    // Phase N: multiple games compete — same criterion, no special-casing.
+    const game_id  = selectGame(state);
     const { mode, scores } = selectMode(state, transferElo || null);
 
     // Zone must be assigned before template selection (template depends on zone)
@@ -479,6 +626,7 @@ function compile(studentId, transferElo) {
 
     return {
         student_id:           studentId,
+        game_id,
         mode,
         zone,
         template_id:          template?.id || null,
@@ -547,4 +695,7 @@ module.exports = {
     assignMode, selectMode, assignZone, selectMap, selectBotProfile,
     buildConfigVector, selectTemplate, toGameConfig,
     loadTopology, BOT_PROFILES, MODES, ASSERTED, TEMPLATES,
+    // Bayesian primitives — used by Observatory, admin, future game adapters
+    selectGame, informationGain, predict, kalmanUpdate, sigma2FromN,
+    GAME_REGISTRY, SIGMA2_PRIOR, MU_PRIOR, LAMBDA_0, R_OBS,
 };

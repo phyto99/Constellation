@@ -28,6 +28,15 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
 /* ── LAYOUT ── */
 .wrap{max-width:740px;margin:0 auto;padding:28px 24px 140px}
 
+/* ── GAME SELECT ── */
+.game-pick{display:flex;gap:0;border:2px solid #000;border-bottom:none;margin-bottom:0}
+.game-btn{flex:1;padding:8px 6px;border:none;border-right:1px solid #000;background:#f8f8f8;font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:background .1s;color:#999}
+.game-btn:last-child{border-right:none}
+.game-btn.active{background:#000;color:#fff}
+.game-btn.available{color:#333;cursor:pointer}
+.game-btn.available:hover{background:#eee}
+.game-btn.coming{color:#ccc;cursor:not-allowed;font-style:italic}
+
 /* ── MODE SELECT ── */
 .mode-pick{display:grid;grid-template-columns:1fr 1fr;gap:0;border:2px solid #000;margin-bottom:28px}
 .mode-btn{padding:14px 20px;cursor:pointer;border:none;background:#fff;text-align:left;font-family:Arial,sans-serif;border-right:1px solid #000;transition:background .1s}
@@ -204,6 +213,14 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
 </div>
 
 <div class="wrap">
+
+  <!-- GAME SELECTOR -->
+  <div class="game-pick">
+    <button class="game-btn available active" id="game-constellation" onclick="setGame('constellation')">Constellation</button>
+    <button class="game-btn coming" title="Phase 2 — not yet available" disabled>GOLAD</button>
+    <button class="game-btn coming" title="Phase 2 — not yet available" disabled>Geobridge</button>
+    <button class="game-btn coming" title="Phase 2 — not yet available" disabled>C4D</button>
+  </div>
 
   <!-- MODE SELECTOR -->
   <div class="mode-pick">
@@ -859,7 +876,9 @@ function hostLines(n) {
     ["The chaos is the same for everyone in the room.","How each person meets it — that is the interesting part."],
   ];
   var msgs = pool[n % pool.length];
-  push("dim", "// HOST SESSION", 400);
+  var GAME_NAMES = {constellation:"CONSTELLATION", golad:"GOLAD", geobridge:"GEOBRIDGE", c4d:"C4D"};
+  var gameName = GAME_NAMES[(S && S.selectedGame) || "constellation"] || "CONSTELLATION";
+  push("dim", "// HOST SESSION — " + gameName, 400);
   msgs.forEach(function(m) { push("obs", m, 800); });
   push("blank","", 450);
   push("hint", "> Create the session, then share the link.", 600);
@@ -1215,7 +1234,7 @@ var BOT_PROFILE_AGGRESSION = {TURTLER:2,STANDARD:5,CONTESTER:6,ACCELERANT:8,MIRR
 var AGG_RANGE = {easy:[1,3],standard:[4,6],hard:[7,9]};
 
 var S = {
-  mode:"train", student:null, studentId:null,
+  mode:"train", selectedGame:"constellation", student:null, studentId:null,
   compiler:null, sessionCount:0,
   maps:[],
   train:{map:"", bot:true},
@@ -1363,6 +1382,17 @@ function setMode(mode) {
   renderTerminal(mode);
 }
 
+// Switch selected game. Only constellation is currently available.
+// When a new game is added: set available:true in server-side GAME_REGISTRY,
+// add its Colyseus room endpoint, and remove the "disabled" attribute from its button.
+function setGame(id) {
+  S.selectedGame = id;
+  document.querySelectorAll(".game-btn").forEach(function(b) { b.classList.remove("active"); });
+  var gb = document.getElementById("game-" + id);
+  if (gb) gb.classList.add("active");
+  renderTerminal(S.mode);
+}
+
 // ── CONTROLS
 function setBot(mode, on) {
   S[mode].bot = on;
@@ -1466,7 +1496,7 @@ function buildTrainOpts(useRec) {
     playerName:      S.student,
     aiBots:          S.train.bot ? (botFromProfile ? [botFromProfile] : [botCfg("standard")]) : [],
     allowPlayerTeamSelection: false,
-    _source:"student-train", studentId:S.studentId, _usedRecommendation:usedRec,
+    _source:"student-train", game_id:S.selectedGame||"constellation", studentId:S.studentId, _usedRecommendation:usedRec,
   };
 }
 // ── SIMULATE JOIN
@@ -1772,7 +1802,7 @@ function buildHostOpts() {
     customMapFilename: null,
     playerName:      S.student,
     aiBots:          h.bot ? [botCfg("standard")] : [],
-    _source:"student-host", studentId:S.studentId, _energy:h.energy, _teamAssignments:S.hostTeams,
+    _source:"student-host", game_id:S.selectedGame||"constellation", studentId:S.studentId, _energy:h.energy, _teamAssignments:S.hostTeams,
     _sessionName:    document.getElementById("h-name").value.trim() || undefined,
   };
 }
