@@ -1130,7 +1130,9 @@ function clearTermTimers() { _termTimers.forEach(function(id) { clearTimeout(id)
 function animateLines(result) {
   clearTermTimers();
   var body = document.getElementById("termBody");
+  var cv = document.getElementById("compilerCanvas");
   body.innerHTML = "";
+  if (cv) body.insertBefore(cv, body.firstChild); // preserve canvas across re-renders
   result.lines.forEach(function(l) {
     _termTimers.push(setTimeout(function() {
       if (l.s === "blank") {
