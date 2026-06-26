@@ -48,7 +48,7 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
 .term-badge.zone-shifting{border-color:#3a2a0a;color:#d97706}
 .term-badge.zone-radical{border-color:#3a0a0a;color:#dc2626}
 .term-badge.zone-rematch{border-color:#0a3a1a;color:#059669}
-.term-body{padding:18px 22px 14px;font-family:Arial,sans-serif;font-size:10.5px;line-height:2;color:#e0e0e0;min-height:240px;overflow-y:auto}
+.term-body{padding:18px 22px 14px;font-family:Arial,sans-serif;font-size:10.5px;line-height:2;color:#e0e0e0;min-height:240px;overflow-y:auto;position:relative;}
 .tl{display:block;opacity:0;transition:opacity .08s}
 .tl.show{opacity:1}
 .tl-dim{color:#1a1a1a}
@@ -224,6 +224,7 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
       <span class="term-badge" id="termBadge">Loading</span>
     </div>
     <div class="term-body" id="termBody">
+      <canvas id="compilerCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;display:none;cursor:pointer"></canvas>
       <span class="tl tl-dim show">// compile to generate terminal sequence</span>
     </div>
     <div class="term-foot">
@@ -887,6 +888,241 @@ function buildTerminalLines(compiler, sessionCount, isHost) {
 //  TERMINAL RENDERER
 // ════════════════════════════════════════════════════════════
 
+
+// ════════════════════════════════════════════════════════════
+//  COMPILER VISUALIZATION
+//  6 orbital rings — one per cognitive mode, unlabeled.
+//  Driven by real state: Elo → radius, velocity → speed,
+//  staleness → opacity. Ring positions shuffled per session
+//  to prevent spatial tracking. Click canvas to skip.
+// ════════════════════════════════════════════════════════════
+
+var _animRAF = null;
+
+function _cancelAnim() {
+  if (_animRAF) { cancelAnimationFrame(_animRAF); _animRAF = null; }
+  var cv = document.getElementById("compilerCanvas");
+  if (cv) {
+    cv.style.display = "none";
+    cv.style.opacity = "1";
+    try { cv.getContext("2d").clearRect(0,0,cv.width,cv.height); } catch(e){}
+  }
+}
+
+function playCompilerAnimation(compiler, sessionCount, codename, zone, onComplete) {
+  var canvas = document.getElementById("compilerCanvas");
+  if (!canvas || !canvas.getContext) { onComplete(); return; }
+
+  _cancelAnim();
+
+  // Size canvas to parent, with DPR for retina sharpness
+  var par  = canvas.parentElement;
+  var dpr  = window.devicePixelRatio || 1;
+  var W    = Math.max(par.clientWidth,  200);
+  var H    = Math.max(par.clientHeight, 200);
+  canvas.width        = Math.round(W * dpr);
+  canvas.height       = Math.round(H * dpr);
+  canvas.style.width  = W + "px";
+  canvas.style.height = H + "px";
+  canvas.style.display  = "block";
+  canvas.style.opacity  = "1";
+  canvas.onclick = function() { _cancelAnim(); onComplete(); };
+
+  var ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  var cx = W / 2, cy = H / 2;
+
+  // ── Data from real compiler state ──────────────────────────
+  var snap    = (compiler && compiler.state_snapshot) || {};
+  var MKEYS   = ["QTY","SPT","FRT","DST","WRM","INV"];
+  var hasData = sessionCount > 0 && !!compiler;
+
+  var elos = MKEYS.map(function(m) { return snap[m] ? (snap[m].elo || 400) : 400; });
+  var vels = MKEYS.map(function(m) { return snap[m] ? Math.abs(snap[m].velocity || 0) : 0; });
+  var taus = MKEYS.map(function(m) { return snap[m] ? (snap[m].since_days || 0) : 0; });
+  var selIdx = hasData ? MKEYS.indexOf(compiler.mode || "QTY") : -1;
+
+  // ── Shuffle visual positions using session seed ─────────────
+  // Same session → same ring layout, different session → different.
+  var seed = (compiler && compiler.generated_at) ? compiler.generated_at : Math.floor(Date.now() / 1000);
+  var order = [0,1,2,3,4,5]; // order[visualSlot] = dataIndex
+  for (var si = 5; si > 0; si--) {
+    seed = ((seed * 1664525 + 1013904223) | 0) >>> 0;
+    var sj = seed % (si + 1);
+    var stmp = order[si]; order[si] = order[sj]; order[sj] = stmp;
+  }
+
+  // ── Build ring objects ──────────────────────────────────────
+  var baseR  = Math.min(W, H) * 0.36;
+  var rings  = [];
+  for (var vi = 0; vi < 6; vi++) {
+    var di      = order[vi];
+    var eloN    = hasData ? Math.min(Math.max((elos[di] - 300) / 620, 0), 1) : 0.5;
+    var stale   = hasData ? Math.min(taus[di] / 28, 1) : 0;
+    var opacity = hasData ? Math.max(0.10, 1 - stale * 0.88) : 0.26;
+    var spd     = 0.014 + (hasData ? vels[di] * 0.0008 : 0);
+    var radius  = baseR * (0.26 + 0.74 * eloN);
+    var isSel   = (di === selIdx);
+    var nPts    = Math.max(4, Math.round(5 + 8 * opacity) + (isSel ? 3 : 0));
+    var pts     = [];
+    for (var pi = 0; pi < nPts; pi++) {
+      seed = ((seed * 1664525 + 1013904223) | 0) >>> 0;
+      var jitter = ((seed >>> 0) / 0xFFFFFFFF - 0.5) * 0.28;
+      pts.push({ a: (pi / nPts) * Math.PI * 2 + jitter, sz: isSel ? 1.7 : 1.1 });
+    }
+    rings.push({ radius: radius, spd: spd, opacity: opacity, isSel: isSel, pts: pts });
+  }
+
+  // ── Animation phases ────────────────────────────────────────
+  // emerge → orbit → scan → select → codename → fade
+  var DURS = hasData
+    ? [720, 280, 480, 560, 780, 560]
+    : [680, 320,   0,   0, 720, 480];
+  var phase = 0, phaseT = 0;
+  var scanX = 0, selGlow = 0, lastTS = null;
+  var dispName = (codename || (hasData ? "SIGNAL" : "CALIBRATION")).toUpperCase();
+
+  function ease(t) { t = Math.min(Math.max(t,0),1); return t<0.5 ? 2*t*t : -1+(4-2*t)*t; }
+  function lerp(a,b,t) { return a+(b-a)*Math.min(Math.max(t,0),1); }
+
+  function drawRings(selAlphaScale, nonSelAlphaScale, selSzAdd) {
+    for (var ri = 0; ri < 6; ri++) {
+      var rg = rings[ri];
+      var al = rg.isSel
+        ? rg.opacity * selAlphaScale
+        : rg.opacity * nonSelAlphaScale;
+      var sz = rg.isSel ? (rg.pts[0].sz + selSzAdd) : rg.pts[0].sz;
+      var col = rg.isSel ? "222,215,200" : "160,175,190";
+      for (var pi2 = 0; pi2 < rg.pts.length; pi2++) {
+        var px = cx + Math.cos(rg.pts[pi2].a) * rg.radius;
+        var py = cy + Math.sin(rg.pts[pi2].a) * rg.radius;
+        ctx.beginPath();
+        ctx.arc(px, py, Math.max(0.3, sz), 0, Math.PI*2);
+        ctx.fillStyle = "rgba(" + col + "," + Math.min(1, Math.max(0,al)) + ")";
+        ctx.fill();
+      }
+    }
+  }
+
+  function frame(ts) {
+    if (!lastTS) lastTS = ts;
+    var dt = Math.min(ts - lastTS, 50);
+    lastTS = ts;
+    phaseT += dt;
+
+    // Skip zero-duration phases
+    while (DURS[phase] === 0 && phase < DURS.length) { phase++; phaseT = 0; }
+    if (phase >= DURS.length) { _cancelAnim(); canvas.style.display="none"; onComplete(); return; }
+
+    var pt = Math.min(phaseT / DURS[phase], 1);
+    var ef = ease(pt);
+
+    // Rotate particles
+    for (var ri = 0; ri < 6; ri++) {
+      var rg = rings[ri];
+      var sm = (rg.isSel && phase >= 3) ? 1 + selGlow * 0.55 : 1;
+      for (var pi2 = 0; pi2 < rg.pts.length; pi2++) {
+        rg.pts[pi2].a += rg.spd * sm * dt * 0.06;
+      }
+    }
+
+    // Background
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = "rgba(10,10,10,0.97)";
+    ctx.fillRect(0, 0, W, H);
+
+    if (phase === 0) {
+      // Emerge: spiral outward
+      for (var ri = 0; ri < 6; ri++) {
+        var rg = rings[ri];
+        var rr = rg.radius * ef;
+        for (var pi2 = 0; pi2 < rg.pts.length; pi2++) {
+          ctx.beginPath();
+          ctx.arc(cx + Math.cos(rg.pts[pi2].a)*rr, cy + Math.sin(rg.pts[pi2].a)*rr, rg.pts[pi2].sz, 0, Math.PI*2);
+          ctx.fillStyle = "rgba(165,180,195," + (rg.opacity * ef * 0.62) + ")";
+          ctx.fill();
+        }
+      }
+    } else if (phase === 1) {
+      // Orbit steadily
+      drawRings(0.62, 0.62, 0);
+    } else if (phase === 2) {
+      // Scan: sweep brightens nearby particles
+      scanX = lerp(-W*0.06, W*1.06, ease(pt));
+      for (var ri = 0; ri < 6; ri++) {
+        var rg = rings[ri];
+        for (var pi2 = 0; pi2 < rg.pts.length; pi2++) {
+          var px = cx + Math.cos(rg.pts[pi2].a) * rg.radius;
+          var py = cy + Math.sin(rg.pts[pi2].a) * rg.radius;
+          var boost = Math.max(0, 1 - Math.abs(px - scanX) / 36) * 0.38;
+          ctx.beginPath();
+          ctx.arc(px, py, rg.pts[pi2].sz * (1 + boost * 0.5), 0, Math.PI*2);
+          ctx.fillStyle = "rgba(195,208,218," + (rg.opacity * (0.62 + boost)) + ")";
+          ctx.fill();
+        }
+      }
+      var sg = ctx.createLinearGradient(scanX-22, 0, scanX+22, 0);
+      sg.addColorStop(0,   "rgba(180,200,215,0)");
+      sg.addColorStop(0.5, "rgba(180,200,215,0.05)");
+      sg.addColorStop(1,   "rgba(180,200,215,0)");
+      ctx.fillStyle = sg;
+      ctx.fillRect(scanX-22, 0, 44, H);
+    } else if (phase === 3) {
+      // Select: chosen ring brightens
+      selGlow = ef;
+      drawRings(
+        lerp(0.62, 0.96, selGlow),      // sel alpha
+        lerp(0.62, 0.14, selGlow),      // non-sel alpha
+        selGlow * 0.8                    // sel size add
+      );
+    } else if (phase === 4) {
+      // Codename: stable rings + typing text
+      drawRings(0.86, 0.13, 0.8);
+      // Type characters in
+      var shown = dispName.substring(0, Math.min(Math.floor(ease(Math.min(pt * 1.5, 1)) * dispName.length), dispName.length));
+      var cursor = pt < 0.78 ? "_" : "";
+      var tAlpha = Math.min(1, pt * 4);
+      ctx.font = "10px 'Courier New', Courier, monospace";
+      ctx.textAlign = "center";
+      ctx.fillStyle = "rgba(215,208,194," + tAlpha + ")";
+      ctx.fillText(shown + cursor, cx, cy + 4);
+      if (tAlpha > 0.2) {
+        var tw = ctx.measureText(dispName).width;
+        ctx.strokeStyle = "rgba(75,80,84," + (tAlpha * 0.45) + ")";
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(cx - tw/2 - 1, cy + 10);
+        ctx.lineTo(cx + tw/2 + 1, cy + 10);
+        ctx.stroke();
+      }
+    } else if (phase === 5) {
+      // Fade out
+      drawRings(0.86 * (1-ef), 0.13 * (1-ef), 0.8 * (1-ef));
+      if (dispName && phase === 5) {
+        ctx.font = "10px 'Courier New', Courier, monospace";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "rgba(215,208,194," + (1-ef) + ")";
+        ctx.fillText(dispName, cx, cy + 4);
+      }
+      canvas.style.opacity = String(1 - ef);
+    }
+
+    if (phaseT >= DURS[phase]) {
+      phaseT = 0; phase++;
+      if (phase >= DURS.length) {
+        _cancelAnim();
+        canvas.style.display  = "none";
+        canvas.style.opacity  = "1";
+        onComplete();
+        return;
+      }
+    }
+    _animRAF = requestAnimationFrame(frame);
+  }
+
+  _animRAF = requestAnimationFrame(frame);
+}
+
 var _termTimers = [];
 function clearTermTimers() { _termTimers.forEach(function(id) { clearTimeout(id); }); _termTimers = []; }
 
@@ -916,7 +1152,7 @@ function animateLines(result) {
   });
 }
 
-function renderTerminal(mode) {
+function renderTerminal(mode, playIntro) {
   var isTrain = (mode === "train");
   var c = _devActive ? _devCompiler : S.compiler;
   var n = S.sessionCount;
@@ -956,7 +1192,13 @@ function renderTerminal(mode) {
   }
 
   var result = buildTerminalLines(c, n, !isTrain);
-  animateLines(result);
+  if (playIntro) {
+    var cn = result.codename || (n === 0 ? "CALIBRATION" : "SIGNAL");
+    playCompilerAnimation(c, n, cn, result.zone || null, function() { animateLines(result); });
+  } else {
+    _cancelAnim();
+    animateLines(result);
+  }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1099,7 +1341,7 @@ async function loadCompiler() {
     S.compiler = await r.json();
     S.sessionCount = S.compiler.session_count || 0;
     syncSlidersToCompiler();
-    renderTerminal(S.mode);
+    renderTerminal(S.mode, true);
   } catch(_) { fallbackCompiler(); }
 }
 function fallbackCompiler() {
