@@ -96,6 +96,33 @@ table.mt tr:hover td{background:#f8f8f8}
 .err-box{background:#fff0f0;border:1px solid #dc2626;padding:8px;font-size:9px;color:#dc2626;margin:8px 0}
 .no-data{padding:16px 10px;font-size:9px;color:#888;line-height:1.8;border:1px dashed #ddd;margin:8px}
 ::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-track{background:#fff}::-webkit-scrollbar-thumb{background:#ddd}
+/* Bayesian / info-gain cells */
+.ibar-wrap{display:inline-flex;align-items:center;gap:4px;width:100%}
+.ibar{height:6px;border-radius:2px;flex-shrink:0}
+.ibar-val{font-family:'Courier New',monospace;font-size:8px;min-width:34px}
+.sigma-val{font-family:'Courier New',monospace;font-size:9px}
+.sel-mode td{color:#fff!important}
+.sel-mode{background:#000!important}
+/* Bayesian pane */
+.bay-section{margin-bottom:14px}
+.bay-hd{font-size:7px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#555;padding:6px 0 4px;border-bottom:1px solid #eee;margin-bottom:6px}
+.bay-row{display:grid;gap:2px;padding:5px 4px;border-bottom:1px solid #f5f5f5;font-size:9px}
+.bay-row:hover{background:#f8f8f8}
+.bay-mode-lbl{font-size:8px;font-weight:700;letter-spacing:1.5px}
+.bay-kv{display:flex;gap:3px;align-items:baseline;flex-wrap:wrap;margin-top:2px}
+.bay-k{font-size:7px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#999;min-width:52px}
+.bay-v{font-family:'Courier New',monospace;font-size:9px;color:#111}
+/* Parameters pane */
+.param-group{margin-bottom:12px}
+.param-ghd{font-size:7px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#555;border-bottom:1px solid #eee;padding:6px 0 4px;margin-bottom:6px}
+.param-row{padding:5px 0;border-bottom:1px solid #f8f8f8;font-size:9px}
+.param-name{font-family:'Courier New',monospace;font-size:9px;font-weight:700;color:#111}
+.param-val{font-family:'Courier New',monospace;font-size:9px;color:#2563eb}
+.param-status{display:inline-block;font-size:6px;font-weight:700;letter-spacing:1px;padding:1px 4px;border:1px solid;text-transform:uppercase;margin-left:4px;vertical-align:middle}
+.ps-asserted{color:#d97706;border-color:#d97706}
+.ps-measured{color:#2563eb;border-color:#2563eb}
+.ps-corroborated{color:#059669;border-color:#059669}
+.param-refute{font-size:8px;color:#888;margin-top:2px;line-height:1.5}
 @media (max-width:768px){
   body{height:auto;overflow:auto}
   header{flex-wrap:wrap;gap:6px;padding:8px 10px}
@@ -150,13 +177,13 @@ table.mt tr:hover td{background:#f8f8f8}
       <table class="mt">
         <thead>
           <tr>
-            <th>MODE</th>
-            <th>game_elo <span class="asserted">ASSERTED K</span></th>
-            <th>velocity</th>
-            <th>zpd_target</th>
+            <th style="text-align:left">MODE</th>
+            <th style="text-align:left">μ (elo) <span class="asserted">K est.</span></th>
+            <th>σ (unc) <span class="asserted">n-derived</span></th>
+            <th>I(d) <span class="asserted">selection</span></th>
+            <th>vel</th>
             <th>n</th>
-            <th>since (d)</th>
-            <th>decay</th>
+            <th>τ (d)</th>
           </tr>
         </thead>
         <tbody id="mode-tbody">
@@ -165,7 +192,7 @@ table.mt tr:hover td{background:#f8f8f8}
       </table>
       <div id="gap-alert-row"></div>
       <div style="padding:8px 6px;font-size:8px;color:#888;border-top:1px solid #eee;line-height:1.7">
-        <strong style="color:#d97706">ASSERTED</strong>: K∈{40,20,10} · scale=400 · zpd=0.85×elo×decay · τ=14d · mode=argmax(cv[0:4])
+        <strong style="color:#d97706">SELECTION</strong>: argmax I(d) = ½·log(1+σ²ₚᵣᵉᵈ/R) · λ=1/30d · R=3600 [ASSERTED] · σ=√(σ²₀/(1+n·σ²₀/R))
       </div>
     </div>
     <div class="radar-wrap">
@@ -182,6 +209,8 @@ table.mt tr:hover td{background:#f8f8f8}
       <button class="t-btn" id="tab-calibration" onclick="setTab('calibration',this)">Calibration</button>
       <button class="t-btn" id="tab-actions" onclick="setTab('actions',this)" style="display:none">Actions</button>
       <button class="t-btn" id="tab-layer0" onclick="setTab('layer0',this)" style="display:none">Layer 0</button>
+      <button class="t-btn" id="tab-bayesian" onclick="setTab('bayesian',this)">Bayesian</button>
+      <button class="t-btn" id="tab-params" onclick="setTab('params',this)">Parameters</button>
     </div>
 
     <!-- COMPILER -->
@@ -237,10 +266,49 @@ table.mt tr:hover td{background:#f8f8f8}
     </div>
 
   </div>
+
+    <!-- BAYESIAN STATE -->
+    <div class="r-scroll" id="pane-bayesian" style="display:none">
+      <div id="bayesian-content"><div class="loading">Select a student</div></div>
+    </div>
+
+    <!-- PARAMETER REGISTRY -->
+    <div class="r-scroll" id="pane-params" style="display:none">
+      <div id="params-content"></div>
+    </div>
+
+  </div>
 </div>
 
 <script>
 const MODES = ['QTY','SPT','FRT','DST','WRM','INV'];
+
+// Bayesian primitives — mirror of compiler.js, computed browser-side
+const SIGMA2_PRIOR = 22500, MU_PRIOR = 500, LAMBDA_0 = 1/30, R_OBS = 3600;
+function sigma2FromN(n) { return SIGMA2_PRIOR / (1 + n * SIGMA2_PRIOR / R_OBS); }
+function predict(mu, sigma2, lambda, tau) {
+  var decay = Math.exp(-lambda * tau);
+  return { mu_pred: MU_PRIOR + decay*(mu-MU_PRIOR), sigma2_pred: SIGMA2_PRIOR + decay*decay*(sigma2-SIGMA2_PRIOR) };
+}
+function infoGain(sigma2_pred, R) { return 0.5 * Math.log(1 + sigma2_pred / R); }
+function bayesMode(d) {
+  var mu = d.mu || d.elo || MU_PRIOR;
+  var n  = d.n  || 0;
+  var tau = d.tau != null ? d.tau : (d.since_days != null ? d.since_days : 0);
+  var sigma2 = d.sigma2 != null ? d.sigma2 : sigma2FromN(n);
+  var p = predict(mu, sigma2, d.lambda || LAMBDA_0, tau);
+  return { mu, sigma2, tau, mu_pred: p.mu_pred, sigma2_pred: p.sigma2_pred, I: infoGain(p.sigma2_pred, R_OBS) };
+}
+function computeModeScores(state) {
+  var scores = {}, best = null, bestI = -Infinity;
+  MODES.forEach(function(m) {
+    var d = state[m] || { n: 0 };
+    var b = bayesMode(d);
+    scores[m] = b;
+    if (b.I > bestI) { bestI = b.I; best = m; }
+  });
+  return { scores: scores, selected: best };
+}
 const MODE_COLORS = {QTY:'#d97706',SPT:'#2563eb',FRT:'#059669',DST:'#dc2626',WRM:'#7c3aed',INV:'#0891b2'};
 const ZONE_COLORS = {ECHO:'#2563eb',PARALLEL:'#06b6d4',SHIFTING:'#f59e0b',RADICAL:'#d97706',REMATCH:'#dc2626',CALIBRATION:'#6b7280'};
 const ZONE_SHORT  = {ECHO:'ech',PARALLEL:'par',SHIFTING:'shi',RADICAL:'rad',REMATCH:'rem',CALIBRATION:'cal'};
@@ -477,6 +545,7 @@ async function loadStudent(sid) {
     renderCompiler(comp);
     renderSessions(sessions);
     renderCalibration(sessions);
+    renderBayesian(currentState, comp);
   } catch (err) {
     document.getElementById('mode-tbody').innerHTML = `<tr><td colspan="7" class="err-box">${err.message}</td></tr>`;
   }
@@ -484,28 +553,46 @@ async function loadStudent(sid) {
 
 // ── Mode table
 function renderModeTable(state) {
-  const tbody = document.getElementById('mode-tbody');
-  tbody.innerHTML = MODES.map(m => {
-    const d = state[m];
+  var tbody = document.getElementById('mode-tbody');
+  var ms = computeModeScores(state);
+  var maxI = Math.max.apply(null, MODES.map(function(m) { return ms.scores[m] ? ms.scores[m].I : 0; }));
+  tbody.innerHTML = MODES.map(function(m) {
+    var d = state[m];
+    var b = ms.scores[m];
+    var isSel = (m === ms.selected);
     if (!d || d.n === 0) {
-      return `<tr><td style="color:${MODE_COLORS[m]}">${m}</td><td colspan="6" style="color:#ccc;font-style:italic">no sessions</td></tr>`;
+      var b0 = b || { I: infoGain(SIGMA2_PRIOR, R_OBS), sigma2: SIGMA2_PRIOR };
+      var iBarW = Math.round((b0.I / (maxI||1)) * 60);
+      return '<tr class="' + (isSel ? 'sel-mode' : '') + '">' +
+        '<td style="color:' + (isSel ? '#fff' : MODE_COLORS[m]) + '">' + m + (isSel ? ' ←' : '') + '</td>' +
+        '<td style="color:#ccc;font-style:italic">—</td>' +
+        '<td><span class="sigma-val" style="color:#ccc">∞</span></td>' +
+        '<td><div class="ibar-wrap"><div class="ibar" style="width:' + iBarW + 'px;background:' + (isSel?'#fff':'#bbb') + '"></div>' +
+        '<span class="ibar-val" style="color:' + (isSel?'#fff':'#bbb') + '">' + b0.I.toFixed(3) + '</span></div></td>' +
+        '<td style="color:#ccc">—</td><td>0</td><td style="color:#ccc">—</td></tr>';
     }
-    const velStr = d.velocity == null ? '—'
-      : d.velocity > 0 ? `<span class="vel-pos">+${d.velocity}</span>`
-      : d.velocity < 0 ? `<span class="vel-neg">${d.velocity}</span>`
-      : `<span class="vel-zero">0</span>`;
-    const sinceStr = d.since_days != null
-      ? (d.since_days > 14 ? `<span style="color:#d97706">${d.since_days}d</span>` : `${d.since_days}d`)
-      : '—';
-    return `<tr>
-      <td style="color:${MODE_COLORS[m]}">${m}</td>
-      <td><strong>${d.elo}</strong></td>
-      <td>${velStr}</td>
-      <td>${d.zpd_target}</td>
-      <td>${d.n}</td>
-      <td>${sinceStr}</td>
-      <td>${d.decay.toFixed(2)}</td>
-    </tr>`;
+    var velStr = d.velocity == null ? '—'
+      : d.velocity > 0 ? '<span class="vel-pos">+' + d.velocity + '</span>'
+      : d.velocity < 0 ? '<span class="vel-neg">' + d.velocity + '</span>'
+      : '<span class="vel-zero">0</span>';
+    var tau = d.tau != null ? d.tau : (d.since_days != null ? d.since_days : 0);
+    var sinceStr = tau > 0
+      ? (tau > 14 ? '<span style="color:' + (isSel?'#fcd34d':'#d97706') + '">' + tau + 'd</span>' : tau + 'd')
+      : 'today';
+    var sigma = Math.round(Math.sqrt(b.sigma2 || SIGMA2_PRIOR));
+    var sigmaColor = isSel ? '#fff' : (sigma > 100 ? '#d97706' : sigma > 50 ? '#888' : '#15803d');
+    var iBarW = Math.round((b.I / (maxI||1)) * 60);
+    var iColor = isSel ? '#fff' : MODE_COLORS[m];
+    return '<tr class="' + (isSel ? 'sel-mode' : '') + '">' +
+      '<td style="color:' + (isSel?'#fff':MODE_COLORS[m]) + ';font-weight:700">' + m + (isSel?' ←':'') + '</td>' +
+      '<td><strong>' + (d.elo||d.mu||'—') + '</strong></td>' +
+      '<td><span class="sigma-val" style="color:' + sigmaColor + '">±' + sigma + '</span></td>' +
+      '<td><div class="ibar-wrap"><div class="ibar" style="width:' + iBarW + 'px;background:' + iColor + '"></div>' +
+      '<span class="ibar-val" style="color:' + (isSel?'#fff':'#555') + '">' + b.I.toFixed(3) + '</span></div></td>' +
+      '<td>' + velStr + '</td>' +
+      '<td>' + d.n + '</td>' +
+      '<td>' + sinceStr + '</td>' +
+      '</tr>';
   }).join('');
 }
 
@@ -558,12 +645,33 @@ function renderCompiler(comp) {
   const zoneCls     = ZONE_SHORT[comp.zone] || 'cal';
   const vec         = Array.isArray(comp.config_vector) ? comp.config_vector : [];
 
+  // Selection reasoning — use mode_scores from API or derive from state
+  var mscores = comp.mode_scores || {};
+  var derived = computeModeScores(currentState || {});
+  var scoreRows = MODES.map(function(m) {
+    var ms2 = mscores[m] || derived.scores[m];
+    if (!ms2) return '';
+    var I2 = (ms2.info_gain != null ? ms2.info_gain : ms2.I) || 0;
+    var isWinner = (m === (comp.mode || derived.selected));
+    var iBarW = Math.min(Math.round(I2 / 1.1 * 80), 80);
+    var mc = isWinner ? MODE_COLORS[m] : '#ddd';
+    return '<div style="display:flex;align-items:center;gap:4px;padding:2px 0">' +
+      '<span style="width:28px;font-size:8px;color:' + MODE_COLORS[m] + ';font-weight:700;flex-shrink:0">' + m + '</span>' +
+      '<div style="height:5px;background:' + mc + ';width:' + iBarW + 'px;border-radius:1px;flex-shrink:0"></div>' +
+      '<span style="font-family:monospace;font-size:8px;color:' + (isWinner?'#fff':'#888') + ';min-width:38px">' + I2.toFixed(3) + '</span>' +
+      (isWinner ? '<span style="font-size:7px;color:#fff;opacity:.7">selected</span>' : '') +
+      '</div>';
+  }).join('');
   el.innerHTML = `
     <div class="comp-card">
-      <div class="comp-lbl">Next Session — Compiler Output</div>
+      <div class="comp-lbl">Next Session — Compiler Output · ${comp.game_id ? comp.game_id.toUpperCase() : 'CONSTELLATION'}</div>
       <div class="comp-mode" style="color:${modeColor}">${modeDisplay}</div>
       <div class="comp-zone z-${zoneCls}" style="color:${zoneColor};border-color:${zoneColor}55">${zoneName}</div>
       <div class="comp-field">
+        <div class="comp-flbl">Selection — I(d) per mode <span class="asserted">argmax</span></div>
+        <div style="margin-top:3px">${scoreRows}</div>
+      </div>
+      <div class="comp-field" style="margin-top:6px">
         <div class="comp-flbl">Bot Profile</div>
         <div class="comp-fval">${isAdmin ? (comp.bot_profile || '—') : '—'}</div>
       </div>
@@ -588,7 +696,7 @@ function renderCompiler(comp) {
     </div>
     <div class="comp-note">
       <strong style="color:#d97706">ASSERTED</strong> — config_vector[12]: [${VEC_NAMES.join(', ')}]<br>
-      Priority = 0.50×deficit + 0.30×staleness + 0.20×gap · Velocity = (elo_N−elo_{N-3})/3
+      Selection: argmax I(d) = ½·log(1 + σ²ₚᵣᵉᵈ/R) · λ=1/30d · R=3600 [ASSERTED]
     </div>`;
 }
 
@@ -698,14 +806,130 @@ function renderCalibration(sessions) {
   ctx.save();ctx.translate(10,PAD+IH/2);ctx.rotate(-Math.PI/2);ctx.fillText('actual rank_pct →',0,0);ctx.restore();
 }
 
+// ── Bayesian state pane
+function renderBayesian(state, comp) {
+  var el = document.getElementById('bayesian-content');
+  if (!state) { el.innerHTML = '<div class="loading">Select a student</div>'; return; }
+  var ms = computeModeScores(state);
+  var maxI = Math.max.apply(null, MODES.map(function(m) { return ms.scores[m] ? ms.scores[m].I : 0; }));
+  var rows = MODES.map(function(m) {
+    var d = state[m] || {};
+    var b = ms.scores[m] || {};
+    var isSel = (m === ms.selected);
+    var n = d.n || 0;
+    var mu = d.mu || d.elo || MU_PRIOR;
+    var tau = d.tau != null ? d.tau : (d.since_days != null ? d.since_days : 0);
+    var sigma = Math.round(Math.sqrt(b.sigma2 || SIGMA2_PRIOR));
+    var sigma_fwd = Math.round(Math.sqrt(b.sigma2_pred || SIGMA2_PRIOR));
+    var mu_fwd = Math.round(b.mu_pred || MU_PRIOR);
+    var I = b.I || 0;
+    var iBarW = Math.round((I / (maxI||1)) * 120);
+    var selBg = isSel ? 'background:#f5f5f5;border-left:3px solid ' + MODE_COLORS[m] + ';padding-left:5px' : '';
+    var muDir = mu_fwd < mu ? ' ↓' : mu_fwd > mu ? ' ↑' : '';
+    return '<div class="bay-row" style="grid-template-columns:1fr;' + selBg + '">' +
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">' +
+        '<span class="bay-mode-lbl" style="color:' + MODE_COLORS[m] + '">' + m + '</span>' +
+        (isSel ? '<span style="font-size:7px;font-weight:700;color:#15803d;letter-spacing:1px">SELECTED</span>' : '') +
+        (n===0 ? '<span style="font-size:7px;color:#bbb;font-style:italic">no sessions</span>' : '') +
+      '</div>' +
+      '<div class="bay-kv">' +
+        '<span class="bay-k">μ</span><span class="bay-v">' + mu + '</span>' +
+        '<span class="bay-k">σ</span><span class="bay-v" style="color:' + (sigma>100?'#d97706':sigma>50?'#888':'#15803d') + '">±' + sigma + '</span>' +
+        '<span class="bay-k">τ</span><span class="bay-v">' + (tau > 0 ? tau + 'd' : 'today') + '</span>' +
+        '<span class="bay-k">n</span><span class="bay-v">' + n + '</span>' +
+      '</div>' +
+      '<div class="bay-kv" style="margin-top:2px;padding-top:2px;border-top:1px dotted #eee">' +
+        '<span class="bay-k">μₚᵣᵉᵈ</span><span class="bay-v">' + mu_fwd + muDir + '</span>' +
+        '<span class="bay-k">σₚᵣᵉᵈ</span><span class="bay-v" style="color:' + (sigma_fwd>100?'#d97706':sigma_fwd>50?'#888':'#15803d') + '">±' + sigma_fwd + '</span>' +
+      '</div>' +
+      '<div style="margin-top:4px;display:flex;align-items:center;gap:4px">' +
+        '<span style="font-size:7px;font-weight:700;letter-spacing:.5px;color:#999;min-width:28px">I(d)</span>' +
+        '<div style="height:6px;background:' + (isSel?MODE_COLORS[m]:'#e0e0e0') + ';width:' + iBarW + 'px;border-radius:2px;flex-shrink:0"></div>' +
+        '<span style="font-family:monospace;font-size:9px;font-weight:' + (isSel?'700':'400') + ';color:' + (isSel?MODE_COLORS[m]:'#555') + '">' + I.toFixed(4) + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  var selMode = ms.selected;
+  var selI = ms.scores[selMode] ? ms.scores[selMode].I : 0;
+  var gameId = (comp && comp.game_id) ? comp.game_id.toUpperCase() : 'CONSTELLATION';
+  el.innerHTML =
+    '<div class="bay-section">' +
+      '<div class="bay-hd">Selection: argmax I(d) = ½ log(1 + σ²ₚᵣᵉᵈ/R) — Game: ' + gameId + '</div>' +
+      '<div style="font-size:8px;color:#888;padding:0 0 8px;line-height:1.7">' +
+        'Selected <strong style="color:' + (MODE_COLORS[selMode]||'#000') + '">' + selMode + '</strong> with I=' + selI.toFixed(4) + '. ' +
+        'σₚᵣᵉᵈ accounts for forgetting since last session (λ=1/30d ASSERTED). ' +
+        'Higher σₚᵣᵉᵈ = more uncertain = more to learn.' +
+      '</div>' +
+      rows +
+    '</div>' +
+    '<div class="bay-section">' +
+      '<div class="bay-hd">Posterior Parameters [ASSERTED — Phase 1]</div>' +
+      '<div style="font-size:8px;color:#888;line-height:1.9;padding-top:4px">' +
+        'σ²₀ = 22500 (σ₀=150 Elo prior) · λ = 1/30 d⁻¹ · R = 3600 (σ₀bs=60 Elo)<br>' +
+        '<em>Phase 2: σ² stored per session. Phase 3: λ fitted from return residuals.</em>' +
+      '</div>' +
+    '</div>';
+}
+
+// ── Parameter registry pane
+function renderParams() {
+  var el = document.getElementById('params-content');
+  var PARAMS = [
+    { group: 'Elo Model', items: [
+      { name: 'K_high',      val: '40',           status: 'ASSERTED', refute: 'Replace with Kalman gain K=σ²/(σ²+R) when σ² stored per session (Phase 2)' },
+      { name: 'K_mid',       val: '20',           status: 'ASSERTED', refute: 'Same — both dissolve in Phase 2 when Kalman update is live' },
+      { name: 'K_low',       val: '10',           status: 'ASSERTED', refute: 'Same — both dissolve in Phase 2 when Kalman update is live' },
+      { name: 'elo_scale',   val: '400',          status: 'ASSERTED', refute: 'Fit from logistic regression on outcome vs Elo delta when N≥50 students with 20+ sessions' },
+      { name: 'r_bot',       val: '520',          status: 'ASSERTED', refute: 'Measure actual bot win rate vs student Elo distribution; refutes when measured rate deviates >5% from expected' },
+    ]},
+    { group: 'Forgetting Model (λ, Ornstein-Uhlenbeck)', items: [
+      { name: 'lambda_0',     val: '1/30 d⁻¹', status: 'ASSERTED', refute: 'Fit from return-session residuals when N≥10 students with 5+ return events per mode. Expected toward 1/45–1/60d (game skill decays slower than verbal memory)' },
+      { name: 'SIGMA2_PRIOR', val: '22500 (σ₀=150)', status: 'ASSERTED', refute: 'Measure spread of first-session outcomes; refutes if std(rank_pct, first sessions) implies different σ₀ by >20%' },
+      { name: 'R_OBS',        val: '3600 (σ=60)',      status: 'ASSERTED', refute: 'Fit from variance of repeated sessions at same Elo level. Refutes when N≥30 repeated-conditions pairs exist' },
+    ]},
+    { group: 'ZPD / Difficulty', items: [
+      { name: 'zpd_coeff',        val: '0.85', status: 'ASSERTED', refute: 'Fit from engagement vs difficulty curve. Refutes when MAE of rank_pct vs expected drops <0.05 with a different coefficient' },
+      { name: 'forgetting_tau_d', val: '14d',  status: 'ASSERTED', refute: 'Legacy field for zpd_target only. Superseded by λ in the OU forgetting model' },
+    ]},
+    { group: 'Mode Selection (Legacy Heuristic)', items: [
+      { name: 'w_deficit',   val: '0.50', status: 'ASSERTED', refute: 'Superseded by argmax I(d). Preserved for audit. Removed in Phase 3' },
+      { name: 'w_staleness', val: '0.30', status: 'ASSERTED', refute: 'Superseded by σ² forgetting in I(d). Same removal timeline' },
+      { name: 'w_gap',       val: '0.20', status: 'ASSERTED', refute: 'Superseded by BT gap inflating σ² (Phase 2). Same removal timeline' },
+    ]},
+    { group: 'Game Registry', items: [
+      { name: 'Constellation', val: 'AVAILABLE', status: 'MEASURED', refute: 'N/A — live. Adapter: compiler.js. Dimensions: QTY/SPT/FRT/DST/WRM/INV' },
+      { name: 'GOLAD',         val: 'PENDING',   status: 'ASSERTED', refute: 'Enable when game server writes to shared ledger. Dimensions: SIM, ADP' },
+      { name: 'Geobridge',     val: 'PENDING',   status: 'ASSERTED', refute: 'Enable when game server writes to shared ledger. Dimensions: COM, OPP, KNW' },
+      { name: 'C4D',           val: 'PENDING',   status: 'ASSERTED', refute: 'Enable when game server writes to shared ledger. Dimensions: TOP' },
+    ]},
+    { group: 'Cross-Game Transfer Matrix', items: [
+      { name: 'transfer_matrix', val: 'ALL ASSERTED', status: 'ASSERTED', refute: 'Compute Pearson r per (dimension, game pair) when N≥15 students with 5+ sessions in both games. CI: Fisher z ± 1.96/√(n-3). Status: CORROBORATED when |r|>0.4 and p<0.05' },
+      { name: 'alpha_transfer',  val: '0.001',         status: 'ASSERTED', refute: 'Scale gap² → σ² bonus. Dormant until BT bridge live (Phase 2). Fit from cross-channel residuals' },
+    ]},
+  ];
+  el.innerHTML = PARAMS.map(function(g) {
+    var items = g.items.map(function(p) {
+      var sc = p.status === 'MEASURED' ? 'ps-measured' : p.status === 'CORROBORATED' ? 'ps-corroborated' : 'ps-asserted';
+      return '<div class="param-row">' +
+        '<div><span class="param-name">' + p.name + '</span> ' +
+        '<span class="param-val">' + p.val + '</span> ' +
+        '<span class="param-status ' + sc + '">' + p.status + '</span></div>' +
+        '<div class="param-refute">Refutes when: ' + p.refute + '</div>' +
+      '</div>';
+    }).join('');
+    return '<div class="param-group"><div class="param-ghd">' + g.group + '</div>' + items + '</div>';
+  }).join('');
+}
+
 // ── Tab switching
 function setTab(name, el) {
   document.querySelectorAll('.t-btn').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
-  ['compiler','sessions','calibration','actions','layer0'].forEach(n=>{
+  ['compiler','sessions','calibration','actions','layer0','bayesian','params'].forEach(function(n){
     document.getElementById('pane-'+n).style.display = n===name ? '' : 'none';
   });
   if (name === 'layer0' && document.getElementById('layer0-feed').querySelector('.loading')) loadLayer0();
+  if (name === 'params') renderParams();
 }
 
 // ── Admin / student toggle
@@ -718,6 +942,7 @@ function toggleAdmin() {
   document.getElementById('tab-calibration').style.display = isAdmin ? 'none' : '';
   document.getElementById('tab-actions').style.display     = isAdmin ? '' : 'none';
   document.getElementById('tab-layer0').style.display      = isAdmin ? '' : 'none';
+  // Bayesian and Parameters tabs: visible in both modes
   // If calibration was active and switched to admin, jump to compiler
   const activeTab = document.querySelector('.t-btn.active');
   if (isAdmin && activeTab && activeTab.id === 'tab-calibration') {
