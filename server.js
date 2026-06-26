@@ -376,8 +376,9 @@ app.get('/api/ledger/sessions/:studentId', (req, res) => {
 app.get('/api/ledger/state/:studentId', (req, res) => {
     try {
         const sid = decodeURIComponent(req.params.studentId);
-        const sessions = compiler.readStudentSessions(sid);
-        const { state } = compiler.computeState(sessions);
+        const sessions  = compiler.readStudentSessions(sid);
+        const allLambdas = ledger.readLambdas();
+        const { state } = compiler.computeState(sessions, allLambdas[sid] || {});
         res.json({ student_id: sid, state, session_count: sessions.length });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -827,14 +828,102 @@ app.get('/api/dossier/partners/:studentId', (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Compute measured co-presence signal from Layer 0.
+// Joins sessions by session_id (same room = same roomId written on every record).
+// yield = rank_pct - compiler_expected_rank_pct (positive: exceeded prediction).
+// catalyst = yield_together - yield_solo for the same mode (does co-presence help?).
+function computeCoPresenceSignal(sessionsA, sessionsB) {
+    const mapB = new Map();
+    for (const s of sessionsB) {
+        if (s.session_id) mapB.set(s.session_id, s);
+    }
+
+    const shared = [];
+    for (const sA of sessionsA) {
+        const sB = sA.session_id && mapB.get(sA.session_id);
+        if (!sB) continue;
+        const expA  = sA.signals?.compiler_expected_rank_pct ?? null;
+        const expB  = sB.signals?.compiler_expected_rank_pct ?? null;
+        const rankA = sA.outcome?.rank_pct ?? null;
+        const rankB = sB.outcome?.rank_pct ?? null;
+        const mode  = compiler.assignMode(sA.config_vector);
+        shared.push({
+            mode,
+            yield_A: (expA != null && rankA != null) ? rankA - expA : null,
+            yield_B: (expB != null && rankB != null) ? rankB - expB : null,
+        });
+    }
+
+    if (shared.length === 0) return { n_shared: 0, mode_yields: {}, mean_yield_A: null, mean_yield_B: null };
+
+    // Per-mode aggregation for shared sessions
+    const byMode = {};
+    for (const s of shared) {
+        if (!s.mode) continue;
+        if (!byMode[s.mode]) byMode[s.mode] = { n: 0, sumA: 0, sumB: 0, nA: 0, nB: 0 };
+        byMode[s.mode].n++;
+        if (s.yield_A != null) { byMode[s.mode].sumA += s.yield_A; byMode[s.mode].nA++; }
+        if (s.yield_B != null) { byMode[s.mode].sumB += s.yield_B; byMode[s.mode].nB++; }
+    }
+
+    // Solo baseline (sessions without the other student present)
+    const sharedIds = new Set(shared.map((_, i) => sessionsA[i]?.session_id).filter(Boolean));
+    function modeYieldMap(sessions) {
+        const m = {};
+        for (const s of sessions) {
+            if (sharedIds.has(s.session_id)) continue;
+            const mode = compiler.assignMode(s.config_vector);
+            if (!mode) continue;
+            const exp = s.signals?.compiler_expected_rank_pct ?? null;
+            const rank = s.outcome?.rank_pct ?? null;
+            if (exp == null || rank == null) continue;
+            if (!m[mode]) m[mode] = { n: 0, sum: 0 };
+            m[mode].n++;
+            m[mode].sum += rank - exp;
+        }
+        return Object.fromEntries(Object.entries(m).map(([k, v]) => [k, v.sum / v.n]));
+    }
+    const soloA = modeYieldMap(sessionsA);
+    const soloB = modeYieldMap(sessionsB);
+
+    const mode_yields = {};
+    for (const [mode, d] of Object.entries(byMode)) {
+        const yA = d.nA > 0 ? parseFloat((d.sumA / d.nA).toFixed(3)) : null;
+        const yB = d.nB > 0 ? parseFloat((d.sumB / d.nB).toFixed(3)) : null;
+        const soloYA = soloA[mode] != null ? parseFloat(soloA[mode].toFixed(3)) : null;
+        const soloYB = soloB[mode] != null ? parseFloat(soloB[mode].toFixed(3)) : null;
+        mode_yields[mode] = {
+            n: d.n,
+            yield_A:    yA,
+            yield_B:    yB,
+            solo_A:     soloYA,
+            solo_B:     soloYB,
+            catalyst_A: (yA != null && soloYA != null) ? parseFloat((yA - soloYA).toFixed(3)) : null,
+            catalyst_B: (yB != null && soloYB != null) ? parseFloat((yB - soloYB).toFixed(3)) : null,
+        };
+    }
+
+    const allA = shared.filter(s => s.yield_A != null).map(s => s.yield_A);
+    const allB = shared.filter(s => s.yield_B != null).map(s => s.yield_B);
+    return {
+        n_shared:    shared.length,
+        mode_yields,
+        mean_yield_A: allA.length ? parseFloat((allA.reduce((a,b)=>a+b,0)/allA.length).toFixed(3)) : null,
+        mean_yield_B: allB.length ? parseFloat((allB.reduce((a,b)=>a+b,0)/allB.length).toFixed(3)) : null,
+    };
+}
+
 // GET /api/dossier/reaction/:studentA/:studentB
 app.get('/api/dossier/reaction/:studentA/:studentB', (req, res) => {
     try {
         const idA       = decodeURIComponent(req.params.studentA);
         const idB       = decodeURIComponent(req.params.studentB);
+        const sessionsA = compiler.readStudentSessions(idA);
+        const sessionsB = compiler.readStudentSessions(idB);
         const compiledA = compiler.compile(idA);
         const compiledB = compiler.compile(idB);
-        res.json(projectReaction(compiledA, compiledB));
+        const co_presence = computeCoPresenceSignal(sessionsA, sessionsB);
+        res.json({ ...projectReaction(compiledA, compiledB), co_presence });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

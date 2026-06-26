@@ -88,6 +88,21 @@ body{font-family:Arial,sans-serif;font-size:12px;background:var(--bg);color:var(
 .cc-stat-val{font-size:14px;font-weight:700;color:var(--amber);font-family:'Courier New',monospace;display:block;margin-bottom:2px}
 .cc-stat-lbl{font-size:8px;color:#5a4400;letter-spacing:1px;text-transform:uppercase}
 
+/* co-presence measured signal */
+.cp-section{border:1px solid #1a1a1a}
+.cp-hdr{padding:8px 14px;border-bottom:1px solid #111;display:flex;justify-content:space-between;align-items:center}
+.cp-hdr-lbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#2a2a2a}
+.cp-conf{font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:1px 5px;border:1px solid}
+.cp-conf.low{color:#374151;border-color:#374151}
+.cp-conf.med{color:#555;border-color:#555}
+.cp-conf.hi{color:#15803d;border-color:#15803d}
+.cp-table{width:100%;border-collapse:collapse;font-size:9px}
+.cp-table th{padding:5px 10px;text-align:left;font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#2a2a2a;border-bottom:1px solid #111}
+.cp-table td{padding:5px 10px;border-bottom:1px solid #0d0d0d;font-family:'Courier New',monospace}
+.cp-table tr:last-child td{border-bottom:none}
+.yp{color:#15803d}.yn{color:#7f1d1d}.y0{color:#333}
+.cat-p{color:#15803d;font-weight:700}.cat-n{color:#7f1d1d;font-weight:700}.cat-0{color:#333}
+
 /* session record */
 .record-block{border:1px solid var(--border)}
 .record-hdr{border-bottom:1px solid var(--border);padding:8px 14px;display:flex;justify-content:space-between;align-items:center}
@@ -290,6 +305,51 @@ async function openDossier(partnerId){
     }
 }
 
+function coPresenceHtml(cp) {
+    if (!cp || cp.n_shared === 0) {
+        return '<div class="cp-section">' +
+            '<div class="cp-hdr"><span class="cp-hdr-lbl">Joint Session Record</span>' +
+            '<span style="font-size:9px;color:#1a1a1a">No shared sessions yet</span></div>' +
+            '<div style="padding:12px 14px;font-size:9px;color:#1a1a1a">No joint sessions recorded. Play together for a measured reaction.</div>' +
+            '</div>';
+    }
+    var conf    = cp.n_shared >= 10 ? 'hi' : cp.n_shared >= 3 ? 'med' : 'low';
+    var confLbl = cp.n_shared >= 10 ? 'HIGH' : cp.n_shared >= 3 ? 'MEDIUM' : 'LOW';
+    function yCell(v) {
+        if (v == null) return '<td class="y0">—</td>';
+        var pct = Math.round(v * 100);
+        var cls = v > 0.02 ? 'yp' : v < -0.02 ? 'yn' : 'y0';
+        return '<td class="' + cls + '">' + (v > 0 ? '+' : '') + pct + '%</td>';
+    }
+    function cCell(v) {
+        if (v == null) return '<td class="cat-0">—</td>';
+        var pct = Math.round(v * 100);
+        var cls = v > 0.03 ? 'cat-p' : v < -0.03 ? 'cat-n' : 'cat-0';
+        return '<td class="' + cls + '">' + (v > 0 ? '+' : '') + pct + '%</td>';
+    }
+    var rows = Object.entries(cp.mode_yields).map(function(e) {
+        var m = e[0], d = e[1];
+        return '<tr><td style="color:#555;font-size:8px;font-weight:700;letter-spacing:1px">' + m + '</td>' +
+            '<td style="color:#2a2a2a">' + d.n + '</td>' +
+            yCell(d.yield_A) + yCell(d.yield_B) +
+            cCell(d.catalyst_A) + cCell(d.catalyst_B) + '</tr>';
+    }).join('');
+    var avgA = cp.mean_yield_A != null ? (cp.mean_yield_A > 0 ? '+' : '') + Math.round(cp.mean_yield_A*100) + '%' : '—';
+    var avgB = cp.mean_yield_B != null ? (cp.mean_yield_B > 0 ? '+' : '') + Math.round(cp.mean_yield_B*100) + '%' : '—';
+    return '<div class="cp-section">' +
+        '<div class="cp-hdr"><span class="cp-hdr-lbl">Joint Record — ' + cp.n_shared + ' sessions</span>' +
+        '<span class="cp-conf ' + conf + '">' + confLbl + '</span></div>' +
+        '<div style="padding:6px 14px 2px;font-size:8px;color:#2a2a2a;line-height:1.6">' +
+        'Yield = rank vs compiler prediction. Catalyst = yield change vs solo sessions in same mode.</div>' +
+        '<table class="cp-table"><thead><tr>' +
+        '<th>Mode</th><th>N</th><th>Yield (you)</th><th>Yield (them)</th><th>Cat. (you)</th><th>Cat. (them)</th>' +
+        '</tr></thead><tbody>' + rows + '</tbody></table>' +
+        '<div style="padding:7px 14px;border-top:1px solid #111;font-size:9px;color:#2a2a2a;display:flex;gap:20px">' +
+        '<span>Overall — You: <strong style="color:#888">' + avgA + '</strong></span>' +
+        '<span>Them: <strong style="color:#888">' + avgB + '</strong></span>' +
+        '</div></div>';
+}
+
 let _proposalNote = '';
 
 function renderDossier(partner, reaction){
@@ -375,7 +435,7 @@ function renderDossier(partner, reaction){
             </div>
         </div>
         <div class="dos-hdr-right">
-            <div class="dos-sessions"><span style="font-size:9px;color:#2a2a2a;letter-spacing:1px;text-transform:uppercase">Projected reaction</span></div>
+            <div class="dos-sessions"><span style="font-size:9px;color:#2a2a2a;letter-spacing:1px;text-transform:uppercase">${reaction.co_presence && reaction.co_presence.n_shared > 0 ? 'Measured (' + reaction.co_presence.n_shared + ' sessions)' : 'Projected reaction'}</span></div>
         </div>
     </div>
 
@@ -387,13 +447,7 @@ function renderDossier(partner, reaction){
         </div>
     </div>
 
-    <div class="record-block">
-        <div class="record-hdr">
-            <span class="record-hdr-lbl">Joint Session Record</span>
-            <span style="font-size:9px;color:#222">session co-tracking pending</span>
-        </div>
-        <div style="padding:14px;font-size:10px;color:#1a1a1a;font-style:italic">Joint session history will appear here once multi-player sessions are tracked in the ledger.</div>
-    </div>
+    ${coPresenceHtml(reaction.co_presence)}
 
     ${challengeHtml}
     ${proposeHtml}
