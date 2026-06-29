@@ -162,6 +162,15 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
 @media(max-width:560px){.two{grid-template-columns:1fr}.mode-pick{grid-template-columns:1fr}.mode-btn{border-right:none;border-bottom:1px solid #000}.mode-btn:last-child{border-bottom:none}}
 /* ── SESSION ENERGY ── */
 .energy-chips{display:flex;gap:0;border:1px solid #ddd;overflow:hidden;margin-top:4px}
+/* ── INTENT PICKER ── */
+.intent-pick{display:flex;gap:0;border:2px solid #000;margin-bottom:0}
+.intent-btn{flex:1;padding:8px 4px;border:none;border-right:1px solid #000;background:#f8f8f8;font-size:7px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;color:#888;font-family:inherit}
+.intent-btn:last-child{border-right:none}
+.intent-btn.active{background:#000;color:#fff}
+.dir-mode-pick{display:none;gap:0;border:2px solid #000;border-top:1px solid #555;margin-bottom:0}
+.dir-mode-btn{flex:1;padding:6px 2px;border:none;border-right:1px solid #555;background:#1a1a1a;font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;color:#999;font-family:inherit}
+.dir-mode-btn:last-child{border-right:none}
+.dir-mode-btn.active{background:#fff;color:#000}
 .ec{flex:1;padding:9px 10px;cursor:pointer;border:none;background:#fff;text-align:left;font-family:Arial,sans-serif;border-right:1px solid #ddd;transition:background .1s}
 .ec:last-child{border-right:none}
 .ec:hover{background:#f5f5f5}
@@ -338,6 +347,20 @@ body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-
        HOST CONFIG
   ═══════════════════════════════════ -->
   <div id="config-host" style="display:none">
+
+    <div class="intent-pick" id="intent-pick" style="display:none">
+      <button class="intent-btn active" id="intent-compiler" onclick="setIntent('compiler')">COMPILER</button>
+      <button class="intent-btn" id="intent-directed" onclick="setIntent('directed')">DIRECTED</button>
+      <button class="intent-btn" id="intent-manual" onclick="setIntent('manual')">MANUAL</button>
+    </div>
+    <div class="dir-mode-pick" id="dir-mode-pick">
+      <button class="dir-mode-btn" id="dir-QTY" onclick="setDirectedMode('QTY')">QTY</button>
+      <button class="dir-mode-btn" id="dir-SPT" onclick="setDirectedMode('SPT')">SPT</button>
+      <button class="dir-mode-btn" id="dir-FRT" onclick="setDirectedMode('FRT')">FRT</button>
+      <button class="dir-mode-btn" id="dir-DST" onclick="setDirectedMode('DST')">DST</button>
+      <button class="dir-mode-btn" id="dir-WRM" onclick="setDirectedMode('WRM')">WRM</button>
+      <button class="dir-mode-btn" id="dir-INV" onclick="setDirectedMode('INV')">INV</button>
+    </div>
 
     <div class="section">
       <div class="slbl">Session Identity</div>
@@ -870,18 +893,63 @@ function calibrationLines(n) {
 function hostLines(n) {
   var t = 0; var lines = [];
   function push(s, x, dt) { lines.push({t:t,s:s,x:x||""}); t += dt||600; }
-  var pool = [
-    ["You are setting this up for others.","The system will read the room as people join.","Build it how you want."],
-    ["New players get something accessible.","Known players get pushed.","The room shapes the configuration once people arrive."],
-    ["The chaos is the same for everyone in the room.","How each person meets it — that is the interesting part."],
-  ];
-  var msgs = pool[n % pool.length];
   var GAME_NAMES = {constellation:"CONSTELLATION", golad:"GOLAD", geobridge:"GEOBRIDGE", c4d:"C4D"};
   var gameName = GAME_NAMES[(S && S.selectedGame) || "constellation"] || "CONSTELLATION";
+  var intent = (S && S.hostIntent) ? S.hostIntent.type : 'compiler';
   push("dim", "// HOST SESSION — " + gameName, 400);
-  msgs.forEach(function(m) { push("obs", m, 800); });
-  push("blank","", 450);
-  push("hint", "> Create the session, then share the link.", 600);
+
+  if (intent === 'manual') {
+    push("dim", "// MANUAL — FULL HOST CONTROL", 300);
+    push("obs", "You control every setting. Compiler runs but does not override your choices.", 700);
+    push("obs", "The system still reads each player when they join.", 600);
+    push("blank","", 300);
+    push("hint", "> Configure below, then share the link.", 500);
+
+  } else if (intent === 'directed') {
+    var dMode = (S.hostIntent && S.hostIntent.mode) || null;
+    push("dim", "// DIRECTED — MODE: " + (dMode || "NOT SET"), 300);
+    if (dMode) {
+      push("obs", "Mode locked: " + dMode + ". Compiler calibrates ZPD, bot profile, and map for your group.", 700);
+      push("dim", "// Harmonic mean ZPD protects the weakest player in the room.", 500);
+      push("blank","", 300);
+      push("hint", "> Share the link. Compiler applies when the session starts.", 500);
+    } else {
+      push("obs", "Select a mode from the bar above.", 700);
+    }
+
+  } else {
+    // compiler intent — auto mode
+    push("dim", "// COMPILER — ARGMAX GROUP INFORMATION GAIN", 300);
+    if (S.compilerAdvisory) {
+      var adv = S.compilerAdvisory;
+      var ms = adv.mode_scores || {};
+      var sc = ms[adv.mode] !== undefined ? (+ms[adv.mode]).toFixed(3) : '—';
+      var pCount = adv.player_count > 1 ? ' (' + adv.player_count + ' players)' : ' (your profile)';
+      push("obs", "Advisory" + pCount + ": " + adv.mode + " — I(d) = " + sc, 600);
+      if (adv.has_calibration_player) {
+        push("dim", "// New player in group — config adjusted for calibration.", 400);
+      }
+      push("dim", "// Bot and ZPD anchor to weakest player. Will recalibrate as players join.", 400);
+      push("blank","", 300);
+      push("hint", "> Share the link. Compiler applies when the session starts.", 500);
+    } else if (S.studentId && !S._advisoryFetching) {
+      S._advisoryFetching = true;
+      var allIds = [S.studentId].concat(
+        (S.hostPlayers || []).map(function(p) { return p.id || p.studentId; }).filter(Boolean)
+      );
+      var url = API + '/api/compiler/room?ids=' + allIds.map(encodeURIComponent).join(',') + '&type=auto';
+      fetch(url)
+        .then(function(r) { return r.json(); })
+        .then(function(data) { S.compilerAdvisory = data; S._advisoryFetching = false; renderTerminal(S.mode); })
+        .catch(function() { S._advisoryFetching = false; });
+      push("dim", "// Fetching compiler advisory...", 300);
+    } else if (!S.studentId) {
+      push("obs", "Log in to see your compiler advisory.", 600);
+      push("dim", "// The compiler selects the optimal mode for your group.", 400);
+    } else {
+      push("dim", "// Loading...", 300);
+    }
+  }
   return {lines:lines, zone:null, codename:null};
 }
 
@@ -1240,6 +1308,7 @@ var S = {
   train:{map:"", bot:true},
   host:{map:"", steals:true, hq:true, teams:2, pts:false, botCount:0, botAggression:5, botVariety:3, social:false},
   hostPlayers:[], hostTeams:{}, cohortCompiler:null,
+  hostIntent:{type:'compiler',mode:null}, compilerAdvisory:null, _advisoryFetching:false,
   rooms:{train:null, host:null},
 };
 
@@ -1379,6 +1448,9 @@ function setMode(mode) {
   document.getElementById("mode-host").classList.toggle("active", !isTrain);
   document.getElementById("config-train").style.display = isTrain ? "block" : "none";
   document.getElementById("config-host").style.display  = isTrain ? "none" : "block";
+  var ip = document.getElementById("intent-pick");
+  if (ip) ip.style.display = isTrain ? "none" : "flex";
+  if (isTrain) { S.compilerAdvisory = null; S._advisoryFetching = false; }
   renderTerminal(mode);
 }
 
@@ -1390,6 +1462,26 @@ function setGame(id) {
   document.querySelectorAll(".game-btn").forEach(function(b) { b.classList.remove("active"); });
   var gb = document.getElementById("game-" + id);
   if (gb) gb.classList.add("active");
+  renderTerminal(S.mode);
+}
+
+function setIntent(type) {
+  S.hostIntent.type = type;
+  if (type !== 'directed') S.hostIntent.mode = null;
+  document.querySelectorAll('.intent-btn').forEach(function(b) { b.classList.remove('active'); });
+  var btn = document.getElementById('intent-' + type);
+  if (btn) btn.classList.add('active');
+  var dp = document.getElementById('dir-mode-pick');
+  if (dp) dp.style.display = type === 'directed' ? 'flex' : 'none';
+  S.compilerAdvisory = null; S._advisoryFetching = false;
+  renderTerminal(S.mode);
+}
+
+function setDirectedMode(mode) {
+  S.hostIntent.mode = mode;
+  document.querySelectorAll('.dir-mode-btn').forEach(function(b) { b.classList.remove('active'); });
+  var btn = document.getElementById('dir-' + mode);
+  if (btn) btn.classList.add('active');
   renderTerminal(S.mode);
 }
 
@@ -1686,6 +1778,7 @@ function buildHostOpts() {
     _teamAssignments:     S.hostTeams,
     _socialSession:       h.social,
     _kMultiplier:         h.social ? 0.25 : 1.0,
+    _hostIntent:          S.hostIntent,
     _sessionName:         document.getElementById("h-name").value.trim() || undefined,
   };
 }
