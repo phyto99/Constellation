@@ -1,0 +1,2060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nakama Lobby System</title>
+  <script src="/vendor/react/react.production.min.js"></script>
+  <script src="/vendor/react-dom/react-dom.production.min.js"></script>
+  <script src="/vendor/babel/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/colyseus.js@0.15.24/dist/colyseus.js"></script>
+
+</head>
+<body>
+  <div id="root" style="background:#000;min-height:100vh;color:#fff;display:flex;align-items:center;justify-content:center;font-family:monospace;font-size:11px;letter-spacing:2px">LOADING…</div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    const NakamaLobbySystem = () => {
+      const [view, setView] = useState('main');
+      const [lobbies, setLobbies] = useState([]);
+      const [currentLobby, setCurrentLobby] = useState(null);
+      const [playerName, setPlayerName] = useState(() => {
+        return localStorage.getItem('playerName') || '';
+      });
+      const [isConnected, setIsConnected] = useState(false);
+      const [viewAsPlayer, setViewAsPlayer] = useState('host');
+      const [errorMessage, setErrorMessage] = useState('');
+
+      // Persist player name
+      useEffect(() => {
+        if (playerName) {
+          localStorage.setItem('playerName', playerName);
+        }
+      }, [playerName]);
+      const [serverStatus, setServerStatus] = useState('checking');
+      const [lastCheckTime, setLastCheckTime] = useState(0);
+      
+      // Initialize activity log with condensed format
+      const [errorLog, setErrorLog] = useState(() => {
+        try {
+          const saved = localStorage.getItem('activityLog');
+          return saved ? JSON.parse(saved) : [];
+        } catch {
+          return [];
+        }
+      });
+      
+      // Colyseus state
+      const [colyseusClient, setColyseusClient] = useState(null);
+      const [room, setRoom] = useState(null);
+      const [playerCursors, setPlayerCursors] = useState({});
+      const [mySessionId, setMySessionId] = useState(null);
+      const canvasRef = useRef(null);
+
+      // Persist activity log to localStorage
+      useEffect(() => {
+        localStorage.setItem('activityLog', JSON.stringify(errorLog));
+      }, [errorLog]);
+
+      // Activity logging helper with condensing - logs everything with color coding
+      const logActivity = (context, message, type = 'info') => {
+        const now = new Date();
+        const timestamp = now.toLocaleTimeString('en-US', { 
+          hour12: false, 
+          hour: '2-digit', 
+          minute: '2-digit', 
+          second: '2-digit' 
+        });
+        const logMsg = `${context}: ${message}`;
+        console.log(`[${timestamp}] ${logMsg}`);
+        
+        setErrorLog(prev => {
+          // Check if the last log entry is the same message (for condensing)
+          const lastLog = prev[prev.length - 1];
+          if (lastLog && lastLog.msg === logMsg && lastLog.type === type) {
+            // Increment count for repeated message
+            const updated = [...prev];
+            updated[updated.length - 1] = {
+              ...lastLog,
+              count: (lastLog.count || 1) + 1,
+              lastTime: timestamp
+            };
+            return updated.slice(-50); // Keep last 50 entries
+          }
+          
+          // New unique message
+          return [...prev, { 
+            msg: logMsg, 
+            type, 
+            time: timestamp,
+            count: 1 
+          }].slice(-50);
+        });
+      };
+
+      // Shared server health tracking across all tabs using localStorage
+      const getSharedServerData = () => {
+        try {
+          const data = localStorage.getItem('serverHealthData');
+          if (data) {
+            const parsed = JSON.parse(data);
+            // Only use data if it's recent (within last 10 seconds)
+            if (Date.now() - parsed.lastUpdate < 10000) {
+              return parsed;
+            }
+          }
+        } catch (e) {
+          console.error('Error reading shared server data:', e);
+        }
+        return null;
+      };
+
+      const setSharedServerData = (data) => {
+        try {
+          localStorage.setItem('serverHealthData', JSON.stringify({
+            ...data,
+            lastUpdate: Date.now()
+          }));
+        } catch (e) {
+          console.error('Error saving shared server data:', e);
+        }
+      };
+
+      // Initialize server health from shared data
+      const [serverHistory, setServerHistory] = useState(() => {
+        const shared = getSharedServerData();
+        return shared?.history || [];
+      });
+      
+      const [serverUptime, setServerUptime] = useState(() => {
+        const shared = getSharedServerData();
+        return shared?.uptime || 0;
+      });
+      
+      const [serverDowntime, setServerDowntime] = useState(() => {
+        const shared = getSharedServerData();
+        return shared?.downtime || 0;
+      });
+      
+      const [lastStatusChange, setLastStatusChange] = useState(() => {
+        const shared = getSharedServerData();
+        return shared?.lastStatusChange || Date.now();
+      });
+
+      const [sessionStartTime] = useState(Date.now());
+      
+      // Sync server data across tabs
+      useEffect(() => {
+        const syncInterval = setInterval(() => {
+          const shared = getSharedServerData();
+          if (shared && shared.lastUpdate > Date.now() - 5000) {
+            // Another tab updated recently, sync our state
+            setServerHistory(shared.history || []);
+            setServerUptime(shared.uptime || 0);
+            setServerDowntime(shared.downtime || 0);
+            setLastStatusChange(shared.lastStatusChange || Date.now());
+            if (shared.currentStatus && shared.currentStatus !== serverStatus) {
+              setServerStatus(shared.currentStatus);
+            }
+          }
+        }, 1000); // Check for updates every second
+
+        return () => clearInterval(syncInterval);
+      }, [serverStatus]);
+
+      // Check server status periodically with accurate tracking
+      useEffect(() => {
+        let checkCount = 0;
+        let consecutiveFailures = 0;
+        let consecutiveSuccesses = 0;
+        let previousStatus = serverStatus;
+        
+        const checkServer = async () => {
+          checkCount++;
+          setLastCheckTime(checkCount);
+          
+          const checkStartTime = Date.now();
+          let newStatus = 'offline';
+          let responseTime = 0;
+          
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            
+            const response = await fetch('http://localhost:2567/health', {
+              signal: controller.signal,
+              cache: 'no-cache',
+              method: 'GET'
+            });
+            
+            clearTimeout(timeoutId);
+            responseTime = Date.now() - checkStartTime;
+            
+            if (response.ok) {
+              const data = await response.json();
+              if (data && data.status === 'ok') {
+                newStatus = 'online';
+                consecutiveSuccesses++;
+                consecutiveFailures = 0;
+                console.log(`✓ Server health check: ONLINE (${responseTime}ms)`);
+              } else {
+                throw new Error('Invalid response');
+              }
+            } else {
+              throw new Error(`HTTP ${response.status}`);
+            }
+          } catch (error) {
+            newStatus = 'offline';
+            consecutiveFailures++;
+            consecutiveSuccesses = 0;
+            console.log('✗ Server check failed:', error.message);
+          }
+
+          // Get current shared data
+          const shared = getSharedServerData() || {
+            history: [],
+            uptime: 0,
+            downtime: 0,
+            lastStatusChange: Date.now(),
+            currentStatus: 'checking'
+          };
+
+          // Calculate time since last status change
+          const timeSinceChange = Date.now() - shared.lastStatusChange;
+          
+          // Update uptime/downtime based on ACTUAL current status
+          let newUptime = shared.uptime;
+          let newDowntime = shared.downtime;
+          let newLastStatusChange = shared.lastStatusChange;
+          
+          // Only update if status actually changed
+          if (newStatus !== shared.currentStatus) {
+            if (shared.currentStatus === 'online') {
+              // Was online, now offline
+              newUptime += timeSinceChange;
+              logActivity('Server', `✗ Server went OFFLINE (was up ${Math.round(timeSinceChange/1000)}s)`, 'error');
+            } else if (shared.currentStatus === 'offline') {
+              // Was offline, now online
+              newDowntime += timeSinceChange;
+              logActivity('Server', `✓ Server back ONLINE (was down ${Math.round(timeSinceChange/1000)}s)`, 'success');
+            }
+            newLastStatusChange = Date.now();
+          }
+
+          // Update history
+          const newHistory = [...shared.history, { 
+            time: Date.now(), 
+            status: newStatus, 
+            responseTime: newStatus === 'online' ? responseTime : null 
+          }].slice(-60);
+
+          // Save to shared storage
+          const updatedData = {
+            history: newHistory,
+            uptime: newUptime,
+            downtime: newDowntime,
+            lastStatusChange: newLastStatusChange,
+            currentStatus: newStatus
+          };
+          
+          setSharedServerData(updatedData);
+
+          // Update local state
+          setServerStatus(newStatus);
+          setServerHistory(newHistory);
+          setServerUptime(newUptime);
+          setServerDowntime(newDowntime);
+          setLastStatusChange(newLastStatusChange);
+
+          // Provide helpful diagnostics only on first failure
+          if (newStatus === 'offline' && consecutiveFailures === 1 && previousStatus === 'online') {
+            logActivity('Server', '✗ Connection lost - checking...', 'warning');
+          } else if (newStatus === 'offline' && consecutiveFailures === 3) {
+            logActivity('Server', '✗ Server appears to be down. Start with: npm start', 'error');
+          }
+
+          previousStatus = newStatus;
+        };
+
+        checkServer();
+        const interval = setInterval(checkServer, 3000); // Check every 3 seconds
+        return () => clearInterval(interval);
+      }, []);
+      
+      const [lobbyConfig, setLobbyConfig] = useState(() => {
+        try {
+          const saved = localStorage.getItem('lobbyConfig');
+          return saved ? JSON.parse(saved) : {
+            name: 'My Game Room',
+            maxPlayers: 4,
+            isPrivate: false,
+            gameMode: 'competitive',
+            allowTeamSwitching: true,
+            showSettingsToPlayers: true,
+            moves: 15,
+            rounds: 10,
+            roundLength: 30,
+            planningTime: 5,
+            steals: 15,
+            headquarters: 2,
+            multipliers: {
+              count: 500,
+              distance: 1,
+              hq: 10,
+              destruction: 1
+            },
+            aiBots: []
+          };
+        } catch {
+          return {
+            name: 'My Game Room',
+            maxPlayers: 4,
+            isPrivate: false,
+            gameMode: 'competitive',
+            allowTeamSwitching: true,
+            showSettingsToPlayers: true,
+            moves: 15,
+            rounds: 10,
+            roundLength: 30,
+            planningTime: 5,
+            steals: 15,
+            headquarters: 2,
+            multipliers: {
+              count: 500,
+              distance: 1,
+              hq: 10,
+              destruction: 1
+            },
+            aiBots: []
+          };
+        }
+      });
+
+      // Persist lobby config
+      useEffect(() => {
+        localStorage.setItem('lobbyConfig', JSON.stringify(lobbyConfig));
+      }, [lobbyConfig]);
+
+      const [lobbyPlayers, setLobbyPlayers] = useState([]);
+      const [draggedPlayer, setDraggedPlayer] = useState(null);
+      const [readyPlayers, setReadyPlayers] = useState(new Set());
+
+      const TEAM_CONFIGS = [
+        { color: '#00FFFF', name: 'CYAN' },
+        { color: '#FF00FF', name: 'MAGENTA' },
+        { color: '#00FF00', name: 'LIME' },
+        { color: '#FFD700', name: 'GOLD' },
+        { color: '#0000FF', name: 'BLUE' },
+        { color: '#FF0000', name: 'RED' },
+        { color: '#006400', name: 'DARK GREEN' }
+      ];
+
+      const UNASSIGNED_TEAM = { color: '#808080', name: 'UNASSIGNED' };
+
+      const AI_BOT_TYPES = {
+        HAL: { name: 'HAL', description: 'Steady and logical' },
+        CAESAR: { name: 'CAESAR', description: 'Tactical' },
+        ATHENA: { name: 'ATHENA', description: 'Aggressive' },
+        ROBIN_HOOD: { name: 'ROBIN HOOD', description: 'Opportunist' },
+        EINSTEIN: { name: 'EINSTEIN', description: 'Wormhole' },
+        LORENZ: { name: 'LORENZ', description: 'Chaotic' }
+      };
+
+      const connectToColyseus = async () => {
+        try {
+          setErrorMessage('');
+          logActivity('Connect', 'Connecting to Colyseus server...', 'info');
+          console.log('Connecting to ws://localhost:2567...');
+          
+          // Check if Colyseus is loaded
+          if (typeof Colyseus === 'undefined') {
+            throw new Error('Colyseus library not loaded. Check your internet connection.');
+          }
+          
+          // Check if server is actually online first
+          if (serverStatus !== 'online') {
+            throw new Error('Server is offline. Please start the server first.');
+          }
+          
+          const client = new Colyseus.Client('ws://localhost:2567');
+          
+          // Test connection with timeout
+          console.log('Testing connection...');
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Connection timeout after 5 seconds')), 5000)
+          );
+          
+          const startTime = Date.now();
+          await Promise.race([
+            client.getAvailableRooms('constellation'),
+            timeoutPromise
+          ]);
+          
+          const connectTime = Date.now() - startTime;
+          
+          // Set client FIRST before logging success
+          setColyseusClient(client);
+          setIsConnected(true);
+          
+          console.log(`✓ Connected successfully in ${connectTime}ms`);
+          logActivity('Connect', `✓ Connected to Colyseus (${connectTime}ms)`, 'success');
+          
+          // Wait a tick to ensure state is updated before loading lobbies
+          setTimeout(() => {
+            loadLobbies(true); // Silent initial load
+          }, 100);
+        } catch (error) {
+          console.error('✗ Failed to connect:', error);
+          
+          // Provide specific error messages
+          let errorMsg = error.message;
+          if (error.message.includes('timeout')) {
+            errorMsg = 'Connection timeout. Server may be slow or unreachable.';
+          } else if (error.message.includes('offline')) {
+            errorMsg = 'Server is offline. Start with: npm start';
+          } else if (error.message.includes('library')) {
+            errorMsg = 'Failed to load Colyseus library. Check internet connection.';
+          }
+          
+          logActivity('Connect', `✗ ERROR: ${errorMsg}`, 'error');
+          setErrorMessage(errorMsg);
+          setIsConnected(false);
+          setColyseusClient(null);
+        }
+      };
+
+      const loadLobbies = async (silent = false) => {
+        if (!colyseusClient) {
+          if (!silent) {
+            logActivity('Lobbies', '✗ Not connected to server', 'error');
+          }
+          return;
+        }
+        
+        try {
+          const availableRooms = await colyseusClient.getAvailableRooms('constellation');
+          
+          const formattedLobbies = availableRooms.map(room => ({
+            id: room.roomId,
+            name: room.metadata?.name || `Game ${room.roomId}`,
+            host: room.metadata?.hostName || 'Unknown',
+            players: room.clients,
+            maxPlayers: room.maxClients,
+            mode: room.metadata?.gameMode || 'competitive',
+            status: room.metadata?.gameState || 'waiting'
+          }));
+          
+          setLobbies(formattedLobbies);
+          
+          if (!silent) {
+            if (formattedLobbies.length === 0) {
+              logActivity('Lobbies', 'No lobbies available', 'info');
+            } else {
+              logActivity('Lobbies', `Found ${formattedLobbies.length} lobby(ies)`, 'success');
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load lobbies:', error);
+          if (!silent) {
+            logActivity('Lobbies', `✗ Failed to load: ${error.message}`, 'error');
+          }
+          setLobbies([]);
+        }
+      };
+
+      const getNextBalancedTeam = (players, maxPlayers) => {
+        const teamCounts = {};
+        for (let i = 0; i < maxPlayers; i++) {
+          teamCounts[i] = players.filter(p => p.teamIndex === i).length;
+        }
+        let minTeam = 0;
+        let minCount = teamCounts[0];
+        for (let i = 1; i < maxPlayers; i++) {
+          if (teamCounts[i] < minCount) {
+            minCount = teamCounts[i];
+            minTeam = i;
+          }
+        }
+        return minTeam;
+      };
+
+      const createLobby = async () => {
+        try {
+          setErrorMessage('');
+          console.log('Creating lobby:', lobbyConfig.name);
+          logActivity('Create Lobby', `Creating room: ${lobbyConfig.name}`, 'info');
+          
+          const roomInstance = await colyseusClient.create('constellation', {
+            ...lobbyConfig,
+            name: playerName, // Player name for the server
+            roomName: lobbyConfig.name, // Room name for metadata
+            maxPlayers: lobbyConfig.maxPlayers,
+            gameMode: lobbyConfig.gameMode,
+            hostName: playerName
+          });
+          
+          console.log('✓ Room created:', roomInstance.roomId);
+          logActivity('Create Lobby', `✓ Room ${roomInstance.roomId} created`, 'success');
+          
+          setRoom(roomInstance);
+          setMySessionId(roomInstance.sessionId);
+          
+          const newLobby = {
+            id: roomInstance.roomId,
+            name: lobbyConfig.name,
+            host: playerName,
+            players: roomInstance.state.players.size,
+            maxPlayers: lobbyConfig.maxPlayers,
+            mode: lobbyConfig.gameMode,
+            status: 'waiting',
+            config: lobbyConfig
+          };
+          
+          console.log('Created lobby:', newLobby);
+          console.log('Room has', roomInstance.state.players.size, 'players');
+          console.log('My session ID:', roomInstance.sessionId);
+          console.log('Host ID from state:', roomInstance.state.hostId);
+          
+          // Log host status
+          const hostId = roomInstance.state.hostId || roomInstance.sessionId;
+          logActivity('Host', `👑 You are the host (${playerName})`, 'success');
+          
+          const initialPlayers = [];
+          roomInstance.state.players.forEach((player, sessionId) => {
+            const isHostPlayer = player.isHost || sessionId === hostId || sessionId === roomInstance.sessionId;
+            console.log('Initial player:', sessionId, player.name, 'isHost:', isHostPlayer, 'player.isHost:', player.isHost);
+            initialPlayers.push({
+              id: sessionId,
+              name: player.name || playerName,
+              teamIndex: player.team !== null ? player.team : 0,
+              isHost: isHostPlayer,
+              isAI: false,
+              ready: player.ready || false
+            });
+          });
+          
+          lobbyConfig.aiBots.forEach((bot, idx) => {
+            const teamIndex = getNextBalancedTeam(initialPlayers, lobbyConfig.maxPlayers);
+            initialPlayers.push({
+              id: `ai_${bot.id}`,
+              name: AI_BOT_TYPES[bot.type].name,
+              teamIndex: teamIndex,
+              isHost: false,
+              isAI: true,
+              botType: bot.type,
+              aggression: bot.aggression
+            });
+          });
+          
+          setLobbyPlayers(initialPlayers);
+          setCurrentLobby(newLobby);
+          setupRoomListeners(roomInstance);
+          
+          // Switch to lobby view
+          setView('lobby');
+          
+          // Multiple syncs to ensure state is caught
+          setTimeout(() => updatePlayersFromRoomState(roomInstance), 100);
+          setTimeout(() => updatePlayersFromRoomState(roomInstance), 300);
+          setTimeout(() => updatePlayersFromRoomState(roomInstance), 500);
+        } catch (error) {
+          console.error('✗ Failed to create lobby:', error);
+          logActivity('Create Lobby', `✗ ERROR: ${error.message}`, 'error');
+          setErrorMessage('Failed to create lobby: ' + error.message);
+        }
+      };
+
+      const joinLobby = async (lobby) => {
+        try {
+          setErrorMessage('');
+          
+          // Validation checks
+          if (!colyseusClient) {
+            const msg = 'Not connected. Click CONNECT first.';
+            logActivity('Join', `✗ ${msg}`, 'error');
+            setErrorMessage(msg);
+            return;
+          }
+          
+          if (!playerName) {
+            const msg = 'Enter your name first.';
+            logActivity('Join', `✗ ${msg}`, 'error');
+            setErrorMessage(msg);
+            return;
+          }
+          
+          if (lobby.players >= lobby.maxPlayers) {
+            const msg = 'Lobby is full.';
+            logActivity('Join', `✗ ${msg}`, 'error');
+            setErrorMessage(msg);
+            return;
+          }
+          
+          logActivity('Join', `Joining "${lobby.name}"...`, 'info');
+          
+          const joinStartTime = Date.now();
+          const roomInstance = await colyseusClient.joinById(lobby.id, { name: playerName });
+          const joinDuration = Date.now() - joinStartTime;
+          
+          console.log(`✓ Joined room in ${joinDuration}ms:`, roomInstance.sessionId);
+          logActivity('Join', `✓ Joined as ${playerName}`, 'success');
+          
+          // Set room state
+          setRoom(roomInstance);
+          setMySessionId(roomInstance.sessionId);
+          setCurrentLobby({
+            ...lobby,
+            players: roomInstance.state.players.size,
+            host: roomInstance.metadata?.hostName || lobby.host
+          });
+          setViewAsPlayer(roomInstance.sessionId);
+          
+          // Setup listeners first
+          setupRoomListeners(roomInstance);
+          
+          // Initialize players immediately
+          updatePlayersFromRoomState(roomInstance);
+          
+          // Switch to lobby view and sync again
+          setTimeout(() => {
+            updatePlayersFromRoomState(roomInstance);
+            setView('lobby');
+          }, 100);
+          
+          // One more sync after a short delay to catch any late updates
+          setTimeout(() => {
+            updatePlayersFromRoomState(roomInstance);
+          }, 500);
+          
+        } catch (error) {
+          console.error('✗ Failed to join lobby:', error);
+          
+          let msg = 'Failed to join';
+          if (error.message.includes('not found')) {
+            msg = 'Lobby no longer exists';
+          } else if (error.message.includes('full')) {
+            msg = 'Lobby is full';
+          } else if (error.message.includes('timeout')) {
+            msg = 'Connection timeout';
+          } else if (error.message.includes('denied')) {
+            msg = 'Access denied';
+          } else {
+            msg = error.message;
+          }
+          
+          logActivity('Join', `✗ ${msg}`, 'error');
+          setErrorMessage(msg);
+        }
+      };
+
+      const setupRoomListeners = (roomInstance) => {
+        try {
+          console.log('Setting up room listeners for room:', roomInstance.roomId);
+          console.log('Current session ID:', roomInstance.sessionId);
+          
+          // Periodic sync to ensure state consistency (every 2 seconds)
+          const syncInterval = setInterval(() => {
+            if (view === 'lobby' && roomInstance && roomInstance.connection?.isOpen) {
+              updatePlayersFromRoomState(roomInstance);
+            } else if (view !== 'lobby') {
+              clearInterval(syncInterval);
+            }
+          }, 2000);
+          
+          // Store interval for cleanup
+          if (!roomInstance._syncInterval) {
+            roomInstance._syncInterval = syncInterval;
+          }
+          
+          // Listen for hostId changes
+          roomInstance.state.listen('hostId', (value) => {
+            console.log('Host ID changed to:', value);
+            if (value === roomInstance.sessionId) {
+              logActivity('Host', '👑 You are now the host', 'success');
+            }
+            updatePlayersFromRoomState(roomInstance);
+          });
+          
+          // Listen for player state changes
+          roomInstance.state.players.onAdd = (player, sessionId) => {
+            console.log('🔔 Player added event:', sessionId, player.name, 'isHost:', player.isHost);
+            
+            // Listen for changes to this specific player
+            player.listen('isHost', (value) => {
+              console.log(`Player ${sessionId} isHost changed to:`, value);
+              updatePlayersFromRoomState(roomInstance);
+            });
+            
+            player.listen('ready', (value) => {
+              console.log(`Player ${sessionId} ready changed to:`, value);
+              updatePlayersFromRoomState(roomInstance);
+            });
+            
+            player.listen('team', (value) => {
+              console.log(`Player ${sessionId} team changed to:`, value);
+              updatePlayersFromRoomState(roomInstance);
+            });
+            
+            // Immediate update - multiple attempts
+            updatePlayersFromRoomState(roomInstance);
+            setTimeout(() => updatePlayersFromRoomState(roomInstance), 50);
+            setTimeout(() => updatePlayersFromRoomState(roomInstance), 150);
+          };
+          
+          roomInstance.state.players.onRemove = (player, sessionId) => {
+            console.log('🔔 Player removed event:', sessionId);
+            const playerName = player?.name || sessionId.substring(0, 6);
+            logActivity('Player', `${playerName} left the room`, 'warning');
+            updatePlayersFromRoomState(roomInstance);
+          };
+          
+          roomInstance.state.players.onChange = (player, sessionId) => {
+            console.log('🔔 Player changed event:', sessionId, player.name, 'isHost:', player.isHost);
+            updatePlayersFromRoomState(roomInstance);
+          };
+
+          // Listen for player joined broadcast (redundant but ensures sync)
+          roomInstance.onMessage('player_joined', (data) => {
+            console.log('📢 Player joined broadcast:', data);
+            
+            // Log to activity log with host indicator
+            const hostIndicator = data.isHost ? ' 👑' : '';
+            logActivity('Player', `${data.playerName}${hostIndicator} joined (${data.totalPlayers} total)`, 'player');
+            
+            // Force immediate update - multiple attempts to ensure it catches
+            updatePlayersFromRoomState(roomInstance);
+            setTimeout(() => updatePlayersFromRoomState(roomInstance), 50);
+            setTimeout(() => updatePlayersFromRoomState(roomInstance), 150);
+          });
+        
+          // Listen for cursor movements
+          roomInstance.onMessage('cursor_move', (data) => {
+            setPlayerCursors(prev => ({
+              ...prev,
+              [data.sessionId]: {
+                x: data.x,
+                y: data.y,
+                color: data.color,
+                name: data.name
+              }
+            }));
+          });
+        
+          // Listen for team changes
+          roomInstance.onMessage('player_team_changed', (data) => {
+            console.log('Team changed:', data);
+            logActivity('Team', `Player moved to team ${data.newTeam}`, 'info');
+            updatePlayersFromRoomState(roomInstance);
+          });
+
+          // Listen for ready status changes
+          roomInstance.onMessage('player_ready_changed', (data) => {
+            console.log('Ready status changed:', data);
+            setReadyPlayers(prev => {
+              const newSet = new Set(prev);
+              if (data.ready) {
+                newSet.add(data.playerId);
+              } else {
+                newSet.delete(data.playerId);
+              }
+              return newSet;
+            });
+            logActivity('Ready', `Player ${data.ready ? 'ready' : 'not ready'}`, 'info');
+          });
+        
+          // Listen for game start
+          roomInstance.onMessage('game_started', (data) => {
+            console.log('Game started:', data);
+            logActivity('Game', 'Game started!', 'success');
+            setView('game');
+          });
+
+          // Listen for room errors
+          roomInstance.onError = (code, message) => {
+            console.error('Room error:', code, message);
+            logActivity('Room Error', `${message} (code: ${code})`, 'error');
+          };
+
+          // Listen for room leave
+          roomInstance.onLeave = (code) => {
+            console.log('Left room with code:', code);
+            
+            // Clean up sync interval
+            if (roomInstance._syncInterval) {
+              clearInterval(roomInstance._syncInterval);
+              roomInstance._syncInterval = null;
+            }
+            
+            if (code === 1000) {
+              logActivity('Session', 'Left room normally', 'info');
+            } else if (code === 4000) {
+              logActivity('Session', 'Session expired - disconnected', 'error');
+            } else {
+              logActivity('Session', `Disconnected (code: ${code})`, 'warning');
+            }
+          };
+        } catch (error) {
+          console.error('Error setting up room listeners:', error);
+          logActivity('Error', `Failed to setup listeners: ${error.message}`, 'error');
+        }
+      };
+      
+      const updatePlayersFromRoomState = (roomInstance) => {
+        try {
+          if (!roomInstance || !roomInstance.state || !roomInstance.state.players) {
+            console.error('Invalid room instance');
+            return;
+          }
+          
+          const hostId = roomInstance.state.hostId;
+          const playerCount = roomInstance.state.players.size;
+          console.log(`Updating players - Count: ${playerCount}, Host ID: ${hostId}, My session: ${roomInstance.sessionId}`);
+          
+          const players = [];
+          const newReadySet = new Set();
+          let foundHost = false;
+          
+          roomInstance.state.players.forEach((player, sessionId) => {
+            const isHostPlayer = player.isHost || sessionId === hostId;
+            if (isHostPlayer) {
+              foundHost = true;
+              console.log('✓ Found host:', player.name, sessionId);
+            }
+            
+            const playerData = {
+              id: sessionId,
+              name: player.name || `Player ${sessionId.substring(0, 6)}`,
+              teamIndex: player.team !== null && player.team !== undefined ? player.team : 0,
+              isHost: isHostPlayer,
+              isAI: false,
+              ready: player.ready || false
+            };
+            players.push(playerData);
+            
+            // Update ready status
+            if (player.ready) {
+              newReadySet.add(sessionId);
+            }
+            
+            console.log('Player synced:', playerData);
+          });
+          
+          if (!foundHost) {
+            console.warn('⚠ No host found! Setting first player as host');
+            if (players.length > 0) {
+              players[0].isHost = true;
+            }
+          }
+          
+          console.log(`Total players synced: ${players.length}, Host ID: ${hostId}`);
+          
+          // Force new array reference to trigger React re-render
+          setLobbyPlayers([...players]);
+          setReadyPlayers(newReadySet);
+          
+          // Update current lobby player count and host
+          if (currentLobby) {
+            const hostPlayer = players.find(p => p.isHost);
+            setCurrentLobby(prev => ({
+              ...prev,
+              players: players.length,
+              host: hostPlayer?.name || prev.host,
+              lastUpdate: Date.now() // Force update
+            }));
+          }
+        } catch (error) {
+          console.error('Error updating players from room state:', error);
+          logActivity('Error', `Failed to update players: ${error.message}`, 'error');
+        }
+      };
+      
+      const startGame = () => {
+        if (room) {
+          console.log('Starting game, redirecting to index.html with room ID');
+          logActivity('Start Game', `Redirecting to index.html?room=${room.roomId}`, 'success');
+          room.send('start_game');
+          // Redirect to index.html with room ID as query parameter
+          window.location.href = `/index.html?room=${room.roomId}`;
+        } else {
+          console.error('No room connection');
+          logActivity('Start Game', '✗ ERROR: No room connection available', 'error');
+          setErrorMessage('No room connection available');
+        }
+      };
+
+      const addAIBot = () => {
+        const newBot = {
+          id: Date.now(),
+          type: 'HAL',
+          teamIndex: -1,
+          aggression: 0.5
+        };
+        setLobbyConfig({
+          ...lobbyConfig,
+          aiBots: [...lobbyConfig.aiBots, newBot]
+        });
+      };
+
+      const removeAIBot = (botId) => {
+        setLobbyConfig({
+          ...lobbyConfig,
+          aiBots: lobbyConfig.aiBots.filter(bot => bot.id !== botId)
+        });
+      };
+
+      const updateAIBot = (botId, field, value) => {
+        setLobbyConfig({
+          ...lobbyConfig,
+          aiBots: lobbyConfig.aiBots.map(bot =>
+            bot.id === botId ? { ...bot, [field]: value } : bot
+          )
+        });
+      };
+
+      const changePlayerTeam = (playerId, newTeamIndex) => {
+        try {
+          // Only send message if it's the current player's team change
+          if (room && playerId === mySessionId) {
+            room.send('join_team', { teamIndex: newTeamIndex });
+          }
+          
+          // Update local state optimistically
+          setLobbyPlayers(prev => prev.map(p => 
+            p.id === playerId ? { ...p, teamIndex: newTeamIndex } : p
+          ));
+        } catch (error) {
+          console.error('Error changing player team:', error);
+          logActivity('Error', `Failed to change team: ${error.message}`, 'error');
+        }
+      };
+
+      const randomizeTeams = () => {
+        const shuffled = [...lobbyPlayers];
+        const teamsCount = Math.min(currentLobby.maxPlayers, TEAM_CONFIGS.length);
+        
+        shuffled.forEach((player, idx) => {
+          player.teamIndex = idx % teamsCount;
+        });
+        
+        setLobbyPlayers(shuffled);
+        setLobbyConfig({ ...lobbyConfig, allowTeamSwitching: false });
+      };
+
+      const handleDragStart = (e, player) => {
+        try {
+          const currentPlayer = lobbyPlayers.find(p => p.id === mySessionId);
+          const isHostUser = currentPlayer?.isHost || false;
+          const canDrag = isHostUser || (player.id === mySessionId && canSwitchTeams());
+          
+          if (!canDrag) {
+            e.preventDefault();
+            return;
+          }
+          
+          setDraggedPlayer(player);
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', player.id);
+        } catch (error) {
+          console.error('Error in handleDragStart:', error);
+          e.preventDefault();
+        }
+      };
+
+      const handleDragEnd = () => {
+        setDraggedPlayer(null);
+      };
+
+      const handleDragOver = (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      };
+
+      const handleDrop = (e, teamIndex) => {
+        try {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          if (!draggedPlayer) {
+            return;
+          }
+          
+          const currentPlayer = lobbyPlayers.find(p => p.id === mySessionId);
+          const isHostUser = currentPlayer?.isHost || false;
+          
+          // Check if user can move this player
+          const canMove = isHostUser || (draggedPlayer.id === mySessionId && canSwitchTeams());
+          
+          if (canMove) {
+            changePlayerTeam(draggedPlayer.id, teamIndex);
+          } else {
+            logActivity('Team', '✗ Cannot move this player', 'error');
+          }
+          
+          setDraggedPlayer(null);
+        } catch (error) {
+          console.error('Error in handleDrop:', error);
+          logActivity('Error', `Drag failed: ${error.message}`, 'error');
+          setDraggedPlayer(null);
+        }
+      };
+
+      const isHost = () => {
+        const currentPlayer = lobbyPlayers.find(p => p.id === mySessionId);
+        return currentPlayer?.isHost || false;
+      };
+      
+      const canSwitchTeams = () => lobbyConfig.allowTeamSwitching || isHost();
+
+      const toggleReady = (playerId) => {
+        try {
+          if (room && playerId === mySessionId) {
+            // Send toggle ready message to server
+            room.send('toggle_ready');
+            console.log('Sent toggle_ready to server');
+          }
+        } catch (error) {
+          console.error('Error toggling ready:', error);
+          logActivity('Error', `Failed to toggle ready: ${error.message}`, 'error');
+        }
+      };
+
+      // Main Menu
+      const MainMenuView = () => {
+        return (
+          <div className="min-h-screen bg-black flex items-center justify-center p-4">
+            <div className="border border-white p-8 max-w-md w-full">
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 border-2 border-white mx-auto mb-4" />
+                <h1 className="text-4xl font-bold text-white mb-2">STAR CONQUEST</h1>
+                <p className="text-white text-sm tracking-widest">MULTIPLAYER</p>
+              </div>
+
+              {/* Error Message Display */}
+              {errorMessage && (
+                <div className="mb-4 p-3 border-2 border-red-500 bg-red-900 bg-opacity-20">
+                  <div className="text-red-500 text-sm font-bold uppercase tracking-wider mb-1">ERROR</div>
+                  <div className="text-red-400 text-sm">{errorMessage}</div>
+                </div>
+              )}
+
+            {!isConnected ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs text-white mb-2 uppercase tracking-wider">Name</label>
+                  <input
+                    type="text"
+                    value={playerName}
+                    onChange={(e) => setPlayerName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && playerName) {
+                        e.preventDefault();
+                        connectToColyseus();
+                      }
+                    }}
+                    className="w-full px-4 py-3 bg-black border border-white text-white focus:outline-none"
+                    placeholder="ENTER NAME"
+                    autoFocus
+                  />
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (!playerName) {
+                      logActivity('Connect', '✗ ERROR: Please enter your name', 'error');
+                      return;
+                    }
+                    if (serverStatus !== 'online') {
+                      logActivity('Connect', '✗ ERROR: Server is offline', 'error');
+                      return;
+                    }
+                    connectToColyseus();
+                  }}
+                  disabled={!playerName || serverStatus !== 'online'}
+                  className="w-full py-3 bg-white text-black font-bold hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider transition-colors"
+                >
+                  CONNECT
+                </button>
+                {serverStatus === 'offline' && (
+                  <div className="text-red-500 text-xs text-center uppercase tracking-wider">
+                    Server is offline. Start server with: npm start
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-green-500 text-xs mb-4 uppercase tracking-wider">
+                  <div className="w-2 h-2 bg-green-500" />
+                  CONNECTED: {playerName}
+                </div>
+                <button
+                  onClick={() => { createLobby(); setViewAsPlayer('host'); }}
+                  className="w-full py-3 bg-white text-black font-bold hover:bg-gray-200 uppercase tracking-wider transition-colors cursor-pointer"
+                >
+                  CREATE GAME
+                </button>
+                <button
+                  onClick={() => setView('browse')}
+                  style={{ position: 'relative', zIndex: 100 }}
+                  className="w-full py-3 bg-black text-white border border-white font-bold hover:bg-white hover:text-black uppercase tracking-wider transition-colors cursor-pointer"
+                >
+                  BROWSE LOBBIES
+                </button>
+              </div>
+            )}
+            </div>
+          </div>
+        );
+      };
+
+      // Browse Lobbies
+      const BrowseLobbiesView = () => {
+        const [isRefreshing, setIsRefreshing] = useState(false);
+        const hasLoadedRef = useRef(false);
+        
+        // Auto-refresh when view opens (only once)
+        useEffect(() => {
+          if (view === 'browse' && !hasLoadedRef.current) {
+            hasLoadedRef.current = true;
+            loadLobbies(true); // Silent load on mount
+          }
+        }, [view]);
+
+        const handleRefresh = async () => {
+          setIsRefreshing(true);
+          try {
+            await loadLobbies(false); // Not silent, will log results
+          } catch (error) {
+            logActivity('Refresh', `✗ ${error.message}`, 'error');
+          } finally {
+            setIsRefreshing(false);
+          }
+        };
+
+        const handleBack = () => {
+          setView('main');
+        };
+
+        return (
+          <div className="min-h-screen bg-black p-4">
+            <div className="max-w-6xl mx-auto py-8">
+              <button
+                onClick={handleBack}
+                style={{ position: 'relative', zIndex: 100 }}
+                className="mb-6 text-white hover:text-gray-400 uppercase tracking-wider text-xs cursor-pointer"
+              >
+                ← BACK
+              </button>
+
+            <div className="border border-white p-8">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-3xl font-bold text-white uppercase tracking-wider">LOBBIES</h2>
+                <button
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="px-4 py-2 bg-white text-black hover:bg-gray-300 uppercase tracking-wider text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isRefreshing ? 'REFRESHING...' : 'REFRESH'}
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {lobbies.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400">
+                    <p className="text-lg mb-2">No lobbies available</p>
+                    <p className="text-sm">Create a new game to get started</p>
+                  </div>
+                ) : (
+                  lobbies.map(lobby => (
+                    <div
+                      key={lobby.id}
+                      className="border border-white p-6 hover:bg-white hover:bg-opacity-5"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="text-xl font-bold text-white uppercase tracking-wider">{lobby.name}</h3>
+                            <span className="px-2 py-1 border border-green-500 text-green-500 text-xs uppercase">
+                              {lobby.status}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-6 text-sm text-white uppercase tracking-wider mb-2">
+                              <div>HOST: {lobby.host}</div>
+                            <div>PLAYERS: {lobby.players}/{lobby.maxPlayers}</div>
+                            <div>MODE: {lobby.mode}</div>
+                          </div>
+                          <div className="text-xs text-cyan-400 mt-2">
+                            <a 
+                              href={`${window.location.origin}/index.html?room=${lobby.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:underline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                logActivity('Link', `Opening game link for ${lobby.name}`, 'info');
+                              }}
+                            >
+                              🔗 Game Link: {window.location.origin}/index.html?room={lobby.id}
+                            </a>
+                          </div>
+                        </div>
+                        {lobby.status === 'waiting' && (
+                          <button
+                            onClick={() => joinLobby(lobby)}
+                            style={{ position: 'relative', zIndex: 100 }}
+                            className="px-6 py-2 bg-white text-black font-bold hover:bg-gray-300 uppercase tracking-wider cursor-pointer"
+                          >
+                            JOIN
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+        );
+      };
+
+      // Lobby Waiting Room
+      const LobbyView = () => {
+        const currentPlayer = lobbyPlayers.find(p => p.id === mySessionId);
+
+        return (
+          <div className="min-h-screen bg-black p-4">
+            <div className="max-w-7xl mx-auto py-8">
+              <div className="mb-6 flex items-center gap-4">
+                <button
+                  onClick={() => { 
+                    if (room) {
+                      room.leave();
+                      logActivity('Lobby', 'Left room', 'info');
+                    }
+                    setView('browse');
+                  }}
+                  className="text-white hover:text-gray-400 uppercase tracking-wider text-xs cursor-pointer"
+                >
+                  ← LEAVE
+                </button>
+                <div className="flex-1" />
+                {currentPlayer && (
+                  <div className="text-white text-xs uppercase tracking-wider">
+                    {currentPlayer.isHost ? '👑 YOU ARE HOST' : `HOST: ${lobbyPlayers.find(p => p.isHost)?.name || 'Unknown'}`}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid lg:grid-cols-4 gap-6">
+                {currentPlayer?.isHost && (
+                  <div className="lg:col-span-1 border border-white p-6 space-y-6">
+                    <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-4">ROOM SETTINGS</h3>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs text-white mb-2 uppercase tracking-wider">Name</label>
+                        <input
+                          type="text"
+                          value={lobbyConfig.name}
+                          onChange={(e) => {
+                            const newValue = e.target.value;
+                            setLobbyConfig(prev => ({ ...prev, name: newValue }));
+                          }}
+                          onBlur={(e) => {
+                            logActivity('Settings', `Room name: ${e.target.value}`, 'success');
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.target.blur();
+                              logActivity('Settings', `Room name saved: ${e.target.value}`, 'success');
+                            }
+                          }}
+                          className="w-full px-3 py-2 bg-black border border-white text-white text-sm focus:outline-none"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs text-white mb-2 uppercase tracking-wider">Mode</label>
+                        <select
+                          value={lobbyConfig.gameMode}
+                          onChange={(e) => {
+                            const newValue = e.target.value;
+                            setLobbyConfig(prev => ({ ...prev, gameMode: newValue }));
+                            logActivity('Settings', `Game mode: ${newValue}`, 'success');
+                          }}
+                          className="w-full px-3 py-2 bg-black border border-white text-white text-sm focus:outline-none"
+                        >
+                          <option value="competitive">COMPETITIVE</option>
+                          <option value="teams">TEAMS</option>
+                          <option value="collaborative">COLLABORATIVE</option>
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-white mb-2 uppercase tracking-wider">Moves</label>
+                          <input
+                            type="number"
+                            value={lobbyConfig.moves}
+                            onChange={(e) => {
+                              const newValue = parseInt(e.target.value) || 0;
+                              setLobbyConfig(prev => ({ ...prev, moves: newValue }));
+                            }}
+                            onBlur={(e) => {
+                              logActivity('Settings', `Moves per round: ${e.target.value}`, 'success');
+                            }}
+                            className="w-full px-3 py-2 bg-black border border-white text-white text-sm focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-white mb-2 uppercase tracking-wider">Rounds</label>
+                          <input
+                            type="number"
+                            value={lobbyConfig.rounds}
+                            onChange={(e) => {
+                              const newValue = parseInt(e.target.value) || 0;
+                              setLobbyConfig(prev => ({ ...prev, rounds: newValue }));
+                            }}
+                            onBlur={(e) => {
+                              logActivity('Settings', `Total rounds: ${e.target.value}`, 'success');
+                            }}
+                            className="w-full px-3 py-2 bg-black border border-white text-white text-sm focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-white mb-2 uppercase tracking-wider">Time</label>
+                          <input
+                            type="number"
+                            value={lobbyConfig.roundLength}
+                            onChange={(e) => {
+                              const newValue = parseInt(e.target.value) || 0;
+                              setLobbyConfig(prev => ({ ...prev, roundLength: newValue }));
+                            }}
+                            onBlur={(e) => {
+                              logActivity('Settings', `Round length: ${e.target.value}s`, 'success');
+                            }}
+                            className="w-full px-3 py-2 bg-black border border-white text-white text-sm focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-white mb-2 uppercase tracking-wider">Steals</label>
+                          <input
+                            type="number"
+                            value={lobbyConfig.steals}
+                            onChange={(e) => {
+                              const newValue = parseInt(e.target.value) || 0;
+                              setLobbyConfig(prev => ({ ...prev, steals: newValue }));
+                            }}
+                            onBlur={(e) => {
+                              logActivity('Settings', `Total steals: ${e.target.value}`, 'success');
+                            }}
+                            className="w-full px-3 py-2 bg-black border border-white text-white text-sm focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={lobbyConfig.allowTeamSwitching}
+                            onChange={(e) => {
+                              const newValue = e.target.checked;
+                              setLobbyConfig(prev => ({ ...prev, allowTeamSwitching: newValue }));
+                              logActivity('Settings', `Team switching: ${newValue ? 'ON' : 'OFF'}`, 'success');
+                            }}
+                            className="w-4 h-4"
+                          />
+                          <label className="text-white uppercase tracking-wider text-xs">ALLOW TEAM SWITCHING</label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={lobbyConfig.showSettingsToPlayers}
+                            onChange={(e) => {
+                              const newValue = e.target.checked;
+                              setLobbyConfig(prev => ({ ...prev, showSettingsToPlayers: newValue }));
+                              logActivity('Settings', `Show settings: ${newValue ? 'ON' : 'OFF'}`, 'success');
+                            }}
+                            className="w-4 h-4"
+                          />
+                          <label className="text-white uppercase tracking-wider text-xs">SHOW SETTINGS TO PLAYERS</label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-bold text-white mb-3 uppercase tracking-wider">AI BOTS</h4>
+                      <div className="space-y-2">
+                        {lobbyConfig.aiBots.map(bot => (
+                          <div key={bot.id} className="border border-white p-2">
+                            <div className="flex gap-2 items-center text-xs">
+                              <select
+                                value={bot.type}
+                                onChange={(e) => {
+                                  updateAIBot(bot.id, 'type', e.target.value);
+                                  setLobbyPlayers(lobbyPlayers.map(p => 
+                                    p.id === `ai_${bot.id}` ? { ...p, name: AI_BOT_TYPES[e.target.value].name, botType: e.target.value } : p
+                                  ));
+                                }}
+                                className="flex-1 px-2 py-1 bg-black border border-white text-white uppercase"
+                              >
+                                {Object.keys(AI_BOT_TYPES).map(key => (
+                                  <option key={key} value={key}>{AI_BOT_TYPES[key].name}</option>
+                                ))}
+                              </select>
+                              <button
+                                onClick={() => {
+                                  removeAIBot(bot.id);
+                                  setLobbyPlayers(lobbyPlayers.filter(p => p.id !== `ai_${bot.id}`));
+                                }}
+                                className="px-2 py-1 bg-white text-black hover:bg-gray-300 uppercase"
+                              >
+                                X
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        <button
+                          onClick={() => {
+                            const newBot = {
+                              id: Date.now(),
+                              type: 'HAL',
+                              teamIndex: 0,
+                              aggression: 0.5
+                            };
+                            const balancedTeam = getNextBalancedTeam(lobbyPlayers, currentLobby.maxPlayers);
+                            addAIBot();
+                            setLobbyPlayers([...lobbyPlayers, {
+                              id: `ai_${newBot.id}`,
+                              name: AI_BOT_TYPES[newBot.type].name,
+                              teamIndex: balancedTeam,
+                              isHost: false,
+                              isAI: true,
+                              botType: newBot.type,
+                              aggression: newBot.aggression
+                            }]);
+                          }}
+                          className="w-full py-2 bg-black text-white border border-white hover:bg-white hover:text-black uppercase tracking-wider text-xs transition-colors"
+                        >
+                          + ADD AI
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 pt-4 border-t border-white">
+                      <button
+                        onClick={randomizeTeams}
+                        className="w-full py-2 bg-black text-white border border-white hover:bg-white hover:text-black uppercase tracking-wider text-xs"
+                      >
+                        RANDOMIZE TEAMS
+                      </button>
+                      <button
+                        onClick={startGame}
+                        className="w-full py-3 bg-green-500 text-black font-bold hover:bg-green-400 uppercase tracking-wider cursor-pointer"
+                      >
+                        START GAME
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className={currentPlayer?.isHost ? 'lg:col-span-3' : 'lg:col-span-4'}>
+                  <div className="border border-white p-6">
+                    <div className="mb-6">
+                      <div className="flex justify-between items-center mb-2">
+                        <h2 className="text-2xl font-bold text-white uppercase tracking-wider">
+                          {currentLobby?.name}
+                        </h2>
+                        {currentPlayer && (
+                          <div className="text-white text-sm uppercase tracking-wider">
+                            YOU: <span style={{ color: TEAM_CONFIGS[currentPlayer.teamIndex].color }}>
+                              {TEAM_CONFIGS[currentPlayer.teamIndex].name}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-gray-400 text-xs mb-2">
+                        Host: {currentLobby?.host} • Players: {lobbyPlayers.length}/{currentLobby?.maxPlayers} • Mode: {currentLobby?.mode}
+                      </div>
+                      {room && (
+                        <div className="text-xs text-cyan-400">
+                          <span className="text-gray-500">Game Link: </span>
+                          <a 
+                            href={`${window.location.origin}/index.html?room=${room.roomId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:underline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              logActivity('Link', 'Opening game link in new tab', 'info');
+                            }}
+                          >
+                            {window.location.origin}/index.html?room={room.roomId}
+                          </a>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(`${window.location.origin}/index.html?room=${room.roomId}`);
+                              logActivity('Link', '✓ Game link copied to clipboard', 'success');
+                            }}
+                            className="ml-2 px-2 py-1 bg-cyan-500 text-black text-xs hover:bg-cyan-400"
+                          >
+                            COPY
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-1 mb-6">
+                      {TEAM_CONFIGS.slice(0, currentLobby?.maxPlayers || 4).map((team, teamIdx) => {
+                        const teamPlayers = lobbyPlayers.filter(p => p.teamIndex === teamIdx);
+                        
+                        return (
+                          <div
+                            key={teamIdx}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, teamIdx)}
+                            className="border-2 p-2"
+                            style={{ borderColor: team.color }}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="w-20 h-14 flex-shrink-0"
+                                style={{ backgroundColor: team.color }}
+                              />
+                              
+                              <div className="w-28 flex-shrink-0">
+                                <div className="text-white text-sm font-bold uppercase tracking-wider">
+                                  {team.name}
+                                </div>
+                              </div>
+
+                              <div className="flex-1 flex gap-2 flex-wrap items-center min-h-[88px]">
+                                {teamPlayers.map(player => {
+                                  const canDrag = currentPlayer?.isHost || (player.id === currentPlayer?.id && canSwitchTeams());
+                                  const isBeingDragged = draggedPlayer?.id === player.id;
+                                  
+                                  return (
+                                    <div
+                                      key={player.id}
+                                      draggable={canDrag}
+                                      onDragStart={(e) => handleDragStart(e, player)}
+                                      onDragEnd={handleDragEnd}
+                                      className={`relative border-2 w-20 h-20 bg-black flex flex-col items-center justify-center ${
+                                        canDrag ? 'cursor-move' : 'cursor-default'
+                                      }`}
+                                      style={{
+                                        borderColor: team.color,
+                                        opacity: isBeingDragged ? 0.4 : 1
+                                      }}
+                                    >
+                                      <div className={`text-[10px] uppercase tracking-wider text-center px-1 break-words pointer-events-none leading-tight ${
+                                        player.isHost ? 'text-yellow-500 font-bold' : 'text-white'
+                                      }`}>
+                                        {player.name}
+                                      </div>
+                                      {player.isAI && (
+                                        <div className="text-gray-400 text-[9px] uppercase mt-0.5 pointer-events-none">AI</div>
+                                      )}
+                                      
+                                      {readyPlayers.has(player.id) && (
+                                        <div 
+                                          className="absolute w-4 h-4 flex items-center justify-center pointer-events-none"
+                                          style={{ 
+                                            backgroundColor: team.color,
+                                            bottom: '-1px',
+                                            right: '-1px'
+                                          }}
+                                        >
+                                          <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M2 6L5 9L10 3" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                          </svg>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                                
+                                {teamPlayers.length === 0 && (
+                                  <div className="text-gray-500 text-xs uppercase tracking-wider px-4 pointer-events-none">
+                                    EMPTY
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {(!currentPlayer?.isHost && lobbyConfig.showSettingsToPlayers) && (
+                      <div className="border-t border-white pt-6 mt-6">
+                        <h3 className="text-lg font-bold text-white uppercase tracking-wider mb-4">GAME SETTINGS</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-white text-xs uppercase tracking-wider">
+                          <div className="border border-white p-3">
+                            <div className="text-gray-400 mb-1">MODE</div>
+                            <div className="font-bold">{lobbyConfig.gameMode}</div>
+                          </div>
+                          <div className="border border-white p-3">
+                            <div className="text-gray-400 mb-1">ROUNDS</div>
+                            <div className="font-bold">{lobbyConfig.rounds}</div>
+                          </div>
+                          <div className="border border-white p-3">
+                            <div className="text-gray-400 mb-1">TIME</div>
+                            <div className="font-bold">{lobbyConfig.roundLength * lobbyConfig.rounds}S</div>
+                          </div>
+                          <div className="border border-white p-3">
+                            <div className="text-gray-400 mb-1">MOVES</div>
+                            <div className="font-bold">{lobbyConfig.moves}</div>
+                          </div>
+                          <div className="border border-white p-3">
+                            <div className="text-gray-400 mb-1">STEALS</div>
+                            <div className="font-bold">{lobbyConfig.steals}</div>
+                          </div>
+                          <div className="border border-white p-3">
+                            <div className="text-gray-400 mb-1">HEADQUARTERS</div>
+                            <div className="font-bold">{lobbyConfig.headquarters}</div>
+                          </div>
+                          <div className="border border-white p-3">
+                            <div className="text-gray-400 mb-1">PLANNING</div>
+                            <div className="font-bold">{lobbyConfig.planningTime}S</div>
+                          </div>
+                          <div className="border border-white p-3">
+                            <div className="text-gray-400 mb-1">TEAM SWITCH</div>
+                            <div className="font-bold">{lobbyConfig.allowTeamSwitching ? 'YES' : 'NO'}</div>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-4">
+                          <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-3">MULTIPLIERS</h4>
+                          <div className="grid grid-cols-4 gap-4 text-white text-xs uppercase tracking-wider">
+                            {Object.entries(lobbyConfig.multipliers).map(([key, value]) => (
+                              <div key={key} className="border border-white p-3">
+                                <div className="text-gray-400 mb-1">{key}</div>
+                                <div className="font-bold">{value}X</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {(!currentPlayer?.isHost && !lobbyConfig.showSettingsToPlayers) && (
+                      <div className="border-t border-white pt-6 mt-6">
+                        <div className="text-center text-white text-sm uppercase tracking-wider">
+                          WAITING FOR HOST TO START GAME
+                        </div>
+                      </div>
+                    )}
+
+                    {!currentPlayer?.isHost && currentPlayer && (
+                      <div className="border-t border-white pt-6 mt-6">
+                        <button
+                          onClick={() => toggleReady(currentPlayer.id)}
+                          className={`w-full py-3 font-bold uppercase tracking-wider ${
+                            readyPlayers.has(currentPlayer.id)
+                              ? 'bg-green-500 text-black hover:bg-green-400'
+                              : 'bg-black text-white border border-white hover:bg-white hover:text-black'
+                          }`}
+                        >
+                          {readyPlayers.has(currentPlayer.id) ? '✓ READY' : 'Ready to START?'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // Game View with Constellation Canvas
+      const GameView = () => {
+        const [stars, setStars] = useState([]);
+        const [myTeamMoves, setMyTeamMoves] = useState(0);
+        const [totalTeamMoves, setTotalTeamMoves] = useState(0);
+        const [myMovesUsed, setMyMovesUsed] = useState(0);
+        
+        useEffect(() => {
+          // Generate random stars for constellation
+          const generatedStars = Array.from({ length: 50 }, (_, i) => ({
+            id: i,
+            x: Math.random() * 800,
+            y: Math.random() * 600,
+            owner: null
+          }));
+          setStars(generatedStars);
+          
+          // Calculate move allocation
+          const currentPlayer = lobbyPlayers.find(p => p.id === mySessionId);
+          if (currentPlayer) {
+            const teamPlayers = lobbyPlayers.filter(p => p.teamIndex === currentPlayer.teamIndex && !p.isAI);
+            const totalMoves = lobbyConfig.moves || 12;
+            const movesPerPlayer = Math.floor(totalMoves / teamPlayers.length);
+            setMyTeamMoves(movesPerPlayer);
+            setTotalTeamMoves(totalMoves);
+          }
+          
+          // Setup canvas mouse tracking
+          const canvas = canvasRef.current;
+          if (canvas && room) {
+            const handleMouseMove = (e) => {
+              const rect = canvas.getBoundingClientRect();
+              const x = e.clientX - rect.left;
+              const y = e.clientY - rect.top;
+              
+              const currentPlayer = lobbyPlayers.find(p => p.id === mySessionId);
+              const teamColor = currentPlayer ? TEAM_CONFIGS[currentPlayer.teamIndex].color : '#FFFFFF';
+              
+              room.send('cursor_move', {
+                x,
+                y,
+                color: teamColor,
+                name: playerName
+              });
+            };
+            
+            canvas.addEventListener('mousemove', handleMouseMove);
+            return () => canvas.removeEventListener('mousemove', handleMouseMove);
+          }
+        }, [room, mySessionId, lobbyPlayers]);
+        
+        const currentPlayer = lobbyPlayers.find(p => p.id === mySessionId);
+        const teamColor = currentPlayer ? TEAM_CONFIGS[currentPlayer.teamIndex].color : '#FFFFFF';
+        const teamName = currentPlayer ? TEAM_CONFIGS[currentPlayer.teamIndex].name : 'UNKNOWN';
+        
+        return (
+          <div className="min-h-screen bg-black p-4">
+            <div className="max-w-7xl mx-auto">
+              {/* Header with move allocation */}
+              <div className="border border-white p-4 mb-4 flex justify-between items-center">
+                <div className="text-white">
+                  <span className="uppercase tracking-wider text-sm">YOUR TEAM: </span>
+                  <span className="font-bold uppercase tracking-wider" style={{ color: teamColor }}>
+                    {teamName}
+                  </span>
+                </div>
+                <div className="text-white">
+                  <span className="uppercase tracking-wider text-sm">YOUR MOVES: </span>
+                  <span className="font-bold text-xl" style={{ color: teamColor }}>
+                    {myMovesUsed}/{myTeamMoves}
+                  </span>
+                  <span className="text-gray-500 text-sm ml-2">
+                    (Team Total: {totalTeamMoves})
+                  </span>
+                </div>
+              </div>
+              
+              {/* Game Canvas */}
+              <div className="border border-white relative" style={{ width: '800px', height: '600px', margin: '0 auto' }}>
+                <canvas
+                  ref={canvasRef}
+                  width={800}
+                  height={600}
+                  className="bg-black"
+                  style={{ display: 'block' }}
+                />
+                
+                {/* Render multiplayer cursors */}
+                {Object.entries(playerCursors).map(([sessionId, cursor]) => {
+                  if (sessionId === mySessionId) return null;
+                  
+                  return (
+                    <div
+                      key={sessionId}
+                      className="absolute pointer-events-none"
+                      style={{
+                        left: cursor.x,
+                        top: cursor.y,
+                        transform: 'translate(-50%, -50%)'
+                      }}
+                    >
+                      {/* Cursor pointer */}
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path
+                          d="M5 3L19 12L12 13L9 20L5 3Z"
+                          fill={cursor.color}
+                          stroke="white"
+                          strokeWidth="1"
+                        />
+                      </svg>
+                      {/* Player name label */}
+                      <div
+                        className="text-xs font-bold uppercase tracking-wider whitespace-nowrap px-2 py-1 rounded"
+                        style={{
+                          backgroundColor: cursor.color,
+                          color: 'black',
+                          marginTop: '4px'
+                        }}
+                      >
+                        {cursor.name}
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {/* Render stars on canvas */}
+                <svg
+                  width={800}
+                  height={600}
+                  className="absolute top-0 left-0 pointer-events-none"
+                >
+                  {stars.map(star => (
+                    <circle
+                      key={star.id}
+                      cx={star.x}
+                      cy={star.y}
+                      r={4}
+                      fill={star.owner ? TEAM_CONFIGS[star.owner].color : 'white'}
+                      stroke="white"
+                      strokeWidth={1}
+                    />
+                  ))}
+                </svg>
+              </div>
+              
+              {/* Team players sidebar */}
+              <div className="border border-white p-4 mt-4">
+                <h3 className="text-white font-bold uppercase tracking-wider mb-3">TEAM PLAYERS</h3>
+                <div className="grid grid-cols-4 gap-2">
+                  {lobbyPlayers
+                    .filter(p => p.teamIndex === currentPlayer?.teamIndex)
+                    .map(player => (
+                      <div
+                        key={player.id}
+                        className="border-2 p-2 text-center"
+                        style={{ borderColor: teamColor }}
+                      >
+                        <div className="text-white text-xs uppercase tracking-wider">
+                          {player.name}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          {player.id === mySessionId ? 'YOU' : 'TEAMMATE'}
+                        </div>
+                        <div className="text-xs font-bold mt-1" style={{ color: teamColor }}>
+                          {myTeamMoves} MOVES
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // Persistent Server Status Display
+      const ServerStatusDisplay = () => {
+        const getStatusColor = () => {
+          switch (serverStatus) {
+            case 'online': return 'bg-green-500';
+            case 'offline': return 'bg-red-500';
+            case 'error': return 'bg-yellow-500';
+            default: return 'bg-gray-500';
+          }
+        };
+
+        const getStatusText = () => {
+          switch (serverStatus) {
+            case 'online': return 'ONLINE';
+            case 'offline': return 'OFFLINE';
+            case 'error': return 'ERROR';
+            default: return 'CHECKING';
+          }
+        };
+
+        // Calculate ACCURATE uptime percentage including current session
+        const currentSessionTime = Date.now() - lastStatusChange;
+        let totalUptime = serverUptime;
+        let totalDowntime = serverDowntime;
+        
+        // Add current session time to appropriate counter
+        if (serverStatus === 'online') {
+          totalUptime += currentSessionTime;
+        } else if (serverStatus === 'offline') {
+          totalDowntime += currentSessionTime;
+        }
+        
+        const totalTime = totalUptime + totalDowntime;
+        const uptimePercent = totalTime > 0 ? ((totalUptime / totalTime) * 100).toFixed(1) : 0;
+        
+        // Get recent history for mini graph
+        const recentHistory = serverHistory.slice(-20);
+        
+        // Calculate average response time
+        const onlineChecks = serverHistory.filter(h => h.status === 'online' && h.responseTime);
+        const avgResponseTime = onlineChecks.length > 0 
+          ? Math.round(onlineChecks.reduce((sum, h) => sum + h.responseTime, 0) / onlineChecks.length)
+          : 0;
+
+        // Calculate current session duration
+        const sessionDuration = Math.round((Date.now() - sessionStartTime) / 1000);
+        const formatDuration = (seconds) => {
+          if (seconds < 60) return `${seconds}s`;
+          const mins = Math.floor(seconds / 60);
+          const secs = seconds % 60;
+          return `${mins}m ${secs}s`;
+        };
+
+        return (
+          <>
+            {/* Server Status - Bottom Right */}
+            <div className="fixed bottom-4 right-4 bg-black p-3 z-50" style={{ minWidth: '300px' }}>
+              <div className="flex items-center gap-2 mb-2">
+                <div className={`w-2 h-2 rounded-full ${getStatusColor()} animate-pulse`} />
+                <span className="text-white text-xs font-bold uppercase tracking-wider">
+                  SERVER: {getStatusText()}
+                </span>
+              </div>
+              
+              {/* Mini status graph */}
+              <div className="flex gap-0.5 mb-2" style={{ height: '20px' }}>
+                {recentHistory.map((check, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex-1 ${check.status === 'online' ? 'bg-green-500' : 'bg-red-500'}`}
+                    title={`${check.status === 'online' ? 'Online' : 'Offline'} - ${new Date(check.time).toLocaleTimeString()}`}
+                  />
+                ))}
+                {recentHistory.length < 20 && Array.from({ length: 20 - recentHistory.length }).map((_, idx) => (
+                  <div key={`empty-${idx}`} className="flex-1 bg-gray-700" />
+                ))}
+              </div>
+              
+              <div className="text-gray-400 text-xs space-y-1">
+                <div>Check #{lastCheckTime} • Every 3s</div>
+                <div className="flex justify-between">
+                  <span>Uptime: {uptimePercent}%</span>
+                  <span>Avg: {avgResponseTime}ms</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-green-400">Up: {formatDuration(Math.round(totalUptime/1000))}</span>
+                  <span className="text-red-400">Down: {formatDuration(Math.round(totalDowntime/1000))}</span>
+                </div>
+                <div className="text-gray-500">Session: {formatDuration(sessionDuration)}</div>
+                <div className="text-gray-500 text-[10px]">ws://localhost:2567</div>
+              </div>
+              
+              {serverStatus === 'offline' && (
+                <div className="mt-2 pt-2 border-t border-gray-700">
+                  <div className="text-red-400 text-xs">
+                    ⚠ Server offline
+                  </div>
+                  <div className="text-gray-500 text-xs mt-1">
+                    Run: npm start
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Activity Log - Bottom Left (Always Visible) */}
+            <div className="fixed bottom-4 left-4 bg-black p-3 z-50 max-w-md flex flex-col" style={{ maxHeight: '350px', minWidth: '400px' }}>
+              <div className="flex justify-between items-center mb-2">
+                <div className="text-white text-xs font-bold uppercase tracking-wider">ACTIVITY LOG</div>
+                <div className="text-gray-500 text-xs">{errorLog.length} entries</div>
+              </div>
+              <div className="overflow-y-auto flex-1 mb-2 space-y-1">
+                {errorLog.length === 0 ? (
+                  <div className="text-gray-500 text-xs">No activity yet...</div>
+                ) : (
+                  [...errorLog].reverse().map((log, idx) => {
+                    let colorClass = 'text-gray-400';
+                    let bgClass = '';
+                    if (log.type === 'error') {
+                      colorClass = 'text-red-400';
+                      bgClass = 'bg-red-900 bg-opacity-10';
+                    } else if (log.type === 'success') {
+                      colorClass = 'text-green-400';
+                      bgClass = 'bg-green-900 bg-opacity-10';
+                    } else if (log.type === 'warning') {
+                      colorClass = 'text-yellow-400';
+                      bgClass = 'bg-yellow-900 bg-opacity-10';
+                    } else if (log.type === 'player') {
+                      colorClass = 'text-cyan-400';
+                      bgClass = 'bg-cyan-900 bg-opacity-10';
+                    } else if (log.type === 'info') {
+                      colorClass = 'text-blue-400';
+                      bgClass = 'bg-blue-900 bg-opacity-10';
+                    }
+                    
+                    return (
+                      <div key={idx} className={`text-xs font-mono p-1.5 rounded ${bgClass} flex items-start gap-2`}>
+                        <div className={`flex-1 ${colorClass}`}>
+                          <span className="text-gray-500">[{log.time}]</span> {log.msg}
+                        </div>
+                        {log.count > 1 && (
+                          <div className="flex-shrink-0 bg-white text-black rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold">
+                            {log.count}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    const logText = errorLog.map(log => {
+                      const countStr = log.count > 1 ? ` (×${log.count})` : '';
+                      return `[${log.time}] ${log.msg}${countStr}`;
+                    }).join('\n');
+                    navigator.clipboard.writeText(logText);
+                    logActivity('System', '✓ Activity log copied to clipboard', 'success');
+                  }}
+                  className="px-2 py-1 bg-blue-500 text-white text-xs uppercase hover:bg-blue-400"
+                >
+                  COPY
+                </button>
+                <button
+                  onClick={() => {
+                    setErrorLog([]);
+                    localStorage.removeItem('activityLog');
+                    logActivity('System', 'Activity log cleared', 'info');
+                  }}
+                  className="px-2 py-1 bg-white text-black text-xs uppercase hover:bg-gray-300"
+                >
+                  CLEAR
+                </button>
+                <button
+                  onClick={() => {
+                    const logData = JSON.stringify(errorLog, null, 2);
+                    const blob = new Blob([logData], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `activity-log-${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    logActivity('System', '✓ Activity log exported', 'success');
+                  }}
+                  className="px-2 py-1 bg-green-500 text-white text-xs uppercase hover:bg-green-400"
+                >
+                  EXPORT
+                </button>
+              </div>
+            </div>
+          </>
+        );
+      };
+
+      return (
+        <div>
+          {view === 'main' && <MainMenuView />}
+          {view === 'browse' && <BrowseLobbiesView />}
+          {view === 'lobby' && <LobbyView />}
+          {view === 'game' && <GameView />}
+          <ServerStatusDisplay />
+        </div>
+      );
+    };
+
+    const _root = ReactDOM.createRoot(document.getElementById('root'));
+    _root.render(<NakamaLobbySystem />);
+  </script>
+</body>
+</html>

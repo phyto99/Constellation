@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Constellation — Session Setup</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-height:100vh}
+
+/* ── HEADER ── */
+.hdr{border-bottom:2px solid #000;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;background:#fff;position:sticky;top:0;z-index:30}
+.hdr-left{display:flex;align-items:baseline;gap:12px}
+.hdr-logo{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase}
+.hdr-sub{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#888}
+.hdr-right{display:flex;align-items:center;gap:14px}
+.hdr-name{font-size:11px;color:#666}
+.hdr-name b{color:#111}
+.conn-pill{display:flex;align-items:center;gap:5px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#aaa}
+.conn-dot{width:6px;height:6px;border-radius:50%;background:#aaa}
+.conn-dot.live{background:#059669;animation:pulse 2s infinite}
+.conn-dot.err{background:#dc2626}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.admin-link{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#bbb;text-decoration:none;border-bottom:1px solid transparent}
+.admin-link:hover{color:#111;border-bottom-color:#111}
+
+/* ── LAYOUT ── */
+.main{max-width:880px;margin:0 auto;padding:24px 20px 100px}
+
+/* ── CONTEXT SELECTOR ── */
+.ctx-section{margin-bottom:22px}
+.ctx-label{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#aaa;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.ctx-label::after{content:'';flex:1;height:1px;background:#eee}
+.ctx-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ctx-card{border:2px solid #e0e0e0;padding:14px 16px;cursor:pointer;transition:border-color .15s,background .15s;background:#fff}
+.ctx-card:hover{border-color:#999}
+.ctx-card.active{border-color:#000;background:#000;color:#fff}
+.ctx-card.active .ctx-desc{color:#888}
+.ctx-name{font-size:11px;font-weight:700;letter-spacing:.5px;margin-bottom:4px}
+.ctx-desc{font-size:10px;color:#666;line-height:1.5}
+
+/* ── TERMINAL ── */
+.term-wrap{background:#0a0a0a;margin-bottom:22px;border:1px solid #1a1a1a}
+.term-hdr{border-bottom:1px solid #111;padding:7px 16px;display:flex;justify-content:space-between;align-items:center}
+.term-hdr-lbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#333}
+.term-badge{font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:1px 6px;border:1px solid #1e1e1e;color:#444;font-weight:700}
+.term-badge.live{border-color:#1a3a2a;color:#059669}
+.term-body{padding:16px 20px;font-family:'Courier New',monospace;font-size:11px;line-height:1.9;color:#e0e0e0}
+.tr{display:flex}
+.tk{color:#333;min-width:128px;flex-shrink:0}
+.tv{color:#e0e0e0}
+.tv.a{color:#d97706}.tv.g{color:#059669}.tv.w{color:#fff;font-weight:700}.tv.c{color:#0891b2}
+.thr{border:none;border-top:1px solid #111;margin:10px 0}
+.tm{color:#444;line-height:2}
+.tblink::after{content:'█';animation:blink 1.2s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.term-actions{border-top:1px solid #111;padding:10px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn-term{background:#fff;color:#000;border:2px solid #fff;padding:6px 16px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-term:hover{background:#ddd;border-color:#ddd}
+.btn-term:disabled{opacity:.35;cursor:default}
+.btn-term-sec{background:transparent;color:#555;border:1px solid #333;padding:5px 12px;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-term-sec:hover{color:#e0e0e0;border-color:#666}
+.term-note{font-size:9px;color:#333;margin-left:auto;font-family:Arial,sans-serif;font-style:italic;max-width:240px;text-align:right;line-height:1.5}
+
+/* ── SETTINGS ── */
+.settings-wrap{border:1px solid #e5e7eb;background:#f9fafb;padding:18px 20px;margin-bottom:16px}
+.settings-title{font-size:13px;font-weight:700;margin-bottom:16px}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.settings-grid .full{grid-column:1/-1}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg label{font-size:12px;font-weight:700}
+.fg .sub{font-weight:400;font-size:11px;color:#666;margin-left:4px}
+.fg input[type=number],.fg select,.fg textarea{padding:6px 8px;border:1px solid #d1d5db;border-radius:3px;font-size:12px;font-family:Arial,sans-serif;background:#fff}
+.fg input:focus,.fg select:focus{outline:2px solid #000;outline-offset:0}
+.fg textarea{resize:vertical;min-height:56px;font-size:11px;font-family:'Courier New',monospace}
+
+/* slider */
+.sl-row{display:flex;align-items:center;gap:8px}
+.sl-row input[type=range]{flex:1;accent-color:#000}
+.sl-val{font-size:11px;font-weight:700;min-width:32px;text-align:right;font-family:'Courier New',monospace}
+
+/* toggle pill */
+.tg{display:inline-flex;border:1px solid #d1d5db;background:#fff;border-radius:2px;overflow:hidden}
+.tg-opt{padding:4px 10px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;background:none;border:none;color:#888;font-family:Arial,sans-serif}
+.tg-opt.on{background:#000;color:#fff}
+
+/* multiplier row */
+.mult-row{display:flex;gap:6px}
+.mult-row input{flex:1;min-width:0}
+.mult-note{font-size:9px;color:#aaa;font-style:italic;margin-top:3px}
+
+/* challenge */
+.ch-wrap{display:flex;border:1px solid #d1d5db;overflow:hidden;border-radius:2px}
+.ch-opt{flex:1;padding:5px 0;text-align:center;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;background:#fff;color:#888;border:none;font-family:Arial,sans-serif}
+.ch-opt+.ch-opt{border-left:1px solid #d1d5db}
+.ch-opt.on{background:#000;color:#fff}
+.ch-note{font-size:9px;color:#aaa;font-style:italic;margin-top:3px}
+
+/* bot row */
+.bot-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px;border:1px solid #d1d5db;background:#fff;margin-bottom:6px}
+.bot-row select{flex:1;min-width:140px;padding:4px 6px;font-size:11px;font-family:Arial,sans-serif;border:1px solid #d1d5db;border-radius:2px}
+.bot-swatch{width:18px;height:18px;border-radius:2px;flex-shrink:0}
+.btn-rmbot{background:#ef4444;color:#fff;border:none;padding:3px 7px;font-size:11px;cursor:pointer;border-radius:2px}
+.btn-addbot{background:#3b82f6;color:#fff;border:none;padding:5px 10px;font-size:11px;cursor:pointer;border-radius:2px;margin-top:4px}
+
+/* advanced section (Solo only) */
+.adv-section{display:none}
+.adv-section.visible{display:block}
+.adv-label{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#dc2626;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.adv-label::after{content:'';flex:1;height:1px;background:#fecaca}
+
+/* map grid */
+.map-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.map-chip{border:1px solid #d1d5db;padding:5px 10px;cursor:pointer;font-size:10px;background:#fff;white-space:nowrap}
+.map-chip:hover{border-color:#666}
+.map-chip.sel{border-color:#000;border-width:2px;font-weight:700;background:#f5f5f5}
+.map-chip.rnd{border-style:dashed}
+
+/* ── PHASE 2: WAITING ROOM ── */
+.room-waiting{display:none;border:2px solid #000;padding:20px;margin-top:16px}
+.room-waiting.vis{display:block}
+.rw-hd{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px}
+.rw-link-row{display:flex;gap:6px;margin-bottom:14px}
+.rw-link{flex:1;padding:7px 10px;border:1px solid #d1d5db;font-size:11px;font-family:'Courier New',monospace;background:#f5f5f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn-copy{padding:6px 14px;background:#000;color:#fff;border:none;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif;white-space:nowrap}
+.btn-copy:hover{background:#333}
+.rw-players-lbl{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:6px}
+.player-chips{display:flex;flex-wrap:wrap;gap:5px;min-height:28px;margin-bottom:14px}
+.pchip{border:1px solid #d1d5db;padding:3px 8px;font-size:11px;background:#fff}
+.pchip.ready{border-color:#000;background:#000;color:#fff}
+.pchip.bot{border-color:#3b82f6;color:#3b82f6;font-style:italic}
+.rw-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn-start{flex:2;padding:10px;background:#000;color:#fff;border:none;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-start:hover{background:#222}
+.btn-start:disabled{background:#9ca3af;cursor:default}
+.btn-close-room{padding:9px 16px;background:#fff;color:#666;border:1px solid #d1d5db;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-close-room:hover{border-color:#111;color:#111}
+.rw-note{font-size:10px;color:#888;font-style:italic;margin-top:8px}
+
+/* ── MAIN ACTION ── */
+.main-action{margin-top:20px;padding-top:16px;border-top:2px solid #000;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn-create{padding:11px 28px;background:#000;color:#fff;border:2px solid #000;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-create:hover{background:#222}
+.btn-create:disabled{background:#9ca3af;border-color:#9ca3af;cursor:default}
+.action-status{font-size:10px;color:#888;font-style:italic}
+
+/* notification toast */
+.toast{position:fixed;bottom:48px;right:16px;background:#000;color:#fff;padding:6px 14px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;z-index:100;opacity:0;transition:opacity .2s;pointer-events:none;font-family:Arial,sans-serif}
+.toast.show{opacity:1}
+
+/* ── FOOTER STATUS ── */
+.status-bar{position:fixed;bottom:0;left:0;right:0;border-top:1px solid #e5e7eb;background:#fff;padding:7px 20px;display:flex;align-items:center;gap:16px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#bbb;z-index:20}
+.sb-item{display:flex;align-items:center;gap:5px}
+
+@media(max-width:600px){
+  .settings-grid,.ctx-cards{grid-template-columns:1fr}
+  .settings-grid .full{grid-column:1}
+  .hdr{flex-wrap:wrap;gap:6px}
+  .mult-row{flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-left">
+    <span class="hdr-logo">Constellation</span>
+    <span class="hdr-sub">Session Setup</span>
+  </div>
+  <div class="hdr-right">
+    <div class="hdr-name" id="hdrName" style="display:none">Playing as <b id="hdrNameVal"></b></div>
+    <div class="conn-pill">
+      <div class="conn-dot" id="connDot"></div>
+      <span id="connLabel">Connecting</span>
+    </div>
+    <a href="/admin" class="admin-link">Admin ↗</a>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ══════════════════════════════════ -->
+  <!-- CONTEXT SELECTOR                   -->
+  <!-- ══════════════════════════════════ -->
+  <div class="ctx-section">
+    <div class="ctx-label">Session Type</div>
+    <div class="ctx-cards">
+      <div class="ctx-card" id="ctx-solo" onclick="setContext('solo')">
+        <div class="ctx-name">Solo Training</div>
+        <div class="ctx-desc">Personal development. The system configures for your growth.</div>
+      </div>
+      <div class="ctx-card active" id="ctx-friends" onclick="setContext('friends')">
+        <div class="ctx-name">Play with Friends</div>
+        <div class="ctx-desc">Host a session. Config adapts as players join.</div>
+      </div>
+      <div class="ctx-card" id="ctx-competitive" onclick="setContext('competitive')">
+        <div class="ctx-name">Competitive</div>
+        <div class="ctx-desc">Everyone's experienced. Challenge targets the strongest player.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════ -->
+  <!-- TERMINAL                           -->
+  <!-- ══════════════════════════════════ -->
+  <div class="term-wrap">
+    <div class="term-hdr">
+      <span class="term-hdr-lbl">System</span>
+      <span class="term-badge" id="termBadge">Offline</span>
+    </div>
+    <div class="term-body">
+      <div class="tr"><span class="tk">────────────────</span></div>
+      <div class="tr" style="margin-top:2px"><span class="tv w">CONSTELLATION</span><span class="tk" style="padding-left:10px;font-size:10px">cognitive development system</span></div>
+      <div class="tr" style="margin-top:6px"><span class="tk">session      </span><span class="tv a" id="tSess">—</span></div>
+      <div class="tr"><span class="tk">context      </span><span class="tv w" id="tCtx">—</span></div>
+      <div class="tr"><span class="tk">zone         </span><span class="tv w" id="tZone">—</span></div>
+      <div class="tr"><span class="tk">signal       </span><span class="tv a" id="tSignal">loading</span></div>
+      <hr class="thr" style="margin:10px 0">
+      <div class="tm" id="tMsg1"></div>
+      <div class="tm" id="tMsg2"></div>
+      <div class="tm" id="tMsg3"></div>
+      <div style="margin-top:10px"><span class="tk">────────────────</span></div>
+      <div style="margin-top:4px"><span class="tk">enter when ready</span><span class="tblink"></span></div>
+    </div>
+    <div class="term-actions">
+      <button class="btn-term" id="btnLaunchRec" onclick="launchRecommended()" disabled>Launch Recommended</button>
+      <button class="btn-term-sec" onclick="scrollToSettings()">Customize ›</button>
+      <span class="term-note" id="termNote">—</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════ -->
+  <!-- SETTINGS                           -->
+  <!-- ══════════════════════════════════ -->
+  <div class="settings-wrap" id="settingsWrap">
+    <div class="settings-title">Game Settings</div>
+    <div class="settings-grid">
+
+      <!-- MAP -->
+      <div class="fg full">
+        <label>Map <span class="sub">what terrain are you playing on</span></label>
+        <div class="map-grid" id="mapGrid">
+          <div class="map-chip rnd sel" data-map="" onclick="selectMap('',this)">Random</div>
+        </div>
+      </div>
+
+      <!-- ROUNDS -->
+      <div class="fg">
+        <label>Rounds <span class="sub">how many rounds</span></label>
+        <div class="sl-row">
+          <input type="range" id="s-rounds" min="3" max="20" value="10"
+            oninput="sv('s-rounds-v',this.value);reactTerminal()">
+          <span class="sl-val" id="s-rounds-v">10</span>
+        </div>
+      </div>
+
+      <!-- ROUND TIME -->
+      <div class="fg">
+        <label>Round Length <span class="sub">seconds per round</span></label>
+        <div class="sl-row">
+          <input type="range" id="s-rt" min="15" max="90" step="5" value="30"
+            oninput="sv('s-rt-v',this.value+'s');reactTerminal()">
+          <span class="sl-val" id="s-rt-v">30s</span>
+        </div>
+      </div>
+
+      <!-- MOVES -->
+      <div class="fg">
+        <label>Moves per Round <span class="sub">how many moves each round</span></label>
+        <input type="number" id="s-moves" value="15" min="1" max="50"
+          onchange="clamp(this,1,50);reactTerminal()">
+      </div>
+
+      <!-- COUNTDOWN -->
+      <div class="fg">
+        <label>Countdown <span class="sub">seconds before game starts</span></label>
+        <input type="number" id="s-countdown" value="5" min="0" max="60"
+          onchange="clamp(this,0,60)">
+      </div>
+
+      <!-- STEALS -->
+      <div class="fg">
+        <label>Steals <span class="sub">players can take each other's stars</span></label>
+        <div class="sl-row">
+          <input type="range" id="s-steals" min="0" max="30" value="10"
+            oninput="sv('s-steals-v',this.value==0?'Off':this.value);reactTerminal()">
+          <span class="sl-val" id="s-steals-v">10</span>
+        </div>
+      </div>
+
+      <!-- HQ -->
+      <div class="fg">
+        <label>Headquarters <span class="sub">capture points worth bonus stars</span></label>
+        <input type="number" id="s-hq" value="2" min="0" max="10"
+          onchange="clamp(this,0,10);reactTerminal()">
+      </div>
+
+      <!-- TEAMS -->
+      <div class="fg">
+        <label>Teams <span class="sub">how many teams</span></label>
+        <div class="tg" id="tg-teams">
+          <button class="tg-opt on" data-v="2" onclick="setTg('tg-teams',this,'teams')">2</button>
+          <button class="tg-opt" data-v="3" onclick="setTg('tg-teams',this,'teams')">3</button>
+          <button class="tg-opt" data-v="4" onclick="setTg('tg-teams',this,'teams')">4</button>
+          <button class="tg-opt" data-v="6" onclick="setTg('tg-teams',this,'teams')">6</button>
+        </div>
+      </div>
+
+      <!-- PLAYER TEAM SELECTION -->
+      <div class="fg">
+        <label>Players Pick Teams <span class="sub">let players choose their own team</span></label>
+        <div class="tg" id="tg-pts">
+          <button class="tg-opt on" data-v="false" onclick="setTg('tg-pts',this,'pts')">Off</button>
+          <button class="tg-opt" data-v="true" onclick="setTg('tg-pts',this,'pts')">On</button>
+        </div>
+      </div>
+
+      <!-- SCORE MULTIPLIERS -->
+      <div class="fg full">
+        <label>Score Weights <span class="sub">Count · Distance · HQ · Destruction</span></label>
+        <div class="mult-row">
+          <input type="number" id="s-cnt" value="500" min="0" max="5000" placeholder="Count"
+            onchange="clamp(this,0,5000);reactTerminal()">
+          <input type="number" id="s-dst" value="1" min="0" max="100" placeholder="Dist"
+            onchange="clamp(this,0,100);reactTerminal()">
+          <input type="number" id="s-hqm" value="10" min="0" max="500" placeholder="HQ"
+            onchange="clamp(this,0,500);reactTerminal()">
+          <input type="number" id="s-det" value="1" min="-500" max="500" placeholder="Dest"
+            onchange="clamp(this,-500,500);reactTerminal()">
+        </div>
+        <div class="mult-note" id="multNote">Tip: negative Destruction score means fewer destroyed stars score higher.</div>
+      </div>
+
+      <!-- AI BOTS -->
+      <div class="fg full">
+        <label>AI Opponents</label>
+        <div id="botList"></div>
+        <button class="btn-addbot" onclick="addBot()">+ Add AI Opponent</button>
+        <div class="ch-note" style="margin-top:6px">Opponent style is assigned at session start — varies each game.</div>
+      </div>
+
+      <!-- MAP JSON (hidden, populated by map selection) -->
+      <input type="hidden" id="s-mapjson" value="">
+
+    </div><!-- /settings-grid -->
+
+    <!-- ADVANCED (Solo only) -->
+    <div class="adv-section" id="advSection" style="margin-top:20px;padding-top:16px;border-top:1px solid #fecaca">
+      <div class="adv-label">Advanced — Solo Training Only</div>
+      <div class="settings-grid">
+        <div class="fg">
+          <label>INVERSION Mode <span class="sub">inverts scoring logic silently</span></label>
+          <div class="tg" id="tg-inv">
+            <button class="tg-opt on" data-v="false" onclick="setTg('tg-inv',this,'inv')">Off</button>
+            <button class="tg-opt" data-v="true" onclick="setTg('tg-inv',this,'inv')">On</button>
+          </div>
+          <div class="ch-note">When on, the terminal will not announce the inversion.</div>
+        </div>
+        <div class="fg">
+          <label>Ithkuil Numerals <span class="sub">scores shown in Ithkuil script</span></label>
+          <div class="tg" id="tg-ithk">
+            <button class="tg-opt on" data-v="false" onclick="setTg('tg-ithk',this,'ithk')">Off</button>
+            <button class="tg-opt" data-v="true" onclick="setTg('tg-ithk',this,'ithk')">On</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /settings-wrap -->
+
+  <!-- ══════════════════════════════════ -->
+  <!-- MAIN ACTION                        -->
+  <!-- ══════════════════════════════════ -->
+  <div class="main-action">
+    <button class="btn-create" id="btnCreate" onclick="createRoom()">Create Session</button>
+    <span class="action-status" id="actionStatus"></span>
+  </div>
+
+  <!-- ══════════════════════════════════ -->
+  <!-- PHASE 2: WAITING ROOM              -->
+  <!-- ══════════════════════════════════ -->
+  <div class="room-waiting" id="roomWaiting">
+    <div class="rw-hd" id="rwHd">Session Created — waiting for players</div>
+    <div class="rw-link-row">
+      <div class="rw-link" id="rwLink"></div>
+      <button class="btn-copy" onclick="copyLink()">Copy Link</button>
+    </div>
+    <div class="rw-players-lbl">Players in room</div>
+    <div class="player-chips" id="playerChips">
+      <div class="pchip">Waiting…</div>
+    </div>
+    <div class="rw-actions">
+      <button class="btn-start" id="btnStart" onclick="startGame()">Start Game</button>
+      <button class="btn-close-room" onclick="closeRoom()">Close Room</button>
+    </div>
+    <div class="rw-note" id="rwNote"></div>
+  </div>
+
+</div><!-- /main -->
+
+<div class="toast" id="toast"></div>
+
+<div class="status-bar">
+  <div class="sb-item"><div class="conn-dot" id="sbDot"></div><span id="sbStatus">Connecting</span></div>
+  <div class="sb-item" id="sbStudent" style="display:none"><span id="sbStudentLabel"></span></div>
+  <div style="margin-left:auto" class="sb-item">Constellation · Student Panel</div>
+</div>
+
+<script src="https://unpkg.com/colyseus.js@0.15.24/dist/colyseus.js"></script>
+<script>
+// ── CONSTANTS ─────────────────────────────────────────────────
+const WS  = (location.protocol==='https:'?'wss':'ws')+'://'+location.host;
+const API = location.origin;
+const BOT_TYPES = ['HAL','CAESAR','ATHENA','ROBIN_HOOD','EINSTEIN','LORENZ'];
+const BOT_LABELS = {HAL:'HAL — steady',CAESAR:'Caesar — tactical',ATHENA:'Athena — aggressive',ROBIN_HOOD:'Robin Hood — opportunist',EINSTEIN:'Einstein — wormholes',LORENZ:'Lorenz — chaotic'};
+const AGG_RANGE  = {easy:[1,3],standard:[4,6],hard:[7,9]};
+const TEAM_COLORS= ['#00FFFF','#FF00FF','#00FF00','#FFD700','#0000FF','#FF0000'];
+const CTX_LABELS = {solo:'SOLO TRAINING',friends:'FRIENDS SESSION',competitive:'COMPETITIVE'};
+
+// ── STATE ─────────────────────────────────────────────────────
+const S = {
+  ctx:'friends', connected:false,
+  studentId:null, sessionCount:0, compilerData:null,
+  maps:[], selectedMap:'',
+  teams:2, pts:false, inv:false, ithk:false,
+  botCount:0, bots:[],
+  room:null, roomId:null,
+};
+
+// ── INIT ──────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',()=>{
+  const name = localStorage.getItem('constellation_name')||'Guest';
+  S.studentId = slugify(name);
+  document.getElementById('hdrNameVal').textContent = name;
+  document.getElementById('hdrName').style.display = 'block';
+  document.getElementById('sbStudentLabel').textContent = name;
+  document.getElementById('sbStudent').style.display = 'flex';
+  initColyseus();
+  loadMaps();
+  loadCompiler();
+  setContext('friends');
+});
+
+function initColyseus(){
+  try{ new Colyseus.Client(WS); setConn(true); }catch(e){ setConn(false); }
+}
+
+function setConn(live){
+  S.connected=live;
+  ['connDot','sbDot'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.className='conn-dot'+(live?' live':' err');
+  });
+  document.getElementById('connLabel').textContent=live?'Live':'Offline';
+  document.getElementById('sbStatus').textContent=live?'Server connected':'Server offline';
+}
+
+// ── CONTEXT ───────────────────────────────────────────────────
+function setContext(ctx){
+  S.ctx=ctx;
+  ['solo','friends','competitive'].forEach(c=>{
+    document.getElementById('ctx-'+c).classList.toggle('active',c===ctx);
+  });
+  // Advanced section: Solo only
+  document.getElementById('advSection').classList.toggle('visible',ctx==='solo');
+
+  // Friends: boost teams default, restrict destructive settings
+  if(ctx==='friends'){
+    if(+getV('s-steals')===0) setSlider('s-steals','s-steals-v',10,v=>v==0?'Off':v);
+    document.getElementById('multNote').textContent=
+      'In Friends mode, score weights are varied slightly at launch to keep sessions fresh.';
+  } else if(ctx==='solo'){
+    document.getElementById('multNote').textContent=
+      'In Solo Training the compiler may override these for your development session.';
+  } else {
+    document.getElementById('multNote').textContent=
+      'Tip: negative Destruction score means fewer destroyed stars score higher.';
+  }
+  reactTerminal();
+}
+
+// ── MAPS ──────────────────────────────────────────────────────
+async function loadMaps(){
+  try{
+    const r=await fetch(API+'/api/maps/topology');
+    if(!r.ok)return;
+    const d=await r.json();
+    S.maps=(d.maps||[]).slice(0,20);
+    renderMaps();
+  }catch(_){}
+}
+
+function renderMaps(){
+  const g=document.getElementById('mapGrid');
+  g.innerHTML='<div class="map-chip rnd sel" data-map="" onclick="selectMap(\'\',this)">Random</div>';
+  S.maps.forEach(m=>{
+    const name=m.name.replace('.json','');
+    const chip=document.createElement('div');
+    chip.className='map-chip';
+    chip.dataset.map=m.name;
+    chip.textContent=name;
+    chip.onclick=()=>selectMap(m.name,chip);
+    g.appendChild(chip);
+  });
+}
+
+function selectMap(name,el){
+  S.selectedMap=name;
+  document.querySelectorAll('.map-chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  reactTerminal();
+}
+
+// ── TERMINAL ──────────────────────────────────────────────────
+async function loadCompiler(){
+  try{
+    const r=await fetch(API+'/api/compiler/'+encodeURIComponent(S.studentId));
+    if(!r.ok){fallbackTerminal();return;}
+    const d=await r.json();
+    S.compilerData=d;
+    S.sessionCount=d.session_count||0;
+    document.getElementById('btnLaunchRec').disabled=false;
+    reactTerminal();
+  }catch(_){fallbackTerminal();}
+}
+
+function fallbackTerminal(){
+  S.sessionCount=0;
+  document.getElementById('btnLaunchRec').disabled=false;
+  reactTerminal();
+}
+
+// Terminal reacts to: context + settings + session count
+function reactTerminal(){
+  const ctx   = S.ctx;
+  const n     = S.sessionCount;
+  const det   = +getV('s-det')||1;
+  const steals= +getV('s-steals')||0;
+  const rounds= +getV('s-rounds')||10;
+  const inv   = S.inv;
+  const map   = S.selectedMap||'';
+
+  // Derive zone signal from config
+  let zone='CALIBRATION', signal='initializing';
+  if(ctx==='solo'&&n>0){
+    if(S.compilerData?.zone) zone=S.compilerData.zone;
+    else if(det<0) zone='INVERSION';
+    else zone='RADICAL';
+    signal=S.compilerData?.signal_text||'system recommendation';
+  } else if(ctx==='friends'){
+    zone='PARALLEL'; signal='multi-player · group configuration';
+  } else if(ctx==='competitive'){
+    zone='RADICAL'; signal='competitive · full challenge';
+  } else {
+    zone='CALIBRATION'; signal='first session · no data yet';
+  }
+
+  // Terminal messages
+  let m1='',m2='',m3='';
+  if(ctx==='solo'){
+    if(n===0){
+      m1='The system does not know you yet.';
+      m2='This session is a question, not an assessment.';
+      m3='Play as you would play.';
+    } else {
+      const cd=S.compilerData;
+      m1=cd?.messages?.[0]||'The system has been watching your sessions.';
+      m2=cd?.messages?.[1]||'This configuration is selected for your current position.';
+      m3=cd?.messages?.[2]||'';
+      if(inv) m3='INVERSION is active. The terminal will not announce it.';
+    }
+  } else if(ctx==='friends'){
+    if(steals>15) m1='High steal count — kinetic and chaotic. Good for large groups.';
+    else if(steals===0) m1='No steals — cleaner game. Better for first-time players.';
+    else m1='This configuration gives everyone room to move.';
+    m2=rounds>14?'Long session — make sure everyone has time.':
+       rounds<6?'Short session — good warmup format.':'Standard session length.';
+    m3='Config will adapt as players join the room.';
+  } else {
+    m1='Competitive mode. Challenge targets the strongest player in the room.';
+    m2='All players assumed experienced.';
+    m3=steals>0?'Steals on — expect aggression.':'Steals off — pure territorial play.';
+  }
+
+  // Config signal description
+  let sig2=signal;
+  if(det<0) sig2+=' · inversion active';
+  if(steals===0) sig2+=' · no steals';
+  if(+getV('s-hq')===0) sig2+=' · no HQ';
+
+  // Write to DOM
+  document.getElementById('tSess').textContent=String(n+1).padStart(3,'0');
+  document.getElementById('tCtx').textContent=CTX_LABELS[ctx]||'—';
+  document.getElementById('tZone').textContent=zone;
+  document.getElementById('tSignal').textContent=sig2;
+  document.getElementById('tMsg1').textContent=m1;
+  document.getElementById('tMsg2').textContent=m2;
+  document.getElementById('tMsg3').textContent=m3;
+
+  const badge=document.getElementById('termBadge');
+  badge.textContent=n>0?n+' sessions recorded':'No data yet';
+  badge.className='term-badge'+(n>0?' live':'');
+
+  document.getElementById('termNote').textContent=
+    ctx==='solo'&&n>0?'Personalized for your '+n+' recorded sessions':
+    ctx==='solo'?'First session — calibration mode':
+    ctx==='friends'?'Optimized for engagement · adapts to room':
+    'Competitive configuration';
+
+  // Multiplier variation note
+  if(ctx==='friends'){
+    document.getElementById('multNote').textContent=
+      'In Friends mode, score weights are varied ±10% at launch. Students can\'t pre-optimize against exact values.';
+  }
+}
+
+// ── SETTINGS HELPERS ─────────────────────────────────────────
+function sv(id,v){ document.getElementById(id).textContent=v; }
+function getV(id){ return document.getElementById(id).value; }
+function clamp(el,lo,hi){ const v=+el.value; if(v<lo)el.value=lo; if(v>hi)el.value=hi; }
+function setSlider(id,vid,val,fmt){ const el=document.getElementById(id); el.value=val; document.getElementById(vid).textContent=(fmt||String)(val); }
+
+function setTg(gid,btn,key){
+  document.querySelectorAll('#'+gid+' .tg-opt').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  const val = btn.dataset.v==='true'?true:btn.dataset.v==='false'?false:+btn.dataset.v;
+  if(key==='teams')  S.teams=+btn.dataset.v;
+  if(key==='pts')    S.pts=val;
+  if(key==='inv')    { S.inv=val; reactTerminal(); }
+  if(key==='ithk')   S.ithk=val;
+}
+
+function scrollToSettings(){
+  document.getElementById('settingsWrap').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ── BOTS ──────────────────────────────────────────────────────
+function addBot(){
+  if(S.bots.length>=6){toast('Max 6 bots');return;}
+  const id='bot_'+S.botCount++;
+  S.bots.push({id,challenge:'standard',team:0});
+  renderBots();
+}
+function removeBot(id){
+  S.bots=S.bots.filter(b=>b.id!==id);
+  renderBots();
+}
+function setBotChallenge(id,level){
+  const b=S.bots.find(x=>x.id===id);
+  if(b)b.challenge=level;
+  renderBots();
+}
+function setBotTeam(id,team){
+  const b=S.bots.find(x=>x.id===id);
+  if(b)b.team=+team;
+}
+function renderBots(){
+  const list=document.getElementById('botList');
+  list.innerHTML='';
+  if(!S.bots.length){
+    list.innerHTML='<div style="color:#aaa;font-size:11px;font-style:italic;padding:8px">No AI opponents added</div>';
+    return;
+  }
+  S.bots.forEach((b,i)=>{
+    const div=document.createElement('div');
+    div.className='bot-row';
+    const teamOpts=Array.from({length:S.teams},(_, t)=>`<option value="${t}" ${t===b.team?'selected':''}>Team ${t+1}</option>`).join('');
+    div.innerHTML=`
+      <div class="bot-swatch" style="background:${TEAM_COLORS[b.team%TEAM_COLORS.length]}"></div>
+      <select onchange="setBotTeam('${b.id}',this.value)" style="width:90px">${teamOpts}</select>
+      <div class="ch-wrap" style="flex:1">
+        <button class="ch-opt ${b.challenge==='easy'?'on':''}" onclick="setBotChallenge('${b.id}','easy')">Easy</button>
+        <button class="ch-opt ${b.challenge==='standard'?'on':''}" onclick="setBotChallenge('${b.id}','standard')">Standard</button>
+        <button class="ch-opt ${b.challenge==='hard'?'on':''}" onclick="setBotChallenge('${b.id}','hard')">Hard</button>
+      </div>
+      <button class="btn-rmbot" onclick="removeBot('${b.id}')">Remove</button>`;
+    list.appendChild(div);
+  });
+}
+
+// ── BUILD CONFIG ──────────────────────────────────────────────
+function buildConfig(useCompiler){
+  const ctx=S.ctx;
+  const cd=S.compilerData;
+  let cnt=+getV('s-cnt'), dst=+getV('s-dst'), hqm=+getV('s-hqm'), det=+getV('s-det');
+
+  // Friends: vary multipliers ±10% so students can't pre-optimize
+  if(ctx==='friends'){
+    cnt=varyPct(cnt,10); dst=varyPct(dst,10);
+    hqm=varyPct(hqm,10); det=Math.abs(varyPct(det,10)); // no accidental inversion
+  }
+
+  // INVERSION (solo only): flip dest_mult sign silently
+  if(ctx==='solo'&&S.inv) det=-Math.abs(det||100);
+
+  // Compiler override in solo if useCompiler
+  if(ctx==='solo'&&useCompiler&&cd?.config_vector){
+    const cv=cd.config_vector;
+    cnt=cv.count_mult||cnt; dst=cv.distance_mult||dst;
+    hqm=cv.hq_mult||hqm;   det=cv.dest_mult||det;
+  }
+
+  // Competitive: target highest player — use stored compiler data if available
+  // (falls through to manual settings if not)
+
+  const aiBots=S.bots.map(b=>{
+    const [lo,hi]=AGG_RANGE[b.challenge]||[4,6];
+    return{ type:BOT_TYPES[randInt(0,BOT_TYPES.length-1)], aggression:randInt(lo,hi), team:b.team };
+  });
+
+  return{
+    countMultiplier:cnt, distanceMultiplier:dst,
+    hqMultiplier:hqm, destructionMultiplier:det,
+    rounds:+getV('s-rounds'),
+    roundTime:+getV('s-rt'),
+    movesPerRound:+getV('s-moves'),
+    countdownTime:+getV('s-countdown'),
+    stealLimit:+getV('s-steals'),
+    hqMax:+getV('s-hq'),
+    colorTeamCount:S.teams,
+    allowPlayerTeamSelection:S.pts,
+    ithkuilNumerals:ctx==='solo'&&S.ithk,
+    mapJson:getMapJson(S.selectedMap),
+    playerName:localStorage.getItem('constellation_name')||'Player',
+    aiBots,
+    _ctx:ctx,
+    _studentId:S.studentId,
+    _source:'student-panel',
+  };
+}
+
+// ── LAUNCH RECOMMENDED ───────────────────────────────────────
+async function launchRecommended(){
+  const btn=document.getElementById('btnLaunchRec');
+  btn.disabled=true; btn.textContent='Launching…';
+  try{
+    const client=new Colyseus.Client(WS);
+    const cfg=buildConfig(true);
+    const room=await client.create('constellation',cfg);
+    window.open(location.origin+'/game/'+room.id,'_blank');
+    btn.textContent='Launched ✓';
+    setTimeout(()=>{btn.disabled=false;btn.textContent='Launch Recommended';},3000);
+  }catch(e){
+    btn.disabled=false; btn.textContent='Launch Recommended';
+    toast('Connection failed — is the server running?');
+  }
+}
+
+// ── CREATE ROOM (phase 1 → 2) ─────────────────────────────────
+async function createRoom(){
+  const btn=document.getElementById('btnCreate');
+  btn.disabled=true; btn.textContent='Creating…';
+  setActionStatus('');
+  try{
+    const client=new Colyseus.Client(WS);
+    const cfg=buildConfig(false);
+    const room=await client.create('constellation',cfg);
+    S.room=room;
+    S.roomId=room.id;
+    enterPhase2(room);
+    btn.textContent='Create Session';
+    btn.disabled=false;
+  }catch(e){
+    btn.disabled=false; btn.textContent='Create Session';
+    setActionStatus('Failed to create — is the server running?');
+  }
+}
+
+function enterPhase2(room){
+  const link=location.origin+'/game/'+room.id;
+  document.getElementById('rwLink').textContent=link;
+  document.getElementById('rwLink').dataset.link=link;
+  document.getElementById('roomWaiting').classList.add('vis');
+  document.getElementById('rwNote').textContent=
+    S.ctx==='friends'?'Share the link above. Terminal will update as players join.':
+    S.ctx==='competitive'?'Waiting for all players. Game will start when you\'re ready.':
+    'Solo session ready.';
+
+  room.onStateChange(st=>updatePlayers(st));
+  room.onLeave(()=>{ S.room=null; });
+  document.getElementById('roomWaiting').scrollIntoView({behavior:'smooth'});
+  updatePlayers(null);
+}
+
+function updatePlayers(st){
+  const chips=document.getElementById('playerChips');
+  chips.innerHTML='';
+  if(!st||!st.players||!st.players.size){
+    chips.innerHTML='<div class="pchip">Waiting for players…</div>';
+    // Update terminal social framing based on room being empty
+    reactTerminalWithPlayers(0,[]);
+    return;
+  }
+  const players=[];
+  st.players.forEach((p,id)=>{
+    players.push(p);
+    const chip=document.createElement('div');
+    chip.className='pchip'+(p.ready?' ready':'')+(p.isBot?' bot':'');
+    chip.textContent=(p.isBot?'🤖 ':'')+( p.name||'Player '+id);
+    chips.appendChild(chip);
+  });
+  document.getElementById('btnStart').disabled=players.length<1;
+  reactTerminalWithPlayers(players.length,players);
+}
+
+function reactTerminalWithPlayers(count,players){
+  if(S.ctx!=='friends') return;
+  const hasNewPlayers=players.some(p=>!p.sessionCount||p.sessionCount<5);
+  let m3=S.sessionCount>0?
+    'Terminal updated based on who\'s in the room.':
+    'Config adjusted for your group.';
+  if(count===0) m3='Waiting for players to join.';
+  else if(hasNewPlayers) m3='New players detected — config tuned for accessibility.';
+  else if(count>=4) m3='Full room — high energy config.';
+  document.getElementById('tMsg3').textContent=m3;
+}
+
+async function startGame(){
+  if(!S.room){toast('No room active');return;}
+  try{
+    // Push updated settings before starting
+    S.room.send('updateSettings',buildConfig(false));
+    S.room.send('startGame',{});
+    const link=location.origin+'/game/'+S.roomId;
+    window.open(link,'_blank');
+  }catch(e){ toast('Failed to start game'); }
+}
+
+function closeRoom(){
+  if(S.room){ try{ S.room.leave(); }catch(_){} S.room=null; }
+  document.getElementById('roomWaiting').classList.remove('vis');
+}
+
+// ── COPY LINK ─────────────────────────────────────────────────
+function copyLink(){
+  const el=document.getElementById('rwLink');
+  const link=el.dataset.link||el.textContent;
+  navigator.clipboard.writeText(link).catch(()=>{
+    const i=document.createElement('input');
+    i.value=link; document.body.appendChild(i); i.select(); document.execCommand('copy'); document.body.removeChild(i);
+  });
+  toast('Link copied!');
+}
+
+// ── HELPERS ───────────────────────────────────────────────────
+function getMapJson(name){
+  if(!name) return '';
+  const m=S.maps.find(x=>x.name===name);
+  return m?.json||'';
+}
+function varyPct(v,pct){ return Math.round(v*(1+(Math.random()*pct*2-pct)/100)); }
+function randInt(lo,hi){ return Math.floor(Math.random()*(hi-lo+1))+lo; }
+function slugify(s){ return s.toLowerCase().replace(/[^a-z0-9]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,''); }
+function setActionStatus(msg){ document.getElementById('actionStatus').textContent=msg; }
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+renderBots();
+</script>
+</body>
+</html>

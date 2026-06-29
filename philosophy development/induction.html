@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Induction — The Onboarding Philosophy</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.6}
+header{border-bottom:2px solid #000;padding:20px 28px 14px;position:sticky;top:0;background:#fff;z-index:10}
+.hd-label{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:4px}
+.hd-main{font-size:20px;font-weight:700;line-height:1.2;margin-bottom:6px}
+.hd-sub{font-size:11px;color:#555;max-width:720px;line-height:1.8}
+nav{display:flex;gap:20px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px solid #eee}
+nav a{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;text-decoration:none;padding:2px 0;border-bottom:2px solid transparent}
+nav a:hover{color:#000;border-bottom-color:#000}
+.content{max-width:760px;margin:0 auto;padding:36px 28px 100px}
+hr.rule{border:none;border-top:1px solid #eee;margin:44px 0}
+.sec-label{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:6px}
+.sec-title{font-size:17px;font-weight:700;margin-bottom:14px;line-height:1.3}
+.body{font-size:12px;color:#333;line-height:1.9;max-width:680px}
+.body p{margin-bottom:14px}
+.body p:last-child{margin-bottom:0}
+.body strong{color:#000}
+ul.bl{font-size:12px;color:#333;line-height:2.1;padding-left:20px;margin:10px 0 14px}
+ul.bl li{margin-bottom:2px}
+.callout{border-left:3px solid #000;padding:10px 16px;margin:20px 0;font-size:11px;line-height:1.8;color:#444;background:#fafafa}
+.callout.amber{border-color:#d97706;background:#fffbeb;color:#92400e}
+.callout.green{border-color:#059669;background:#f0fdf4;color:#065f46}
+.callout.violet{border-color:#7c3aed;background:#faf5ff;color:#4c1d95}
+.principle{border:1px solid #e5e7eb;padding:14px 18px;margin:12px 0}
+.p-num{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#bbb;margin-bottom:3px}
+.p-title{font-size:12px;font-weight:700;margin-bottom:6px}
+.p-body{font-size:11px;color:#555;line-height:1.8}
+
+/* message mockups */
+.msg-mock{background:#0a0a0a;padding:20px 24px;font-family:Arial,sans-serif;font-size:11.5px;line-height:2.1;margin:16px 0;color:#e0e0e0;position:relative}
+.msg-mock .line{display:block}
+.msg-mock .blank{display:block;height:1em}
+.msg-mock .dim{color:#2a2a2a}
+.msg-mock .amber{color:#d97706}
+.msg-mock .sig{color:#555;font-size:10px;margin-top:6px;display:block;letter-spacing:1px}
+.msg-mock .label{position:absolute;top:8px;right:12px;font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#222;border:1px solid #1a1a1a;padding:2px 6px}
+
+/* sequence diagram */
+.seq{margin:20px 0}
+.seq-step{display:flex;gap:0;margin-bottom:2px}
+.seq-label{min-width:160px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#aaa;padding:8px 12px;border-right:2px solid #eee;display:flex;align-items:center}
+.seq-content{padding:8px 16px;font-size:11px;color:#333;line-height:1.6;flex:1}
+.seq-step.active .seq-label{color:#000;border-right-color:#000}
+.seq-step.active .seq-content{color:#000;font-weight:700}
+
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:11px}
+th{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 10px;border-bottom:2px solid #000;text-align:left}
+td{padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top;line-height:1.6}
+tr:last-child td{border-bottom:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd-label">Philosophy Development · Era 11 — Onboarding</div>
+  <div class="hd-main">Induction, Not Onboarding</div>
+  <div class="hd-sub">The student doesn't go through a process. They're let into something. Every design decision in the first encounter should serve that distinction — the feeling of being trusted with access, not walked through a tutorial.</div>
+  <nav>
+    <a href="#distinction">Induction vs Onboarding</a>
+    <a href="#x">The Signature</a>
+    <a href="#stakes">First Game Stakes</a>
+    <a href="#solve">Solve Something</a>
+    <a href="#discretion">Absolute Discretion</a>
+    <a href="#growth">Organic Growth</a>
+    <a href="#sequence">Full Sequence</a>
+    <a href="#open">Open Questions</a>
+  </nav>
+</header>
+
+<div class="content">
+
+<!-- ── DISTINCTION ── -->
+<div id="distinction">
+  <div class="sec-label">Foundation</div>
+  <div class="sec-title">Induction, not onboarding</div>
+  <div class="body">
+    <p>Onboarding is what platforms do. There is a process. You complete it. You are now onboarded. The process exists to transfer information: here is what the thing is, here is how it works, here is where to click. The goal is orientation. The experience is fundamentally passive — you are moved through something by the system.</p>
+    <p>Induction is something else. It is the moment of being let in. Not shown around — trusted with access. The person who inducted you believed you belonged. That belief is already in the room before anything is explained. The goal is not orientation but <strong>belonging prior to understanding.</strong></p>
+    <p>This is the design principle that governs everything in the first encounter. The student hasn't earned their place yet — but they were brought here by someone who thought they belonged, and that is enough. The system's job in the first session is to confirm that instinct without explaining it.</p>
+    <p>Practically: the first message does not explain what Constellation is. It does not describe the game. It does not list features. It says one true thing about the moment the student is in — and signs off. That's it. Everything else is discovered through play.</p>
+  </div>
+  <div class="callout green">
+    The test for every first-encounter design decision: does it induct or does it onboard? Anything that explains, orients, or walks through belongs to onboarding. Anything that lets the student discover, feels like being trusted, or creates intrigue belongs to induction.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── THE SIGNATURE ── -->
+<div id="x">
+  <div class="sec-label">The Signature</div>
+  <div class="sec-title">— X.</div>
+  <div class="body">
+    <p>The terminal message is signed. This is one of the most important design decisions in the system and it deserves explanation.</p>
+    <p>Signing a message implies a person. Not a system. Not a platform. Someone specific, with a name, who thought about what to say to this student before this session. The signature changes the register of everything that came before it — "Embrace the chaos" reads differently when it's signed than when it's unsigned. Unsigned, it's advice from a system. Signed, it's advice from someone who's been inside the chaos and knows something about it.</p>
+    <p>The name is X. Not a real name. Not an abbreviation. X is:</p>
+    <ul class="bl">
+      <li>Deliberately ambiguous — who is X?</li>
+      <li>Recognisably personal — someone wrote this and signed it</li>
+      <li>Slightly cryptic — the right register for the moment</li>
+      <li>Compact — a single character doesn't inflate itself</li>
+    </ul>
+    <p>The student will wonder who X is. This is correct. The question should not be answered quickly. X is the voice of the system made human — not a specific person, not a character with a backstory, but the impression that someone is on the other end of this thing who thought about you specifically before you arrived.</p>
+    <p>Later terminal messages are not signed. The signature belongs to the induction moment. Once the student is inside, the terminal speaks in its own voice — still personal, but no longer signed. The signature is a first-encounter gesture that would become strange if repeated.</p>
+  </div>
+
+  <div class="msg-mock">
+    <span class="label">Session 1</span>
+    <span class="dim">────────────────────────────</span>
+    <span class="line" style="margin-top:8px"><strong>CONSTELLATION</strong>&nbsp;&nbsp;<span class="dim" style="font-size:9px">cognitive development system</span></span>
+    <span class="blank"></span>
+    <span class="line">Looks like this is your first game.</span>
+    <span class="blank"></span>
+    <span class="line">Through adaptability and flexible thinking,</span>
+    <span class="line">you may win.</span>
+    <span class="blank"></span>
+    <span class="line">Embrace the chaos.</span>
+    <span class="sig">— X</span>
+    <span class="blank"></span>
+    <span class="dim">────────────────────────────</span>
+    <span class="dim" style="font-size:9px;margin-top:4px;display:block">the system is listening</span>
+  </div>
+
+  <div class="callout amber">
+    <strong>Design question — open:</strong> Should X be consistent across all students? Or should the signature vary (— A, — M, — R) as if different people inside the system induct different students? The consistent X is cleaner and more mysterious. The varying signature implies an actual community of inductors, which is philosophically interesting but harder to implement honestly. Current decision: X is consistent. Revisit when the community is large enough for the varying signature to be real rather than performed.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── FIRST GAME STAKES ── -->
+<div id="stakes">
+  <div class="sec-label">Stakes</div>
+  <div class="sec-title">The first game matters — and the student should know it</div>
+  <div class="body">
+    <p>After the first game ends — before the student goes to the lobby to play again — a second message appears. This is the stakes message. It does something specific: it tells the student that what just happened already has consequences in the system.</p>
+    <p>The design instinct here is exactly right and worth making explicit. Most games treat the first session as a tutorial — a throwaway, a practice round, something that doesn't count. This is philosophically wrong for Constellation. <strong>The first session is the highest-information observation the system will ever make about this student.</strong> Prior uncertainty is maximum. Everything is signal. The Ledger starts writing from the first move.</p>
+    <p>The student doesn't know this. And the stakes message is the moment they find out.</p>
+  </div>
+
+  <div class="msg-mock">
+    <span class="label">Post-game popup · Session 1</span>
+    <span class="dim">────────────────────────────</span>
+    <span class="blank"></span>
+    <span class="line">Although it's just a 25% chance —</span>
+    <span class="blank"></span>
+    <span class="line">your first game carries more weight</span>
+    <span class="line">in the system than any other.</span>
+    <span class="blank"></span>
+    <span class="line amber">The Ledger is already watching.</span>
+    <span class="blank"></span>
+    <span class="dim">────────────────────────────</span>
+    <span class="dim" style="font-size:9px;margin-top:4px;display:block">There's considerably more, if you want it.</span>
+  </div>
+
+  <div class="body">
+    <p>The 25% win rate is honest. Most students playing their first game against an AI opponent at a reasonable difficulty will not win. The message doesn't say "you will win if you try hard." It says "you may win — and either way, it matters." This is the difference between a promise and a real statement about real stakes.</p>
+    <p>The phrase "your first game carries more weight in the system than any other" is literally true — statistically, a first observation has maximum Bayesian weight because prior uncertainty is maximum. It sounds like mystique. It is also just accurate. This is the transparent medium principle operating at the level of copy: true things, said plainly, sound more interesting than invented ones.</p>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Reputation concept — open</div>
+    <div class="p-title">Does the student have a standing in the system from session 1?</div>
+    <div class="p-body">The stakes message implies reputation — there is something accumulating. Whether this surfaces as a visible score, a zone, an Elo, or remains entirely internal to the Ledger is unresolved. The current architecture has zone (CALIBRATION, ECHO, RADICAL, etc.) which serves some of this function. But "reputation" implies something social — other people can see where you are, or you can be compared. This is architecturally possible but raises questions about what the comparison is for. A student who sees their reputation might play to the reputation rather than playing naturally. This is the same contamination problem as showing exact multipliers. Unresolved — flag for Era 12.</div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── SOLVE SOMETHING ── -->
+<div id="solve">
+  <div class="sec-label">The Hook</div>
+  <div class="sec-title">Make the student solve something</div>
+  <div class="body">
+    <p>The deepest hook is not intrigue. It is <strong>a problem the student hasn't solved yet.</strong></p>
+    <p>Intrigue opens the door. A genuine unsolved problem is what makes them stay. The student who finishes their first game and immediately starts a second isn't doing it because the system was mysterious enough. They're doing it because something happened in that game that they don't fully understand yet — and they want to understand it.</p>
+    <p>This is the design philosophy behind the chaos being designed. The chaos is not arbitrary. It is precisely constructed to create a specific kind of cognitive pressure. A student who understands this will want to figure out the structure of the chaos. That investigation is itself the cognitive development the system is designed to produce.</p>
+    <p>The inspect element comment belongs here. Not as a puzzle to find — as a real piece of information placed where the kind of person who would look for it would find it. <code>&lt;!-- The chaos is designed. Most people feel it as a problem. The ones who stay notice it as information. --&gt;</code> This is the same line that appears in the Stage 2 terminal message. Finding it in the source code and recognising it from the terminal is a small moment of genuine discovery — not a reward, a confirmation that the system is coherent all the way down.</p>
+    <p>Other problems the system plants that the student might try to solve:</p>
+    <ul class="bl">
+      <li>What determines which zone the terminal shows? (The student can't know without data — but they will try to figure it out)</li>
+      <li>Who is X? (The signature invites this question without answering it)</li>
+      <li>Why did I lose that round? (The game mechanics are learnable — the student who figures out the scoring structure has solved something real)</li>
+      <li>What does RADICAL mean? (Used without explanation — the student builds the definition from experience)</li>
+    </ul>
+    <p>None of these are ARG puzzles. They are genuine questions with genuine answers that the student can discover through engagement. The system is not withholding for the sake of mystery. The system is structured in a way that rewards the people who look carefully.</p>
+  </div>
+
+  <div class="callout violet">
+    <strong>The distinction that matters:</strong> An ARG withholds information to create a hunt. That wastes people's time — the information only becomes available at a rate the designers control, and finding it doesn't make you better at the thing, just at the hunt. What we're doing is different: the information is there, always, for anyone who engages deeply enough. The student who figures out the chaos structure is better at the game, not just better at finding easter eggs. The discovery is real because what was discovered is real.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── ABSOLUTE DISCRETION ── -->
+<div id="discretion">
+  <div class="sec-label">The Vibe</div>
+  <div class="sec-title">Absolute discretion — what it means and what it is not</div>
+  <div class="body">
+    <p>The discretion vibe is not secrecy. It is not an NDA. It is the feeling of being trusted with something that not everyone gets access to — and treating that access accordingly.</p>
+    <p>The feeling comes from a specific experience: arriving somewhere through a personal referral from someone who knew you, finding the thing is exactly as interesting as promised, and understanding that your being there is a function of someone's judgment about you. That is different from signing up for a service. The service doesn't trust you — it just lets you in. The referral implies a judgment was made.</p>
+    <p>In design terms, this means:</p>
+    <ul class="bl">
+      <li>The system never markets itself to the student. Marketing is what you do when you need to convince someone they belong. The student was already brought here by someone who made that judgment.</li>
+      <li>The system speaks to the student as if they are already capable of handling what's here. No tutorials, no "this might be challenging" warnings, no progressive disclosure of difficulty. The student is trusted from the first session.</li>
+      <li>The system never explains itself defensively. It doesn't say "we do this because research shows." It says the thing and trusts the student to meet it.</li>
+      <li>What happens inside Constellation stays inside Constellation — not because there's a rule, but because the people who understand what it is don't need to explain it to people who don't, and the people who don't understand it wouldn't know what to do with the explanation anyway.</li>
+    </ul>
+    <p>The discretion vibe is not exclusive in the bad sense — it is not designed to make people feel rejected. It is designed to make the people who are already inside feel that being inside means something. That feeling is what makes them want to bring others in. Not to show off. Because they genuinely think the people they're bringing in belong here.</p>
+  </div>
+
+  <div class="callout green">
+    The discretion vibe is self-reinforcing if it's genuine. If the system actually is something worth being discrete about — actually develops real cognitive capacity, actually gets more interesting the deeper you go — then the discretion is not a design affectation. It is a natural response to having something worth protecting. Build the real thing first. The discretion follows.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── ORGANIC GROWTH ── -->
+<div id="growth">
+  <div class="sec-label">Growth</div>
+  <div class="sec-title">How the community grows — and why referral is the only model</div>
+  <div class="body">
+    <p>Constellation does not advertise. It does not have a referral program with incentives. It does not ask students to share or invite. It grows because the students who are inside it want to bring in specific people they believe belong — and the system makes that easy.</p>
+    <p>The mechanism is simple: the HOST mode of the student panel. A student who wants to play with friends creates a session. Those friends play. If the session is good enough — if the chaos is interesting enough, if the strategy is real enough — some of those friends will want to keep playing. They become students. They eventually become people who invite others.</p>
+    <p>This is the only growth model that preserves the induction vibe. A marketing campaign produces people who showed up because of the campaign. A referral incentive produces people who were invited because someone wanted the reward. A genuinely interesting system produces people who were invited because someone genuinely believed they belonged.</p>
+    <p>The first-game experience is designed with this in mind. Every choice — the stakes message, the signed terminal, the chaos that reveals structure to the people who look — is designed to produce a student who, at the end of their first session, wants to invite one specific person they know. Not to share on social media. To bring one person in who they think would get it.</p>
+    <p>That is the growth model. One person at a time, by referral, because the product is real.</p>
+  </div>
+
+  <div class="callout amber">
+    <strong>The community as the curriculum:</strong> The students who arrive through personal referral know each other. They play against each other. The HOST mode means the community is constantly creating sessions for itself. The game's social layer is not a separate feature — it is the primary environment in which the cognitive development happens. The chaos is more interesting when the other player is someone who knows you and is trying to beat you specifically.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── FULL SEQUENCE ── -->
+<div id="sequence">
+  <div class="sec-label">Full Sequence</div>
+  <div class="sec-title">The complete first-encounter flow, in order</div>
+
+  <div class="seq">
+    <div class="seq-step active">
+      <span class="seq-label">Invited by friend</span>
+      <span class="seq-content">Student receives a link from someone they trust. No explanation given — "just try it." This is the induction beginning. The friend's judgment is already in the room.</span>
+    </div>
+    <div class="seq-step">
+      <span class="seq-label">First game lobby</span>
+      <span class="seq-content">Student joins the game. No tutorial. The chaos begins immediately. The game is learnable but not explained.</span>
+    </div>
+    <div class="seq-step">
+      <span class="seq-label">First game ends</span>
+      <span class="seq-content">Win or lose. The result screen is specific to what happened — not generic. The system noticed.</span>
+    </div>
+    <div class="seq-step active">
+      <span class="seq-label">Post-game popup</span>
+      <span class="seq-content">"Although it's just a 25% chance — your first game carries more weight in the system than any other. The Ledger is already watching. There's considerably more, if you want it."</span>
+    </div>
+    <div class="seq-step">
+      <span class="seq-label">Student panel · first visit</span>
+      <span class="seq-content">Student opens the panel for the first time. Terminal fires the session 1 message — signed by X. No zone shown. The system is listening, not speaking yet.</span>
+    </div>
+    <div class="seq-step active">
+      <span class="seq-label">Session 1 terminal</span>
+      <span class="seq-content">"Looks like this is your first game. Through adaptability and flexible thinking, you may win. Embrace the chaos. — X"</span>
+    </div>
+    <div class="seq-step">
+      <span class="seq-label">Student plays</span>
+      <span class="seq-content">First training session. Ledger writes. Zone remains CALIBRATION. The system has one data point.</span>
+    </div>
+    <div class="seq-step">
+      <span class="seq-label">Sessions 2–4</span>
+      <span class="seq-content">Terminal shifts to Stage 2 voice. "You came back. That's usually how it starts." Unsigned. The system is becoming a voice, not a person.</span>
+    </div>
+    <div class="seq-step">
+      <span class="seq-label">Session 5+</span>
+      <span class="seq-content">Zone voice activates. CALIBRATION, ECHO, RADICAL, ALPHA, or SINGULARITY. The student begins to learn what the code words mean through experience. No one explains them.</span>
+    </div>
+    <div class="seq-step active">
+      <span class="seq-label">Student invites someone</span>
+      <span class="seq-content">At some point — could be session 3, could be session 20 — the student thinks of someone specific who belongs here. They create a HOST session. The cycle begins again.</span>
+    </div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── OPEN QUESTIONS ── -->
+<div id="open">
+  <div class="sec-label">Open Questions</div>
+  <div class="sec-title">What this philosophy has not yet resolved</div>
+
+  <div class="principle">
+    <div class="p-num">Q1 — Who is X?</div>
+    <div class="p-title">Does X ever get explained, and if so when?</div>
+    <div class="p-body">The signature creates a question. Some students will want the answer. The current design leaves it permanently open. This is probably correct — the moment X is explained, the mystery collapses. But there may be a moment (SINGULARITY? a specific session count?) where the system can say something partial and true without deflating the question. Unresolved.</div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Q2 — The reputation concept</div>
+    <div class="p-title">Does standing in the system surface anywhere the student can see?</div>
+    <div class="p-body">The stakes message implies reputation. The zones imply trajectory. But there is no social standing visible anywhere yet. Whether this is correct (standing would produce performance rather than genuine play) or a gap (students need to feel their trajectory is real) is unresolved. The zone vocabulary is the closest thing to reputation the system currently has — and it may be enough.</div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Q3 — The varying result screen</div>
+    <div class="p-title">What does the post-game result screen say for session 1, specifically?</div>
+    <div class="p-body">The result screen after the first game should be specific to what happened — not generic. The philosophy from the Lila onboarding doc has five result states (massive loss, narrow loss, draw, narrow win, dominant win) each saying something true and specific. The post-game popup with the stakes message fires over whatever result screen exists. The result screen itself needs to be designed. Currently not implemented.</div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Q4 — When does the student get to ask questions?</div>
+    <div class="p-title">Is there ever a place where the student can ask the system something directly?</div>
+    <div class="p-body">The current design is all outbound — the system speaks, the student plays, the system watches. There is no interface for the student to ask "what is RADICAL?" or "what is X?" This is probably correct for the induction period. But at some point a student who has been engaged for many sessions deserves more access to what the system knows about them. This connects to the progressive unlock tier system in student-design.html. Unresolved for Era 12.</div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Constellation — Session Setup</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;--surface:#f5f5f5;--border:#d0d0d0;--border2:#e8e8e8;
+  --text:#111;--dim:#666;--dimmer:#aaa;
+  --term-bg:#0a0a0a;--term-border:#1e1e1e;
+  --term-text:#e0e0e0;--term-dim:#444;--term-amber:#d97706;
+  --term-green:#059669;--term-white:#fff;
+}
+body{font-family:Arial,sans-serif;font-size:12px;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* HEADER */
+.hdr{border-bottom:2px solid #000;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;background:#fff;position:sticky;top:0;z-index:20}
+.hdr-left{display:flex;align-items:baseline;gap:12px}
+.hdr-logo{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase}
+.hdr-sub{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim)}
+.hdr-right{display:flex;align-items:center;gap:14px}
+.conn-pill{display:flex;align-items:center;gap:5px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dimmer)}
+.conn-dot{width:6px;height:6px;border-radius:50%;background:var(--dimmer)}
+.conn-dot.live{background:#059669;animation:pulse 2s infinite}
+.conn-dot.err{background:#dc2626}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.hdr-name{font-size:11px;color:var(--dim)}
+.hdr-name b{color:var(--text)}
+.admin-link{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dimmer);text-decoration:none;border-bottom:1px solid transparent}
+.admin-link:hover{color:var(--text);border-bottom-color:var(--text)}
+
+/* LAYOUT */
+.main{max-width:720px;margin:0 auto;padding:24px 20px 80px}
+
+/* TERMINAL */
+.term-wrap{background:var(--term-bg);border:1px solid var(--term-border);margin-bottom:24px}
+.term-hdr{border-bottom:1px solid #111;padding:7px 16px;display:flex;justify-content:space-between;align-items:center}
+.term-hdr-lbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#333}
+.term-badge{font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:1px 6px;border:1px solid #1e1e1e;color:#444;font-weight:700}
+.term-badge.live{border-color:#1a3a2a;color:#059669}
+.term-body{padding:18px 22px;font-family:'Courier New',monospace;font-size:11px;line-height:1.9;color:var(--term-text)}
+.tr{display:flex}.tk{color:var(--term-dim);min-width:120px;flex-shrink:0}
+.tv{color:var(--term-text)}.tv.a{color:var(--term-amber)}.tv.w{color:var(--term-white);font-weight:700}.tv.g{color:var(--term-green)}
+.thr{border:none;border-top:1px solid #111;margin:10px 0}
+.tm{color:var(--term-dim);line-height:2}
+.tblink::after{content:'█';animation:blink 1.2s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.term-actions{border-top:1px solid #111;padding:10px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn-term{background:#fff;color:#000;border:2px solid #fff;padding:6px 16px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-term:hover{background:#ddd;border-color:#ddd}
+.btn-term:disabled{opacity:.35;cursor:default}
+.btn-term-sec{background:transparent;color:#555;border:1px solid #333;padding:5px 12px;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-term-sec:hover{color:var(--term-text);border-color:#666}
+.term-note{font-size:9px;color:#333;margin-left:auto;font-family:Arial,sans-serif;font-style:italic}
+
+/* TABS */
+.tabs{display:flex;border-bottom:2px solid #000;margin-bottom:22px}
+.tab{padding:9px 20px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;color:var(--dim);border-bottom:2px solid transparent;margin-bottom:-2px;background:none;border-top:none;border-left:none;border-right:none;font-family:Arial,sans-serif}
+.tab.active{color:#000;border-bottom-color:#000}
+.tab:hover:not(.active){color:var(--text)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* FORM */
+.sec-lbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.sec-lbl::after{content:'';flex:1;height:1px;background:var(--border2)}
+.section{margin-bottom:22px}
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.fg label{font-size:11px;font-weight:700}
+.fg .sub{font-size:10px;font-weight:400;color:var(--dim);margin-left:4px}
+.fg input[type=text]{padding:7px 9px;border:1px solid var(--border);font-size:12px;font-family:Arial,sans-serif;background:#fff;width:100%}
+.fg input:focus{outline:2px solid #000;outline-offset:0}
+
+/* sliders */
+.sl-row{display:flex;align-items:center;gap:10px}
+.sl-row input[type=range]{flex:1;accent-color:#000}
+.sl-val{font-size:11px;font-weight:700;min-width:36px;text-align:right;font-family:'Courier New',monospace}
+
+/* toggles */
+.tg{display:inline-flex;border:1px solid var(--border);overflow:hidden}
+.tg-opt{padding:5px 12px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;background:#fff;color:var(--dim);border:none;font-family:Arial,sans-serif}
+.tg-opt.on{background:#000;color:#fff}
+
+/* challenge */
+.ch-wrap{display:flex;border:1px solid var(--border);overflow:hidden}
+.ch-opt{flex:1;padding:5px 0;text-align:center;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;background:#fff;color:var(--dim);border:none;font-family:Arial,sans-serif}
+.ch-opt+.ch-opt{border-left:1px solid var(--border)}
+.ch-opt.on{background:#000;color:#fff}
+.ch-note{font-size:9px;color:var(--dimmer);font-style:italic;margin-top:4px}
+
+/* map chips */
+.map-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.map-chip{border:1px solid var(--border);padding:5px 10px;cursor:pointer;font-size:10px;background:#fff;white-space:nowrap;transition:border-color .1s}
+.map-chip:hover{border-color:#666}
+.map-chip.sel{border-color:#000;border-width:2px;font-weight:700;background:var(--surface)}
+.map-chip.rnd{border-style:dashed}
+
+/* grid */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+/* actions */
+.form-actions{margin-top:24px;padding-top:16px;border-top:2px solid #000;display:flex;gap:8px;align-items:center}
+.btn-primary{padding:10px 24px;background:#000;color:#fff;border:2px solid #000;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-primary:hover{background:#222}
+.btn-primary:disabled{background:#9ca3af;border-color:#9ca3af;cursor:default}
+.act-status{font-size:10px;color:var(--dim);font-style:italic}
+
+/* ROOM CREATED */
+.room-box{display:none;border:2px solid #000;padding:20px;margin-top:18px}
+.room-box.vis{display:block}
+.room-hd{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px}
+.room-id{font-size:18px;font-weight:700;letter-spacing:4px;font-family:'Courier New',monospace;margin-bottom:8px}
+.link-row{display:flex;gap:6px;margin-bottom:14px}
+.link-box{flex:1;padding:6px 9px;border:1px solid var(--border);font-size:11px;font-family:'Courier New',monospace;background:var(--surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn-copy{padding:6px 14px;background:#000;color:#fff;border:none;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif;white-space:nowrap}
+.btn-copy:hover{background:#333}
+.players-lbl{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+.pchips{display:flex;flex-wrap:wrap;gap:5px;min-height:28px;margin-bottom:14px}
+.pchip{border:1px solid var(--border);padding:3px 8px;font-size:11px;background:#fff}
+.pchip.ready{border-color:#000;background:#000;color:#fff}
+.room-actions{display:flex;gap:8px}
+.btn-join{flex:1;padding:10px;background:#000;color:#fff;border:none;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif;text-decoration:none;display:flex;align-items:center;justify-content:center}
+.btn-join:hover{background:#222}
+.btn-close{padding:9px 16px;background:#fff;color:var(--dim);border:1px solid var(--border);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-close:hover{border-color:#111;color:#111}
+
+/* STATUS BAR */
+.status-bar{position:fixed;bottom:0;left:0;right:0;border-top:1px solid var(--border2);background:#fff;padding:7px 20px;display:flex;align-items:center;gap:16px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dimmer);z-index:10}
+.sb-item{display:flex;align-items:center;gap:5px}
+
+@media(max-width:560px){
+  .two-col{grid-template-columns:1fr}
+  .hdr{flex-wrap:wrap;gap:6px}
+}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-left">
+    <span class="hdr-logo">Constellation</span>
+    <span class="hdr-sub">Session Setup</span>
+  </div>
+  <div class="hdr-right">
+    <div class="hdr-name" id="hdrName" style="display:none">Playing as <b id="hdrNameVal"></b></div>
+    <div class="conn-pill">
+      <div class="conn-dot" id="connDot"></div>
+      <span id="connLabel">Connecting</span>
+    </div>
+    <a href="/admin" class="admin-link">Admin ↗</a>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- TERMINAL -->
+  <div class="term-wrap">
+    <div class="term-hdr">
+      <span class="term-hdr-lbl">System Recommendation</span>
+      <span class="term-badge" id="termBadge">Offline</span>
+    </div>
+    <div class="term-body">
+      <div class="tr"><span class="tk">────────────────</span></div>
+      <div class="tr" style="margin-top:4px">
+        <span class="tv w">CONSTELLATION</span>
+        <span class="tk" style="padding-left:10px;font-size:10px">cognitive development system</span>
+      </div>
+      <div class="tr" style="margin-top:8px"><span class="tk">session</span><span class="tv a" id="tSess">—</span></div>
+      <div class="tr"><span class="tk">zone</span><span class="tv w" id="tZone">—</span></div>
+      <div class="tr"><span class="tk">signal</span><span class="tv a" id="tSignal">loading</span></div>
+      <hr class="thr">
+      <div class="tm" id="tMsg1"></div>
+      <div class="tm" id="tMsg2"></div>
+      <div class="tm" id="tMsg3"></div>
+      <div style="margin-top:10px"><span class="tk">────────────────</span></div>
+      <div style="margin-top:4px"><span class="tk">enter when ready</span><span class="tblink"></span></div>
+    </div>
+    <div class="term-actions">
+      <button class="btn-term" id="btnRec" onclick="launchRecommended()" disabled>Launch Recommended</button>
+      <button class="btn-term-sec" onclick="switchTab('train')">Customize ›</button>
+      <span class="term-note" id="termNote">—</span>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" id="tab-train" onclick="switchTab('train')">Train</button>
+    <button class="tab" id="tab-create" onclick="switchTab('create')">Create for Friends</button>
+  </div>
+
+  <!-- ═══════════ TRAIN ═══════════ -->
+  <div class="tab-panel active" id="panel-train">
+
+    <div class="section">
+      <div class="sec-lbl">Session Length</div>
+      <div class="two-col">
+        <div class="fg">
+          <label>Rounds <span class="sub">how many rounds</span></label>
+          <div class="sl-row">
+            <input type="range" id="tr-rounds" min="5" max="15" value="10"
+              oninput="document.getElementById('tr-rounds-v').textContent=this.value">
+            <span class="sl-val" id="tr-rounds-v">10</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Round Length <span class="sub">seconds</span></label>
+          <div class="sl-row">
+            <input type="range" id="tr-rt" min="15" max="60" step="5" value="30"
+              oninput="document.getElementById('tr-rt-v').textContent=this.value+'s'">
+            <span class="sl-val" id="tr-rt-v">30s</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-lbl">Map</div>
+      <div class="fg">
+        <label>Which map <span class="sub">or let the system decide</span></label>
+        <div class="map-grid" id="tr-map-grid">
+          <div class="map-chip rnd sel" data-map="" onclick="selMap('train','',this)">System Selects</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-lbl">AI Opponent</div>
+      <div class="two-col">
+        <div class="fg">
+          <label>Include AI</label>
+          <div class="tg">
+            <button class="tg-opt" id="tr-bot-off" onclick="setBot('train',false)">Off</button>
+            <button class="tg-opt on" id="tr-bot-on" onclick="setBot('train',true)">On</button>
+          </div>
+        </div>
+        <div class="fg" id="tr-ch-wrap">
+          <label>Challenge</label>
+          <div class="ch-wrap">
+            <button class="ch-opt" onclick="setCh('train','easy')">Easy</button>
+            <button class="ch-opt on" onclick="setCh('train','standard')">Standard</button>
+            <button class="ch-opt" onclick="setCh('train','hard')">Hard</button>
+          </div>
+          <div class="ch-note">Bot style varies each session</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn-primary" id="btn-train" onclick="createSession('train')">Launch Training Session</button>
+      <span class="act-status" id="tr-status"></span>
+    </div>
+
+    <div class="room-box" id="tr-room">
+      <div class="room-hd">Training Session Ready</div>
+      <div class="room-id" id="tr-room-id">—</div>
+      <div class="link-row">
+        <div class="link-box" id="tr-link">—</div>
+        <button class="btn-copy" onclick="copyLink('train')">Copy</button>
+      </div>
+      <div class="players-lbl">Players in room</div>
+      <div class="pchips" id="tr-chips"><div class="pchip">Waiting…</div></div>
+      <div class="room-actions">
+        <a class="btn-join" id="tr-join" href="#" target="_blank">Join Game →</a>
+        <button class="btn-close" onclick="closeRoom('train')">Close</button>
+      </div>
+    </div>
+
+  </div><!-- /train -->
+
+  <!-- ═══════════ CREATE ═══════════ -->
+  <div class="tab-panel" id="panel-create">
+
+    <div class="section">
+      <div class="sec-lbl">Session</div>
+      <div class="fg">
+        <label>Session Name <span class="sub">shown to players joining</span></label>
+        <input type="text" id="cr-name" placeholder="e.g. Friday night, Period 3" maxlength="50">
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-lbl">Map</div>
+      <div class="fg">
+        <label>Choose a map</label>
+        <div class="map-grid" id="cr-map-grid">
+          <div class="map-chip rnd sel" data-map="" onclick="selMap('create','',this)">Surprise Me</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-lbl">Session Length</div>
+      <div class="two-col">
+        <div class="fg">
+          <label>Rounds</label>
+          <div class="sl-row">
+            <input type="range" id="cr-rounds" min="3" max="20" value="10"
+              oninput="document.getElementById('cr-rounds-v').textContent=this.value">
+            <span class="sl-val" id="cr-rounds-v">10</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Round Length</label>
+          <div class="sl-row">
+            <input type="range" id="cr-rt" min="15" max="90" step="5" value="30"
+              oninput="document.getElementById('cr-rt-v').textContent=this.value+'s'">
+            <span class="sl-val" id="cr-rt-v">30s</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-lbl">Rules</div>
+      <div class="two-col">
+        <div class="fg">
+          <label>Steals <span class="sub">can players take stars?</span></label>
+          <div class="tg">
+            <button class="tg-opt" id="cr-st-off" onclick="setToggle('steals',false)">Off</button>
+            <button class="tg-opt on" id="cr-st-on" onclick="setToggle('steals',true)">On</button>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Headquarters <span class="sub">capture bonuses</span></label>
+          <div class="tg">
+            <button class="tg-opt" id="cr-hq-off" onclick="setToggle('hq',false)">Off</button>
+            <button class="tg-opt on" id="cr-hq-on" onclick="setToggle('hq',true)">On</button>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Teams</label>
+          <div class="tg" id="cr-teams-tg">
+            <button class="tg-opt on" data-v="2" onclick="setTeams(2,this)">2</button>
+            <button class="tg-opt" data-v="3" onclick="setTeams(3,this)">3</button>
+            <button class="tg-opt" data-v="4" onclick="setTeams(4,this)">4</button>
+            <button class="tg-opt" data-v="6" onclick="setTeams(6,this)">6</button>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Players Pick Teams</label>
+          <div class="tg">
+            <button class="tg-opt on" id="cr-pts-off" onclick="setToggle('pts',false)">Off</button>
+            <button class="tg-opt" id="cr-pts-on" onclick="setToggle('pts',true)">On</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-lbl">AI Opponent</div>
+      <div class="two-col">
+        <div class="fg">
+          <label>Include AI</label>
+          <div class="tg">
+            <button class="tg-opt on" id="cr-bot-off" onclick="setBot('create',false)">Off</button>
+            <button class="tg-opt" id="cr-bot-on" onclick="setBot('create',true)">On</button>
+          </div>
+        </div>
+        <div class="fg" id="cr-ch-wrap" style="opacity:.35;pointer-events:none">
+          <label>Challenge</label>
+          <div class="ch-wrap">
+            <button class="ch-opt" onclick="setCh('create','easy')">Easy</button>
+            <button class="ch-opt on" onclick="setCh('create','standard')">Standard</button>
+            <button class="ch-opt" onclick="setCh('create','hard')">Hard</button>
+          </div>
+          <div class="ch-note">Bot style assigned at session start</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn-primary" id="btn-create" onclick="createSession('create')">Create Session</button>
+      <span class="act-status" id="cr-status"></span>
+    </div>
+
+    <div class="room-box" id="cr-room">
+      <div class="room-hd">Session Created — Share the link</div>
+      <div class="room-id" id="cr-room-id">—</div>
+      <div class="link-row">
+        <div class="link-box" id="cr-link">—</div>
+        <button class="btn-copy" onclick="copyLink('create')">Copy</button>
+      </div>
+      <div class="players-lbl">Players in room</div>
+      <div class="pchips" id="cr-chips"><div class="pchip">Waiting for players…</div></div>
+      <div class="room-actions">
+        <a class="btn-join" id="cr-join" href="#" target="_blank">Join Game →</a>
+        <button class="btn-close" onclick="closeRoom('create')">Close</button>
+      </div>
+    </div>
+
+  </div><!-- /create -->
+
+</div><!-- /main -->
+
+<div class="status-bar">
+  <div class="sb-item"><div class="conn-dot" id="sbDot"></div><span id="sbStatus">Connecting</span></div>
+  <div class="sb-item" id="sbName" style="display:none"><span id="sbNameVal"></span></div>
+  <div style="margin-left:auto" class="sb-item">Constellation · Student Panel</div>
+</div>
+
+<script src="https://unpkg.com/colyseus.js@0.15.24/dist/colyseus.js"></script>
+<script>
+const WS  = (location.protocol==='https:'?'wss':'ws')+'://'+location.host;
+const API = location.origin;
+const BOT_TYPES = ['HAL','CAESAR','ATHENA','ROBIN_HOOD','EINSTEIN','LORENZ'];
+const AGG = {easy:[1,3],standard:[4,6],hard:[7,9]};
+
+const S = {
+  connected:false, studentId:null, sessionCount:0, compilerData:null,
+  maps:[],
+  train:{ map:'', bot:true,  challenge:'standard' },
+  create:{ map:'', bot:false, challenge:'standard', steals:true, hq:true, teams:2, pts:false },
+  rooms:{ train:null, create:null },
+};
+
+// ── BOOT
+window.addEventListener('DOMContentLoaded',()=>{
+  const name = localStorage.getItem('constellation_name')||'Guest';
+  S.studentId = name.toLowerCase().replace(/[^a-z0-9]/g,'-');
+  document.getElementById('hdrNameVal').textContent = name;
+  document.getElementById('hdrName').style.display = 'block';
+  document.getElementById('sbNameVal').textContent  = name;
+  document.getElementById('sbName').style.display   = 'flex';
+  tryConnect();
+  loadMaps();
+  loadCompiler();
+});
+
+function tryConnect(){
+  try{ new Colyseus.Client(WS); setConn(true); }catch(e){ setConn(false); }
+}
+function setConn(live){
+  S.connected=live;
+  document.getElementById('connDot').className='conn-dot'+(live?' live':' err');
+  document.getElementById('sbDot').className='conn-dot'+(live?' live':'');
+  document.getElementById('connLabel').textContent=live?'Live':'Offline';
+  document.getElementById('sbStatus').textContent=live?'Server connected':'Server offline';
+}
+
+// ── MAPS
+async function loadMaps(){
+  try{
+    const r=await fetch(API+'/api/maps/topology');
+    if(!r.ok) return;
+    const d=await r.json();
+    S.maps=(d.maps||[]).slice(0,18);
+    renderMaps();
+  }catch(_){}
+}
+function renderMaps(){
+  ['train','create'].forEach(tab=>{
+    const id   = tab==='train'?'tr-map-grid':'cr-map-grid';
+    const lbl  = tab==='train'?'System Selects':'Surprise Me';
+    const grid = document.getElementById(id);
+    grid.innerHTML=`<div class="map-chip rnd sel" data-map="" onclick="selMap('${tab}','',this)">${lbl}</div>`;
+    S.maps.forEach(m=>{
+      const name=m.name.replace('.json','');
+      const c=document.createElement('div');
+      c.className='map-chip'; c.dataset.map=m.name;
+      c.textContent=name;
+      c.onclick=()=>selMap(tab,m.name,c);
+      grid.appendChild(c);
+    });
+  });
+}
+function selMap(tab,val,el){
+  S[tab].map=val;
+  const id=tab==='train'?'tr-map-grid':'cr-map-grid';
+  document.querySelectorAll('#'+id+' .map-chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+// ── COMPILER
+async function loadCompiler(){
+  try{
+    const r=await fetch(API+'/api/compiler/'+encodeURIComponent(S.studentId));
+    if(!r.ok){ fallbackTerm(); return; }
+    const d=await r.json();
+    S.compilerData=d; S.sessionCount=d.session_count||0;
+    renderTerm(d);
+    document.getElementById('btnRec').disabled=false;
+  }catch(_){ fallbackTerm(); }
+}
+function renderTerm(d){
+  const n=d.session_count||0;
+  set('tSess',String(n+1).padStart(3,'0'));
+  set('tZone',d.zone||'CALIBRATION');
+  set('tSignal',d.signal_text||'initializing');
+  set('tMsg1',(d.messages||[])[0]||'The system does not know you yet.');
+  set('tMsg2',(d.messages||[])[1]||'This session is a question, not an assessment.');
+  set('tMsg3',(d.messages||[])[2]||'Play as you would play.');
+  const badge=document.getElementById('termBadge');
+  badge.textContent=n>0?n+' sessions recorded':'First session';
+  badge.className='term-badge'+(n>0?' live':'');
+  set('termNote',n>0?'Based on your '+n+' recorded sessions':'No data yet — calibration mode');
+  document.getElementById('btnRec').disabled=false;
+}
+function fallbackTerm(){
+  set('tSess','001'); set('tZone','CALIBRATION'); set('tSignal','initializing');
+  set('tMsg1','The system does not know you yet.');
+  set('tMsg2','This session is a question, not an assessment.');
+  set('tMsg3','Play as you would play.');
+  set('termBadge','No data'); set('termNote','Server offline or no sessions recorded');
+  document.getElementById('btnRec').disabled=false;
+}
+
+// ── TABS
+function switchTab(tab){
+  ['train','create'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('active',t===tab);
+    document.getElementById('panel-'+t).classList.toggle('active',t===tab);
+  });
+}
+
+// ── CONTROLS
+function setBot(tab,on){
+  S[tab].bot=on;
+  if(tab==='train'){
+    document.getElementById('tr-bot-off').classList.toggle('on',!on);
+    document.getElementById('tr-bot-on').classList.toggle('on',on);
+    document.getElementById('tr-ch-wrap').style.opacity=on?'1':'.35';
+    document.getElementById('tr-ch-wrap').style.pointerEvents=on?'':'none';
+  } else {
+    document.getElementById('cr-bot-off').classList.toggle('on',!on);
+    document.getElementById('cr-bot-on').classList.toggle('on',on);
+    document.getElementById('cr-ch-wrap').style.opacity=on?'1':'.35';
+    document.getElementById('cr-ch-wrap').style.pointerEvents=on?'':'none';
+  }
+}
+function setCh(tab,level){
+  S[tab].challenge=level;
+  const prefix=tab==='train'?'#panel-train':'#panel-create';
+  document.querySelectorAll((tab==='train'?'#panel-train':'#panel-create')+' .ch-opt').forEach(b=>{
+    const v=b.textContent.toLowerCase();
+    b.classList.toggle('on',v===level);
+  });
+}
+function setToggle(key,on){
+  S.create[key]=on;
+  const off=document.getElementById('cr-'+key.slice(0,2)+'-off')||document.getElementById('cr-'+key+'-off');
+  const onb=document.getElementById('cr-'+key.slice(0,2)+'-on')||document.getElementById('cr-'+key+'-on');
+  if(off&&onb){ off.classList.toggle('on',!on); onb.classList.toggle('on',on); }
+}
+function setTeams(n,btn){
+  S.create.teams=n;
+  document.querySelectorAll('#cr-teams-tg .tg-opt').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+
+// ── BOT CONFIG (type and exact aggression never exposed)
+function botConfig(tab){
+  if(!S[tab].bot) return [];
+  const [lo,hi]=AGG[S[tab].challenge]||[4,6];
+  const agg=lo+Math.floor(Math.random()*(hi-lo+1));
+  const type=BOT_TYPES[Math.floor(Math.random()*BOT_TYPES.length)];
+  return [{ type, aggression:agg, team:1 }];
+}
+
+// ── LAUNCH RECOMMENDED
+async function launchRecommended(){
+  const btn=document.getElementById('btnRec');
+  btn.disabled=true; btn.textContent='Launching…';
+  try{
+    const client=new Colyseus.Client(WS);
+    const cd=S.compilerData;
+    const cv=cd?.config_vector||{};
+    const opts={
+      countMultiplier:      cv.count_mult||500,
+      distanceMultiplier:   cv.distance_mult||1,
+      hqMultiplier:         cv.hq_mult||10,
+      destructionMultiplier:cv.dest_mult||1,
+      rounds:               cv.rounds||10,
+      roundTime:            30,
+      movesPerRound:        cv.moves||15,
+      stealLimit:           cv.steals||0,
+      hqMax:                cv.headquarters||2,
+      mapJson:              cd?.map_json||'',
+      playerName:           localStorage.getItem('constellation_name')||'Student',
+      aiBots:               botConfig('train'),
+      allowPlayerTeamSelection:false,
+      _source:'student-rec', _studentId:S.studentId,
+    };
+    const room=await client.create('constellation',opts);
+    window.open(location.origin+'/game/'+room.id,'_blank');
+    btn.textContent='Launched ✓';
+    setTimeout(()=>{ btn.disabled=false; btn.textContent='Launch Recommended'; },3000);
+  }catch(e){
+    btn.disabled=false; btn.textContent='Launch Recommended';
+  }
+}
+
+// ── CREATE SESSION
+async function createSession(tab){
+  const btnId=tab==='train'?'btn-train':'btn-create';
+  const btn=document.getElementById(btnId);
+  btn.disabled=true; btn.textContent='Creating…';
+  setStatus(tab,'');
+  try{
+    const client=new Colyseus.Client(WS);
+    const opts=tab==='train'?buildTrain():buildCreate();
+    const room=await client.create('constellation',opts);
+    S.rooms[tab]=room;
+    showRoom(tab,room.id);
+    room.onStateChange(st=>updatePlayers(tab,st));
+    room.onLeave(()=>{ S.rooms[tab]=null; });
+  }catch(e){
+    setStatus(tab,'Failed — is the server running?');
+  }
+  btn.disabled=false;
+  btn.textContent=tab==='train'?'Launch Training Session':'Create Session';
+}
+
+function buildTrain(){
+  const cd=S.compilerData; const cv=cd?.config_vector||{};
+  return{
+    countMultiplier:      cv.count_mult||500,
+    distanceMultiplier:   cv.distance_mult||1,
+    hqMultiplier:         cv.hq_mult||10,
+    destructionMultiplier:cv.dest_mult||1,
+    rounds:+document.getElementById('tr-rounds').value,
+    roundTime:+document.getElementById('tr-rt').value,
+    movesPerRound:15, stealLimit:5, hqMax:2,
+    mapJson:getMapJson(S.train.map)||(cd?.map_json||''),
+    playerName:localStorage.getItem('constellation_name')||'Student',
+    aiBots:botConfig('train'),
+    allowPlayerTeamSelection:false,
+    _source:'student-train', _studentId:S.studentId,
+  };
+}
+function buildCreate(){
+  // Multipliers: balanced defaults with slight variation (prevents cross-session optimization)
+  const vary=v=>Math.round(v*(0.9+Math.random()*0.2));
+  return{
+    countMultiplier:      vary(500),
+    distanceMultiplier:   vary(1),
+    hqMultiplier:         vary(10),
+    destructionMultiplier:vary(1),
+    rounds:+document.getElementById('cr-rounds').value,
+    roundTime:+document.getElementById('cr-rt').value,
+    movesPerRound:15,
+    stealLimit:S.create.steals?12:0,
+    hqMax:S.create.hq?2:0,
+    colorTeamCount:S.create.teams,
+    allowPlayerTeamSelection:S.create.pts,
+    mapJson:getMapJson(S.create.map),
+    playerName:localStorage.getItem('constellation_name')||'Host',
+    aiBots:botConfig('create'),
+    _source:'student-create', _studentId:S.studentId,
+  };
+}
+
+// ── ROOM
+function showRoom(tab,roomId){
+  const link=location.origin+'/game/'+roomId;
+  const pre=tab==='train'?'tr':'cr';
+  document.getElementById(pre+'-room-id').textContent=roomId;
+  document.getElementById(pre+'-link').textContent=link;
+  document.getElementById(pre+'-link').dataset.link=link;
+  document.getElementById(pre+'-join').href=link;
+  document.getElementById((tab==='train'?'tr':'cr')+'-room').classList.add('vis');
+  document.getElementById((tab==='train'?'tr':'cr')+'-room').scrollIntoView({behavior:'smooth'});
+}
+function updatePlayers(tab,st){
+  if(!st||!st.players) return;
+  const id=(tab==='train'?'tr':'cr')+'-chips';
+  const chips=document.getElementById(id);
+  chips.innerHTML='';
+  st.players.forEach((p,pid)=>{
+    const c=document.createElement('div');
+    c.className='pchip'+(p.ready?' ready':'');
+    c.textContent=p.name||'Player '+pid;
+    chips.appendChild(c);
+  });
+}
+function closeRoom(tab){
+  if(S.rooms[tab]){ try{ S.rooms[tab].leave(); }catch(_){} S.rooms[tab]=null; }
+  document.getElementById((tab==='train'?'tr':'cr')+'-room').classList.remove('vis');
+}
+function copyLink(tab){
+  const el=document.getElementById((tab==='train'?'tr':'cr')+'-link');
+  const link=el.dataset.link||el.textContent;
+  navigator.clipboard.writeText(link).catch(()=>{
+    const i=document.createElement('input'); i.value=link;
+    document.body.appendChild(i); i.select(); document.execCommand('copy'); document.body.removeChild(i);
+  });
+  const btn=el.nextElementSibling;
+  btn.textContent='Copied!';
+  setTimeout(()=>btn.textContent='Copy',1800);
+}
+
+// ── UTILS
+function set(id,v){ const el=document.getElementById(id); if(el) el.textContent=v; }
+function getMapJson(name){ const m=S.maps.find(x=>x.name===name); return m?.json||''; }
+function setStatus(tab,msg){ set(tab==='train'?'tr-status':'cr-status',msg); }
+</script>
+</body>
+</html>

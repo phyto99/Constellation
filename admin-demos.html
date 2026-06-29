@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mobile Approaches — Admin Panel</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; font-size: 12px; background: #f0f0f0; padding: 32px 24px; color: #111; }
+h1 { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #999; margin-bottom: 40px; }
+.approach { margin-bottom: 56px; }
+.approach-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+.approach-desc { font-size: 11px; color: #555; line-height: 1.7; margin-bottom: 16px; max-width: 560px; }
+.frames { display: flex; gap: 24px; align-items: flex-start; }
+.frame-wrap { flex: 1; }
+.frame-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #aaa; margin-bottom: 6px; }
+iframe { width: 100%; border: 1px solid #ccc; background: #fff; display: block; }
+.note { font-size: 10px; color: #888; font-style: italic; margin-top: 10px; }
+hr { border: none; border-top: 1px solid #ddd; margin: 56px 0; }
+</style>
+</head>
+<body>
+
+<h1>Admin panel — mobile support approaches</h1>
+
+<!-- ─── 1. @media queries only ──────────────────────────────────────────── -->
+<div class="approach">
+  <div class="approach-title">1. @media queries only</div>
+  <div class="approach-desc">At a breakpoint, sidebar goes full-width and stacks above content. No JS. Pure CSS. Everything is still there — just reflowed. Resize the desktop frame to see it collapse.</div>
+  <div class="frames">
+    <div class="frame-wrap">
+      <div class="frame-label">desktop</div>
+      <iframe height="180" srcdoc='
+        <style>
+        *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif;font-size:11px}
+        body{display:flex;height:100vh}
+        .sb{width:120px;background:#f5f5f5;border-right:1px solid #ccc;padding:10px;flex-shrink:0}
+        .sb div{padding:5px 6px;margin-bottom:2px;cursor:pointer;border-radius:2px}
+        .sb div:hover{background:#e0e0e0}
+        .sb div.sel{background:#e0e0e0}
+        .main{flex:1;padding:12px;overflow:auto}
+        .card{border:1px solid #ddd;padding:10px;margin-bottom:8px;font-size:11px}
+        h3{font-size:11px;font-weight:bold;margin-bottom:6px}
+        @media(max-width:400px){body{flex-direction:column}.sb{width:100%;height:auto;border-right:none;border-bottom:1px solid #ccc}.main{flex:1}}
+        </style>
+        <div class="sb"><div class="sel">Room A</div><div>Room B</div><div>Room C</div></div>
+        <div class="main"><h3>Room A</h3><div class="card">Players: 4/8</div><div class="card">Map: Ad Astra</div><div class="card">Status: waiting</div></div>
+      '></iframe>
+    </div>
+    <div class="frame-wrap">
+      <div class="frame-label">mobile (same file, narrow viewport)</div>
+      <iframe height="260" style="max-width:220px" srcdoc='
+        <style>
+        *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif;font-size:11px}
+        body{display:flex;flex-direction:column;height:100vh}
+        .sb{width:100%;background:#f5f5f5;border-bottom:1px solid #ccc;padding:6px 10px;display:flex;gap:4px}
+        .sb div{padding:4px 8px;cursor:pointer;border-radius:2px;white-space:nowrap}
+        .sb div.sel{background:#e0e0e0}
+        .main{flex:1;padding:10px;overflow:auto}
+        .card{border:1px solid #ddd;padding:8px;margin-bottom:6px;font-size:11px}
+        h3{font-size:11px;font-weight:bold;margin-bottom:6px}
+        </style>
+        <div class="sb"><div class="sel">Room A</div><div>Room B</div><div>Room C</div></div>
+        <div class="main"><h3>Room A</h3><div class="card">Players: 4/8</div><div class="card">Map: Ad Astra</div><div class="card">Status: waiting</div></div>
+      '></iframe>
+    </div>
+  </div>
+  <div class="note">Tradeoff: all the desktop complexity is still in the DOM — long config panels just scroll vertically.</div>
+</div>
+
+<hr>
+
+<!-- ─── 2. Hamburger drawer ─────────────────────────────────────────────── -->
+<div class="approach">
+  <div class="approach-title">2. Hamburger drawer</div>
+  <div class="approach-desc">Sidebar becomes a fixed overlay. A button slides it in/out. Main content is always full width. Click the ☰ button in the mobile frame.</div>
+  <div class="frames">
+    <div class="frame-wrap">
+      <div class="frame-label">desktop (sidebar always visible)</div>
+      <iframe height="180" srcdoc='
+        <style>
+        *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif;font-size:11px}
+        body{display:flex;height:100vh}
+        .sb{width:120px;background:#f5f5f5;border-right:1px solid #ccc;padding:10px;flex-shrink:0}
+        .sb div{padding:5px 6px;margin-bottom:2px;cursor:pointer;border-radius:2px}
+        .sb div.sel{background:#e0e0e0}
+        .main{flex:1;padding:12px}
+        .card{border:1px solid #ddd;padding:10px;margin-bottom:8px}
+        h3{font-size:11px;font-weight:bold;margin-bottom:6px}
+        </style>
+        <div class="sb"><div class="sel">Room A</div><div>Room B</div><div>Room C</div></div>
+        <div class="main"><h3>Room A</h3><div class="card">Players: 4/8</div><div class="card">Map: Ad Astra</div></div>
+      '></iframe>
+    </div>
+    <div class="frame-wrap">
+      <div class="frame-label">mobile — sidebar is a drawer (click ☰)</div>
+      <iframe height="220" style="max-width:220px" srcdoc='
+        <style>
+        *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif;font-size:11px}
+        body{height:100vh;overflow:hidden}
+        .topbar{background:#f5f5f5;border-bottom:1px solid #ccc;padding:6px 10px;display:flex;align-items:center;gap:8px}
+        .ham{font-size:16px;cursor:pointer;user-select:none;background:none;border:none}
+        .topbar-title{font-weight:bold}
+        .drawer{position:fixed;top:0;left:-160px;width:160px;height:100%;background:#f5f5f5;border-right:1px solid #ccc;padding:40px 10px 10px;transition:left .2s;z-index:10}
+        .drawer.open{left:0}
+        .drawer div{padding:6px 8px;margin-bottom:2px;cursor:pointer}
+        .drawer div.sel{background:#e0e0e0;border-radius:2px}
+        .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:9}
+        .overlay.open{display:block}
+        .main{padding:10px}
+        .card{border:1px solid #ddd;padding:8px;margin-bottom:6px}
+        h3{font-size:11px;font-weight:bold;margin-bottom:6px}
+        </style>
+        <div class="topbar"><button class="ham" onclick="toggle()">☰</button><span class="topbar-title">Admin</span></div>
+        <div class="overlay" id="ov" onclick="toggle()"></div>
+        <div class="drawer" id="dr"><div class="sel">Room A</div><div>Room B</div><div>Room C</div></div>
+        <div class="main"><h3>Room A</h3><div class="card">Players: 4/8</div><div class="card">Map: Ad Astra</div></div>
+        <script>function toggle(){document.getElementById("dr").classList.toggle("open");document.getElementById("ov").classList.toggle("open");}</script>
+      '></iframe>
+    </div>
+  </div>
+  <div class="note">Tradeoff: slightly more JS (~15 lines). Sidebar content still needs to be scrollable. Overlay/escape to close is expected UX.</div>
+</div>
+
+<hr>
+
+<!-- ─── 3. Touch targets ────────────────────────────────────────────────── -->
+<div class="approach">
+  <div class="approach-title">3. Touch targets (pointer: coarse)</div>
+  <div class="approach-desc">No structural change. On touch devices, interactive elements get 44px minimum height. Uses <code>@media (pointer: coarse)</code> which targets touchscreens specifically, not screen width.</div>
+  <div class="frames">
+    <div class="frame-wrap">
+      <div class="frame-label">mouse device — tight targets</div>
+      <iframe height="160" srcdoc='
+        <style>
+        *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif;font-size:11px}
+        body{padding:10px}
+        .item{padding:5px 8px;border:1px solid #ddd;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;justify-content:space-between}
+        .item:hover{background:#f5f5f5}
+        button{padding:3px 8px;font-size:10px;border:1px solid #ccc;background:#fff;cursor:pointer}
+        .label{font-size:9px;color:#aaa;margin-bottom:8px;letter-spacing:1px;text-transform:uppercase}
+        </style>
+        <div class="label">mouse — 5px padding</div>
+        <div class="item">Room A — 4 players<button>Join</button></div>
+        <div class="item">Room B — 2 players<button>Join</button></div>
+        <div class="item">Room C — 8 players<button>Join</button></div>
+      '></iframe>
+    </div>
+    <div class="frame-wrap">
+      <div class="frame-label">touch device — 44px targets</div>
+      <iframe height="200" style="max-width:220px" srcdoc='
+        <style>
+        *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif;font-size:11px}
+        body{padding:10px}
+        .item{padding:5px 8px;border:1px solid #ddd;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;justify-content:space-between}
+        .item:hover{background:#f5f5f5}
+        button{padding:3px 8px;font-size:10px;border:1px solid #ccc;background:#fff;cursor:pointer}
+        .label{font-size:9px;color:#aaa;margin-bottom:8px;letter-spacing:1px;text-transform:uppercase}
+        @media(pointer:coarse){.item{min-height:44px;padding:10px 8px}button{min-height:36px;min-width:52px;font-size:12px}}
+        </style>
+        <div class="label">touch — 44px min-height</div>
+        <div class="item">Room A — 4 players<button>Join</button></div>
+        <div class="item">Room B — 2 players<button>Join</button></div>
+        <div class="item">Room C — 8 players<button>Join</button></div>
+      '></iframe>
+    </div>
+  </div>
+  <div class="note">Tradeoff: purely additive, zero risk. Doesn't fix layout overflow — only improves tap accuracy. Should be combined with another approach.</div>
+</div>
+
+<hr>
+
+<!-- ─── 4. Separate simplified mobile page ──────────────────────────────── -->
+<div class="approach">
+  <div class="approach-title">4. Separate simplified mobile page</div>
+  <div class="approach-desc">Two different pages: full admin for desktop, a stripped version for phones that only shows the 3 most common mobile tasks — share a join link, check who's in, and start/stop. Redirect on load based on screen width.</div>
+  <div class="frames">
+    <div class="frame-wrap">
+      <div class="frame-label">desktop — full admin</div>
+      <iframe height="180" srcdoc='
+        <style>
+        *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif;font-size:11px}
+        body{display:flex;height:100vh}
+        .sb{width:120px;background:#f5f5f5;border-right:1px solid #ccc;padding:10px;flex-shrink:0}
+        .sb div{padding:5px 6px;margin-bottom:2px;cursor:pointer}
+        .sb div.sel{background:#e0e0e0}
+        .main{flex:1;padding:12px}
+        .row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+        input{border:1px solid #ccc;padding:3px 6px;font-size:10px;width:80px}
+        label{font-size:10px;color:#666}
+        select{font-size:10px;border:1px solid #ccc;padding:2px}
+        button{padding:3px 8px;font-size:10px;border:1px solid #ccc;background:#111;color:#fff;cursor:pointer}
+        h3{font-size:11px;font-weight:bold;margin-bottom:8px}
+        </style>
+        <div class="sb"><div class="sel">Room A</div><div>Room B</div></div>
+        <div class="main">
+          <h3>Room A — configure</h3>
+          <div class="row"><label>Rounds<br><input value="10"></label><label>Time(s)<br><input value="30"></label><label>Map<br><select><option>Ad Astra</option></select></label></div>
+          <div class="row"><label>Bot<br><select><option>Standard</option><option>Aggressive</option></select></label><label>HQs<br><input value="2"></label><label>Steals<br><input value="5"></label></div>
+          <div class="row"><button>Create Room</button><button style="background:#fff;color:#111">Copy Link</button></div>
+        </div>
+      '></iframe>
+    </div>
+    <div class="frame-wrap">
+      <div class="frame-label">mobile — simplified page (/admin-mobile)</div>
+      <iframe height="280" style="max-width:220px" srcdoc='
+        <style>
+        *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif;font-size:12px}
+        body{padding:12px;background:#fff}
+        h2{font-size:11px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:#999;margin-bottom:16px}
+        .room{border:1px solid #e0e0e0;padding:10px;margin-bottom:10px;border-radius:2px}
+        .room-name{font-weight:bold;margin-bottom:4px}
+        .room-meta{font-size:10px;color:#888;margin-bottom:8px}
+        .room-actions{display:flex;gap:6px}
+        button{flex:1;padding:10px 0;font-size:11px;border:1px solid #ccc;background:#fff;cursor:pointer;border-radius:2px}
+        button.primary{background:#111;color:#fff;border-color:#111}
+        .status{font-size:9px;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;color:#059669}
+        </style>
+        <h2>Admin — Mobile</h2>
+        <div class="status">● Server online · 2 rooms</div>
+        <div class="room">
+          <div class="room-name">Room A</div>
+          <div class="room-meta">4 / 8 players · waiting</div>
+          <div class="room-actions"><button onclick="alert(\'Link copied\')">Copy link</button><button class="primary">Start</button></div>
+        </div>
+        <div class="room">
+          <div class="room-name">Room B</div>
+          <div class="room-meta">2 / 8 players · in game</div>
+          <div class="room-actions"><button onclick="alert(\'Link copied\')">Copy link</button><button style="border-color:#dc2626;color:#dc2626">Stop</button></div>
+        </div>
+      '></iframe>
+    </div>
+  </div>
+  <div class="note">Tradeoff: double the maintenance surface. But mobile admin UX is genuinely different from desktop — config belongs on desktop, link-sharing and start/stop belong on mobile.</div>
+</div>
+
+<hr>
+
+<!-- ─── 5. Container queries ────────────────────────────────────────────── -->
+<div class="approach">
+  <div class="approach-title">5. Container queries</div>
+  <div class="approach-desc">Individual panels respond to <em>their own width</em> rather than the viewport. A wide panel shows fields inline; a narrow panel stacks them. Useful when panels vary in size regardless of screen width.</div>
+  <div class="frames">
+    <div class="frame-wrap">
+      <div class="frame-label">wide container — inline fields</div>
+      <iframe height="140" srcdoc='
+        <style>
+        *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif;font-size:11px}
+        body{padding:12px}
+        .panel{container-type:inline-size;border:1px solid #ddd;padding:10px}
+        .fields{display:flex;gap:8px;flex-wrap:wrap}
+        label{display:flex;flex-direction:column;gap:3px;font-size:10px;color:#666}
+        input,select{border:1px solid #ccc;padding:3px 5px;font-size:10px}
+        @container(max-width:280px){.fields{flex-direction:column}}
+        </style>
+        <div class="panel">
+          <div class="fields">
+            <label>Rounds<input value="10" style="width:60px"></label>
+            <label>Time (s)<input value="30" style="width:60px"></label>
+            <label>Map<select style="width:100px"><option>Ad Astra</option></select></label>
+            <label>Bot<select style="width:100px"><option>Standard</option></select></label>
+          </div>
+        </div>
+      '></iframe>
+    </div>
+    <div class="frame-wrap">
+      <div class="frame-label">narrow container — same component, stacked</div>
+      <iframe height="200" style="max-width:180px" srcdoc='
+        <style>
+        *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif;font-size:11px}
+        body{padding:12px}
+        .panel{container-type:inline-size;border:1px solid #ddd;padding:10px}
+        .fields{display:flex;gap:8px;flex-wrap:wrap}
+        label{display:flex;flex-direction:column;gap:3px;font-size:10px;color:#666}
+        input,select{border:1px solid #ccc;padding:3px 5px;font-size:10px}
+        @container(max-width:280px){.fields{flex-direction:column}.fields label{flex-direction:row;align-items:center;gap:8px;justify-content:space-between}}
+        </style>
+        <div class="panel">
+          <div class="fields">
+            <label>Rounds<input value="10" style="width:50px"></label>
+            <label>Time (s)<input value="30" style="width:50px"></label>
+            <label>Map<select style="width:80px"><option>Ad Astra</option></select></label>
+            <label>Bot<select style="width:80px"><option>Standard</option></select></label>
+          </div>
+        </div>
+      '></iframe>
+    </div>
+  </div>
+  <div class="note">Tradeoff: container queries are component-scoped — they don't solve the sidebar/layout problem, only the field layout within panels. Best used alongside approach 1 or 2.</div>
+</div>
+
+</body>
+</html>

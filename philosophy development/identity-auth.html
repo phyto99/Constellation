@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Identity & Auth — Constellation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.6}
+header{border-bottom:2px solid #000;padding:18px 28px 12px;position:sticky;top:0;background:#fff;z-index:100}
+.hd-label{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:3px}
+.hd-title{font-size:18px;font-weight:700;margin-bottom:5px}
+.hd-sub{font-size:11px;color:#555;margin-bottom:10px;max-width:700px;line-height:1.6}
+nav{display:flex;gap:0;overflow-x:auto;border-top:1px solid #eee;margin-top:8px}
+.tab{padding:7px 0;margin-right:20px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.tab:hover{color:#000}.tab.active{color:#000;border-bottom-color:#000}
+.content{max-width:1020px;margin:0 auto;padding:28px 28px 80px}
+.panel{display:none}.panel.active{display:block}
+
+h1{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;border-bottom:2px solid #000;padding-bottom:5px;margin-bottom:18px}
+h2{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #ddd;padding-bottom:3px;margin:22px 0 10px}
+h3{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
+p{font-size:11px;line-height:1.85;color:#222;margin-bottom:9px;max-width:700px}
+.sep{border:none;border-top:1px solid #eee;margin:24px 0}
+ul{margin-left:16px;margin-bottom:8px}
+li{font-size:11px;line-height:1.8;color:#333;margin-bottom:2px}
+code{font-family:'Courier New',monospace;font-size:10px;background:#f5f5f5;padding:1px 5px;border:1px solid #e0e0e0}
+
+/* domain colors */
+:root{
+  --t0:#555;--t0bg:#f5f5f5;--t0border:#ccc;
+  --t1:#d97706;--t1bg:#fffbeb;--t1border:#fde68a;
+  --t2:#2563eb;--t2bg:#eff6ff;--t2border:#dbeafe;
+  --t3:#059669;--t3bg:#f0fdf4;--t3border:#bbf7d0;
+  --urgent:#dc2626;--urgentbg:#fef2f2;
+  --school:#7c3aed;--schoolbg:#faf5ff;
+}
+
+.badge{display:inline-block;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:1px 7px;border:1px solid;vertical-align:middle;margin-left:4px}
+.b-t0{color:var(--t0);border-color:var(--t0)}
+.b-t1{color:var(--t1);border-color:var(--t1)}
+.b-t2{color:var(--t2);border-color:var(--t2)}
+.b-t3{color:var(--t3);border-color:var(--t3)}
+.b-now{background:var(--urgent);color:#fff;border-color:var(--urgent)}
+.b-p1{background:var(--t1);color:#fff;border-color:var(--t1)}
+.b-school{color:var(--school);border-color:var(--school)}
+
+.inset{padding:10px 14px;font-size:11px;line-height:1.8;margin:10px 0;max-width:720px}
+.inset-t0{background:var(--t0bg);border-left:3px solid var(--t0)}
+.inset-t1{background:var(--t1bg);border-left:3px solid var(--t1)}
+.inset-t2{background:var(--t2bg);border-left:3px solid var(--t2)}
+.inset-t3{background:var(--t3bg);border-left:3px solid var(--t3)}
+.inset-urgent{background:var(--urgentbg);border-left:3px solid var(--urgent)}
+.inset-school{background:var(--schoolbg);border-left:3px solid var(--school)}
+.inset-dk{background:#000;color:#bbb;padding:14px 18px;font-family:'Courier New',monospace;font-size:10px;line-height:1.85;max-width:720px}
+.inset-dk strong{color:#e8e8e8}
+.inset-dk .dim{color:#3a3a3a}
+.inset-dk .amber{color:#d97706}
+.inset-dk .blue{color:#60a5fa}
+.inset-dk .green{color:#059669}
+.inset-dk .gray{color:#666}
+
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:11px}
+th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 10px;border-bottom:2px solid #000;text-align:left;background:#f5f5f5}
+td{padding:7px 10px;border-bottom:1px solid #eee;vertical-align:top;line-height:1.65}
+tr:last-child td{border-bottom:none}
+.td-t0{background:var(--t0bg);color:var(--t0);font-weight:700}
+.td-t1{background:var(--t1bg);color:#92400e;font-weight:700}
+.td-t2{background:var(--t2bg);color:#1e40af;font-weight:700}
+.td-t3{background:var(--t3bg);color:#065f46;font-weight:700}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:12px 0}
+.card{border:1px solid #ddd;padding:12px 14px}
+.card-title{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+
+/* tier cards */
+.tier-card{border-left:4px solid;padding:14px 16px;margin-bottom:10px}
+.tier-card-t0{border-color:var(--t0);background:var(--t0bg)}
+.tier-card-t1{border-color:var(--t1);background:var(--t1bg)}
+.tier-card-t2{border-color:var(--t2);background:var(--t2bg)}
+.tier-card-t3{border-color:var(--t3);background:var(--t3bg)}
+.tier-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.tier-name{font-size:13px;font-weight:700}
+.tier-label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-top:1px}
+.tier-body{font-size:11px;color:#333;line-height:1.75}
+.tier-rule{font-size:10px;margin-top:8px;padding:6px 10px;background:rgba(255,255,255,0.6);border-left:2px solid rgba(0,0,0,0.15)}
+
+/* auth provider cards */
+.provider{border:1px solid #ddd;padding:12px 14px;margin-bottom:8px}
+.provider-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.provider-name{font-size:12px;font-weight:700}
+.provider-reach{font-size:9px;color:#888}
+.provider-body{font-size:11px;color:#444;line-height:1.7}
+.provider-impl{font-size:10px;color:#555;margin-top:6px;padding:5px 8px;background:#f9f9f9;border-left:2px solid #ddd;font-family:'Courier New',monospace}
+
+/* join flow prototype */
+.join-screen{border:2px solid #000;background:#000;color:#e8e8e8;font-family:'Courier New',monospace;font-size:12px;padding:28px 32px;max-width:480px;margin:14px 0}
+.join-prompt{font-size:9px;color:#444;letter-spacing:2px;text-transform:uppercase;margin-bottom:20px}
+.join-title{font-size:15px;color:#fff;font-weight:700;margin-bottom:6px}
+.join-sub{font-size:11px;color:#555;margin-bottom:24px;line-height:1.6}
+.join-option{border:1px solid #222;padding:10px 14px;margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#aaa}
+.join-option:hover{border-color:#555;color:#e8e8e8}
+.join-option.primary{border-color:#059669;color:#e8e8e8}
+.join-option.primary .jo-label{color:#059669;font-weight:700}
+.join-option.school{border-color:#7c3aed}
+.join-option.school .jo-label{color:#a78bfa;font-weight:700}
+.join-option.guest{border-color:#333;color:#555}
+.jo-label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.jo-desc{font-size:10px;color:#444;margin-top:3px}
+.join-sep{border-top:1px solid #1a1a1a;margin:14px 0;font-size:9px;color:#333;text-align:center;position:relative}
+.join-sep span{background:#000;padding:0 8px;position:relative;top:-1px}
+.join-name-field{border:1px solid #333;background:#000;color:#e8e8e8;width:100%;padding:9px 12px;font-family:'Courier New',monospace;font-size:12px;margin-top:8px;outline:none}
+.join-name-field:focus{border-color:#666}
+.join-name-field::placeholder{color:#333}
+.join-continue{border:1px solid #444;background:transparent;color:#888;width:100%;padding:9px;font-family:'Courier New',monospace;font-size:11px;margin-top:8px;cursor:pointer;text-transform:uppercase;letter-spacing:2px}
+.join-continue:hover{border-color:#888;color:#e8e8e8}
+.join-note{font-size:9px;color:#333;margin-top:14px;line-height:1.6}
+
+/* flow diagram */
+.flow{display:flex;flex-direction:column;gap:0;max-width:680px;margin:14px 0}
+.flow-row{display:flex;align-items:stretch;gap:0;border-left:2px solid #ddd;margin-left:14px}
+.flow-dot{width:10px;height:10px;border-radius:50%;background:#000;margin-left:-6px;margin-top:16px;flex-shrink:0}
+.flow-content{flex:1;padding:10px 14px;font-size:11px;border-bottom:1px solid #f0f0f0}
+.flow-label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
+.flow-decision{font-size:11px;color:#222}
+.flow-outcomes{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
+.flow-outcome{font-size:9px;padding:2px 8px;border:1px solid}
+
+/* ledger diff */
+.ldiff{border:1px solid #ddd;margin:10px 0;max-width:720px}
+.ldiff-header{background:#f5f5f5;padding:6px 12px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid #ddd}
+.ldiff-body{padding:10px 12px;font-family:'Courier New',monospace;font-size:10px;line-height:1.85;color:#333}
+.ldiff-add{color:#059669}.ldiff-keep{color:#999}.ldiff-note{color:#2563eb;font-style:italic;font-family:Arial,sans-serif;font-size:10px}
+
+/* build spec */
+.build-item{border-left:3px solid #ddd;padding:10px 14px;margin-bottom:8px}
+.build-now{border-color:var(--urgent)}
+.build-p1{border-color:var(--t1)}
+.build-p2{border-color:var(--t2)}
+.build-p3{border-color:var(--t3)}
+.build-title{font-size:10px;font-weight:700;margin-bottom:3px}
+.build-body{font-size:10px;color:#555;line-height:1.65}
+.build-files{font-size:9px;color:#888;margin-top:4px;font-family:'Courier New',monospace}
+
+@media(max-width:700px){
+  header{padding:14px 14px 10px;position:relative}
+  .content{padding:20px 14px 40px}
+  .grid2,.grid3{grid-template-columns:1fr}
+  .join-screen{padding:20px 18px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd-label">Constellation — Identity & Authentication</div>
+  <div class="hd-title">Who Is Playing, What Gets Recorded, How They Sign In</div>
+  <div class="hd-sub">The system records everything at Layer 0. The question is what gets attributed, to whom, and who can see it. Identity tier determines what the student receives — not whether the game works.</div>
+  <nav>
+    <div class="tab active" onclick="show('tiers',this)">Identity Tiers</div>
+    <div class="tab" onclick="show('providers',this)">Auth Stack</div>
+    <div class="tab" onclick="show('joinflow',this)">Join Flow</div>
+    <div class="tab" onclick="show('mixed',this)">Mixed Sessions</div>
+    <div class="tab" onclick="show('ledger',this)">Ledger Changes</div>
+    <div class="tab" onclick="show('build',this)">Build Spec</div>
+  </nav>
+</header>
+
+<div class="content">
+
+<!-- ══════════════════════════════════════ TIERS -->
+<div id="panel-tiers" class="panel active">
+<h1>The Four Identity Tiers</h1>
+
+<p>Identity tier determines what the student receives from the system — not whether they can play, and not whether the system records the session. The game is fully functional at every tier. The cognitive model activates progressively as identity becomes more certain.</p>
+
+<div class="inset inset-urgent">
+  <strong style="color:var(--urgent)">The core rule:</strong> Consent affects what the student <em>sees</em>, not what the Ledger <em>records</em>. The Ledger is append-only; it records all outcomes at Layer 0. Attribution and visibility are Layer 1 decisions — derived views, not stored values. A player who never signs in still affects every other player's model through session outcomes.
+</div>
+
+<div style="margin:18px 0">
+
+<div class="tier-card tier-card-t0">
+  <div class="tier-header">
+    <div>
+      <div class="tier-name" style="color:var(--t0)">Tier 0 — Anonymous Guest</div>
+      <div class="tier-label">No name · No account · Session token only</div>
+    </div>
+    <span class="badge b-t0">Zero friction</span>
+  </div>
+  <div class="tier-body">
+    A player who clicks "play as guest" and gives nothing. They receive a session-scoped token stored in <code>localStorage</code> — a random UUID generated on first visit, never linked to any name or contact. No PII is ever collected. COPPA does not apply. GDPR does not apply. The system records their outcome in the Ledger tagged with that session token, but the record is not attributed to a person — it is attributed to a device session.
+    <div class="tier-rule">
+      <strong>What they get:</strong> The game works fully. No zone overlay (no compiler history). No personal model in Observatory.<br>
+      <strong>What the system gets:</strong> Outcome signal contributing to session calibration (all other players' rank_pct is affected by their score). Aggregate patterns — but not attributed to a student.<br>
+      <strong>Legal status:</strong> No consent required. No PII collected. Fully compliant at launch.
+    </div>
+  </div>
+</div>
+
+<div class="tier-card tier-card-t1">
+  <div class="tier-header">
+    <div>
+      <div class="tier-name" style="color:var(--t1)">Tier 1 — Named Guest</div>
+      <div class="tier-label">Picks a name · No account · Name stored in localStorage</div>
+    </div>
+    <span class="badge b-t1">Current default behavior</span>
+  </div>
+  <div class="tier-body">
+    The current system. Player enters a name. The server calls <code>resolveStudentId(name)</code> and assigns a stable UUID from the name registry — the same UUID every time they type that name in that browser. Their history accumulates session-to-session as long as they use the same name and the same browser. If they clear localStorage or switch devices, the chain breaks.
+    <div class="tier-rule">
+      <strong>What they get:</strong> Zone overlay if compiler has run. Personal history accumulates. Shows in Observatory as "unconfirmed" (name-hash icon). Cannot see their own Layer 1 model (not exposed to students without explicit consent).<br>
+      <strong>What the system gets:</strong> Confirmed-quality signal because the name→UUID mapping is stable within a browser. <code>student_id_confirmed: true</code> (currently) but without actual identity verification.<br>
+      <strong>Legal status:</strong> Gray area. If the name is not real (e.g. "PlayerX"), no PII is collected. If the name is real, it is PII. Best practice: add a brief notice at name entry — "Your name is used to remember your progress. No account required."<br>
+      <strong>COPPA:</strong> If name entry is not linked to real identity, no verifiable consent is required. The risk is low but not zero.
+    </div>
+  </div>
+</div>
+
+<div class="tier-card tier-card-t2">
+  <div class="tier-header">
+    <div>
+      <div class="tier-name" style="color:var(--t2)">Tier 2 — Registered</div>
+      <div class="tier-label">Email or Google · Age gate · Explicit consent</div>
+    </div>
+    <span class="badge b-t2">To build</span>
+  </div>
+  <div class="tier-body">
+    Player creates an account via Google OAuth or email/password. Age gate applies at registration: if under 13 (US) or under 16 (EU), parental consent flow is triggered. Consent is recorded with policy_version and timestamp. The student's UUID in the registry is linked to their Google ID or verified email, making it cross-device and permanent.
+    <div class="tier-rule">
+      <strong>What they get:</strong> Full zone overlay. Personal Layer 1 model visible at appropriate Progressive Unlock tier (BASELINE → DEVELOPING → ALPHA). Cross-device persistence. Data export. Deletion rights self-served.<br>
+      <strong>What the system gets:</strong> Verified identity, explicit consent on file, cross-device session chain, long-term model with no chain breaks.<br>
+      <strong>Legal status:</strong> COPPA compliant if age gate is implemented and parental consent flow works for under-13. GDPR compliant if consent is explicit and granular. Privacy policy must be linked at signup.<br>
+      <strong>Claim path:</strong> A Tier 1 "Alex" who registers as "Alex" on the same browser can be offered their historical sessions as a merge (teacher can also merge from Observatory).
+    </div>
+  </div>
+</div>
+
+<div class="tier-card tier-card-t3">
+  <div class="tier-header">
+    <div>
+      <div class="tier-name" style="color:var(--t3)">Tier 3 — School SSO</div>
+      <div class="tier-label">Clever · ClassLink · Google Workspace for Education · Canvas</div>
+    </div>
+    <span class="badge b-t3">Highest value · Build after Tier 2</span>
+  </div>
+  <div class="tier-body">
+    Student arrives via their school's SSO provider. The school district has already signed a DPA covering student data. COPPA and GDPR consent are handled by the school as data controller — no student-facing consent flow is required, no age gate, no parental consent. The student just clicks "sign in with school" and is in.
+    <div class="tier-rule">
+      <strong>What they get:</strong> Everything in Tier 2, plus: grade level, class roster, teacher linkage. The cognitive model is embedded in their school context, not a personal consumer app.<br>
+      <strong>What the system gets:</strong> Verified grade level (age-appropriate content guaranteed), stable Clever/ClassLink ID (survives school year changes, name changes, even district data resets), teacher can see the model in the correct class context.<br>
+      <strong>Legal status:</strong> Best possible. School DPA is a blanket authorization. No per-student consent required. This is how every serious EdTech operates at scale in the US.<br>
+      <strong>Why Clever first:</strong> ~70% of US K-12 districts use Clever. One Clever integration unlocks most of the US school market without any additional per-district work.
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="sep"></div>
+<h2>What Each Tier Sees</h2>
+<table>
+<tr>
+  <th>Capability</th>
+  <th class="td-t0">Tier 0 — Anonymous</th>
+  <th class="td-t1">Tier 1 — Named Guest</th>
+  <th class="td-t2">Tier 2 — Registered</th>
+  <th class="td-t3">Tier 3 — School SSO</th>
+</tr>
+<tr><td>Play the game</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+<tr><td>Zone overlay (pre-session terminal)</td><td>No (no history)</td><td>Yes (if compiler ran)</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Personal Layer 1 model</td><td>No</td><td>No (teacher only)</td><td>Yes — BASELINE+</td><td>Yes — BASELINE+</td></tr>
+<tr><td>History accumulates</td><td>Device only, breaks on clear</td><td>Browser only, breaks on clear</td><td>Cross-device, permanent</td><td>Cross-device, permanent</td></tr>
+<tr><td>Teacher sees in Observatory</td><td>No (anonymous slot)</td><td>Yes — unconfirmed icon</td><td>Yes — confirmed</td><td>Yes — confirmed + class context</td></tr>
+<tr><td>Alpha track eligible</td><td>No</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Data export / deletion (self)</td><td>No (nothing attributed)</td><td>No</td><td>Yes</td><td>Yes (via school DPA)</td></tr>
+<tr><td>Consent required</td><td>None</td><td>Notice only</td><td>Explicit (+ parental if &lt;13)</td><td>School DPA (already signed)</td></tr>
+<tr><td>COPPA risk</td><td>None</td><td>Low (no verified PII)</td><td>Managed (age gate)</td><td>None (school handles it)</td></tr>
+</table>
+</div>
+
+
+<!-- ══════════════════════════════════════ PROVIDERS -->
+<div id="panel-providers" class="panel">
+<h1>Authentication Provider Stack</h1>
+
+<p>Ordered by ROI for Constellation specifically. Clever alone unlocks 70% of the US school market. Google alone covers most consumer teens. The combination covers nearly every context.</p>
+
+<div class="inset inset-school">
+  <strong style="color:var(--school)">The fundamental split: school context vs consumer context.</strong><br>
+  School context (Clever, ClassLink, Google Workspace for Education): DPA covers consent, COPPA is handled, no age gate needed.<br>
+  Consumer context (Google personal, email/password): age gate required, parental consent flow required for under-13.<br>
+  These are architecturally different flows. Build them separately.
+</div>
+
+<h2>Tier 3 Providers — School SSO</h2>
+
+<div class="provider">
+  <div class="provider-header">
+    <div>
+      <div class="provider-name">Clever <span class="badge b-school">Build First</span></div>
+      <div class="provider-reach">~70% of US K-12 districts · 25M+ students · Free for schools</div>
+    </div>
+  </div>
+  <div class="provider-body">
+    Clever is the dominant school SSO in the United States. Students log in with their school credentials — Google, Microsoft, or Clever password — and get redirected to your app with a Clever token. From that token you get a stable Clever student ID, first name, grade level, and school/district association. The school has already done the DPA work; you get all of this without any student-facing consent flow.<br><br>
+    There are two integration modes:<br>
+    <strong>Instant Login</strong> — school purchases your app, it appears in every student's Clever dashboard. Student clicks your icon, arrives in Constellation already authenticated. This is the school procurement path.<br>
+    <strong>"Log In with Clever" button</strong> — you add a button to your own site. Student clicks it, authenticates with school credentials, arrives in Constellation authenticated. This is the direct-to-student path.<br><br>
+    Build both. The button unlocks the consumer path for school students. The Instant Login is what you get after a school buys you.
+  </div>
+  <div class="provider-impl">
+    npm install passport-clever<br>
+    GET /auth/clever → passport.authenticate('clever', { scope: ['read:student_id', 'read:sis'] })<br>
+    GET /auth/clever/callback → exchanges code, gets { clever_id, name, grade }<br>
+    Scope 'read:student_id' gives stable ID. 'read:sis' gives grade/school. No email exposed (COPPA-safe).
+  </div>
+</div>
+
+<div class="provider">
+  <div class="provider-header">
+    <div>
+      <div class="provider-name">ClassLink <span class="badge b-p1">Second priority</span></div>
+      <div class="provider-reach">~30% of US K-12 districts · Often used in districts that don't use Clever</div>
+    </div>
+  </div>
+  <div class="provider-body">
+    ClassLink is Clever's main competitor. Most districts use one or the other, rarely both. The integration is architecturally identical — OAuth2, you get a stable student ID, grade level, school association. Prioritize after Clever because the market share doesn't overlap: ClassLink users cannot use Clever, so this is incremental coverage.
+  </div>
+  <div class="provider-impl">
+    npm install passport-classlink (or implement OAuth2 directly with ClassLink docs)<br>
+    GET /auth/classlink → OAuth2 authorize endpoint<br>
+    GET /auth/classlink/callback → exchanges code, gets { classlink_id, name, grade }
+  </div>
+</div>
+
+<div class="provider">
+  <div class="provider-header">
+    <div>
+      <div class="provider-name">Google Workspace for Education</div>
+      <div class="provider-reach">Detected at OAuth2 stage via hd (hosted domain) parameter</div>
+    </div>
+  </div>
+  <div class="provider-body">
+    When a student signs in with Google and their Google account is a school-managed Workspace for Education account, Google returns an <code>hd</code> (hosted domain) field in the OAuth response — e.g. <code>"hd": "school.edu"</code>. If <code>hd</code> is present, the student is in school context: their district's DPA likely covers Constellation (or you request they sign a standard Google for Education DPA). No age gate needed; the school manages age verification.
+    <br><br>If <code>hd</code> is absent, the student is in consumer context: age gate is required.
+    <br><br>This distinction is handled in the same Google OAuth flow — you just branch on whether <code>hd</code> is present in the token response.
+  </div>
+  <div class="provider-impl">
+    npm install passport-google-oauth20<br>
+    scope: ['openid', 'profile', 'email']<br>
+    In callback: if (profile._json.hd) → school context, skip age gate<br>
+    else → consumer context, trigger age gate
+  </div>
+</div>
+
+<div class="provider">
+  <div class="provider-header">
+    <div>
+      <div class="provider-name">Canvas LTI <span class="badge b-t0">Lower priority</span></div>
+      <div class="provider-reach">LMS embedding — teacher adds Constellation as an LTI tool inside Canvas</div>
+    </div>
+  </div>
+  <div class="provider-body">
+    Canvas LTI is not an SSO provider — it is a Learning Management System integration standard. When a teacher adds Constellation as an LTI 1.3 tool in Canvas, students click a link inside Canvas and arrive in Constellation pre-authenticated via a signed LTI launch. The LMS passes student ID, name, and course context. Useful for deep classroom integration but significantly more complex to implement than OAuth2. Build after Clever and ClassLink are live and you have school demand.
+  </div>
+</div>
+
+<h2>Tier 2 Providers — Consumer Registration</h2>
+
+<div class="provider">
+  <div class="provider-header">
+    <div>
+      <div class="provider-name">Google OAuth2 (consumer) <span class="badge b-t2">Core consumer auth</span></div>
+      <div class="provider-reach">Universal · Any Google account · Most teens have one</div>
+    </div>
+  </div>
+  <div class="provider-body">
+    The highest-friction-to-value ratio for consumer signups. Most teens have a Google account. Sign-in-with-Google requires no password creation, no email verification. After OAuth callback: check <code>hd</code> to determine context. If consumer context: run age gate (birth year selector). If under 13: trigger parental consent flow before account activation.
+  </div>
+  <div class="provider-impl">
+    Same passport-google-oauth20 strategy as above.<br>
+    If !hd and !age_verified → show age gate before completing registration.<br>
+    If under 13 → flag account as pending_parental_consent, redirect to parent flow.
+  </div>
+</div>
+
+<div class="provider">
+  <div class="provider-header">
+    <div>
+      <div class="provider-name">Microsoft / Azure AD <span class="badge b-t0">Optional</span></div>
+      <div class="provider-reach">Dominant in enterprise school districts; less common in K-12 than Clever</div>
+    </div>
+  </div>
+  <div class="provider-body">
+    Many districts use Microsoft 365 for Education. Students have school Microsoft accounts. Similar school-context detection: if the tenant is a school tenant, DPA covers consent. Implement after Clever if you encounter Microsoft-heavy districts. The <code>passport-azure-ad</code> strategy handles this.
+  </div>
+</div>
+
+<div class="provider">
+  <div class="provider-header">
+    <div>
+      <div class="provider-name">Email / Password <span class="badge b-t0">Fallback</span></div>
+      <div class="provider-reach">Universal fallback · Higher friction · Required for Tier 2 completeness</div>
+    </div>
+  </div>
+  <div class="provider-body">
+    Some parents and students won't use Google. Email/password with bcrypt is the fallback. Email verification required before account activation. Age gate at registration. Under-13: parental email + consent token (parent receives email, clicks link, activates account). This is the most complex COPPA-compliant path — email-based verifiable parental consent is the only method explicitly approved by the FTC.
+  </div>
+  <div class="provider-impl">
+    npm install bcryptjs nodemailer (or use Mailgun/SendGrid for email)<br>
+    POST /auth/register → hash password, send verification email, set pending_verification: true<br>
+    GET /auth/verify/:token → activate account, trigger age gate if under 13<br>
+    For under-13: POST /auth/parent-consent/:childId → send consent email to parent address
+  </div>
+</div>
+
+<div class="sep"></div>
+<h2>The Simplest Possible Starting Stack</h2>
+<div class="inset inset-t2">
+  <strong>Phase 1 (now):</strong> Google OAuth2 only. Consumer + Workspace for Education detection. Age gate for non-school Google accounts. This covers most teens immediately, requires one OAuth integration, and gets you COPPA-compliant for Tier 2 users.<br><br>
+  <strong>Phase 2 (month 3):</strong> Add Clever. This unlocks school procurement. You can now sign a school DPA and tell districts "students can log in with their Clever account."<br><br>
+  <strong>Phase 3 (school demand):</strong> ClassLink, Microsoft, Canvas LTI, email/password as needed.
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════ JOIN FLOW -->
+<div id="panel-joinflow" class="panel">
+<h1>The Join Flow — What Players See</h1>
+
+<p>The join flow appears before the player enters any game room. It is not a barrier — every path leads to playing. It is a context-setting moment that determines what tier the player enters at.</p>
+
+<h2>The Pre-Game Identity Screen (Prototype)</h2>
+<p>This screen appears when a player loads the game page and has no active session. It replaces the current bare "enter your name" input.</p>
+
+<div class="join-screen">
+  <div class="join-prompt">Constellation</div>
+  <div class="join-title">How would you like to play?</div>
+  <div class="join-sub">Your choice determines what the system can learn about you across sessions.</div>
+
+  <div class="join-option school" style="margin-bottom:2px">
+    <div>
+      <div class="jo-label">Sign in with school</div>
+      <div class="jo-desc">Clever · ClassLink · Google Workspace — no password needed</div>
+    </div>
+    <span style="color:#444;font-size:10px">→</span>
+  </div>
+  <div style="font-size:9px;color:#333;margin-bottom:10px;margin-left:2px">No consent forms. Your school has already handled it.</div>
+
+  <div class="join-option primary">
+    <div>
+      <div class="jo-label">Sign in with Google</div>
+      <div class="jo-desc">Personal account — your model persists across devices</div>
+    </div>
+    <span style="color:#444;font-size:10px">→</span>
+  </div>
+
+  <div class="join-sep"><span>or play without an account</span></div>
+
+  <input class="join-name-field" type="text" placeholder="enter a name to play as...">
+  <button class="join-continue">continue as named guest →</button>
+
+  <div class="join-sep"><span>or</span></div>
+
+  <div class="join-option guest">
+    <div>
+      <div class="jo-label">Play anonymously</div>
+      <div class="jo-desc">No name · No data attributed to you · No persistent model</div>
+    </div>
+    <span style="color:#222;font-size:10px">→</span>
+  </div>
+
+  <div class="join-note">
+    Every path lets you play the full game.<br>
+    Named and signed-in players accumulate a cognitive model across sessions.<br>
+    Anonymous players contribute to session outcomes but are not tracked.
+  </div>
+</div>
+
+<div class="sep"></div>
+<h2>Decision Tree — Server-Side Identity Resolution</h2>
+
+<div class="flow">
+
+  <div class="flow-row">
+    <div class="flow-dot" style="background:var(--school)"></div>
+    <div class="flow-content">
+      <div class="flow-label" style="color:var(--school)">School SSO path (Clever / ClassLink / Google Workspace)</div>
+      <div class="flow-decision">OAuth2 callback returns external ID + school context</div>
+      <div class="flow-outcomes">
+        <span class="flow-outcome" style="color:var(--t3);border-color:var(--t3)">identity_tier: 'clever' or 'classlink' or 'workspace'</span>
+        <span class="flow-outcome" style="color:var(--t3);border-color:var(--t3)">student_id_confirmed: true</span>
+        <span class="flow-outcome" style="color:var(--t3);border-color:var(--t3)">consent_source: 'school_dpa'</span>
+        <span class="flow-outcome" style="color:var(--t3);border-color:var(--t3)">No age gate</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-row">
+    <div class="flow-dot" style="background:var(--t2)"></div>
+    <div class="flow-content">
+      <div class="flow-label" style="color:var(--t2)">Google consumer path (no hd field in token)</div>
+      <div class="flow-decision">Age gate: collect birth year. If ≥ 13 (US) or ≥ 16 (EU) → proceed. If under threshold → parental consent flow.</div>
+      <div class="flow-outcomes">
+        <span class="flow-outcome" style="color:var(--t2);border-color:var(--t2)">identity_tier: 'google'</span>
+        <span class="flow-outcome" style="color:var(--t2);border-color:var(--t2)">consent: { policy_v, consented_at }</span>
+        <span class="flow-outcome" style="color:var(--urgent);border-color:var(--urgent)">If &lt;13: pending_parental_consent → email parent</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-row">
+    <div class="flow-dot" style="background:var(--t1)"></div>
+    <div class="flow-content">
+      <div class="flow-label" style="color:var(--t1)">Named guest path</div>
+      <div class="flow-decision">Player enters a name. Server calls resolveStudentId(name). UUID assigned from name registry. Notice shown: "Your name is used to save progress across sessions. No account is created." No other consent required unless PII is involved.</div>
+      <div class="flow-outcomes">
+        <span class="flow-outcome" style="color:var(--t1);border-color:var(--t1)">identity_tier: 'named_guest'</span>
+        <span class="flow-outcome" style="color:var(--t1);border-color:var(--t1)">student_id_confirmed: true (name-based)</span>
+        <span class="flow-outcome" style="color:#888;border-color:#ddd">History accumulates in this browser only</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-row">
+    <div class="flow-dot" style="background:var(--t0)"></div>
+    <div class="flow-content">
+      <div class="flow-label" style="color:var(--t0)">Anonymous path</div>
+      <div class="flow-decision">Player clicks "play anonymously." Server generates session UUID — random, not linked to name. Stored in localStorage as anon_session_id. Clears when browser data is cleared.</div>
+      <div class="flow-outcomes">
+        <span class="flow-outcome" style="color:var(--t0);border-color:var(--t0)">identity_tier: 'anonymous'</span>
+        <span class="flow-outcome" style="color:var(--t0);border-color:var(--t0)">student_id_confirmed: false</span>
+        <span class="flow-outcome" style="color:#888;border-color:#ddd">Layer 1 never computed for this ID</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="sep"></div>
+<h2>The Upgrade Path — Tier 1 → Tier 2</h2>
+<p>A Named Guest who later registers is offered their session history. This works because the name-based UUID is deterministic — if they registered with the same name from the same browser, the system can propose a merge.</p>
+<div class="inset inset-t1">
+  <strong>The merge offer:</strong> After Google login, the server checks if <code>localStorage</code> has a <code>playerName</code> value. If it does, it calls <code>resolveStudentId(name)</code> to get the name-hash UUID, then checks if that UUID has any ledger records. If yes: "We found 7 sessions recorded under the name 'Alex' in this browser. Would you like to link them to your account?" One button press triggers a teacher-style merge: name-hash UUID → google account UUID. Append-only: the merge event is recorded in the ledger.
+</div>
+
+<h2>Friend Invite Flow</h2>
+<p>Player A is registered (Tier 2). They create a game room. They share the room link with friends. Friends arrive at the room URL. What happens?</p>
+
+<div class="inset inset-t1">
+  <strong>Option 1 (current behavior):</strong> Friends land on the game page, see the identity screen, choose their tier (anonymous, named, or sign in). Each friend's data is attributed independently. The game works immediately. Player A's model is updated based on the full session outcome. Friends who chose anonymously contributed to the session but don't accumulate their own model.<br><br>
+  <strong>Option 2 (future):</strong> A friend invitation link carries a <code>?ref=playerA_id</code> parameter. The system pre-fills a "join as guest, your friend A invited you" screen. Their identity is still their own choice — but the social graph is recorded in the session for future social dimension analysis (Q5).
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════ MIXED SESSIONS -->
+<div id="panel-mixed" class="panel">
+<h1>Mixed-Consent Sessions</h1>
+
+<p>A single game session will routinely have players at different identity tiers. This is normal and expected. The system handles it correctly at Layer 0 — each player's record is tagged with their own identity tier and consent status. No one player's choice blocks anyone else from playing.</p>
+
+<h2>Example: A 4-Player Session</h2>
+
+<table>
+<tr>
+  <th>Player</th><th>Identity Tier</th><th>Ledger Record</th><th>Outcome Used For</th><th>Personal Model</th>
+</tr>
+<tr>
+  <td><strong>Player A</strong><br><span style="font-size:9px;color:#888">Signed in via Clever</span></td>
+  <td class="td-t3">Tier 3 — School SSO</td>
+  <td><code>identity_tier: 'clever'</code><br><code>student_id_confirmed: true</code><br><code>consent_source: 'school_dpa'</code></td>
+  <td>Full Elo update for Player A. Zone assigned for next session. Compiler runs.</td>
+  <td>Full Layer 1. Visible in Observatory. Zone overlay next session.</td>
+</tr>
+<tr>
+  <td><strong>Player B</strong><br><span style="font-size:9px;color:#888">Named guest "Jordan"</span></td>
+  <td class="td-t1">Tier 1 — Named Guest</td>
+  <td><code>identity_tier: 'named_guest'</code><br><code>student_id_confirmed: true</code><br><code>consent: null</code></td>
+  <td>Elo update for "Jordan". Session contributes to rank_pct calculations for all players.</td>
+  <td>Layer 1 computed but not surfaced to student. Teacher sees in Observatory with ⚠ unconfirmed icon. Zone overlay works if compiler ran.</td>
+</tr>
+<tr>
+  <td><strong>Player C</strong><br><span style="font-size:9px;color:#888">Anonymous</span></td>
+  <td class="td-t0">Tier 0 — Anonymous</td>
+  <td><code>identity_tier: 'anonymous'</code><br><code>student_id_confirmed: false</code><br><code>student_name: null</code></td>
+  <td>Their outcome contributes to rank_pct for all other players. No personal Elo. No personal model.</td>
+  <td>None. Not in Observatory. Session token only.</td>
+</tr>
+<tr>
+  <td><strong>Player D</strong><br><span style="font-size:9px;color:#888">Registered, Google</span></td>
+  <td class="td-t2">Tier 2 — Registered</td>
+  <td><code>identity_tier: 'google'</code><br><code>student_id_confirmed: true</code><br><code>consent: { policy_v: '1.0', consented_at: ... }</code></td>
+  <td>Full Elo update for Player D. Compiler runs independently of other players' tiers.</td>
+  <td>Full Layer 1. Student can see their own model at appropriate Progressive Unlock tier.</td>
+</tr>
+</table>
+
+<div class="inset inset-dk" style="margin-top:14px">
+  <strong>// rank_pct calculation in a mixed-consent session</strong><br>
+  All four players' scores determine ranking. rank_pct is computed from the real outcome —<br>
+  Player C's anonymity doesn't remove them from the score table. They competed.<br><br>
+  <span class="amber">Player A rank 1 → rank_pct: 1.00 → Elo update: +K*(1.00 - E)</span><br>
+  <span class="blue">Player D rank 2 → rank_pct: 0.67 → Elo update: +K*(0.67 - E)</span><br>
+  <span class="amber">Player B rank 3 → rank_pct: 0.33 → Elo update (attributed to 'Jordan')</span><br>
+  <span class="gray">Player C rank 4 → rank_pct: 0.00 → no personal Elo, contributes to others' signal</span>
+</div>
+
+<div class="sep"></div>
+<h2>What Anonymous Players Contribute</h2>
+<p>An anonymous player in a 4-person game reduces the noise in everyone else's rank_pct signal. Without them, a 3-player game has a coarser ranking (1/2/3). With them, the ranking is more informative. Their presence is signal even if their identity is unknown. The system treats them as real competitors for rank purposes — which is what they are.</p>
+
+<div class="grid2">
+  <div class="card">
+    <div class="card-title">They get</div>
+    <ul>
+      <li>Full game experience</li>
+      <li>All game features</li>
+      <li>Zone overlay — only if a prior session was recorded for their anon token AND the teacher ran the compiler for that token (rare)</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-title">The system gets from them</div>
+    <ul>
+      <li>Session outcome (rank, score)</li>
+      <li>Signal that improves other players' rank_pct precision</li>
+      <li>Behavioral signals (archetype_tag, strategy_shift_count) — recorded but not attributed</li>
+      <li>Nothing linkable to a real person</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sep"></div>
+<h2>The Rule: One Student's Decision Never Blocks Another's Data</h2>
+<div class="inset inset-t3">
+  Player A's full model does not depend on Player B's consent status. Player B's anonymity does not corrupt Player A's Elo. The session is independently attributed — each player's record is their own row in the Ledger, their own Elo update, their own model. The only thing shared is the rank_pct calculation, which is computed from the actual game outcome regardless of who is consented. This is the correct architecture.
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════ LEDGER CHANGES -->
+<div id="panel-ledger" class="panel">
+<h1>Ledger Schema Changes</h1>
+
+<p>The Ledger is append-only. New fields are additive — they don't break existing records. Older records simply have these fields absent (treated as <code>null</code> / unknown). The Layer 1 compiler already handles missing fields gracefully.</p>
+
+<h2>Fields Added to Each Session Record</h2>
+
+<div class="ldiff">
+  <div class="ldiff-header">session record — current fields (showing only identity-relevant)</div>
+  <div class="ldiff-body">
+<span class="ldiff-keep">{</span><br>
+<span class="ldiff-keep">  "type": "session",</span><br>
+<span class="ldiff-keep">  "student_id": "uuid-or-name-hash",</span><br>
+<span class="ldiff-keep">  "student_id_confirmed": true,</span><br>
+<span class="ldiff-keep">  "student_name": "Alex",</span><br>
+<span class="ldiff-keep">  ...</span><br>
+<span class="ldiff-keep">}</span>
+  </div>
+</div>
+
+<div class="ldiff">
+  <div class="ldiff-header">session record — with identity tier fields added</div>
+  <div class="ldiff-body">
+<span class="ldiff-keep">{</span><br>
+<span class="ldiff-keep">  "type": "session",</span><br>
+<span class="ldiff-keep">  "student_id": "uuid",</span><br>
+<span class="ldiff-keep">  "student_id_confirmed": true,</span><br>
+<span class="ldiff-keep">  "student_name": "Alex",</span><br>
+<span class="ldiff-add">  "identity_tier": "clever",</span> <span class="ldiff-note">// 'anonymous' | 'named_guest' | 'google' | 'clever' | 'classlink' | 'workspace'</span><br>
+<span class="ldiff-add">  "consent_source": "school_dpa",</span> <span class="ldiff-note">// 'explicit' | 'school_dpa' | null</span><br>
+<span class="ldiff-add">  "auth_provider_id": "clever:1234567",</span> <span class="ldiff-note">// external stable ID, null for guest/anon</span><br>
+<span class="ldiff-add">  "grade_level": 9,</span> <span class="ldiff-note">// from SSO provider, null if unknown</span><br>
+<span class="ldiff-keep">  ...</span><br>
+<span class="ldiff-keep">}</span>
+  </div>
+</div>
+
+<h2>New: Student Registry Fields (_students.json)</h2>
+<div class="ldiff">
+  <div class="ldiff-header">_students.json — current entry</div>
+  <div class="ldiff-body">
+<span class="ldiff-keep">"Alex": {</span><br>
+<span class="ldiff-keep">  "id": "uuid",</span><br>
+<span class="ldiff-keep">  "created_at": 1718000000</span><br>
+<span class="ldiff-keep">}</span>
+  </div>
+</div>
+
+<div class="ldiff">
+  <div class="ldiff-header">_students.json — with auth fields</div>
+  <div class="ldiff-body">
+<span class="ldiff-keep">"Alex": {</span><br>
+<span class="ldiff-keep">  "id": "uuid",</span><br>
+<span class="ldiff-keep">  "created_at": 1718000000,</span><br>
+<span class="ldiff-add">  "identity_tier": "google",</span><br>
+<span class="ldiff-add">  "auth_providers": [</span><br>
+<span class="ldiff-add">    { "provider": "google", "external_id": "116247832...", "linked_at": 1718000100 }</span><br>
+<span class="ldiff-add">  ],</span><br>
+<span class="ldiff-add">  "consent": {</span><br>
+<span class="ldiff-add">    "policy_version": "1.0",</span><br>
+<span class="ldiff-add">    "consented_at": 1718000100,</span><br>
+<span class="ldiff-add">    "source": "explicit"</span><br>
+<span class="ldiff-add">  },</span><br>
+<span class="ldiff-add">  "age_verified": true,</span><br>
+<span class="ldiff-add">  "pending_parental_consent": false,</span><br>
+<span class="ldiff-add">  "grade_level": null</span><br>
+<span class="ldiff-keep">}</span>
+  </div>
+</div>
+
+<h2>The JWT Payload (What Gets Sent to the Game Client)</h2>
+<p>When a player is authenticated, the server issues a JWT stored in <code>localStorage</code> or a cookie. The game client includes it in the <code>joinById</code> options so the server can verify identity without a round-trip.</p>
+
+<div class="ldiff">
+  <div class="ldiff-header">JWT payload — passed as joinById options.token</div>
+  <div class="ldiff-body">
+<span class="ldiff-keep">{</span><br>
+<span class="ldiff-keep">  "sub": "uuid",</span> <span class="ldiff-note">// student UUID from registry</span><br>
+<span class="ldiff-keep">  "name": "Alex",</span><br>
+<span class="ldiff-add">  "tier": "clever",</span><br>
+<span class="ldiff-add">  "consent_source": "school_dpa",</span><br>
+<span class="ldiff-add">  "grade": 9,</span><br>
+<span class="ldiff-keep">  "iat": 1718000000,</span><br>
+<span class="ldiff-keep">  "exp": 1718086400</span> <span class="ldiff-note">// 24 hours</span><br>
+<span class="ldiff-keep">}</span>
+  </div>
+</div>
+
+<h2>Server onJoin Change</h2>
+<p>Currently: <code>onJoin</code> resolves identity from <code>options.name</code>. New: if <code>options.token</code> is present, verify it and extract the student ID and tier directly — no registry lookup needed.</p>
+
+<div class="ldiff">
+  <div class="ldiff-header">server.js — ConstellationRoom.onJoin (diff)</div>
+  <div class="ldiff-body">
+<span class="ldiff-keep">onJoin(client, options) {</span><br>
+<span class="ldiff-keep">  const player = new Player();</span><br>
+<span class="ldiff-add">  if (options.token) {</span><br>
+<span class="ldiff-add">    const jwt = verifyJWT(options.token); // throws if invalid/expired</span><br>
+<span class="ldiff-add">    player.studentId = jwt.sub;</span><br>
+<span class="ldiff-add">    player._studentIdConfirmed = true;</span><br>
+<span class="ldiff-add">    player._identityTier = jwt.tier;</span><br>
+<span class="ldiff-add">    player._consentSource = jwt.consent_source;</span><br>
+<span class="ldiff-add">    player.name = jwt.name || options.name || 'Player';</span><br>
+<span class="ldiff-add">  } else if (options.name) {</span><br>
+<span class="ldiff-keep">    const resolved = ledger.resolveStudentId(options.name);</span><br>
+<span class="ldiff-keep">    player.studentId = resolved.id;</span><br>
+<span class="ldiff-keep">    player._studentIdConfirmed = resolved.confirmed;</span><br>
+<span class="ldiff-add">    player._identityTier = 'named_guest';</span><br>
+<span class="ldiff-add">  } else {</span><br>
+<span class="ldiff-add">    // Anonymous</span><br>
+<span class="ldiff-add">    player.studentId = options.anonToken || ledger.nameToId('');</span><br>
+<span class="ldiff-add">    player._studentIdConfirmed = false;</span><br>
+<span class="ldiff-add">    player._identityTier = 'anonymous';</span><br>
+<span class="ldiff-add">  }</span><br>
+<span class="ldiff-keep">  ...</span><br>
+<span class="ldiff-keep">}</span>
+  </div>
+</div>
+
+<div class="sep"></div>
+<h2>Layer 1 Change: Filter by Consent Before Surfacing</h2>
+<p>The compiler already runs for all confirmed students. The change: before the compiler output is surfaced to a student's own view (their personal model page), check <code>consent_source</code>. Named guests see nothing personal — only teacher sees their Observatory entry. Registered and SSO students see their model at the appropriate Progressive Unlock tier.</p>
+
+<div class="inset inset-t1">
+  <strong>Named guests in the Observatory:</strong> Teacher sees them with a <code>⚠ unconfirmed</code> badge. Clicking their row shows: "This player is a named guest. Their history is recorded and their model is computed. To give them access to their own model, ask them to register and link this name." Teacher can trigger a merge from the Observatory once the student registers.
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════ BUILD SPEC -->
+<div id="panel-build" class="panel">
+<h1>Build Specification — Ordered by Impact</h1>
+
+<p>Everything below is additive. The game works at Tier 1 (current behavior) before any of this is built. Each item adds a layer without breaking what exists.</p>
+
+<h2>Immediate (this week)</h2>
+
+<div class="build-item build-now">
+  <div class="build-title">1. Anonymous-tier session token <span class="badge b-now">Now</span></div>
+  <div class="build-body">Add <code>anon_session_id</code> to localStorage on first visit (random UUID via <code>crypto.randomUUID()</code>). Pass it as <code>options.anonToken</code> when joining a room with no name. Server uses it as student_id with <code>identity_tier: 'anonymous'</code> and <code>student_id_confirmed: false</code>. This makes the current "no name" path explicit rather than using a hash of an empty string.</div>
+  <div class="build-files">index.html — generateAnonToken(); joinById({ anonToken: localStorage.anonSessionId })</div>
+</div>
+
+<div class="build-item build-now">
+  <div class="build-title">2. Identity pre-screen in game client <span class="badge b-now">Now</span></div>
+  <div class="build-body">Add the pre-game identity screen (prototype shown in "Join Flow" tab) to <code>index.html</code>. This replaces the bare name input. Routes players to: anonymous / named-guest (current behavior) / [sign in with Google button, currently disabled but visible]. No backend changes required yet — just the UI with the third option grayed out until auth is built.</div>
+  <div class="build-files">index.html — showIdentityScreen() before connectToRoom()</div>
+</div>
+
+<div class="build-item build-now">
+  <div class="build-title">3. identity_tier field in Ledger records <span class="badge b-now">Now</span></div>
+  <div class="build-body">Modify <code>_writeSessionObservations</code> in <code>server.js</code> to include <code>identity_tier</code> and <code>consent_source</code> from <code>player._identityTier</code> and <code>player._consentSource</code>. Also add these to the <code>Player</code> schema so they're carried through session lifecycle. These are the fields researchers will want for any study — having them from day one is worth the small effort.</div>
+  <div class="build-files">server.js — Player schema, onJoin, _writeSessionObservations</div>
+</div>
+
+<h2>Phase 1 Auth (this month)</h2>
+
+<div class="build-item build-p1">
+  <div class="build-title">4. Google OAuth2 — consumer + Workspace detection <span class="badge b-p1">Month 1</span></div>
+  <div class="build-body">
+    Install <code>passport passport-google-oauth20 express-session jsonwebtoken</code>.<br>
+    Add <code>GET /auth/google</code> → redirect to Google.<br>
+    Add <code>GET /auth/google/callback</code> → receive code, exchange for profile, detect <code>hd</code>.<br>
+    If <code>hd</code> present: school context, skip age gate, issue JWT with <code>tier: 'workspace'</code>.<br>
+    If <code>hd</code> absent: show age gate screen. If age ≥ 13: issue JWT with <code>tier: 'google'</code>, record consent. If age &lt; 13: redirect to parental consent placeholder (can be a simple "parent email" form for now — full COPPA flow later).<br>
+    <code>GET /api/auth/session</code> → returns current auth state (used by game client on page load).<br>
+    <code>GET /api/auth/logout</code> → clear cookie/localStorage JWT.
+  </div>
+  <div class="build-files">server.js or auth.js (new file) — passport strategy, session middleware, JWT issue/verify<br>index.html — check /api/auth/session on load, pre-fill identity if already logged in</div>
+</div>
+
+<div class="build-item build-p1">
+  <div class="build-title">5. JWT verification in onJoin <span class="badge b-p1">Month 1</span></div>
+  <div class="build-body">
+    When a player joins a room with <code>options.token</code> set, the server calls <code>jwt.verify(options.token, JWT_SECRET)</code>. If valid: extract <code>sub</code> (student UUID), <code>tier</code>, <code>consent_source</code>. Assign to player. If invalid or expired: fall back to named-guest behavior (don't reject the join — the game still works). This is the bridge between the auth system and the Colyseus room.
+  </div>
+  <div class="build-files">server.js — onJoin, verifyJWT() helper<br>index.html — pass token in joinById options</div>
+</div>
+
+<div class="build-item build-p1">
+  <div class="build-title">6. _students.json auth fields <span class="badge b-p1">Month 1</span></div>
+  <div class="build-body">
+    Extend <code>ledger.resolveStudentId</code> / <code>ledger.js</code> to support <code>upsertAuthProvider(studentId, provider, externalId)</code> — adds to the <code>auth_providers</code> array in the registry entry. Add <code>recordConsent(studentId, policyVersion, source)</code>. These are called from the OAuth callback after a successful login.
+  </div>
+  <div class="build-files">ledger.js — upsertAuthProvider(), recordConsent(), updateRegistry()</div>
+</div>
+
+<h2>Phase 2 Auth (school demand)</h2>
+
+<div class="build-item build-p2">
+  <div class="build-title">7. Clever OAuth2 integration <span class="badge b-p2">Month 3</span></div>
+  <div class="build-body">
+    Register as a Clever app at dev.clever.com (free). Install <code>passport-clever</code> or implement OAuth2 directly against Clever's endpoints. Scope: <code>read:student_id read:sis</code>. On callback: get <code>clever_id</code>, <code>name.first</code>, <code>grade</code>. Upsert into student registry. Issue JWT with <code>tier: 'clever'</code> and <code>consent_source: 'school_dpa'</code>. No age gate. This is the biggest school unlock available.
+  </div>
+  <div class="build-files">server.js or auth.js — passport-clever strategy<br>index.html — "Sign in with Clever" button (shows next to Google)</div>
+</div>
+
+<div class="build-item build-p2">
+  <div class="build-title">8. Named-guest upgrade path (claim history) <span class="badge b-p2">Month 3</span></div>
+  <div class="build-body">
+    After Google/Clever login, check <code>localStorage.playerName</code>. If present, resolve to name-hash UUID. If that UUID has ledger records, offer merge: "We found N sessions recorded under '[name]' in this browser." Confirm → call <code>ledger.mergeStudents(newId, nameHashId)</code>. This is the path from Tier 1 to Tier 2 without losing history.
+  </div>
+  <div class="build-files">index.html — post-login claim-history flow<br>ledger.js — mergeStudents() already exists</div>
+</div>
+
+<div class="build-item build-p2">
+  <div class="build-title">9. Observatory unconfirmed / tier display <span class="badge b-p2">Month 3</span></div>
+  <div class="build-body">
+    Update <code>observatory.html</code> to show identity tier badge per student: <code>CLEVER · GOOGLE · WORKSPACE · NAMED_GUEST · ANON</code>. Named guest entries get a ⚠ icon and a "merge when registered" button. Anonymous entries show as "guest session [token_prefix]" and are excluded from the student list by default (opt-in to show them). This makes the privacy posture legible to teachers.
+  </div>
+  <div class="build-files">observatory.html — student list rendering, identity tier badges</div>
+</div>
+
+<div class="build-item build-p3">
+  <div class="build-title">10. ClassLink, Microsoft, email/password <span class="badge b-p2">On demand</span></div>
+  <div class="build-body">
+    Implement when you encounter districts that require them. ClassLink is architecturally identical to Clever — OAuth2, stable ID, school context. Microsoft Azure AD has a well-supported Passport strategy. Email/password is the most complex due to email verification and the COPPA parental consent email flow for under-13.
+  </div>
+</div>
+
+<div class="sep"></div>
+<h2>Package Requirements</h2>
+<table style="max-width:640px">
+<tr><th>Package</th><th>Purpose</th><th>When</th></tr>
+<tr><td><code>passport</code></td><td>Auth middleware framework</td><td>Phase 1</td></tr>
+<tr><td><code>passport-google-oauth20</code></td><td>Google OAuth2 strategy</td><td>Phase 1</td></tr>
+<tr><td><code>jsonwebtoken</code></td><td>Issue + verify JWTs</td><td>Phase 1</td></tr>
+<tr><td><code>express-session</code></td><td>Server-side session (for OAuth callback state)</td><td>Phase 1</td></tr>
+<tr><td><code>passport-clever</code></td><td>Clever OAuth2 strategy</td><td>Phase 2</td></tr>
+<tr><td><code>bcryptjs</code></td><td>Password hashing (email/password auth)</td><td>Phase 3</td></tr>
+<tr><td><code>nodemailer</code></td><td>Parental consent emails, email verification</td><td>Phase 3</td></tr>
+</table>
+
+<div class="inset inset-dk" style="margin-top:16px">
+  <strong>// what doesn't need to be built</strong><br><br>
+  <span class="dim">A separate accounts database. The student registry (_students.json) is the accounts database.</span><br>
+  <span class="dim">It already has the right structure — just needs the auth fields added.</span><br>
+  <span class="dim">No Postgres, no user table, no separate auth service.</span><br><br>
+  <span class="amber">The registry IS the identity system.</span><br>
+  <span class="amber">The Ledger IS the session history.</span><br>
+  <span class="amber">JWT + OAuth2 IS the auth layer.</span><br><br>
+  <span class="dim">Three files, no new infrastructure.</span>
+</div>
+</div>
+
+</div><!-- /content -->
+
+<script>
+function show(id,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  el.classList.add('active');
+  window.scrollTo(0,0);
+}
+</script>
+</body>
+</html>

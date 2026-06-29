@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Constellation — Complete System Architecture</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.4}
+nav{position:sticky;top:0;z-index:100;background:#fff;border-bottom:2px solid #000;display:flex;align-items:stretch;padding:0 14px;overflow-x:auto;gap:0}
+.logo{font-size:9px;letter-spacing:2px;font-weight:700;padding:10px 14px 10px 0;border-right:1px solid #ccc;margin-right:4px;white-space:nowrap;align-self:center;text-transform:uppercase;color:#555}
+.tab{padding:10px 13px;cursor:pointer;font-size:9px;letter-spacing:1px;color:#888;border-bottom:3px solid transparent;transition:all .1s;white-space:nowrap;font-weight:700;text-transform:uppercase}
+.tab:hover{color:#000}.tab.active{color:#000;border-bottom-color:#000}
+.panel{display:none;padding:20px}.panel.active{display:block}
+h2{font-size:9px;letter-spacing:2px;font-weight:700;text-transform:uppercase;border-bottom:1px solid #000;padding-bottom:5px;margin-bottom:14px;color:#333}
+h3{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+h4{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;color:#444}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.card{border:1px solid #ccc;padding:12px;background:#fafafa}
+.card-dk{border:2px solid #000;padding:14px;background:#000;color:#fff}
+.sep{border:none;border-top:1px solid #ddd;margin:10px 0}
+table.t{width:100%;border-collapse:collapse;font-size:11px}
+table.t th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 8px;border-bottom:2px solid #000;text-align:left;background:#f0f0f0}
+table.t td{padding:5px 8px;border-bottom:1px solid #eee;vertical-align:top}
+table.t tr:hover td{background:#f5f5f5}
+.inset{background:#f0f0f0;border-left:3px solid #000;padding:8px 10px;font-size:11px;line-height:1.7;margin:8px 0}
+.warn{background:#f8f8f8;border:1px dashed #000;padding:8px 10px;font-size:10px;line-height:1.7;margin:8px 0}
+.formula{font-family:'Courier New',monospace;font-size:10px;line-height:1.9;background:#f0f0f0;border:1px solid #ccc;padding:10px 12px;white-space:pre-wrap}
+.badge{display:inline-block;padding:1px 7px;font-size:9px;letter-spacing:1px;text-transform:uppercase;border:1px solid #000;font-weight:700}
+.badge-inv{background:#000;color:#fff}
+button.btn{background:#fff;border:1px solid #000;color:#000;padding:4px 12px;cursor:pointer;font-size:9px;font-family:Arial;font-weight:700;letter-spacing:1px;text-transform:uppercase;transition:all .1s}
+button.btn:hover{background:#000;color:#fff}
+button.btn.act{background:#000;color:#fff}
+input[type=range]{accent-color:#000}
+.srow{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.srow label{font-size:9px;color:#555;flex-shrink:0}
+.sval{width:44px;text-align:right;font-size:10px;font-weight:700}
+/* terminal */
+#terminal{background:#000;color:#0f0;font-family:'Courier New',monospace;font-size:11px;padding:16px;min-height:300px;border:2px solid #000;overflow-y:auto;position:relative}
+#terminal .line{margin-bottom:2px;opacity:0;transition:opacity .08s}
+#terminal .line.show{opacity:1}
+#codename-display{font-size:26px;font-weight:700;letter-spacing:6px;color:#fff;margin:12px 0 4px;text-align:center;display:none}
+#codename-display.show{display:block}
+#session-sub{text-align:center;font-size:9px;color:#888;letter-spacing:2px;margin-bottom:12px}
+/* earned color */
+.c-in{color:#15803d}.c-out{color:#dc2626}.c-add{color:#1d4ed8}.c-cond{color:#92400e}
+.c-qty{color:#d97706}.c-spt{color:#2563eb}.c-frt{color:#059669}
+.c-dst{color:#dc2626}.c-wrm{color:#7c3aed}.c-inv{color:#0891b2}
+.c-gain{color:#16a34a}.c-noise{color:#dc2626}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:#fff}::-webkit-scrollbar-thumb{background:#ccc}
+@media(max-width:760px){.grid2,.grid3,.grid6{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav>
+  <span class="logo">Constellation System</span>
+  <div class="tab active" onclick="showTab('system',this)">System</div>
+  <div class="tab" onclick="showTab('geometry',this)">Information</div>
+  <div class="tab" onclick="showTab('loop',this)">The Loop</div>
+  <div class="tab" onclick="showTab('terminal',this)">Terminal</div>
+  <div class="tab" onclick="showTab('messages',this)">Messages</div>
+</nav>
+
+<!-- ══════════════════════════════════════════════════ SYSTEM -->
+<div id="panel-system" class="panel active">
+  <h2>Complete System — Variables, Architecture, Formal Specification</h2>
+
+  <div class="grid2" style="margin-bottom:16px">
+    <!-- VARIABLE AUDIT -->
+    <div>
+      <h3 style="margin-bottom:6px">Variable Audit — Signal vs Complexity</h3>
+      <div style="font-size:9px;color:#555;margin-bottom:6px">Every variable evaluated: does it improve session selection accuracy beyond variables already present? Hover a point for detail.</div>
+      <canvas id="audit-canvas" width="420" height="300" style="display:block;border:1px solid #ccc;cursor:crosshair"></canvas>
+      <div id="audit-tooltip" style="font-size:9px;color:#111;margin-top:6px;min-height:28px;padding:4px 8px;background:#f0f0f0;border:1px solid #ddd"></div>
+      <div style="display:flex;gap:12px;margin-top:6px;font-size:9px;flex-wrap:wrap">
+        <span class="c-in">■ INCLUDE</span><span class="c-add">■ ADD (missing)</span><span class="c-cond">■ CONDITIONAL</span><span class="c-out">■ EXCLUDE</span>
+      </div>
+    </div>
+    <!-- THREE LAYERS -->
+    <div>
+      <h3 style="margin-bottom:6px">Three-Layer Architecture</h3>
+      <canvas id="layers-canvas" width="420" height="180" style="display:block;border:1px solid #ccc;margin-bottom:10px"></canvas>
+      <h3 style="margin-bottom:6px">Minimum Sufficient State</h3>
+      <canvas id="radar-canvas" width="420" height="220" style="display:block;border:1px solid #ccc"></canvas>
+      <div id="radar-sliders" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- FORMAL SPEC -->
+  <div class="grid2">
+    <div>
+      <h3 style="margin-bottom:6px">The State — 18 Dimensions</h3>
+      <div class="formula">S(student) = {
+  <span class="c-in">e[6]</span>   : mode_elo[6]            ∈ [0,999]⁶   <span style="color:#888">← position</span>
+  <span class="c-add">ė[6]</span>  : mode_elo_velocity[6]   ∈ ℝ⁶         <span style="color:#888">← momentum  [NEW]</span>
+  <span class="c-add">τ[6]</span>  : sessions_since_last[6]  ∈ ℝ⁺         <span style="color:#888">← recency   [NEW]</span>
+  o    : last_outcome            = (pct, margin)
+  <span class="c-add">h[6]</span>  : recent_template_ids[6]  ∈ list       <span style="color:#888">← no-repeat [NEW]</span>
+}
+<span class="c-out">REMOVE: global_elo (= weighted_mean(e)) — redundant</span>
+<span class="c-out">REMOVE: same_mode_streak — derivable</span>
+<span class="c-out">REMOVE: brain_metrics — unvalidated MI</span>
+<span class="c-out">REMOVE: target_hit_rate — separate system</span></div>
+    </div>
+    <div>
+      <h3 style="margin-bottom:6px">The Selection — One Operation</h3>
+      <div class="formula">next = argmax<sub>C ∈ valid(S)</sub> 𝔼[ KL(S(t+1) ‖ S(t)) | C ]
+
+valid(S) requires:
+  C.difficulty ∈ ZPD(S)            <span style="color:#888">← within reach</span>
+    target = e[mode]/999 × 0.85    <span style="color:#888">← [ASSERTED → LEARN]</span>
+    adjusted × exp(−τ/λ)           <span style="color:#888">← forgetting decay</span>
+
+  C.mode ∈ hypercube_eligible(S)   <span style="color:#888">← breadth guarantee</span>
+    + weight by (e^0.7 × 1/(sess+1) × vel_bonus)
+
+  C.template ∉ h[mode]             <span style="color:#888">← no recent repeat</span>
+    prefer max(locked_axes)        <span style="color:#888">← most constrained</span>
+
+  overlay: if e[mode]&lt;300 AND τ&lt;7 AND sess≥6
+    P(INVERSION) = 0.25            <span style="color:#888">← [ASSERTED → LEARN]</span>
+    cooldown ≥ 3 sessions          <span style="color:#888">← [NEW]</span>
+
+The meta-principle:
+  include variable V ⟺
+    I(session_accuracy; V | existing) &gt; ε</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ INFORMATION -->
+<div id="panel-geometry" class="panel">
+  <h2>Information Geometry — The Shape of Maximum Development</h2>
+
+  <div class="grid2" style="margin-bottom:16px">
+    <div>
+      <h3 style="margin-bottom:6px">Information Gain Function</h3>
+      <div style="font-size:9px;color:#555;margin-bottom:5px">Drag slider. System targets the peak — 30–40th predicted percentile.</div>
+      <canvas id="gain-canvas" width="420" height="240" style="display:block;border:1px solid #ccc"></canvas>
+      <div class="srow" style="margin-top:6px">
+        <label style="width:100px">Challenge level</label>
+        <input type="range" min="0" max="100" value="38" id="chal-slider" oninput="updateGainCurve(+this.value/100)">
+        <div class="sval" id="chal-val">0.38</div>
+      </div>
+      <div id="gain-feedback" style="font-size:10px;padding:6px 8px;border:1px solid #ccc;margin-top:4px;min-height:30px"></div>
+    </div>
+    <div>
+      <h3 style="margin-bottom:6px">Per-Mode Information Landscapes</h3>
+      <canvas id="mode-gains" width="420" height="240" style="display:block;border:1px solid #ccc"></canvas>
+      <div id="mode-legend" style="margin-top:6px;font-size:9px;line-height:1.8"></div>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div class="card" style="border-color:#000">
+      <h4 style="margin-bottom:6px">Why the peak is at 30–40th pct, not 50th</h4>
+      <div style="font-size:10px;line-height:1.8;color:#333">
+        At 50th percentile the student won comfortably. The outcome was somewhat expected — the posterior update is moderate. At 30–40th percentile the student barely won. The outcome was genuinely uncertain — maximum surprise while still being processable. This is where the information gain function peaks. The asymmetry (overwhelm kills faster than boredom) means target the lower edge, not the center.
+      </div>
+    </div>
+    <div class="card">
+      <h4 style="margin-bottom:6px">The forgetting decay adjustment</h4>
+      <div style="font-size:10px;line-height:1.8;color:#333">
+        Returning to a mode after τ days: <code>d_adjusted = d_base × exp(−τ/λ)</code> where λ ≈ 14 days (to be learned from data). Without this, a student returning to SPATIAL after 3 weeks receives a difficulty calibrated for someone who played yesterday. The information gain curve shifts left with time away — the ZPD shrinks as skills decay. The system must account for this or risk pushing students past their current ZPD.
+      </div>
+    </div>
+    <div class="card">
+      <h4 style="margin-bottom:6px">Velocity bonus in mode selection</h4>
+      <div style="font-size:10px;line-height:1.8;color:#333">
+        Two students at Elo 500 in SPATIAL. One has been improving at +30 Elo/session; the other is flat for 6 sessions. The improving student is in an active learning arc — pulling them away for coverage costs more than the benefit. The plateau student needs a mode change or template change — staying in SPATIAL is not working. The velocity term in the selection weight captures this: students in active improvement arcs should be allowed to continue; plateaued students should be rotated.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ THE LOOP -->
+<div id="panel-loop" class="panel">
+  <h2>The Mutual Information Loop — Both Models Update Every Session</h2>
+  <div class="grid2" style="margin-bottom:14px">
+    <div>
+      <canvas id="loop-canvas" width="420" height="360" style="display:block;border:1px solid #ccc"></canvas>
+      <div style="text-align:center;margin-top:8px">
+        <button class="btn" onclick="toggleLoop()" id="loop-btn">PAUSE</button>
+        <button class="btn" onclick="resetLoop()" style="margin-left:6px">RESET</button>
+      </div>
+    </div>
+    <div>
+      <h3 style="margin-bottom:8px">Convergence Stages</h3>
+      <table class="t" style="margin-bottom:12px">
+        <tr><th>Sessions</th><th>Student model</th><th>System certainty</th><th>Session type</th></tr>
+        <tr><td style="font-size:10px">1–6</td><td style="font-size:10px">No priors. Building first model per mode.</td><td style="font-size:10px">High uncertainty. Budget 1–2.</td><td style="font-size:10px">Coverage rotation. ECHO. No overlays.</td></tr>
+        <tr><td style="font-size:10px">7–20</td><td style="font-size:10px">Mode models forming. Can detect strategy failure.</td><td style="font-size:10px">Moderate. Budget 3.</td><td style="font-size:10px">Priority-weighted. PARALLEL. First overlays.</td></tr>
+        <tr><td style="font-size:10px">21–50</td><td style="font-size:10px">Strong models. Cross-mode transfer emerging.</td><td style="font-size:10px">High. Budget 4.</td><td style="font-size:10px">Targeted. SHIFTING. Regular overlays.</td></tr>
+        <tr><td style="font-size:10px">50+</td><td style="font-size:10px">Full 6-dimension model. Maximum entropy outputs.</td><td style="font-size:10px">Very high. Budget 5.</td><td style="font-size:10px">Precise. RADICAL for mastered modes.</td></tr>
+      </table>
+      <div class="card-dk" style="padding:14px">
+        <h4 style="color:#fff;margin-bottom:6px">The final state</h4>
+        <div style="font-size:10px;line-height:1.8;color:#ccc">
+          The student who has converged does not have a strategy — they have a model of the game sophisticated enough to generate the correct strategy for any configuration on the fly. This is maximum entropy output: their behavior is unpredictable from prior sessions because it is fully conditioned on the current moment, not habit. INVERSION stops being an overlay and becomes their permanent operating mode. The system has nothing left to teach. <strong style="color:#fff">That is the objective.</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ TERMINAL -->
+<div id="panel-terminal" class="panel">
+  <h2>Terminal System — The Student Experience</h2>
+
+  <div class="warn" style="margin-bottom:14px">
+    The terminal is the student's only window into the system's reasoning. It is calibrated for <strong>optimal obscurity</strong>: enough signal that the student knows the system is watching something real, not enough to tell them what to do next. The messages create a meta-community — students compare what their terminal said and theorize about what patterns the system is tracking. No telltale signs, but never pure noise.
+  </div>
+
+  <div class="grid2" style="margin-bottom:14px">
+    <!-- CONTROLS -->
+    <div>
+      <div class="card" style="margin-bottom:10px">
+        <h4 style="margin-bottom:8px">Player Context</h4>
+        <div class="srow"><label style="width:120px">Sessions played</label><input type="range" min="0" max="50" value="12" id="t-sess" oninput="document.getElementById('tv-sess').textContent=this.value"><div class="sval" id="tv-sess">12</div></div>
+        <div class="srow"><label style="width:120px">Last rank pct</label><input type="range" min="1" max="100" value="55" id="t-rank" oninput="document.getElementById('tv-rank').textContent=this.value+'%'"><div class="sval" id="tv-rank">55%</div></div>
+        <div class="srow"><label style="width:120px">Win margin</label><input type="range" min="0" max="60" value="9" id="t-margin" oninput="document.getElementById('tv-margin').textContent=this.value+'%'"><div class="sval" id="tv-margin">9%</div></div>
+        <div class="srow"><label style="width:120px">Global Elo</label><input type="range" min="0" max="999" value="380" id="t-elo" oninput="document.getElementById('tv-elo').textContent=this.value"><div class="sval" id="tv-elo">380</div></div>
+        <div class="srow"><label style="width:120px">Same-mode streak</label><input type="range" min="0" max="5" value="1" step="1" id="t-streak" oninput="document.getElementById('tv-streak').textContent=this.value"><div class="sval" id="tv-streak">1</div></div>
+        <hr class="sep">
+        <div style="margin-bottom:6px">
+          <div style="font-size:9px;color:#555;margin-bottom:4px">Mode override</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap" id="t-mode-btns"></div>
+        </div>
+        <button class="btn act" onclick="runTerminal()" style="width:100%;padding:8px;font-size:11px;margin-top:4px">GENERATE SESSION</button>
+      </div>
+      <div class="card" id="t-result" style="display:none">
+        <h4 style="margin-bottom:6px">Session Config</h4>
+        <div id="t-config" style="font-family:'Courier New',monospace;font-size:10px;line-height:1.8"></div>
+      </div>
+    </div>
+    <!-- TERMINAL DISPLAY -->
+    <div>
+      <div id="terminal">
+        <div style="opacity:.35;font-size:10px">// CONSTELLATION — CHALLENGE COMPILER v2</div>
+        <div style="opacity:.35;font-size:10px">// awaiting context...</div>
+      </div>
+      <div id="codename-display"></div>
+      <div id="session-sub"></div>
+    </div>
+  </div>
+
+  <!-- CALIBRATION PRINCIPLE -->
+  <h3 style="margin-bottom:8px">The Calibration Principle</h3>
+  <canvas id="calib-canvas" width="100%" height="160" style="display:block;width:100%;border:1px solid #ccc;margin-bottom:10px"></canvas>
+  <div class="grid3">
+    <div class="card" style="border-color:#dc2626">
+      <h4 style="margin-bottom:5px;color:#dc2626">Too revealing — never use</h4>
+      <div style="font-size:10px;color:#333;line-height:1.8">
+        "You should connect your HQs faster."<br>
+        "Claim stars near the center first."<br>
+        "Your distance score was 47% below optimal."<br>
+        "Use blackholes more aggressively."<br>
+        <br>
+        <em>These tell the student what to do. The system should observe, not instruct. Instruction removes the cognitive work that produces development.</em>
+      </div>
+    </div>
+    <div class="card" style="border-color:#15803d;border-width:2px">
+      <h4 style="margin-bottom:5px;color:#15803d">Optimally calibrated — use these</h4>
+      <div style="font-size:10px;color:#333;line-height:1.8">
+        "HQ network collapsed in round 4. Logged."<br>
+        "Three direction changes in the opening sequence."<br>
+        "Steal rate: 0. The mechanism was available."<br>
+        "This pattern has been observed before."<br>
+        <br>
+        <em>Observational, factual, verifiable. Creates the question "what does that mean?" without a one-word answer. Forces reflection, not imitation.</em>
+      </div>
+    </div>
+    <div class="card" style="border-color:#888">
+      <h4 style="margin-bottom:5px">Too obscure — avoid</h4>
+      <div style="font-size:10px;color:#333;line-height:1.8">
+        "Signal vector 7 deviated by σ=2.3."<br>
+        "Pattern 7-δ detected in behavioral cluster."<br>
+        "Entropy threshold exceeded."<br>
+        "Coefficient matrix adjusted."<br>
+        <br>
+        <em>Meaningless to the student. Creates no discussion, no reflection. The community cannot theorize about signals they cannot connect to anything they did.</em>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ MESSAGES -->
+<div id="panel-messages" class="panel">
+  <h2>Message Library — Complete Calibrated Message System</h2>
+
+  <div class="inset" style="margin-bottom:12px">
+    Messages are organized by register. <strong>Behavioral observation</strong>: what the system actually saw. <strong>Calibration</strong>: what is changing and why, without revealing how. <strong>Recognition</strong>: acknowledging achievement without explaining significance. <strong>Overlay</strong>: controlled epistemic disruption. <strong>Meta-community</strong>: connecting the student to a history that predates them.
+  </div>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px" id="msg-filter-btns"></div>
+  <div id="msg-library"></div>
+
+  <div style="margin-top:16px">
+    <h3 style="margin-bottom:8px">The Community Generation Mechanism</h3>
+    <div class="grid2">
+      <div>
+        <table class="t">
+          <tr><th>Message property</th><th>Why it generates community</th></tr>
+          <tr><td>Specific to behavior</td><td>"Your HQ placement followed the same pattern" is quotable. "You played poorly" is not.</td></tr>
+          <tr><td>Slightly mysterious</td><td>Students ask "What does it mean the system logged that?" → external discussion → community.</td></tr>
+          <tr><td>Verifiable if thought about</td><td>Students can go back and check whether what the terminal said was true. This creates engagement with their own session data.</td></tr>
+          <tr><td>Session-numbered</td><td>"Session 14:" anchors the message to a specific point. Students track their arcs.</td></tr>
+          <tr><td>Implies ongoing observation</td><td>"The system has been watching longer than this session." Creates the sense of a persistent entity.</td></tr>
+          <tr><td>Not universally the same</td><td>Different players get different observations. This makes sharing them interesting.</td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="card-dk" style="padding:14px;margin-bottom:10px">
+          <h4 style="color:#fff;margin-bottom:6px">The surveillance aesthetic — calibrated</h4>
+          <div style="font-size:10px;line-height:1.8;color:#ccc">
+            The terminal should feel like it knows more about the session than the student does. Not because it is mysterious, but because it is measuring things the student was not thinking to track.<br><br>
+            "You noticed you lost. The system noticed you lost in round 3 of 10, that your HQ network was 40% shorter than your best, and that your steal rate dropped to zero in the second half."<br><br>
+            The student sees the rank. The terminal sees the signals. The gap between those two perspectives is the productive mystery.
+          </div>
+        </div>
+        <div class="warn">
+          <strong>The anti-pattern.</strong> Messages that reference abstract system internals ("entropy budget adjusted") are not surveillance — they are noise. Surveillance messages must reference something the student actually did in a form they can recognize. The system is observing <em>the student</em>, not reporting on its own state.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════ DATA
+
+const MODES=[
+  {id:'qty',name:'QUANTITY',icon:'⬡',color:'#d97706',elo:450,vel:20,tau:3,
+   zdpL:.13,peak:.38,lSlope:.22,rSlope:.42,
+   note:'Wide ZPD — many partial expansion strategies.'},
+  {id:'spt',name:'SPATIAL',icon:'◎',color:'#2563eb',elo:620,vel:-5,tau:7,
+   zdpL:.14,peak:.36,lSlope:.20,rSlope:.40,
+   note:'Moderate ZPD — direction commitment creates clear signals.'},
+  {id:'frt',name:'FORTRESS',icon:'⬢',color:'#059669',elo:380,vel:35,tau:1,
+   zdpL:.12,peak:.40,lSlope:.25,rSlope:.45,
+   note:'Wide ZPD — network planning has rich intermediate states.'},
+  {id:'dst',name:'DESTRUCTION',icon:'✕',color:'#dc2626',elo:700,vel:-15,tau:12,
+   zdpL:.15,peak:.35,lSlope:.18,rSlope:.38,
+   note:'Narrower ZPD — opponent modeling works or collapses quickly.'},
+  {id:'wrm',name:'WORMHOLE',icon:'⊕',color:'#7c3aed',elo:500,vel:0,tau:5,
+   zdpL:.17,peak:.42,lSlope:.16,rSlope:.30,
+   note:'Narrowest ZPD — near-binary outcome, little partial signal.'},
+  {id:'inv',name:'INVERSION',icon:'⊘',color:'#0891b2',elo:560,vel:10,tau:2,
+   zdpL:.10,peak:.45,lSlope:.35,rSlope:.55,
+   note:'Widest ZPD — flexibility tolerates high uncertainty.'},
+];
+
+const CODENAMES={
+  qty:['THE FLOOD','WAVE FRONT','MANIFEST DENSITY','THE SWARM','OVERFLOW','LANDGRAB','SATURATION','THE TIDE'],
+  spt:['THE EXPANSE','LONG REACH','FAR HORIZON','THE CARTOGRAPHER','BLIND REACH','DEEP SPACE','FURTHEST POINT','EDGE CASE'],
+  frt:['IRON CURTAIN','SIEGE LINES','THE CITADEL','DEEP ROOTS','BASTILLE','THE HOLD','STONEWORK','ENTRENCHED'],
+  dst:['CHAIN REACTION','SCORCHED EARTH','THE BREAKING','GHOST CIRCUIT','SHATTER','ERASURE','NULL FIELD','AFTERBURN'],
+  wrm:['THE GATEWAY','EVENT HORIZON','FOLD SPACE','THE BRIDGE','TRANSIT','SINGULARITY','THE NEEDLE','CROSSING'],
+  inv:['MIRROR LOGIC','NULL SPACE','THE FLIP','OPPOSITE DAY','DARK MATTER','REVERSAL','ANTI-PATTERN','WRONG ANSWER'],
+};
+
+const TEMPLATES_BY_MODE={
+  qty:[{name:'MISER',c:'8 moves/round fixed'},{name:'SPEED FLOOD',c:'5 rounds compressed'},{name:'FLOOD',c:'count×500 pure expansion'}],
+  spt:[{name:'BLIND REACH',c:'hidden map, proximity reveal'},{name:'ARCHITECT',c:'pattern target shown'},{name:'REACH',c:'distance×500 no HQs'}],
+  frt:[{name:'PATIENCE',c:'10 moves/round fixed'},{name:'SIEGE',c:'sustained ATHENA pressure'},{name:'NETWORK',c:'4 HQs, destruction penalty'}],
+  dst:[{name:'SCORCHED EARTH',c:'denial score = opponent HQ'},{name:'CHAIN REACTION',c:'destruction×500, count negative'},{name:'HUNTER',c:'50 steals, target opponent value'}],
+  wrm:[{name:'DECOY',c:'3 pairs, 1 real, 2 traps'},{name:'THE GATEWAY',c:'instant win, all multipliers irrelevant'}],
+  inv:[{name:'MIRROR',c:'exact inverse of last session'},{name:'NEGATIVE SPACE',c:'all multipliers negative'},{name:'HIDDEN OBJECTIVE',c:'Fisher-Yates shuffle, no hints'}],
+};
+
+// ════════════════════════════════════════ MESSAGE LIBRARY
+
+const MSG_LIBRARY={
+  behavioral:{
+    label:'Behavioral Observation',
+    color:'#000',
+    desc:'Factual observations about what happened. Verifiable. Non-prescriptive.',
+    msgs:[
+      {ctx:'Any', txt:'HQ network collapsed in round {round}. Logged.'},
+      {ctx:'Any', txt:'Three direction changes in the opening {n} moves.'},
+      {ctx:'DST/INV', txt:'Steal rate: 0. The mechanism was available.'},
+      {ctx:'QTY', txt:'Claim distribution: front-loaded. Rounds 7–10 contributed {pct}% of session total.'},
+      {ctx:'SPT', txt:'Average claim distance: {dist} units. Previous personal mean: {prev}.'},
+      {ctx:'FRT', txt:'First HQ connection established in round {round}. Network operated below full specification for {n} rounds.'},
+      {ctx:'DST', txt:'Blackhole chain length: {n}. Activation count: {m}. The mechanism was engaged {m} times.'},
+      {ctx:'WRM', txt:'Wormhole proximity established in round {round}. Two commits were made before activation.'},
+      {ctx:'INV', txt:'Strategy adjustment detected between rounds {r1} and {r2}. Signal was available earlier.'},
+      {ctx:'INV', txt:'Prior session heuristic maintained through round {r}. Score feedback was available from round 2.'},
+      {ctx:'Any', txt:'Move efficiency: {pct}% of moves contributed to final score. Remainder generated no measurable signal.'},
+      {ctx:'Any', txt:'Bot engagement pattern: avoidance. Logged across this session.'},
+    ]
+  },
+  pattern:{
+    label:'Pattern Detection',
+    color:'#555',
+    desc:'Repeated behavior across sessions. Creates the sense of longitudinal observation.',
+    msgs:[
+      {ctx:'Any', txt:'Opening move was identical to session {n-1}.'},
+      {ctx:'Any', txt:'HQ placement followed the same pattern as session {n-1} and session {n-2}. The system has noted this.'},
+      {ctx:'Any', txt:'Same-mode performance variance has been decreasing for {n} consecutive sessions.'},
+      {ctx:'Any', txt:'No wormhole engagement in {n} sessions. This changes now.'},
+      {ctx:'Any', txt:'Steal behavior: absent in {n} consecutive sessions.'},
+      {ctx:'Any', txt:'Time-to-first-HQ has increased across the last 3 sessions. Trend logged.'},
+      {ctx:'Any', txt:'Opening {n} moves have been structurally consistent for {streak} sessions. The system is aware.'},
+      {ctx:'Any', txt:'A behavioral pattern has been stable for {n} sessions. The system does not indicate whether this is optimal.'},
+    ]
+  },
+  calibration:{
+    label:'Calibration',
+    color:'#444',
+    desc:'Announces what changes next without explaining why.',
+    msgs:[
+      {ctx:'RADICAL', txt:'The session you just played will not recur. The system has selected a new trajectory.'},
+      {ctx:'RADICAL', txt:'Recalibrating. The next session will not resemble this one.'},
+      {ctx:'RADICAL', txt:'Performance threshold exceeded. A harder target has been selected. Proceed accordingly.'},
+      {ctx:'SHIFTING', txt:'The system has moved to an adjacent challenge domain.'},
+      {ctx:'SHIFTING', txt:'Mode transition initiated. Prior performance has informed the selection.'},
+      {ctx:'PARALLEL', txt:'Same objective. Different path. The underlying target is unchanged.'},
+      {ctx:'ECHO', txt:'An unresolved challenge has been detected. The system is returning you to it.'},
+      {ctx:'ECHO', txt:'Close margin. The context has been preserved. The system requires one more observation.'},
+      {ctx:'REMATCH', txt:'The previous session generated an incomplete signal. The system requires another attempt.'},
+      {ctx:'STREAK', txt:'Same-mode pattern: {n} consecutive. The system has overridden the sequence.'},
+    ]
+  },
+  recognition:{
+    label:'Recognition',
+    color:'#15803d',
+    desc:'Acknowledges achievement without explaining its significance.',
+    msgs:[
+      {ctx:'Any', txt:'New {mode} record. The system has updated your profile.'},
+      {ctx:'Any', txt:'Consecutive flow zone sessions: {n}. Trajectory is optimal.'},
+      {ctx:'Any', txt:'First session in {mode} mode. Baseline has been established.'},
+      {ctx:'Any', txt:'Performance in the top {pct}% for this session configuration.'},
+      {ctx:'Any', txt:'{n} sessions completed. The system\'s model of your performance is now reliable.'},
+      {ctx:'Any', txt:'SPATIAL Elo: new personal best. The system has recalibrated the ceiling.'},
+      {ctx:'Any', txt:'First wormhole activation recorded. The system has noted the approach.'},
+    ]
+  },
+  overlay:{
+    label:'Overlay / INVERSION',
+    color:'#7c3aed',
+    desc:'Controlled epistemic disruption. Creates the productive unknown.',
+    msgs:[
+      {ctx:'INV', txt:'The reward structure has been altered. The system will not tell you how.'},
+      {ctx:'INV', txt:'This session is not what it appears to be.'},
+      {ctx:'INV', txt:'The rules you learned are no longer in effect.'},
+      {ctx:'INV', txt:'What worked before will not work here. Watch the score after round 1.'},
+      {ctx:'INV', txt:'An overlay has been applied. The nature of the overlay is the challenge.'},
+      {ctx:'INV', txt:'Last session rewarded one thing. This session measures something different.'},
+      {ctx:'ITHKUIL', txt:'Score display: modified. Rank is unaffected. The system tracks the truth.'},
+      {ctx:'ITHKUIL', txt:'Display encoding active. Your performance is still measured in the standard system.'},
+      {ctx:'SHUFFLE', txt:'The relationship between your actions and your score has been altered. Deduce the new relationship.'},
+    ]
+  },
+  meta:{
+    label:'Meta-Community',
+    color:'#92400e',
+    desc:'Connects student to a larger history. Creates the sense of a persistent intelligence.',
+    msgs:[
+      {ctx:'Any', txt:'The system has seen this trajectory before. It knows where it leads.'},
+      {ctx:'Any', txt:'Behavioral pattern: uncommon. Fewer than 15% of sessions at this profile reach this configuration.'},
+      {ctx:'Any', txt:'You are not the first to reach this point. You may not recognize it from inside it.'},
+      {ctx:'Any', txt:'The system has been watching longer than this session.'},
+      {ctx:'Any', txt:'This session type has been observed before. The system has learned from it.'},
+      {ctx:'Any', txt:'The system does not reveal what it is measuring. It reveals that it is measuring.'},
+      {ctx:'Any', txt:'A pattern that began in session {n} has continued to session {now}. Logged.'},
+    ]
+  }
+};
+
+// ════════════════════════════════════════ VARIABLE AUDIT
+
+const VARS=[
+  {name:'mode_elo[6]',x:.92,y:.15,v:'in',detail:'Core variable. Direct measure of cognitive position per mode. All session selection is ultimately a function of this. Cannot be removed.'},
+  {name:'elo_velocity[6]',x:.83,y:.28,v:'add',detail:'MISSING. Rate of Elo change per mode. Essential for plateau detection — two students at identical Elo have completely different needs based on whether they are improving or stagnant.'},
+  {name:'sessions_since_last[6]',x:.74,y:.11,v:'add',detail:'MISSING. Days since last session per mode. Required for forgetting decay. Without this, returning students receive incorrect difficulty calibration.'},
+  {name:'recent_template_history',x:.61,y:.19,v:'add',detail:'MISSING. Which templates were used in the last 3 sessions per mode. Prevents the compiler from repeating MISER forever within QUANTITY.'},
+  {name:'last_outcome',x:.79,y:.13,v:'in',detail:'Immediate state: last session percentile and margin. Required for spectrum zone selection. The most recent signal the system has.'},
+  {name:'mode_sessions[6]',x:.52,y:.15,v:'in',detail:'Session count per mode. Used for entropy budget gating. Partially superseded by sessions_since_last but still needed for budget calculation.'},
+  {name:'global_elo',x:.12,y:.10,v:'out',detail:'EXCLUDE. Completely determined by mode_elo[6] — it is a weighted average. Zero independent information. Compute on demand, never store.'},
+  {name:'same_mode_streak',x:.20,y:.09,v:'out',detail:'EXCLUDE. Derivable from session history in O(1). No independent information. Keep as a cache, not a first-class variable.'},
+  {name:'bot_affinity[6]',x:.48,y:.58,v:'cond',detail:'CONDITIONAL at budget ≥4. Only reliable after 3+ sessions per bot per mode. Before that it adds noise rather than signal.'},
+  {name:'brain_metrics',x:.34,y:.82,v:'out',detail:'EXCLUDE until validated. Unquantified mutual information with session accuracy. May introduce external measurement error exceeding signal. Include only after Phase 4 measures the mutual information directly.'},
+  {name:'target_hit_rate',x:.29,y:.36,v:'out',detail:'SEPARATE SYSTEM. Belongs to the collaborative objective function (target-delta), not the competitive development system. Mixing these confounds the signal.'},
+  {name:'within_session_delta',x:.67,y:.53,v:'cond',detail:'CONDITIONAL at budget ≥3. Round-by-round strategy change. Finer-grained than session-level signals. Worth the tracking cost at sufficient data richness.'},
+];
+
+const VCOLOR={in:'#15803d',add:'#1d4ed8',out:'#dc2626',cond:'#92400e'};
+
+function drawAudit(){
+  const c=document.getElementById('audit-canvas'); if(!c)return;
+  const ctx=c.getContext('2d'),W=c.width,H=c.height;
+  ctx.clearRect(0,0,W,H);
+  const P={l:46,r:14,t:14,b:42};
+  const IW=W-P.l-P.r,IH=H-P.t-P.b;
+  const px=x=>P.l+x*IW, py=y=>P.t+(1-y)*IH;
+
+  // Zones
+  ctx.fillStyle='rgba(21,128,61,.06)'; ctx.fillRect(px(.5),P.t,IW*.5,IH*.5);
+  ctx.fillStyle='rgba(220,38,38,.06)'; ctx.fillRect(P.l,py(.5),IW*.5,IH*.5);
+
+  // Diagonal
+  ctx.strokeStyle='#ddd';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+  ctx.beginPath();ctx.moveTo(P.l,P.t+IH);ctx.lineTo(P.l+IW,P.t);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Grid
+  ctx.strokeStyle='#f0f0f0';ctx.lineWidth=1;
+  [.2,.4,.6,.8].forEach(v=>{
+    ctx.beginPath();ctx.moveTo(P.l,py(v));ctx.lineTo(P.l+IW,py(v));ctx.stroke();
+    ctx.beginPath();ctx.moveTo(px(v),P.t);ctx.lineTo(px(v),P.t+IH);ctx.stroke();
+  });
+
+  // Axes
+  ctx.strokeStyle='#bbb';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+IH);ctx.lineTo(P.l+IW,P.t+IH);ctx.stroke();
+
+  ctx.fillStyle='#888';ctx.font='8px Arial';ctx.textAlign='center';
+  ctx.fillText('information value',P.l+IW/2,P.t+IH+26);
+  ['0','0.2','0.4','0.6','0.8','1.0'].forEach((v,i)=>ctx.fillText(v,px(i/5),P.t+IH+13));
+  ctx.save();ctx.translate(13,P.t+IH/2);ctx.rotate(-Math.PI/2);ctx.fillText('complexity cost',0,0);ctx.restore();
+
+  ctx.fillStyle='rgba(21,128,61,.35)';ctx.font='bold 8px Arial';ctx.textAlign='right';
+  ctx.fillText('INCLUDE ZONE',P.l+IW-4,P.t+11);
+  ctx.fillStyle='rgba(220,38,38,.35)';ctx.textAlign='left';
+  ctx.fillText('EXCLUDE ZONE',P.l+4,P.t+IH-6);
+
+  // Variables
+  VARS.forEach(v=>{
+    const vx=px(v.x),vy=py(v.y),col=VCOLOR[v.v];
+    if(v.v==='add'){
+      ctx.beginPath();ctx.arc(vx,vy,9,0,Math.PI*2);
+      ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.stroke();
+    }
+    ctx.beginPath();ctx.arc(vx,vy,5,0,Math.PI*2);
+    ctx.fillStyle=col;ctx.fill();
+    ctx.fillStyle=col;ctx.font=(v.v==='in'||v.v==='add')?'bold 8px Arial':'8px Arial';
+    ctx.textAlign=v.x>.6?'right':'left';
+    ctx.fillText(v.name,v.x>.6?vx-10:vx+10,vy-9);
+  });
+
+  // Hover state
+  c._vars=VARS;c._P=P;c._IW=IW;c._IH=IH;
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const c=document.getElementById('audit-canvas');
+  if(!c)return;
+  c.addEventListener('mousemove',e=>{
+    const r=c.getBoundingClientRect();
+    const mx=(e.clientX-r.left)*(c.width/r.width);
+    const my=(e.clientY-r.top)*(c.height/r.height);
+    const P={l:46,r:14,t:14,b:42};
+    const IW=c.width-P.l-P.r,IH=c.height-P.t-P.b;
+    const px=x=>P.l+x*IW,py=y=>P.t+(1-y)*IH;
+    let hit=null;
+    VARS.forEach(v=>{
+      const dx=mx-px(v.x),dy=my-py(v.y);
+      if(Math.sqrt(dx*dx+dy*dy)<12)hit=v;
+    });
+    const tt=document.getElementById('audit-tooltip');
+    if(tt)tt.innerHTML=hit?`<strong style="color:${VCOLOR[hit.v]}">${hit.name}</strong> — ${hit.detail}`:'Hover a variable for detail.';
+  });
+});
+
+// ════════════════════════════════════════ THREE LAYERS
+
+function drawLayers(){
+  const c=document.getElementById('layers-canvas');if(!c)return;
+  const W=c.width,H=c.height;const ctx=c.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  const lw=(W-20)/3;
+  const ls=[
+    {n:'LAYER 1\nSTATE',s:'mode_elo[6]\nelo_velocity[6]\nsessions_since[6]',note:'game-agnostic\ncognitive model',fill:'#fff',stroke:'#000',tw:2},
+    {n:'LAYER 2\nSELECTION',s:'argmax 𝔼[KL]\nsubject to ZPD\n+ hypercube',note:'game-agnostic\noptimization',fill:'#000',stroke:'#000',tw:2},
+    {n:'LAYER 3\nIMPLEMENTATION',s:'mode · template\ndifficulty · overlays\nconfig · terminal',note:'game-specific\nmechanics',fill:'#fff',stroke:'#ccc',tw:1},
+  ];
+  ls.forEach((l,i)=>{
+    const x=10+i*lw;
+    ctx.fillStyle=l.fill;ctx.strokeStyle=l.stroke;ctx.lineWidth=l.tw;
+    ctx.fillRect(x,10,lw-10,130);ctx.strokeRect(x,10,lw-10,130);
+    const tc=l.fill==='#000'?'#fff':'#000';
+    ctx.fillStyle=tc;ctx.font='bold 9px Arial';ctx.textAlign='center';
+    l.n.split('\n').forEach((line,li)=>ctx.fillText(line,x+(lw-10)/2,30+li*14));
+    ctx.fillStyle=l.fill==='#000'?'#888':'#555';ctx.font='8px Arial';
+    l.s.split('\n').forEach((line,li)=>ctx.fillText(line,x+(lw-10)/2,72+li*13));
+    ctx.fillStyle=l.fill==='#000'?'#555':'#aaa';ctx.font='italic 8px Arial';
+    l.note.split('\n').forEach((line,li)=>ctx.fillText(line,x+(lw-10)/2,138+li*11));
+    if(i<2){
+      const ax=x+lw-10,ay=75;
+      ctx.strokeStyle='#888';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(ax+6,ay);ctx.stroke();
+      ctx.fillStyle='#888';ctx.beginPath();ctx.moveTo(ax+6,ay-3);ctx.lineTo(ax+10,ay);ctx.lineTo(ax+6,ay+3);ctx.closePath();ctx.fill();
+    }
+  });
+}
+
+// ════════════════════════════════════════ RADAR
+
+const rElo=[450,620,380,700,500,560];
+function initRadar(){
+  const el=document.getElementById('radar-sliders');if(!el)return;
+  el.innerHTML='<div style="font-size:9px;color:#555;margin-bottom:4px">Mode Elo (drag to update)</div>'+
+    MODES.map((m,i)=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+      <span style="width:28px;font-size:8px;font-weight:700;color:${m.color}">${m.id.toUpperCase()}</span>
+      <input type="range" min="0" max="999" value="${rElo[i]}" style="flex:1;accent-color:${m.color}"
+        oninput="rElo[${i}]=+this.value;drawRadar()">
+      <span style="width:28px;font-size:9px;text-align:right;color:${m.color}" id="re-${i}">${rElo[i]}</span>
+    </div>`).join('');
+  drawRadar();
+}
+function drawRadar(){
+  const c=document.getElementById('radar-canvas');if(!c)return;
+  const ctx=c.getContext('2d'),W=c.width,H=c.height;
+  ctx.clearRect(0,0,W,H);
+  const cx=W/2,cy=H/2,R=Math.min(W,H)/2-40,N=6;
+  const ang=i=>(i/N)*Math.PI*2-Math.PI/2;
+  const pt=(i,r)=>({x:cx+r*Math.cos(ang(i)),y:cy+r*Math.sin(ang(i))});
+  for(let ring=1;ring<=4;ring++){
+    ctx.beginPath();
+    for(let i=0;i<=N;i++){const p=pt(i%N,R*ring/4);i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)}
+    ctx.closePath();ctx.strokeStyle='#e8e8e8';ctx.lineWidth=1;ctx.stroke();
+  }
+  for(let i=0;i<N;i++){const p=pt(i,R);ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(p.x,p.y);ctx.strokeStyle='#e8e8e8';ctx.lineWidth=1;ctx.stroke();}
+  ctx.beginPath();
+  for(let i=0;i<N;i++){const norm=1-rElo[i]/999;const p=pt(i,R*norm);i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);}
+  ctx.closePath();ctx.fillStyle='rgba(0,0,0,.06)';ctx.fill();ctx.strokeStyle='#000';ctx.lineWidth=2;ctx.stroke();
+  MODES.forEach((m,i)=>{
+    const norm=1-rElo[i]/999;const p=pt(i,R*norm);
+    const vel=m.vel;
+    if(Math.abs(vel)>8){
+      const pv=pt(i,R*Math.max(0,Math.min(1,1-(rElo[i]+vel*3)/999)));
+      ctx.strokeStyle=vel>0?'#15803d':'#dc2626';ctx.lineWidth=2;ctx.setLineDash([3,2]);
+      ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(pv.x,pv.y);ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fillStyle=m.color;ctx.fill();
+    const lp=pt(i,R+22);
+    ctx.fillStyle=m.color;ctx.font='bold 9px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(m.id.toUpperCase(),lp.x,lp.y);
+    const vp=pt(i,R+33);ctx.fillStyle='#888';ctx.font='8px Arial';
+    ctx.fillText(String(rElo[i]).padStart(3,'0'),vp.x,vp.y);
+    const er=document.getElementById('re-'+i);if(er)er.textContent=rElo[i];
+  });
+}
+
+// ════════════════════════════════════════ INFO GAIN
+
+function gain(x,peak,lS,rS){
+  if(x<=0.05||x>=0.95)return 0;
+  return x<=peak?Math.exp(-.5*Math.pow((x-peak)/lS,2)):Math.exp(-.5*Math.pow((x-peak)/rS,2));
+}
+
+let curChal=0.38;
+function drawGainCurve(chal){
+  const c=document.getElementById('gain-canvas');if(!c)return;
+  const ctx=c.getContext('2d'),W=c.width,H=c.height;
+  ctx.clearRect(0,0,W,H);
+  const P={l:44,r:12,t:14,b:38};
+  const IW=W-P.l-P.r,IH=H-P.t-P.b;
+  const px=x=>P.l+x*IW,py=y=>P.t+(1-y)*IH;
+  ctx.fillStyle='rgba(0,0,0,.03)';ctx.fillRect(px(.12),P.t,px(.88)-px(.12),IH);
+  ctx.fillStyle='rgba(22,163,74,.08)';ctx.fillRect(px(.25),P.t,px(.55)-px(.25),IH);
+  ctx.strokeStyle='#f0f0f0';ctx.lineWidth=1;
+  [.2,.4,.6,.8].forEach(v=>{ctx.beginPath();ctx.moveTo(P.l,py(v));ctx.lineTo(P.l+IW,py(v));ctx.stroke();});
+  ctx.strokeStyle='#000';ctx.lineWidth=2.5;
+  ctx.beginPath();let first=true;
+  for(let i=0;i<=200;i++){const x=i/200,y=gain(x,.38,.22,.42);first?(ctx.moveTo(px(x),py(y)),first=false):ctx.lineTo(px(x),py(y));}
+  ctx.stroke();
+  ctx.strokeStyle='#92400e';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+  [.12,.88].forEach(x=>{ctx.beginPath();ctx.moveTo(px(x),P.t);ctx.lineTo(px(x),P.t+IH);ctx.stroke();});
+  ctx.strokeStyle='#15803d';ctx.lineWidth=1;ctx.setLineDash([2,3]);
+  [.25,.55].forEach(x=>{ctx.beginPath();ctx.moveTo(px(x),P.t);ctx.lineTo(px(x),P.t+IH);ctx.stroke();});
+  ctx.setLineDash([]);
+  ctx.strokeStyle='#15803d';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(px(.38),P.t);ctx.lineTo(px(.38),P.t+IH);ctx.stroke();
+  const g=gain(chal,.38,.22,.42);
+  ctx.strokeStyle='#000';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(px(chal),py(0));ctx.lineTo(px(chal),py(g));ctx.stroke();
+  ctx.beginPath();ctx.arc(px(chal),py(g),6,0,Math.PI*2);ctx.fillStyle='#000';ctx.fill();
+  ctx.strokeStyle='#888';ctx.lineWidth=1;ctx.setLineDash([2,2]);
+  ctx.beginPath();ctx.moveTo(P.l,py(g));ctx.lineTo(px(chal),py(g));ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle='#bbb';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+IH);ctx.lineTo(P.l+IW,P.t+IH);ctx.stroke();
+  ctx.fillStyle='#888';ctx.font='8px Arial';ctx.textAlign='center';
+  ['0','0.2','0.4','0.6','0.8','1.0'].forEach((v,i)=>ctx.fillText(v,px(i/5),P.t+IH+13));
+  ctx.fillText('challenge level',P.l+IW/2,P.t+IH+26);
+  ctx.textAlign='right';ctx.fillText(g.toFixed(3),P.l-3,py(g)+3);
+  ctx.fillStyle='#15803d';ctx.font='bold 8px Arial';ctx.textAlign='center';ctx.fillText('FLOW ZONE',px(.40),P.t+9);
+  ctx.fillStyle='#92400e';ctx.font='8px Arial';ctx.fillText('ZPD',px(.12),P.t+9);ctx.fillText('ZPD',px(.88),P.t+9);
+  ctx.save();ctx.translate(13,P.t+IH/2);ctx.rotate(-Math.PI/2);ctx.textAlign='center';ctx.fillStyle='#888';ctx.fillText('information gain',0,0);ctx.restore();
+  const fb=document.getElementById('gain-feedback');
+  if(fb){
+    let msg,col;
+    if(chal<.12){msg='Below ZPD — overwhelm. Signal is noise. Posterior cannot update from confusion.';col='#dc2626';}
+    else if(chal<.25){msg='ZPD entry — hard but tractable. Information gain rising.';col='#92400e';}
+    else if(chal<=.42){msg='▲ System target — peak information gain. Maximum surprise + ability to process. Barely winning.';col='#15803d';}
+    else if(chal<=.60){msg='Flow zone center — comfortable win. Outcome becoming expected. Gain declining.';col='#555';}
+    else if(chal<.88){msg='Above flow — easy. Low surprise. Near-zero gain.';col='#888';}
+    else{msg='Above ZPD — trivial. No perturbation to model. Zero information gain.';col='#aaa';}
+    fb.innerHTML=`<span style="color:${col}">${msg}</span> &nbsp; <strong>ΔInfo = ${g.toFixed(3)}</strong>`;
+  }
+}
+function updateGainCurve(v){
+  curChal=v;document.getElementById('chal-val').textContent=v.toFixed(2);drawGainCurve(v);
+}
+function drawModeGains(){
+  const c=document.getElementById('mode-gains');if(!c)return;
+  const ctx=c.getContext('2d'),W=c.width,H=c.height;
+  ctx.clearRect(0,0,W,H);
+  const P={l:16,r:16,t:20,b:24};
+  const IW=W-P.l-P.r,IH=H-P.t-P.b;
+  const modeW=IW/6;
+  MODES.forEach((m,mi)=>{
+    const ox=P.l+mi*modeW;
+    const px=x=>ox+x*modeW,py=y=>P.t+(1-y)*IH;
+    ctx.fillStyle=mi%2===0?'#fafafa':'#fff';ctx.fillRect(px(0),P.t,modeW,IH);
+    ctx.fillStyle=m.color+'18';ctx.fillRect(px(.20),P.t,px(.65)-px(.20),IH);
+    ctx.strokeStyle='#efefef';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(px(0),py(.5));ctx.lineTo(px(1),py(.5));ctx.stroke();
+    ctx.beginPath();ctx.moveTo(px(1),P.t);ctx.lineTo(px(1),P.t+IH);ctx.stroke();
+    ctx.beginPath();ctx.strokeStyle=m.color;ctx.lineWidth=2.5;let first=true;
+    for(let i=0;i<=100;i++){const x=i/100,y=gain(x,m.peak,m.lSlope,m.rSlope);first?(ctx.moveTo(px(x),py(y)),first=false):ctx.lineTo(px(x),py(y));}
+    ctx.stroke();
+    const py_=gain(m.peak,m.peak,m.lSlope,m.rSlope);
+    ctx.beginPath();ctx.arc(px(m.peak),py(py_),4,0,Math.PI*2);ctx.fillStyle=m.color;ctx.fill();
+    ctx.fillStyle=m.color;ctx.font='bold 8px Arial';ctx.textAlign='center';ctx.fillText(m.id.toUpperCase(),px(.5),P.t-7);
+  });
+  const leg=document.getElementById('mode-legend');
+  if(leg)leg.innerHTML=MODES.map(m=>`<span style="color:${m.color};font-size:9px"><strong>${m.name}</strong> — ${m.note}</span>`).join('&emsp;&nbsp;');
+}
+
+// ════════════════════════════════════════ LOOP ANIMATION
+
+let loopRun=true,loopF=0,loopRaf;
+function drawLoop(f){
+  const c=document.getElementById('loop-canvas');if(!c)return;
+  const ctx=c.getContext('2d'),W=c.width,H=c.height;
+  ctx.clearRect(0,0,W,H);
+  const SES={x:W/2,y:65,w:130,h:44,label:'SESSION',sub:'joint experiment'};
+  const STU={x:130,y:270,w:130,h:44,label:'STUDENT MODEL',sub:'prior → posterior'};
+  const SYS={x:W-130,y:270,w:130,h:44,label:'SYSTEM MODEL',sub:'uncertainty ↓'};
+  function arrow(x1,y1,x2,y2,col,lbl,ctrl){
+    ctx.strokeStyle=col||'#888';ctx.lineWidth=1.5;ctx.fillStyle=col||'#888';
+    ctx.beginPath();
+    if(ctrl){ctx.moveTo(x1,y1);ctx.quadraticCurveTo(ctrl.x,ctrl.y,x2,y2);}
+    else{ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);}
+    ctx.stroke();
+    const ang=ctrl?Math.atan2(y2-ctrl.y,x2-ctrl.x):Math.atan2(y2-y1,x2-x1);
+    ctx.save();ctx.translate(x2,y2);ctx.rotate(ang);
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-10,-5);ctx.lineTo(-10,5);ctx.closePath();ctx.fill();
+    ctx.restore();
+    if(lbl){ctx.fillStyle='#888';ctx.font='8px Arial';ctx.textAlign='center';
+      const mx=ctrl?(x1+2*ctrl.x+x2)/4:(x1+x2)/2;
+      const my=ctrl?(y1+2*ctrl.y+y2)/4:(y1+y2)/2;
+      ctx.fillText(lbl,mx,my-7);}
+  }
+  arrow(SYS.x-SYS.w/2,SYS.y-8,SES.x+SES.w/3,SES.y+SES.h/2,'#555','chooses argmax 𝔼[KL]',{x:W-70,y:175});
+  arrow(SES.x-SES.w/3,SES.y+SES.h/2,STU.x+STU.w/2,STU.y-8,'#555','challenge · feedback',{x:70,y:185});
+  arrow(STU.x+STU.w/2+2,STU.y+4,SYS.x-SYS.w/2-2,SYS.y+4,'#bbb','signals · rank · outcome');
+  // self-loops
+  ctx.strokeStyle='#059669';ctx.lineWidth=1.5;ctx.setLineDash([3,2]);
+  ctx.beginPath();ctx.arc(STU.x-STU.w/2-12,STU.y,11,-Math.PI/2,Math.PI/2);ctx.stroke();
+  ctx.strokeStyle='#2563eb';ctx.setLineDash([3,2]);
+  ctx.beginPath();ctx.arc(SYS.x+SYS.w/2+12,SYS.y,11,Math.PI/2,-Math.PI/2);ctx.stroke();
+  ctx.setLineDash([]);
+  [SES,STU,SYS].forEach(n=>{
+    ctx.fillStyle='#fff';ctx.strokeStyle='#000';ctx.lineWidth=2;
+    ctx.fillRect(n.x-n.w/2,n.y-n.h/2,n.w,n.h);ctx.strokeRect(n.x-n.w/2,n.y-n.h/2,n.w,n.h);
+    ctx.fillStyle='#000';ctx.font='bold 10px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(n.label,n.x,n.y-4);
+    ctx.fillStyle='#888';ctx.font='8px Arial';ctx.fillText(n.sub,n.x,n.y+10);
+  });
+  // particle
+  const t=(f%240)/240;const segs=[
+    {f:{x:SES.x-SES.w/3,y:SES.y+SES.h/2},t:{x:STU.x+STU.w/2,y:STU.y-8},c:{x:70,y:185}},
+    {f:{x:STU.x+STU.w/2+2,y:STU.y+4},t:{x:SYS.x-SYS.w/2-2,y:SYS.y+4},c:null},
+    {f:{x:SYS.x-SYS.w/2,y:SYS.y-8},t:{x:SES.x+SES.w/3,y:SES.y+SES.h/2},c:{x:W-70,y:175}},
+  ];
+  const st3=t*3,si=Math.floor(st3),sv=st3-si;
+  if(si<segs.length){
+    const sg=segs[si];let px,py;
+    if(sg.c){px=(1-sv)*(1-sv)*sg.f.x+2*(1-sv)*sv*sg.c.x+sv*sv*sg.t.x;py=(1-sv)*(1-sv)*sg.f.y+2*(1-sv)*sv*sg.c.y+sv*sv*sg.t.y;}
+    else{px=sg.f.x+sv*(sg.t.x-sg.f.x);py=sg.f.y+sv*(sg.t.y-sg.f.y);}
+    ctx.beginPath();ctx.arc(px,py,5,0,Math.PI*2);ctx.fillStyle='#000';ctx.fill();
+  }
+  ctx.fillStyle='#059669';ctx.font='7px Arial';ctx.textAlign='left';ctx.fillText('model update',STU.x-STU.w/2-55,STU.y+3);
+  ctx.fillStyle='#2563eb';ctx.textAlign='right';ctx.fillText('uncertainty ↓',SYS.x+SYS.w/2+50,SYS.y+3);
+  ctx.fillStyle='#ccc';ctx.font='9px Arial';ctx.textAlign='center';
+  ctx.fillText('both learn every session',W/2,H-16);
+}
+function animateLoop(){if(!loopRun)return;loopF++;drawLoop(loopF);loopRaf=requestAnimationFrame(animateLoop);}
+function toggleLoop(){loopRun=!loopRun;document.getElementById('loop-btn').textContent=loopRun?'PAUSE':'PLAY';if(loopRun)animateLoop();}
+function resetLoop(){loopF=0;if(!loopRun){loopRun=true;document.getElementById('loop-btn').textContent='PAUSE';}animateLoop();}
+
+// ════════════════════════════════════════ TERMINAL
+
+const MODE_IDS=MODES.map(m=>m.id);
+let tOverrideMode=null;
+let tTimers=[];
+
+function initTerminal(){
+  const el=document.getElementById('t-mode-btns');if(!el)return;
+  el.innerHTML=`<button class="btn act" onclick="setTMode(null,this)">AUTO</button>`+
+    MODES.map(m=>`<button class="btn" onclick="setTMode('${m.id}',this)" style="border-color:${m.color};color:${m.color}">${m.icon} ${m.id.toUpperCase()}</button>`).join('');
+}
+function setTMode(id,el){
+  tOverrideMode=id;
+  document.querySelectorAll('#t-mode-btns .btn').forEach(b=>b.classList.remove('act'));
+  el.classList.add('act');
+}
+
+function buildObs(sess,rank,margin,streak,elo,mode){
+  const pool=[
+    rank<35?`Rank percentile: ${rank}%. Challenge exceeded current capacity.`:
+    rank>80?`Rank percentile: ${rank}%. Session difficulty was insufficient.`:
+    `Last session: ${rank}th percentile. Margin: ${margin}%.`,
+    streak>=3?`Same-mode pattern: ${streak} consecutive sessions. The system has noted this.`:null,
+    margin<8&&rank>=35&&rank<=65?`Win margin: ${margin}%. The signal is unresolved.`:null,
+    margin>35?`Win margin: ${margin}%. Dominant outcome. The system has recalibrated.`:null,
+    elo<300?`Elo: ${String(elo).padStart(3,'0')}. Beginner range. Protective calibration active.`:null,
+    `Opening sequence logged. Pattern consistency: ${(Math.random()>.5?'high':'moderate')}.`,
+    `Behavioral vectors: ${Math.floor(4+Math.random()*6)} tracked this session.`,
+    `HQ placement: ${Math.random()>.5?'consistent with prior sessions':'deviation from prior pattern'}.`,
+    `No ${['steal','wormhole','blackhole chain'][Math.floor(Math.random()*3)]} engagement detected.`,
+    `Move efficiency: ${Math.floor(60+Math.random()*35)}%. System has logged the distribution.`,
+    `A pattern that began in session ${Math.max(1,sess-Math.floor(Math.random()*4))} has continued. The system has noted this.`,
+  ].filter(Boolean);
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
+function runTerminal(){
+  const sess=+document.getElementById('t-sess').value||12;
+  const rank=+document.getElementById('t-rank').value||55;
+  const margin=+document.getElementById('t-margin').value||9;
+  const elo=+document.getElementById('t-elo').value||380;
+  const streak=+document.getElementById('t-streak').value||1;
+  const mode=tOverrideMode||MODE_IDS[Math.floor(Math.random()*6)];
+  const mObj=MODES.find(m=>m.id===mode);
+  const tmpls=TEMPLATES_BY_MODE[mode]||[];
+  const tmpl=tmpls[Math.floor(Math.random()*tmpls.length)]||{name:'DEFAULT',c:'standard config'};
+  const diff=Math.min(.99,elo/999)*0.85;
+  const diffDesc=diff<.3?'reduced':diff<.6?'moderate':diff<.8?'elevated':'maximum';
+  const codename=CODENAMES[mode][Math.floor(Math.random()*CODENAMES[mode].length)];
+
+  // Spectrum zone
+  let zone;
+  if(streak>=3)zone='SHIFTING / RADICAL';
+  else if(rank>=40&&rank<=80&&margin<15)zone='ECHO / PARALLEL';
+  else if(rank<35)zone='REMATCH / ECHO';
+  else if(rank>80&&margin>30)zone='RADICAL';
+  else zone='PARALLEL / SHIFTING';
+
+  const invRoll=elo<400&&sess>=6&&Math.random()<.25;
+  const ithRoll=Math.random()<.10;
+  const obs=buildObs(sess,rank,margin,streak,elo,mode);
+
+  const metaLines=[
+    'The system has been watching longer than this session.',
+    `Behavioral pattern: uncommon. Fewer than 15% of sessions at this profile reach this configuration.`,
+    `You are not the first to reach this point.`,
+  ];
+  const addMeta=Math.random()<.15;
+
+  const lines=[
+    {t:0,    text:`// SESSION ${sess+1} — CHALLENGE COMPILER v2`,style:'dim'},
+    {t:500,  text:`Scanning behavioral history...`,style:'dim'},
+    {t:1000, text:obs,style:'obs'},
+    {t:1700, text:`Spectrum zone: ${zone}`,style:'normal'},
+    {t:2400, text:`Mode selected: ${mObj.name}`,style:'bright'},
+    {t:2900, text:`Template: ${tmpl.name} — ${tmpl.c}`,style:'normal'},
+    {t:3350, text:`Difficulty calibrated: ${diffDesc} (${(diff*100).toFixed(0)}%)`,style:'normal'},
+    ...(invRoll?[{t:3800,text:'Applying INVERSION overlay...',style:'inv'},{t:4100,text:'The reward structure has been altered. The system will not tell you how.',style:'inv'}]:[]),
+    ...(ithRoll&&!invRoll?[{t:3800,text:'ITHKUIL numerals: ACTIVE. Score display modified. Rank unaffected.',style:'inv'}]:[]),
+    ...(addMeta?[{t:invRoll?4500:3800,text:metaLines[Math.floor(Math.random()*metaLines.length)],style:'meta'}]:[]),
+    {t:invRoll?4900:4100, text:'', style:'blank'},
+    {t:invRoll?5100:4300, text:`SESSION ${sess+1}: ${codename}`, style:'codename'},
+    {t:invRoll?5700:4900, text:`> ${getHint(mode,tmpl.name)}`, style:'hint'},
+  ];
+
+  // Clear
+  tTimers.forEach(clearTimeout);tTimers=[];
+  const term=document.getElementById('terminal');
+  const cn=document.getElementById('codename-display');
+  const sub=document.getElementById('session-sub');
+  term.innerHTML='';cn.className='';cn.textContent='—';sub.textContent='';
+  const res=document.getElementById('t-result');if(res)res.style.display='none';
+
+  lines.forEach(l=>{
+    const id=setTimeout(()=>{
+      if(l.style==='blank'){term.innerHTML+='<div class="line show">&nbsp;</div>';return;}
+      if(l.style==='codename'){
+        cn.textContent=codename;cn.className='show';
+        sub.textContent=`SESSION ${sess+1} · ${mObj.name} · ${tmpl.name}`;
+        return;
+      }
+      const div=document.createElement('div');div.className='line show';
+      const styleMap={dim:'opacity:.5;color:#0f0',obs:'color:#0f0',bright:'color:#fff;font-weight:700',
+        normal:'color:#0f0',inv:'color:#0ff',meta:'color:#888;font-style:italic',hint:'color:#aaa'};
+      div.style.cssText=styleMap[l.style]||'color:#0f0';
+      const indent=l.style==='dim'?'':l.style==='codename'?'':l.style==='obs'?'  ':'    ';
+      div.textContent=indent+l.text;
+      term.appendChild(div);term.scrollTop=term.scrollHeight;
+    },l.t);
+    tTimers.push(id);
+  });
+
+  const cnTime=lines.find(l=>l.style==='codename')?.t||4300;
+  tTimers.push(setTimeout(()=>{
+    const res=document.getElementById('t-result');if(!res)return;
+    res.style.display='block';
+    document.getElementById('t-config').innerHTML=
+      `mode: <strong style="color:${mObj.color}">${mObj.name}</strong><br>`+
+      `template: <strong>${tmpl.name}</strong><br>`+
+      `difficulty: ${(diff*100).toFixed(0)}%<br>`+
+      `spectrum: ${zone}<br>`+
+      `inversion: ${invRoll?'<strong style="color:#7c3aed">ACTIVE</strong>':'no'}<br>`+
+      `ithkuil: ${ithRoll?'<strong style="color:#7c3aed">ACTIVE</strong>':'no'}<br>`+
+      `codename: <strong>${codename}</strong>`;
+  },cnTime+600));
+}
+
+function getHint(mode,tmpl){
+  const hints={
+    qty:['Cover the unclaimed center early. Edges last.','The first two rounds determine the game.','Every move must generate territory. Nothing else.'],
+    spt:['Commit to a direction in round 1. Splitting paths halves your score.','Abandon the center. One distant star beats ten nearby ones.','The map reveals itself as you move.'],
+    frt:['Place HQs far apart before connecting them. Short networks lose.','Every move must serve the chain. No waste.','They will come for your network. Hold it.'],
+    dst:['You need exactly two per chain. Position them across high-traffic paths.','Target stars near opponent HQs — they cost more to lose.','Leave nothing useful behind.'],
+    wrm:['Secure the surrounding stars before reaching for the wormhole.','Only the true pair has all required stars claimable.','Score nothing. Do one thing.'],
+    inv:['Watch the score after round 1. Let it tell you what changed.','The inverse of your winning strategy from last session is now correct.','Claim nothing. Move only when it denies them more than it costs you.'],
+  };
+  const pool=hints[mode]||hints.qty;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
+// ════════════════════════════════════════ CALIBRATION CANVAS
+
+function drawCalib(){
+  const el=document.getElementById('calib-canvas');if(!el)return;
+  const W=el.clientWidth||800,H=160;
+  el.setAttribute('width',W);el.setAttribute('height',H);
+  const ctx=el.getContext('2d');ctx.clearRect(0,0,W,H);
+  const zones=[
+    {label:'TOO REVEALING',sub:'tells you what to do',x:.10,w:.22,fill:'rgba(220,38,38,.12)',stroke:'#dc2626'},
+    {label:'OPTIMALLY CALIBRATED',sub:'observational · verifiable · non-prescriptive',x:.32,w:.36,fill:'rgba(21,128,61,.12)',stroke:'#15803d'},
+    {label:'TOO OBSCURE',sub:'no community value',x:.68,w:.22,fill:'rgba(100,100,100,.08)',stroke:'#888'},
+  ];
+  zones.forEach(z=>{
+    ctx.fillStyle=z.fill;ctx.fillRect(z.x*W,20,z.w*W,90);
+    ctx.strokeStyle=z.stroke;ctx.lineWidth=z.stroke==='#15803d'?2:1;
+    ctx.strokeRect(z.x*W,20,z.w*W,90);
+    ctx.fillStyle=z.stroke;ctx.font='bold 9px Arial';ctx.textAlign='center';
+    ctx.fillText(z.label,(z.x+z.w/2)*W,40);
+    ctx.fillStyle='#888';ctx.font='8px Arial';
+    ctx.fillText(z.sub,(z.x+z.w/2)*W,54);
+  });
+  // Arrow
+  ctx.strokeStyle='#000';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(.10*W,135);ctx.lineTo(.90*W,135);ctx.stroke();
+  ctx.fillStyle='#000';ctx.beginPath();ctx.moveTo(.90*W,131);ctx.lineTo(.90*W,139);ctx.lineTo(.90*W+8,135);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#555';ctx.font='9px Arial';ctx.textAlign='left';ctx.fillText('prescriptive',.10*W,150);
+  ctx.textAlign='center';ctx.fillText('observational · verifiable',.50*W,150);
+  ctx.textAlign='right';ctx.fillText('abstract · unverifiable',.90*W,150);
+  ctx.fillStyle='#15803d';ctx.font='bold 8px Arial';ctx.textAlign='center';
+  ctx.fillText('▲ system targets here',.50*W,122);
+}
+
+// ════════════════════════════════════════ MESSAGE LIBRARY
+
+let msgFilter='all';
+function initMessages(){
+  const fb=document.getElementById('msg-filter-btns');if(!fb)return;
+  fb.innerHTML=`<button class="btn act" onclick="setMsgFilter('all',this)">ALL</button>`+
+    Object.entries(MSG_LIBRARY).map(([k,v])=>
+      `<button class="btn" onclick="setMsgFilter('${k}',this)" style="border-color:${v.color};color:${v.color}">${v.label.toUpperCase()}</button>`
+    ).join('');
+  renderMessages();
+}
+function setMsgFilter(f,el){
+  msgFilter=f;
+  document.querySelectorAll('#msg-filter-btns .btn').forEach(b=>b.classList.remove('act'));
+  el.classList.add('act');
+  renderMessages();
+}
+function renderMessages(){
+  const el=document.getElementById('msg-library');if(!el)return;
+  const cats=msgFilter==='all'?Object.entries(MSG_LIBRARY):[[msgFilter,MSG_LIBRARY[msgFilter]]];
+  el.innerHTML=cats.map(([k,cat])=>`
+    <div style="margin-bottom:14px">
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:6px;border-bottom:1px solid #eee;padding-bottom:4px">
+        <span style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${cat.color}">${cat.label}</span>
+        <span style="font-size:9px;color:#888">${cat.desc}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        ${cat.msgs.map(m=>`
+          <div style="border:1px solid #eee;padding:8px 10px;background:#fafafa">
+            <div style="font-family:'Courier New',monospace;font-size:10px;color:#000;margin-bottom:4px">"${m.txt}"</div>
+            <div style="font-size:8px;color:#888;letter-spacing:.5px">${m.ctx}</div>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════ TABS
+
+function showTab(name,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  el.classList.add('active');
+  setTimeout(()=>{
+    drawAudit();drawLayers();drawRadar();
+    drawGainCurve(curChal);drawModeGains();
+    drawCalib();
+    if(name==='loop'){loopRun=true;animateLoop();}
+    else{loopRun=false;}
+  },50);
+}
+
+// ════════════════════════════════════════ INIT
+
+window.addEventListener('DOMContentLoaded',()=>{
+  drawAudit();
+  setTimeout(()=>{drawLayers();drawGainCurve(curChal);drawModeGains();drawCalib();},100);
+  initRadar();initTerminal();initMessages();
+  animateLoop();
+});
+window.addEventListener('resize',()=>{drawLayers();drawCalib();drawModeGains();});
+</script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Constellation — Design Meta-System</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:12px;background:#0a0a0a;color:#e0e0e0;padding:40px 48px 80px;max-width:860px}
+h1{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#fff;margin-bottom:4px}
+.sub{font-size:9px;color:#2a2a2a;letter-spacing:1px;text-transform:uppercase;margin-bottom:40px}
+h2{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#7c3aed;margin:32px 0 10px;padding-bottom:6px;border-bottom:1px solid #1a0d3a}
+h3{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555;margin:20px 0 8px}
+p{font-size:11px;color:#666;line-height:1.9;margin-bottom:10px}
+p strong{color:#aaa}
+.rule{font-size:10px;color:#e0e0e0;line-height:1.8;padding:10px 14px;border-left:2px solid #7c3aed;margin:10px 0;background:#0d0820}
+.step{padding:14px 16px;margin:8px 0;border:1px solid #1a1a1a;background:#0f0f0f}
+.step-n{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#7c3aed;margin-bottom:8px;display:block}
+.step-body{font-size:11px;color:#666;line-height:1.9}
+.step-body strong{color:#aaa}
+.ex{background:#0d0820;border:1px solid #1a0d3a;padding:14px 16px;margin:8px 0}
+.ex-lbl{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#7c3aed;margin-bottom:8px;display:block}
+.test-q{padding:8px 12px;border-left:2px solid #333;font-size:10px;color:#555;line-height:1.8;margin:6px 0}
+.test-q strong{color:#888}
+.col2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0}
+.block{background:#0f0f0f;border:1px solid #1a1a1a;padding:12px 14px;font-size:10px;color:#555;line-height:1.8}
+.block-lbl{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#333;margin-bottom:6px;display:block}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:10px}
+th{text-align:left;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#333;padding:6px 10px;border-bottom:1px solid #1a1a1a}
+td{padding:8px 10px;border-bottom:1px solid #0f0f0f;color:#555;line-height:1.7}
+td:first-child{color:#888}
+.colophon{margin-top:50px;padding-top:20px;border-top:1px solid #111;font-size:9px;color:#1a1a1a;line-height:2;font-style:italic}
+</style>
+</head>
+<body>
+
+<h1>Constellation — Design Meta-System</h1>
+<div class="sub">Philosophy doc · Generative framework for Lila games · How to produce radically different games that share one philosophy</div>
+
+<h2>The Problem This Solves</h2>
+<p>Lila is not a single game with levels. It is a catalogue of experiences — each targeting a different cognitive situation, each demanding that the student enact a specific form of thinking rather than merely describe it. To maintain that over time, the design process must be a generator, not a template.</p>
+<p>A template produces recognizable games — games that feel like each other because they came from the same mold. A generator produces genuinely different things every time because it starts from a different cognitive situation every time, and different situations force different mechanics into existence. Two games built from this system may share nothing mechanical, nothing visual, nothing structural — and still both belong unmistakably to Lila.</p>
+
+<div class="rule">The game is not the point. The cognitive situation the game places you inside is the point. Design backwards from the situation, not forwards from the mechanic.</div>
+
+<h2>The One Non-Negotiable</h2>
+<p>Every Lila game must make the student <strong>enact</strong> the target cognitive behavior, not describe it, not simulate it, not practice it in a controlled environment. The mechanic must be the thing, not a representation of the thing.</p>
+
+<div class="col2">
+  <div class="block">
+    <span class="block-lbl">Describing — wrong</span>
+    A quiz where you select which reasoning error a character made
+  </div>
+  <div class="block">
+    <span class="block-lbl">Enacting — right</span>
+    A game where you must make an actual inference from incomplete data under time pressure, and the game scores your calibration not your answer
+  </div>
+</div>
+<div class="col2" style="margin-top:6px">
+  <div class="block">
+    <span class="block-lbl">Simulating — wrong</span>
+    A scenario where you choose how a detective would respond
+  </div>
+  <div class="block">
+    <span class="block-lbl">Enacting — right</span>
+    A scene where you must find what's missing from it, with no instruction that something is missing
+  </div>
+</div>
+
+<h2>The Generator: How a Game Is Born</h2>
+
+<div class="step">
+  <span class="step-n">Step 1 — Identify the Cognitive Situation</span>
+  <div class="step-body">Write one sentence describing the cognitive situation before touching design. This is not a goal. It is not a skill. It is a situation — a specific configuration of information, pressure, and uncertainty that produces a specific kind of thinking.<br><br>
+  <strong>Example:</strong> "This game is won by the player who can accurately estimate the value of incomplete information relative to the cost of acquiring more."<br><br>
+  Two different sentences produce two games with nothing in common. If your sentence sounds like a learning objective, rewrite it. It should sound like a description of what it feels like to be inside the game.</div>
+</div>
+
+<div class="step">
+  <span class="step-n">Step 2 — Find the Mechanic That Forces the Situation</span>
+  <div class="step-body">The mechanic is not chosen from a library of game mechanics. It grows from the sentence. Ask: what rules would make it impossible to play this game without actually being in that cognitive situation?<br><br>
+  A game about incomplete information could use fog of war, hidden values, or asymmetric knowledge. Only one of these will grow from your specific sentence. The sentence "estimate the value of incomplete information relative to the cost of acquiring more" implies a game where information is purchasable and scarce — not fog of war (which you get for free), not hidden values (which you discover eventually), but a market where you must decide whether to spend.<br><br>
+  The mechanic test comes next.</div>
+</div>
+
+<div class="step">
+  <span class="step-n">Step 3 — The Mechanic Test</span>
+  <div class="step-body">Run the proposed mechanic through four questions:</div>
+</div>
+
+<div class="test-q"><strong>Q1: Can you play this game well by accident?</strong> If random play or formulaic play produces good outcomes, the mechanic doesn't enforce the cognitive situation. A good game must be unwinnable without actually doing the thinking.</div>
+<div class="test-q"><strong>Q2: Is the hardest moment in the game the cognitive situation you named?</strong> Not a prerequisite, not a side effect — the central difficulty. If the hardest moment is dexterity, or speed, or memory, you built the wrong game for your sentence.</div>
+<div class="test-q"><strong>Q3: Does the mechanic produce different experiences for different cognitive profiles?</strong> The right mechanic will feel different to someone who over-estimates vs. under-estimates vs. avoids estimating. If all players have the same experience, the mechanic isn't sensitive to what the game is actually measuring.</div>
+<div class="test-q"><strong>Q4: Would a Lila student who played this game have actually done the thing — or performed doing it?</strong> Performing = following a procedure that produces the right output. Doing = being placed in the situation and navigating it with genuine uncertainty. Only the second produces signal.</div>
+
+<div class="step">
+  <span class="step-n">Step 4 — Design for the Edge, Not the Mean</span>
+  <div class="step-body">Most game design optimizes for the median player. Lila optimizes for the information produced by outliers.<br><br>
+  The student who plays unusually — slow, fast, backwards, with apparent disregard for the rules — is the most valuable signal in the session. The game must be designed so that unusual play is possible, visible, and preserved in the Ledger.<br><br>
+  This means: don't over-constrain. Fewer rules, higher ceilings. A game with 4 rules and a high ceiling produces stranger and more informative play than a game with 12 rules and a clear optimal path.</div>
+</div>
+
+<div class="step">
+  <span class="step-n">Step 5 — Conscious Asymmetry</span>
+  <div class="step-body">Every Lila game has a visible layer (what everyone sees) and a deeper layer (what the system is actually measuring, and what is available to people who look harder).<br><br>
+  The visible layer must be compelling enough to play on its own. The deeper layer must be genuinely better for the people who find it — not a reward, not a collectible, but better. The source code comment. The inspect-element hint. The recognition that appears on the loss screen if your moves showed something specific.<br><br>
+  The ethical constraint: the deeper layer is never withheld out of cruelty. It's not visible on the surface because most people don't need it on the surface. The people who look for it are the people for whom finding it changes something.</div>
+</div>
+
+<div class="step">
+  <span class="step-n">Step 6 — Write the Ledger Entry Format</span>
+  <div class="step-body">Before building the game, specify exactly what the Ledger records. This shapes everything else.<br><br>
+  A Ledger entry for the information-value game might record: the total information purchased, the total information available, the ratio of correct-value-estimates to actual-values, and the sequence of purchase decisions. What the Ledger does <em>not</em> record: score, win/loss, total time. Those are outcomes. The Ledger records behavior.<br><br>
+  If you can't specify the Ledger entry format, you haven't designed the game yet — you've designed a surface.</div>
+</div>
+
+<div class="step">
+  <span class="step-n">Step 7 — Give It a Lifespan</span>
+  <div class="step-body">Games graduate. A game that has produced enough signal — that the compiler can reliably use it to distinguish cognitive profiles — has served its purpose. It doesn't need to be retired, but the community should know what it knows. New students encounter it. Advanced students revisit it and find the deeper layer. Old students who return find that the game knows them.<br><br>
+  The archive is not a graveyard. It is the calibration instrument. The community's history of encounters with a game is what allows the compiler to use future encounters as signal.</div>
+</div>
+
+<h2>The Cognitive Situation Library</h2>
+<p>Seeds for future games — situations that have not yet been given mechanics. Each could generate a different game. None can generate the same game as each other.</p>
+
+<table>
+  <tr><th>Situation</th><th>What it demands</th><th>Current game</th></tr>
+  <tr><td>Navigate a system whose rules are observable but undocumented</td><td>Pattern extraction under uncertainty</td><td>Strategy game (Constellation) — partial</td></tr>
+  <tr><td>Find what is absent from a complete-seeming scene</td><td>Absence detection, completeness testing</td><td>Detective exercise (Lila)</td></tr>
+  <tr><td>Argue the strongest version of a position you disagree with</td><td>Epistemic generosity, model-switching</td><td>Constraint Forge (Lila)</td></tr>
+  <tr><td>Estimate the value of information before acquiring it</td><td>Value-of-information reasoning</td><td>Unbuilt</td></tr>
+  <tr><td>Coordinate with another player without communicating</td><td>Theory of mind, Schelling point reasoning</td><td>Unbuilt</td></tr>
+  <tr><td>Identify which of two similar things is actually different</td><td>Category sharpening, definitional precision</td><td>Unbuilt</td></tr>
+  <tr><td>Build something collaboratively with no agreed design</td><td>Emergence, implicit coordination</td><td>Unbuilt</td></tr>
+  <tr><td>Know when to stop optimizing and ship</td><td>Sufficiency reasoning, diminishing returns</td><td>Unbuilt</td></tr>
+</table>
+
+<h2>What Makes a Lila Game a Lila Game</h2>
+<p>Not visual style. Not difficulty. Not length. Not theme. A game is Lila if:</p>
+<p><strong>1. It cannot be won by performing the target behavior.</strong> The behavior must be real.</p>
+<p><strong>2. The Ledger entry is behavioral, not outcome-based.</strong> What matters is what you did, not what happened.</p>
+<p><strong>3. There is something real for the person who looks harder.</strong> Not a puzzle, not a hunt — something genuinely better for having found it.</p>
+<p><strong>4. The system's response to the student is about what they did, not who they are as a data type.</strong></p>
+<p><strong>5. It can be played by someone who has never heard of Lila and can be played more richly by someone who has been here a long time.</strong> The game does not require the meta-system to function, but the meta-system reveals more of the game over time.</p>
+
+<h2>What This System Does Not Do</h2>
+<p>This is not a content mill. This process does not produce games faster than thoughtful design. It produces games that cannot be produced without thoughtful design — games where the cognitive situation is real and the mechanic forces it and the deeper layer is genuinely worth finding.</p>
+<p>One well-built game is worth more to the Ledger than ten games that pass the surface test but fail the enactment test. Quantity is not a goal. Depth is the goal, across every axis.</p>
+
+<div class="colophon">
+  The game is the transparent medium. The meta-system is what makes it transparent in the right direction.<br>
+  Both must be designed. The medium must be compelling enough to play. The direction must be precisely enough specified that the compiler can read it.<br>
+  This document is the specification for how to keep building without losing either.
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Observatory — Live Ledger View</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:11px;line-height:1.5;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{border-bottom:2px solid #000;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap}
+.hd-title{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888}
+.hd-sub{font-size:9px;color:#bbb;letter-spacing:1px}
+.hd-live{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #15803d;color:#15803d;padding:2px 8px;background:#f0fdf4}
+.hd-warn{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #d97706;color:#d97706;padding:2px 8px;background:#fef3c7}
+.hd-link{margin-left:auto;font-size:9px;letter-spacing:1px;color:#888;text-decoration:none;border:1px solid #ddd;padding:3px 9px;cursor:pointer}
+.hd-link:hover{border-color:#000;color:#000}
+.admin-toggle{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:2px 10px;border:1px solid #ddd;cursor:pointer;background:#fff;color:#888;font-family:Arial,sans-serif}
+.admin-toggle.on{border-color:#000;background:#000;color:#fff}
+/* Layout */
+.main{flex:1;display:grid;grid-template-columns:220px 1fr 300px;min-height:0;overflow:hidden}
+/* Student list */
+.student-list{border-right:1px solid #ddd;display:flex;flex-direction:column;overflow:hidden}
+.self-bar{padding:4px 10px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:6px;background:#fffcf5;flex-shrink:0}
+.self-bar label{font-size:7px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#d97706}
+.self-bar select{font-size:8px;border:1px solid #ddd;padding:1px 4px;flex:1;background:#fff}
+.panel-hd{padding:7px 10px;border-bottom:1px solid #ddd;font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#555;background:#fafafa;flex-shrink:0;display:flex;align-items:center;gap:6px}
+.list-scroll{flex:1;overflow-y:auto}
+.stu-row{padding:8px 10px;cursor:pointer;border-bottom:1px solid #f5f5f5;transition:background .1s;position:relative}
+.stu-row:hover{background:#f8f8f8}
+.stu-row.active{background:#000;color:#fff}
+.stu-row.active .stu-meta{color:#888}
+.stu-row.active .stu-badge{color:#888;border-color:#444}
+.stu-name{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.stu-meta{font-size:8px;color:#888;margin-top:1px}
+.stu-badge{display:inline-block;font-size:7px;font-weight:700;letter-spacing:1px;padding:1px 5px;border:1px solid #ccc;text-transform:uppercase;margin-top:2px}
+.stu-unconfirmed{border-color:#d97706;color:#d97706}
+.you-tag{font-size:7px;font-weight:700;color:#d97706;letter-spacing:1px;position:absolute;right:8px;top:8px}
+/* Zone badges */
+.zone-badge{display:inline-block;font-size:7px;font-weight:700;letter-spacing:1px;padding:1px 5px;border:1px solid;text-transform:uppercase;margin-top:2px;margin-left:3px}
+.z-ech{color:#2563eb;border-color:#bfdbfe}.z-par{color:#06b6d4;border-color:#a5f3fc}
+.z-shi{color:#f59e0b;border-color:#fde68a}.z-rad{color:#d97706;border-color:#fcd34d}
+.z-rem{color:#dc2626;border-color:#fca5a5}.z-cal{color:#6b7280;border-color:#d1d5db}
+/* Center */
+.center-panel{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid #ddd}
+.mode-scroll{flex:1;overflow-y:auto}
+table.mt{width:100%;border-collapse:collapse;font-size:10px}
+table.mt th{font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 6px;border-bottom:2px solid #000;background:#f0f0f0;text-align:right;white-space:nowrap}
+table.mt th:first-child{text-align:left}
+table.mt td{padding:5px 6px;border-bottom:1px solid #f0f0f0;text-align:right;vertical-align:middle}
+table.mt td:first-child{text-align:left;font-weight:700;letter-spacing:1px;font-size:9px}
+table.mt tr:hover td{background:#f8f8f8}
+.asserted{display:inline-block;font-size:7px;font-weight:700;color:#d97706;border:1px solid #d97706;padding:0 3px;letter-spacing:0.5px}
+.vel-pos{color:#15803d;font-weight:700}.vel-neg{color:#dc2626;font-weight:700}.vel-zero{color:#888}
+.radar-wrap{padding:12px;display:flex;flex-direction:column;align-items:center;border-top:1px solid #ddd;flex-shrink:0}
+/* Right panel */
+.right-panel{display:flex;flex-direction:column;overflow:hidden}
+.tab-bar{display:flex;border-bottom:1px solid #ddd;flex-shrink:0}
+.t-btn{padding:6px 10px;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;color:#888;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;background:none;border-left:none;border-right:none;border-top:none;font-family:Arial,sans-serif}
+.t-btn:hover{color:#000}.t-btn.active{color:#000;border-bottom:2px solid #000}
+.r-scroll{flex:1;overflow-y:auto;padding:10px 12px}
+/* Compiler card */
+.comp-card{border:2px solid #000;padding:10px 12px;background:#000;color:#fff;margin-bottom:10px}
+.comp-lbl{font-size:7px;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:4px}
+.comp-mode{font-size:20px;font-weight:700;letter-spacing:2px;margin-bottom:6px}
+.comp-zone{display:inline-block;font-size:8px;font-weight:700;letter-spacing:1.5px;padding:2px 8px;border:1px solid;text-transform:uppercase;margin-bottom:8px}
+.comp-field{margin-bottom:5px}
+.comp-flbl{font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888}
+.comp-fval{font-family:'Courier New',monospace;font-size:10px;color:#fff}
+.comp-note{font-size:8px;color:#888;line-height:1.7;border:1px dashed #eee;padding:8px;margin-top:4px}
+/* Sessions */
+.sess-row{padding:6px 4px;border-bottom:1px solid #f0f0f0;cursor:default;display:grid;grid-template-columns:26px 32px 50px 50px 1fr;gap:3px;align-items:center;font-size:9px}
+.sess-row:hover{background:#f8f8f8}
+.sess-row.hd{font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;border-bottom:2px solid #000;background:#f0f0f0;padding:4px}
+.sess-inv{border-left:3px solid #0891b2}
+/* Actions panel */
+.sec-hd{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#555;padding:8px 0 6px;border-bottom:1px solid #eee;margin-bottom:8px}
+.field-lbl{font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:3px}
+.field-inp{width:100%;font-size:9px;padding:4px 6px;border:1px solid #ddd;background:#fff;color:#111;font-family:'Courier New',monospace;margin-bottom:8px}
+.field-inp:focus{outline:none;border-color:#000}
+.act-btn{display:block;width:100%;padding:6px 10px;font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;border:1px solid #000;background:#000;color:#fff;cursor:pointer;font-family:Arial,sans-serif;margin-bottom:6px}
+.act-btn:hover{background:#222}
+.act-btn.sec{background:#fff;color:#000;border-color:#ccc}
+.act-btn.sec:hover{border-color:#000}
+.act-btn.danger{background:#fff;color:#dc2626;border-color:#dc2626}
+.act-btn.danger:hover{background:#dc2626;color:#fff}
+.res-text{font-size:9px;color:#888;font-style:italic;margin-top:4px;line-height:1.6}
+/* Calibration */
+.calib-stats{display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+/* Layer 0 */
+.raw-row{padding:6px 10px;border-bottom:1px solid #f0f0f0}
+.raw-hash{font-family:'Courier New',monospace;font-size:9px;color:#aaa}
+.raw-name{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.raw-vec{font-family:'Courier New',monospace;font-size:8px;color:#666;word-break:break-all;margin-top:2px}
+.raw-out{display:inline-block;padding:0 5px;font-size:8px;font-weight:700;letter-spacing:1px;border:1px solid;margin-top:3px}
+/* States */
+.loading{padding:20px;font-size:9px;color:#888;font-style:italic}
+.err-box{background:#fff0f0;border:1px solid #dc2626;padding:8px;font-size:9px;color:#dc2626;margin:8px 0}
+.no-data{padding:16px 10px;font-size:9px;color:#888;line-height:1.8;border:1px dashed #ddd;margin:8px}
+::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-track{background:#fff}::-webkit-scrollbar-thumb{background:#ddd}
+/* Bayesian / info-gain cells */
+.ibar-wrap{display:inline-flex;align-items:center;gap:4px;width:100%}
+.ibar{height:6px;border-radius:2px;flex-shrink:0}
+.ibar-val{font-family:'Courier New',monospace;font-size:8px;min-width:34px}
+.sigma-val{font-family:'Courier New',monospace;font-size:9px}
+.sel-mode td{color:#fff!important}
+.sel-mode{background:#000!important}
+/* Bayesian pane */
+.bay-section{margin-bottom:14px}
+.bay-hd{font-size:7px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#555;padding:6px 0 4px;border-bottom:1px solid #eee;margin-bottom:6px}
+.bay-row{display:grid;gap:2px;padding:5px 4px;border-bottom:1px solid #f5f5f5;font-size:9px}
+.bay-row:hover{background:#f8f8f8}
+.bay-mode-lbl{font-size:8px;font-weight:700;letter-spacing:1.5px}
+.bay-kv{display:flex;gap:3px;align-items:baseline;flex-wrap:wrap;margin-top:2px}
+.bay-k{font-size:7px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#999;min-width:52px}
+.bay-v{font-family:'Courier New',monospace;font-size:9px;color:#111}
+/* Parameters pane */
+.param-group{margin-bottom:12px}
+.param-ghd{font-size:7px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#555;border-bottom:1px solid #eee;padding:6px 0 4px;margin-bottom:6px}
+.param-row{padding:5px 0;border-bottom:1px solid #f8f8f8;font-size:9px}
+.param-name{font-family:'Courier New',monospace;font-size:9px;font-weight:700;color:#111}
+.param-val{font-family:'Courier New',monospace;font-size:9px;color:#2563eb}
+.param-status{display:inline-block;font-size:6px;font-weight:700;letter-spacing:1px;padding:1px 4px;border:1px solid;text-transform:uppercase;margin-left:4px;vertical-align:middle}
+.ps-asserted{color:#d97706;border-color:#d97706}
+.ps-measured{color:#2563eb;border-color:#2563eb}
+.ps-corroborated{color:#059669;border-color:#059669}
+.param-refute{font-size:8px;color:#888;margin-top:2px;line-height:1.5}
+@media (max-width:768px){
+  body{height:auto;overflow:auto}
+  header{flex-wrap:wrap;gap:6px;padding:8px 10px}
+  .hd-link{margin-left:0}
+  .hd-warn{display:none}
+  .main{display:block;overflow:visible;min-height:0}
+  .student-list,.center-panel,.right-panel{height:auto;overflow:visible;border-right:none;border-bottom:2px solid #ddd;min-height:0}
+  .list-scroll,.mode-scroll,.r-scroll{overflow:visible;flex:none;max-height:none}
+  .radar-wrap{border-top:1px solid #ddd}
+  #radar-canvas{width:100%;max-width:280px;height:auto}
+  .tab-bar{overflow-x:auto}
+  .t-btn{white-space:nowrap;padding:6px 8px;font-size:9px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="hd-title">Observatory</span>
+  <span class="hd-sub">— Live Ledger View — reading from /ledger/*.jsonl</span>
+  <span class="hd-live" id="live-badge">LIVE</span>
+  <span class="hd-warn">APPROXIMATION — every value has a refutation condition</span>
+  <span id="health-badge" style="font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #ddd;color:#888;padding:2px 8px;cursor:pointer" title="Ledger integrity" onclick="checkHealth()">HEALTH ↻</span>
+  <button class="admin-toggle" id="admin-toggle-btn" onclick="toggleAdmin()">STUDENT VIEW</button>
+  <button id="dev-btn" onclick="toggleDev()" style="font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:2px 10px;border:1px solid #ddd;cursor:pointer;background:#fff;color:#888;font-family:Arial,sans-serif">DEV</button>
+  <a class="hd-link" href="/philosophy/layer-1-approximation.html" target="_blank">← Mock prototype</a>
+  <a class="hd-link" href="/ledger" target="_blank">Layer 0 →</a>
+</header>
+
+<div class="main">
+
+  <!-- ── STUDENT LIST ── -->
+  <div class="student-list">
+    <div class="panel-hd">
+      Students
+      <span id="student-count" style="margin-left:auto;font-size:8px;color:#bbb"></span>
+      <button onclick="refresh()" style="font-size:7px;padding:1px 5px;cursor:pointer;border:1px solid #ddd;background:#fff;margin-left:4px">↺</button>
+    </div>
+    <div class="self-bar">
+      <label>You</label>
+      <select id="self-select" onchange="setSelf(this.value)"><option value="">— not set —</option></select>
+    </div>
+    <div class="list-scroll" id="student-list">
+      <div class="loading">Loading from server…</div>
+    </div>
+  </div>
+
+  <!-- ── CENTER: MODE TABLE + RADAR ── -->
+  <div class="center-panel">
+    <div class="panel-hd">State — Layer 1 view over Layer 0 <span class="asserted" style="margin-left:8px">ASSERTED formulas</span></div>
+    <div class="mode-scroll">
+      <table class="mt">
+        <thead>
+          <tr>
+            <th style="text-align:left">MODE</th>
+            <th style="text-align:left">μ (elo) <span class="asserted">K est.</span></th>
+            <th>σ (unc) <span class="asserted">n-derived</span></th>
+            <th>I(d) <span class="asserted">selection</span></th>
+            <th>vel</th>
+            <th>n</th>
+            <th>τ (d)</th>
+          </tr>
+        </thead>
+        <tbody id="mode-tbody">
+          <tr><td colspan="7" class="loading">Select a student</td></tr>
+        </tbody>
+      </table>
+      <div id="gap-alert-row"></div>
+      <div style="padding:8px 6px;font-size:8px;color:#888;border-top:1px solid #eee;line-height:1.7">
+        <strong style="color:#d97706">SELECTION</strong>: argmax I(d) = ½·log(1+σ²ₚᵣᵉᵈ/R) · λ=1/30d · R=3600 [ASSERTED] · σ=√(σ²₀/(1+n·σ²₀/R))
+      </div>
+    </div>
+    <div class="radar-wrap">
+      <canvas id="radar-canvas" width="200" height="200"></canvas>
+      <div style="font-size:8px;color:#888;margin-top:4px;text-align:center">game_elo radar · all values ASSERTED</div>
+    </div>
+  </div>
+
+  <!-- ── RIGHT: TABS ── -->
+  <div class="right-panel">
+    <div class="tab-bar">
+      <button class="t-btn active" onclick="setTab('compiler',this)">Compiler</button>
+      <button class="t-btn" onclick="setTab('sessions',this)">Sessions</button>
+      <button class="t-btn" id="tab-calibration" onclick="setTab('calibration',this)">Calibration</button>
+      <button class="t-btn" id="tab-actions" onclick="setTab('actions',this)" style="display:none">Actions</button>
+      <button class="t-btn" id="tab-layer0" onclick="setTab('layer0',this)" style="display:none">Layer 0</button>
+      <button class="t-btn" id="tab-bayesian" onclick="setTab('bayesian',this)">Bayesian</button>
+      <button class="t-btn" id="tab-params" onclick="setTab('params',this)">Parameters</button>
+    </div>
+
+    <!-- COMPILER -->
+    <div class="r-scroll" id="pane-compiler">
+      <div id="compiler-content"><div class="loading">Select a student</div></div>
+    </div>
+
+    <!-- SESSIONS -->
+    <div class="r-scroll" id="pane-sessions" style="display:none;padding:0">
+      <div class="sess-row hd"><span>#</span><span>Mode</span><span>Outcome</span><span>Δ</span><span>Date · flags</span></div>
+      <div id="sessions-content"><div class="loading">Select a student</div></div>
+    </div>
+
+    <!-- CALIBRATION (student mode) -->
+    <div class="r-scroll" id="pane-calibration" style="display:none">
+      <div style="font-size:8px;color:#888;margin-bottom:6px">Predicted rank_pct (Elo formula) vs actual rank_pct per session. Diagonal = perfect calibration.</div>
+      <div class="calib-stats" id="calib-stats"></div>
+      <canvas id="calib-canvas" width="260" height="240" style="display:block;width:100%;max-width:280px;margin:0 auto"></canvas>
+    </div>
+
+    <!-- ACTIONS (admin mode) -->
+    <div class="r-scroll" id="pane-actions" style="display:none">
+      <div class="sec-hd">Apply Compiler to Room</div>
+      <div style="font-size:9px;color:#888;margin-bottom:8px;line-height:1.6">
+        Selected: <span id="actions-student-name" style="font-weight:700;color:#111">none</span>
+      </div>
+      <div class="field-lbl">Room ID</div>
+      <input class="field-inp" id="push-room-id" placeholder="room_xxxx">
+      <button class="act-btn" onclick="pushCompilerToRoom()">Apply Compiler →</button>
+      <div class="res-text" id="push-result"></div>
+
+      <div class="sec-hd" style="margin-top:14px">Ledger Integrity</div>
+      <button class="act-btn sec" onclick="checkHealth()">Run Integrity Check</button>
+      <div id="health-result" class="res-text">Not checked yet.</div>
+
+      <div class="sec-hd" style="margin-top:14px">Merge Students</div>
+      <div style="font-size:9px;color:#888;margin-bottom:8px;line-height:1.6">Append-only: records a merge event. All secondary sessions read under primary going forward. Cannot be undone.</div>
+      <div class="field-lbl">Primary ID (keep)</div>
+      <input class="field-inp" id="merge-primary" placeholder="student_id to keep">
+      <div class="field-lbl">Secondary ID (absorb)</div>
+      <input class="field-inp" id="merge-secondary" placeholder="student_id to merge into primary">
+      <button class="act-btn danger" onclick="mergeStudents()">MERGE (irreversible)</button>
+      <div class="res-text" id="merge-result"></div>
+    </div>
+
+    <!-- LAYER 0 (admin mode) -->
+    <div class="r-scroll" id="pane-layer0" style="display:none;padding:0">
+      <div class="panel-hd">
+        Raw Layer 0 Feed — append-only
+        <button onclick="loadLayer0()" style="margin-left:auto;font-size:7px;padding:1px 6px;cursor:pointer;border:1px solid #ddd;background:#fff">load 100</button>
+      </div>
+      <div id="layer0-feed"><div class="loading">Click load to fetch raw records.</div></div>
+    </div>
+
+  </div>
+
+    <!-- BAYESIAN STATE -->
+    <div class="r-scroll" id="pane-bayesian" style="display:none">
+      <div id="bayesian-content"><div class="loading">Select a student</div></div>
+    </div>
+
+    <!-- PARAMETER REGISTRY -->
+    <div class="r-scroll" id="pane-params" style="display:none">
+      <div id="params-content"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const MODES = ['QTY','SPT','FRT','DST','WRM','INV'];
+
+// Bayesian primitives — mirror of compiler.js, computed browser-side
+const SIGMA2_PRIOR = 22500, MU_PRIOR = 500, LAMBDA_0 = 1/30, R_OBS = 3600;
+function sigma2FromN(n) { return SIGMA2_PRIOR / (1 + n * SIGMA2_PRIOR / R_OBS); }
+function predict(mu, sigma2, lambda, tau) {
+  var decay = Math.exp(-lambda * tau);
+  return { mu_pred: MU_PRIOR + decay*(mu-MU_PRIOR), sigma2_pred: SIGMA2_PRIOR + decay*decay*(sigma2-SIGMA2_PRIOR) };
+}
+function infoGain(sigma2_pred, R) { return 0.5 * Math.log(1 + sigma2_pred / R); }
+function bayesMode(d) {
+  var mu = d.mu || d.elo || MU_PRIOR;
+  var n  = d.n  || 0;
+  var tau = d.tau != null ? d.tau : (d.since_days != null ? d.since_days : 0);
+  var sigma2 = d.sigma2 != null ? d.sigma2 : sigma2FromN(n);
+  var p = predict(mu, sigma2, d.lambda || LAMBDA_0, tau);
+  return { mu, sigma2, tau, mu_pred: p.mu_pred, sigma2_pred: p.sigma2_pred, I: infoGain(p.sigma2_pred, R_OBS) };
+}
+function computeModeScores(state) {
+  var scores = {}, best = null, bestI = -Infinity;
+  MODES.forEach(function(m) {
+    var d = state[m] || { n: 0 };
+    var b = bayesMode(d);
+    scores[m] = b;
+    if (b.I > bestI) { bestI = b.I; best = m; }
+  });
+  return { scores: scores, selected: best };
+}
+const MODE_COLORS = {QTY:'#d97706',SPT:'#2563eb',FRT:'#059669',DST:'#dc2626',WRM:'#7c3aed',INV:'#0891b2'};
+const ZONE_COLORS = {ECHO:'#2563eb',PARALLEL:'#06b6d4',SHIFTING:'#f59e0b',RADICAL:'#d97706',REMATCH:'#dc2626',CALIBRATION:'#6b7280'};
+const ZONE_SHORT  = {ECHO:'ech',PARALLEL:'par',SHIFTING:'shi',RADICAL:'rad',REMATCH:'rem',CALIBRATION:'cal'};
+const VEC_NAMES   = ['count_mult','dist_mult','hq_mult','dest_mult','moves','round_s','rounds','steals','hq_count','map_idx','bot_type','bot_agg×100'];
+
+let currentStudent = null;
+let currentSessions = [];
+let currentState = null;
+let currentCompiler = null;
+let allStudents = [];
+let isAdmin = false;
+let myStudentId = localStorage.getItem('constellation_me') || null;
+let zoneCache = {};
+
+// ── DEV MOCK ───────────────────────────────────────────────────────────────
+let _devMock = false;
+
+// Same students/sessions as layer-0-ledger MOCK_OBS — consistent dataset
+const MOCK_STUDENTS = [
+  {student_id:'aria', student_name:'ARIA', sessions:22, last_t:1719014400, student_id_confirmed:true},
+  {student_id:'clio', student_name:'CLIO', sessions:51, last_t:1717804800, student_id_confirmed:true},
+  {student_id:'dara', student_name:'DARA', sessions:11, last_t:1718582400, student_id_confirmed:true},
+  {student_id:'bram', student_name:'BRAM', sessions:5,  last_t:1718150400, student_id_confirmed:false},
+];
+
+const MOCK_STATES = {
+  aria:{state:{
+    QTY:{elo:562,velocity: 1.2,zpd_target:477,n:4, since_days:5, decay:0.70},
+    SPT:{elo:683,velocity: 2.1,zpd_target:581,n:14,since_days:1, decay:0.93},
+    FRT:{elo:511,velocity:null,zpd_target:104,n:2, since_days:21,decay:0.22},
+    DST:{elo:494,velocity:null,zpd_target: 59,n:1, since_days:30,decay:0.12},
+    WRM:{elo:  0,velocity:null,zpd_target:  0,n:0, since_days:null,decay:0},
+    INV:{elo:521,velocity:null,zpd_target:291,n:1, since_days:8, decay:0.56},
+  }},
+  clio:{state:{
+    QTY:{elo:724,velocity: 0.8,zpd_target:615,n:8, since_days:3, decay:0.81},
+    SPT:{elo:862,velocity: 1.4,zpd_target:733,n:22,since_days:1, decay:0.93},
+    FRT:{elo:793,velocity: 1.9,zpd_target:674,n:12,since_days:2, decay:0.86},
+    DST:{elo:711,velocity: 0.5,zpd_target:604,n:6, since_days:7, decay:0.61},
+    WRM:{elo:602,velocity:null,zpd_target:408,n:2, since_days:18,decay:0.28},
+    INV:{elo:749,velocity:null,zpd_target:419,n:1, since_days:12,decay:0.42},
+  }},
+  dara:{state:{
+    QTY:{elo:522,velocity:-0.5,zpd_target:386,n:2, since_days:9, decay:0.53},
+    SPT:{elo:476,velocity:-1.2,zpd_target:352,n:2, since_days:7, decay:0.61},
+    FRT:{elo:508,velocity:null,zpd_target:199,n:1, since_days:14,decay:0.37},
+    DST:{elo:698,velocity: 3.4,zpd_target:594,n:5, since_days:2, decay:0.86},
+    WRM:{elo:503,velocity:null,zpd_target:198,n:1, since_days:16,decay:0.32},
+    INV:{elo:  0,velocity:null,zpd_target:  0,n:0, since_days:null,decay:0},
+  }},
+  bram:{state:{
+    QTY:{elo:521,velocity: 0.3,zpd_target:391,n:2, since_days:11,decay:0.46},
+    SPT:{elo:513,velocity: 0.1,zpd_target:384,n:2, since_days:9, decay:0.53},
+    FRT:{elo:500,velocity:null,zpd_target:  0,n:0, since_days:null,decay:0},
+    DST:{elo:506,velocity:null,zpd_target:379,n:1, since_days:13,decay:0.40},
+    WRM:{elo:500,velocity:null,zpd_target:  0,n:0, since_days:null,decay:0},
+    INV:{elo:  0,velocity:null,zpd_target:  0,n:0, since_days:null,decay:0},
+  }},
+};
+
+// Sessions in /api/ledger/sessions shape: {session_id,t,config_vector,outcome:{rank_pct},silent_inv,student_id_confirmed,compiler_generated,signals:{r_bot}}
+const MOCK_SESSIONS = {
+  aria:[
+    {session_id:'a01',t:1717200000,config_vector:[500,1,5,1,15,30,8,15,2,0,0,50],  outcome:{rank_pct:0.62},silent_inv:false,student_id_confirmed:true, compiler_generated:false,signals:{r_bot:520}},
+    {session_id:'a02',t:1717286400,config_vector:[500,1,5,1,15,30,8,15,2,0,2,60],  outcome:{rank_pct:0.71},silent_inv:false,student_id_confirmed:true, compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'a05',t:1717545600,config_vector:[1,500,1,1,15,32,10,5,0,1,5,40],  outcome:{rank_pct:0.58},silent_inv:false,student_id_confirmed:true, compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'a08',t:1717804800,config_vector:[1,500,1,1,12,32,10,5,0,1,1,60],  outcome:{rank_pct:0.73},silent_inv:false,student_id_confirmed:true, compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'a12',t:1718150400,config_vector:[50,1,500,-200,15,30,10,3,4,2,0,50],outcome:{rank_pct:0.48},silent_inv:false,student_id_confirmed:true, compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'a16',t:1718496000,config_vector:[1,500,1,1,12,35,10,5,0,1,1,70],  outcome:{rank_pct:0.76},silent_inv:false,student_id_confirmed:true, compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'a18',t:1718668800,config_vector:[-100,1,1,1,15,30,10,15,2,0,5,40],outcome:{rank_pct:0.31},silent_inv:true, student_id_confirmed:true, compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'a20',t:1718841600,config_vector:[1,500,1,1,12,35,10,5,0,1,1,70],  outcome:{rank_pct:0.79},silent_inv:false,student_id_confirmed:true, compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'a21',t:1718928000,config_vector:[500,1,5,1,15,30,10,15,2,0,0,50], outcome:{rank_pct:0.64},silent_inv:false,student_id_confirmed:true, compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'a22',t:1719014400,config_vector:[1,500,1,1,10,35,10,5,0,1,1,70],  outcome:{rank_pct:0.82},silent_inv:false,student_id_confirmed:true, compiler_generated:true, signals:{r_bot:520}},
+  ],
+  clio:[
+    {session_id:'c44',t:1716940800,config_vector:[1,500,1,1,10,32,10,5,0,1,1,70],    outcome:{rank_pct:0.89},silent_inv:false,student_id_confirmed:true,compiler_generated:true,signals:{r_bot:520}},
+    {session_id:'c46',t:1717113600,config_vector:[50,1,500,-200,10,30,10,3,4,2,2,80],outcome:{rank_pct:0.92},silent_inv:false,student_id_confirmed:true,compiler_generated:true,signals:{r_bot:520}},
+    {session_id:'c48',t:1717286400,config_vector:[1,-300,1,-200,15,30,10,15,2,0,5,40],outcome:{rank_pct:0.78},silent_inv:true, student_id_confirmed:true,compiler_generated:true,signals:{r_bot:520}},
+    {session_id:'c49',t:1717372800,config_vector:[500,1,5,1,10,25,8,15,2,0,1,70],    outcome:{rank_pct:0.91},silent_inv:false,student_id_confirmed:true,compiler_generated:true,signals:{r_bot:520}},
+    {session_id:'c50',t:1717459200,config_vector:[50,1,500,-200,10,30,10,3,4,2,0,60],outcome:{rank_pct:0.94},silent_inv:false,student_id_confirmed:true,compiler_generated:true,signals:{r_bot:520}},
+    {session_id:'c51',t:1717545600,config_vector:[1,1,1,1,10,30,10,10,1,3,4,90],     outcome:{rank_pct:0.88},silent_inv:false,student_id_confirmed:true,compiler_generated:true,signals:{r_bot:520}},
+    {session_id:'c52',t:1717718400,config_vector:[1,500,1,1,8,35,10,5,0,1,1,80],     outcome:{rank_pct:0.93},silent_inv:false,student_id_confirmed:true,compiler_generated:true,signals:{r_bot:520}},
+    {session_id:'c53',t:1717804800,config_vector:[50,1,500,-200,8,30,10,3,4,2,0,80], outcome:{rank_pct:0.95},silent_inv:false,student_id_confirmed:true,compiler_generated:true,signals:{r_bot:520}},
+  ],
+  dara:[
+    {session_id:'d01',t:1717718400,config_vector:[500,1,5,1,15,30,8,15,2,0,0,50],   outcome:{rank_pct:0.55},silent_inv:false,student_id_confirmed:true,compiler_generated:false,signals:{r_bot:520}},
+    {session_id:'d03',t:1717891200,config_vector:[1,500,1,1,15,32,10,5,0,1,5,40],   outcome:{rank_pct:0.37},silent_inv:false,student_id_confirmed:true,compiler_generated:false,signals:{r_bot:520}},
+    {session_id:'d05',t:1718064000,config_vector:[1,1,1,320,15,30,10,40,2,0,3,60],  outcome:{rank_pct:0.84},silent_inv:false,student_id_confirmed:true,compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'d07',t:1718236800,config_vector:[50,1,500,-200,15,30,10,3,4,2,0,50],outcome:{rank_pct:0.43},silent_inv:false,student_id_confirmed:true,compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'d09',t:1718409600,config_vector:[1,1,1,360,15,30,10,45,2,0,3,80],  outcome:{rank_pct:0.91},silent_inv:false,student_id_confirmed:true,compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'d10',t:1718496000,config_vector:[1,500,1,1,15,32,10,5,0,1,1,50],   outcome:{rank_pct:0.39},silent_inv:false,student_id_confirmed:true,compiler_generated:true, signals:{r_bot:520}},
+    {session_id:'d11',t:1718582400,config_vector:[1,1,1,360,12,30,10,40,2,0,2,80],  outcome:{rank_pct:0.88},silent_inv:false,student_id_confirmed:true,compiler_generated:true, signals:{r_bot:520}},
+  ],
+  bram:[
+    {session_id:'b01',t:1717545600,config_vector:[500,1,5,1,15,30,8,15,2,0,0,50],  outcome:{rank_pct:0.44},silent_inv:false,student_id_confirmed:false,compiler_generated:false,signals:{r_bot:520}},
+    {session_id:'b02',t:1717632000,config_vector:[1,500,1,1,15,32,10,5,0,1,5,40],  outcome:{rank_pct:0.52},silent_inv:false,student_id_confirmed:false,compiler_generated:false,signals:{r_bot:520}},
+    {session_id:'b03',t:1717804800,config_vector:[50,1,500,-200,15,30,10,3,4,2,0,50],outcome:{rank_pct:0.29},silent_inv:false,student_id_confirmed:false,compiler_generated:false,signals:{r_bot:520}},
+    {session_id:'b04',t:1717977600,config_vector:[1,1,1,200,15,30,10,40,2,0,3,60],  outcome:{rank_pct:0.58},silent_inv:false,student_id_confirmed:false,compiler_generated:false,signals:{r_bot:520}},
+    {session_id:'b05',t:1718150400,config_vector:[1,1,1,1,12,30,10,10,1,3,4,90],    outcome:{rank_pct:0.49},silent_inv:false,student_id_confirmed:false,compiler_generated:false,signals:{r_bot:520}},
+  ],
+};
+
+const MOCK_COMPILERS = {
+  aria:{mode:'SPT',zone:'ECHO',      bot_profile:'STANDARD',    map_filename:'Ad Astra by Josh Dahn.json',  config_vector:[1,500,1,1,12,35,10,5,0,1,1,70],     config_hash:'a3f2b1c9',expected_rank_pct:0.52,r_bot:520,params_version:'v1.0'},
+  clio:{mode:'FRT',zone:'ALPHA',     bot_profile:'ACCELERANT',  map_filename:'Cluster IV.json',             config_vector:[50,1,500,-200,10,28,10,3,4,2,0,80],  config_hash:'c8e4d7a2',expected_rank_pct:0.67,r_bot:520,params_version:'v1.0'},
+  dara:{mode:'DST',zone:'PARALLEL',  bot_profile:'CONTESTER',   map_filename:'Archipelago.json',            config_vector:[1,1,1,360,12,30,10,40,2,0,3,80],     config_hash:'d1f9c3b5',expected_rank_pct:0.55,r_bot:520,params_version:'v1.0'},
+  bram:{mode:'QTY',zone:'CALIBRATION',bot_profile:'TURTLER',    map_filename:'Delta Nine.json',             config_vector:[500,1,5,1,15,30,8,15,2,0,0,50],      config_hash:'b7a4e2f1',expected_rank_pct:0.50,r_bot:520,params_version:'v1.0'},
+};
+
+const MOCK_RAW = MOCK_STUDENTS.flatMap(s =>
+  (MOCK_SESSIONS[s.student_id]||[]).map(r => ({
+    hash: r.session_id, ts: r.t,
+    student_id: s.student_id, student_name: s.student_name,
+    config_vector: r.config_vector,
+    outcome: r.outcome.rank_pct >= 0.65 ? 'win' : r.outcome.rank_pct < 0.40 ? 'loss' : 'draw',
+  }))
+).sort((a,b) => b.ts - a.ts);
+
+function mockFetch(url) {
+  if (url.includes('/api/ledger/students'))    return JSON.parse(JSON.stringify(MOCK_STUDENTS));
+  if (url.includes('/api/ledger/health'))       return {valid:35,invalid:0,files:[{file:'2026-06-21.jsonl',valid:35,invalid:0}]};
+  if (url.includes('/api/ledger/raw'))          return MOCK_RAW.slice(0,100);
+  const sid = url.match(/\/api\/(?:ledger\/state|ledger\/sessions|compiler)\/(.+)/)?.[1];
+  const id  = sid ? decodeURIComponent(sid) : null;
+  if (url.includes('/api/ledger/state/'))      return MOCK_STATES[id] || {state:{}};
+  if (url.includes('/api/ledger/sessions/'))   return MOCK_SESSIONS[id] || [];
+  if (url.includes('/api/compiler/'))          return MOCK_COMPILERS[id] || {};
+  return {};
+}
+
+function toggleDev() {
+  _devMock = !_devMock;
+  const btn = document.getElementById('dev-btn');
+  btn.textContent  = _devMock ? 'DEV ON' : 'DEV';
+  btn.style.borderColor = _devMock ? '#d97706' : '#ddd';
+  btn.style.color       = _devMock ? '#d97706' : '#888';
+  document.getElementById('live-badge').textContent = _devMock ? 'MOCK' : 'LIVE';
+  currentStudent = null; currentSessions = []; currentState = null; currentCompiler = null; zoneCache = {};
+  refresh();
+}
+// ── END DEV MOCK ───────────────────────────────────────────────────────────
+
+// ── API
+async function apiFetch(url) {
+  if (_devMock) return mockFetch(url);
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+  return r.json();
+}
+
+// ── Bootstrap
+async function refresh() {
+  document.getElementById('live-badge').textContent = '…';
+  try {
+    const students = await apiFetch('/api/ledger/students');
+    allStudents = students;
+    renderStudentList(students);
+    document.getElementById('student-count').textContent = students.length + ' students';
+    document.getElementById('live-badge').textContent = 'LIVE';
+    document.getElementById('live-badge').style.borderColor = '#15803d';
+    document.getElementById('live-badge').style.color = '#15803d';
+    if (currentStudent) loadStudent(currentStudent);
+  } catch (err) {
+    document.getElementById('student-list').innerHTML =
+      `<div class="err-box">Cannot reach server API.<br>${err.message}<br><br>Start the server: <code>node server.js</code></div>`;
+    document.getElementById('live-badge').textContent = 'OFFLINE';
+    document.getElementById('live-badge').style.borderColor = '#dc2626';
+    document.getElementById('live-badge').style.color = '#dc2626';
+  }
+}
+
+// ── Student list
+function renderStudentList(students) {
+  populateSelfSelect(students);
+  const el = document.getElementById('student-list');
+  if (!students.length) {
+    el.innerHTML = `<div class="no-data">No sessions in Ledger yet.<br><br>Run a game session and the server will write to /ledger/YYYY-MM-DD.jsonl.</div>`;
+    return;
+  }
+  el.innerHTML = students.map(s => {
+    const dt = s.last_t ? new Date(s.last_t*1000).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '—';
+    const badgeCls = s.student_id_confirmed ? '' : ' stu-unconfirmed';
+    const displayName = s.student_name || s.student_id.replace('name:','').slice(0,16);
+    const sid = s.student_id.replace(/'/g,"\\'");
+    const isMe = s.student_id === myStudentId;
+    const zone = zoneCache[s.student_id];
+    const zoneBadge = zone ? `<span class="zone-badge z-${ZONE_SHORT[zone]||'cal'}">${zone}</span>` : '';
+    return `<div class="stu-row${s.student_id === currentStudent ? ' active' : ''}" data-sid="${s.student_id}" onclick="loadStudent('${sid}')">
+      ${isMe ? '<span class="you-tag">YOU</span>' : ''}
+      <div class="stu-name">${displayName}</div>
+      <div class="stu-meta">${s.sessions} sessions · last ${dt}${zoneBadge}</div>
+      <span class="stu-badge${badgeCls}">${s.student_id_confirmed ? 'ID CONFIRMED' : 'NAME HASH'}</span>
+    </div>`;
+  }).join('');
+}
+
+function populateSelfSelect(students) {
+  const sel = document.getElementById('self-select');
+  sel.innerHTML = '<option value="">— not set —</option>' +
+    students.map(s => {
+      const name = s.student_name || s.student_id.replace('name:','').slice(0,16);
+      return `<option value="${s.student_id}"${s.student_id === myStudentId ? ' selected' : ''}>${name}</option>`;
+    }).join('');
+}
+
+function setSelf(id) {
+  myStudentId = id || null;
+  if (myStudentId) localStorage.setItem('constellation_me', myStudentId);
+  else localStorage.removeItem('constellation_me');
+  renderStudentList(allStudents);
+}
+
+// ── Load student
+async function loadStudent(sid) {
+  currentStudent = sid;
+  document.querySelectorAll('.stu-row').forEach(r => r.classList.toggle('active', r.dataset.sid === sid));
+  document.getElementById('mode-tbody').innerHTML = '<tr><td colspan="7" class="loading">Loading…</td></tr>';
+  document.getElementById('compiler-content').innerHTML = '<div class="loading">Loading…</div>';
+  document.getElementById('sessions-content').innerHTML = '<div class="loading">Loading…</div>';
+  document.getElementById('actions-student-name').textContent =
+    allStudents.find(s => s.student_id === sid)?.student_name || sid.replace('name:','').slice(0,20) || sid;
+  try {
+    const [stateData, sessions, comp] = await Promise.all([
+      apiFetch(`/api/ledger/state/${encodeURIComponent(sid)}`),
+      apiFetch(`/api/ledger/sessions/${encodeURIComponent(sid)}`),
+      apiFetch(`/api/compiler/${encodeURIComponent(sid)}`),
+    ]);
+    currentState = stateData.state;
+    currentSessions = sessions;
+    currentCompiler = comp;
+    if (comp.zone) { zoneCache[sid] = comp.zone; renderStudentList(allStudents); }
+    renderModeTable(currentState);
+    drawRadar(currentState);
+    renderCompiler(comp);
+    renderSessions(sessions);
+    renderCalibration(sessions);
+    renderBayesian(currentState, comp);
+  } catch (err) {
+    document.getElementById('mode-tbody').innerHTML = `<tr><td colspan="7" class="err-box">${err.message}</td></tr>`;
+  }
+}
+
+// ── Mode table
+function renderModeTable(state) {
+  var tbody = document.getElementById('mode-tbody');
+  var ms = computeModeScores(state);
+  var maxI = Math.max.apply(null, MODES.map(function(m) { return ms.scores[m] ? ms.scores[m].I : 0; }));
+  tbody.innerHTML = MODES.map(function(m) {
+    var d = state[m];
+    var b = ms.scores[m];
+    var isSel = (m === ms.selected);
+    if (!d || d.n === 0) {
+      var b0 = b || { I: infoGain(SIGMA2_PRIOR, R_OBS), sigma2: SIGMA2_PRIOR };
+      var iBarW = Math.round((b0.I / (maxI||1)) * 60);
+      return '<tr class="' + (isSel ? 'sel-mode' : '') + '">' +
+        '<td style="color:' + (isSel ? '#fff' : MODE_COLORS[m]) + '">' + m + (isSel ? ' ←' : '') + '</td>' +
+        '<td style="color:#ccc;font-style:italic">—</td>' +
+        '<td><span class="sigma-val" style="color:#ccc">∞</span></td>' +
+        '<td><div class="ibar-wrap"><div class="ibar" style="width:' + iBarW + 'px;background:' + (isSel?'#fff':'#bbb') + '"></div>' +
+        '<span class="ibar-val" style="color:' + (isSel?'#fff':'#bbb') + '">' + b0.I.toFixed(3) + '</span></div></td>' +
+        '<td style="color:#ccc">—</td><td>0</td><td style="color:#ccc">—</td></tr>';
+    }
+    var velStr = d.velocity == null ? '—'
+      : d.velocity > 0 ? '<span class="vel-pos">+' + d.velocity + '</span>'
+      : d.velocity < 0 ? '<span class="vel-neg">' + d.velocity + '</span>'
+      : '<span class="vel-zero">0</span>';
+    var tau = d.tau != null ? d.tau : (d.since_days != null ? d.since_days : 0);
+    var sinceStr = tau > 0
+      ? (tau > 14 ? '<span style="color:' + (isSel?'#fcd34d':'#d97706') + '">' + tau + 'd</span>' : tau + 'd')
+      : 'today';
+    var sigma = Math.round(Math.sqrt(b.sigma2 || SIGMA2_PRIOR));
+    var sigmaColor = isSel ? '#fff' : (sigma > 100 ? '#d97706' : sigma > 50 ? '#888' : '#15803d');
+    var iBarW = Math.round((b.I / (maxI||1)) * 60);
+    var iColor = isSel ? '#fff' : MODE_COLORS[m];
+    return '<tr class="' + (isSel ? 'sel-mode' : '') + '">' +
+      '<td style="color:' + (isSel?'#fff':MODE_COLORS[m]) + ';font-weight:700">' + m + (isSel?' ←':'') + '</td>' +
+      '<td><strong>' + (d.elo||d.mu||'—') + '</strong></td>' +
+      '<td><span class="sigma-val" style="color:' + sigmaColor + '">±' + sigma + '</span></td>' +
+      '<td><div class="ibar-wrap"><div class="ibar" style="width:' + iBarW + 'px;background:' + iColor + '"></div>' +
+      '<span class="ibar-val" style="color:' + (isSel?'#fff':'#555') + '">' + b.I.toFixed(3) + '</span></div></td>' +
+      '<td>' + velStr + '</td>' +
+      '<td>' + d.n + '</td>' +
+      '<td>' + sinceStr + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+// ── Radar
+function drawRadar(state) {
+  const cv = document.getElementById('radar-canvas');
+  const ctx = cv.getContext('2d');
+  const W=200,H=200,cx=100,cy=100,R=76;
+  ctx.clearRect(0,0,W,H);
+  const angles = MODES.map((_,i) => -Math.PI/2 + i*2*Math.PI/6);
+  const maxElo = 1000;
+  [0.25,0.5,0.75,1].forEach(r => {
+    ctx.strokeStyle = r===1?'#bbb':'#eee'; ctx.lineWidth = r===1?1.5:1;
+    ctx.beginPath();
+    angles.forEach((a,i) => { const x=cx+Math.cos(a)*R*r,y=cy+Math.sin(a)*R*r; i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+    ctx.closePath(); ctx.stroke();
+    if(r<1){ctx.fillStyle='#ccc';ctx.font='7px Arial';ctx.textAlign='center';ctx.fillText((r*1000|0),cx,cy-R*r-2);}
+  });
+  angles.forEach(a=>{ctx.strokeStyle='#eee';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(a)*R,cy+Math.sin(a)*R);ctx.stroke();});
+  ctx.beginPath();
+  let first=true;
+  MODES.forEach((m,i)=>{
+    const d=state[m]; if(!d||!d.elo)return;
+    const r=(d.elo/maxElo)*R;
+    const x=cx+Math.cos(angles[i])*r,y=cy+Math.sin(angles[i])*r;
+    first?ctx.moveTo(x,y):ctx.lineTo(x,y); first=false;
+  });
+  ctx.closePath(); ctx.strokeStyle='#000'; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle='rgba(0,0,0,0.07)'; ctx.fill();
+  MODES.forEach((m,i)=>{
+    const d=state[m]; if(!d||!d.elo)return;
+    const r=(d.elo/maxElo)*R;
+    const x=cx+Math.cos(angles[i])*r,y=cy+Math.sin(angles[i])*r;
+    ctx.fillStyle=MODE_COLORS[m]; ctx.strokeStyle='#fff'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    const lx=cx+Math.cos(angles[i])*(R+13),ly=cy+Math.sin(angles[i])*(R+13)+3;
+    ctx.fillStyle=MODE_COLORS[m]; ctx.font='bold 8px Arial'; ctx.textAlign='center';
+    ctx.fillText(m,lx,ly);
+  });
+}
+
+// ── Compiler card
+function renderCompiler(comp) {
+  const el = document.getElementById('compiler-content');
+  const isInv = comp.mode === 'INV';
+  const modeDisplay = (!isAdmin && isInv) ? '???' : comp.mode;
+  const modeColor   = (!isAdmin && isInv) ? '#888' : (MODE_COLORS[comp.mode] || '#fff');
+  const zoneName    = (!isAdmin && isInv) ? '—' : (comp.zone || '—');
+  const zoneColor   = ZONE_COLORS[comp.zone] || '#888';
+  const zoneCls     = ZONE_SHORT[comp.zone] || 'cal';
+  const vec         = Array.isArray(comp.config_vector) ? comp.config_vector : [];
+
+  // Selection reasoning — use mode_scores from API or derive from state
+  var mscores = comp.mode_scores || {};
+  var derived = computeModeScores(currentState || {});
+  var scoreRows = MODES.map(function(m) {
+    var ms2 = mscores[m] || derived.scores[m];
+    if (!ms2) return '';
+    var I2 = (ms2.info_gain != null ? ms2.info_gain : ms2.I) || 0;
+    var isWinner = (m === (comp.mode || derived.selected));
+    var iBarW = Math.min(Math.round(I2 / 1.1 * 80), 80);
+    var mc = isWinner ? MODE_COLORS[m] : '#ddd';
+    return '<div style="display:flex;align-items:center;gap:4px;padding:2px 0">' +
+      '<span style="width:28px;font-size:8px;color:' + MODE_COLORS[m] + ';font-weight:700;flex-shrink:0">' + m + '</span>' +
+      '<div style="height:5px;background:' + mc + ';width:' + iBarW + 'px;border-radius:1px;flex-shrink:0"></div>' +
+      '<span style="font-family:monospace;font-size:8px;color:' + (isWinner?'#fff':'#888') + ';min-width:38px">' + I2.toFixed(3) + '</span>' +
+      (isWinner ? '<span style="font-size:7px;color:#fff;opacity:.7">selected</span>' : '') +
+      '</div>';
+  }).join('');
+  el.innerHTML = `
+    <div class="comp-card">
+      <div class="comp-lbl">Next Session — Compiler Output · ${comp.game_id ? comp.game_id.toUpperCase() : 'CONSTELLATION'}</div>
+      <div class="comp-mode" style="color:${modeColor}">${modeDisplay}</div>
+      <div class="comp-zone z-${zoneCls}" style="color:${zoneColor};border-color:${zoneColor}55">${zoneName}</div>
+      <div class="comp-field">
+        <div class="comp-flbl">Selection — I(d) per mode <span class="asserted">argmax</span></div>
+        <div style="margin-top:3px">${scoreRows}</div>
+      </div>
+      <div class="comp-field" style="margin-top:6px">
+        <div class="comp-flbl">Bot Profile</div>
+        <div class="comp-fval">${isAdmin ? (comp.bot_profile || '—') : '—'}</div>
+      </div>
+      <div class="comp-field">
+        <div class="comp-flbl">Expected Rank <span class="asserted" style="color:#f0a60a;border-color:#f0a60a">ASSERTED r_bot=${comp.r_bot}</span></div>
+        <div class="comp-fval">${comp.expected_rank_pct != null ? (comp.expected_rank_pct*100).toFixed(1)+'%' : '—'}</div>
+      </div>
+      <div class="comp-field">
+        <div class="comp-flbl">Map</div>
+        <div class="comp-fval">${comp.map_filename || '—'}</div>
+      </div>
+      ${isAdmin ? `
+      <div class="comp-field">
+        <div class="comp-flbl">Config Vector [12]</div>
+        <div class="comp-fval" style="font-size:8px">[${vec.join(', ')}]</div>
+      </div>
+      <div class="comp-field">
+        <div class="comp-flbl">Hash · Version</div>
+        <div class="comp-fval">${(comp.config_hash||'').slice(0,8)} · ${comp.params_version||'—'}</div>
+      </div>
+      ` : ''}
+    </div>
+    <div class="comp-note">
+      <strong style="color:#d97706">ASSERTED</strong> — config_vector[12]: [${VEC_NAMES.join(', ')}]<br>
+      Selection: argmax I(d) = ½·log(1 + σ²ₚᵣᵉᵈ/R) · λ=1/30d · R=3600 [ASSERTED]
+    </div>`;
+}
+
+// ── Sessions feed
+function assignMode(cv) {
+  if (!cv) return null;
+  if (cv[0]<0||cv[1]<0||cv[2]<0||cv[3]<0) return 'INV';
+  const mults=[cv[0],cv[1],cv[2],cv[3]];
+  if(mults.reduce((a,b)=>a+b,0)<20) return 'WRM';
+  return ['QTY','SPT','FRT','DST'][mults.indexOf(Math.max(...mults))];
+}
+
+function computePredictions(sessions) {
+  const modeElo={QTY:500,SPT:500,FRT:500,DST:500,WRM:500,INV:500};
+  const modeN={QTY:0,SPT:0,FRT:0,DST:0,WRM:0,INV:0};
+  const Kf=n=>n<=5?40:n<=20?20:10;
+  return [...sessions].sort((a,b)=>a.t-b.t).map(obs=>{
+    const mode=assignMode(obs.config_vector);
+    if(!mode) return null;
+    const elo=modeElo[mode];
+    const R=obs.signals?.r_bot??520;
+    const E=1/(1+Math.pow(10,(R-elo)/400));
+    const S=obs.outcome?.rank_pct??0.5;
+    modeElo[mode]=elo+Kf(modeN[mode]+1)*(S-E);
+    modeN[mode]++;
+    return {id:obs.session_id,mode,predicted:parseFloat(E.toFixed(3)),actual:S,delta:parseFloat((S-E).toFixed(3))};
+  }).filter(Boolean);
+}
+
+function renderSessions(sessions) {
+  const el = document.getElementById('sessions-content');
+  if (!sessions.length) { el.innerHTML = '<div class="loading">No sessions yet</div>'; return; }
+  const preds = computePredictions(sessions);
+  const predMap = Object.fromEntries(preds.map(p=>[p.id,p]));
+  el.innerHTML = [...sessions].reverse().map((s,i) => {
+    const n = sessions.length - i;
+    const mode = assignMode(s.config_vector);
+    const p = predMap[s.session_id];
+    const delta = p ? (s.outcome?.rank_pct - p.predicted) : null;
+    const deltaStr = delta==null ? '—'
+      : delta>=0 ? `<span style="color:#15803d">+${(delta*100).toFixed(0)}%</span>`
+      : `<span style="color:#dc2626">${(delta*100).toFixed(0)}%</span>`;
+    const dt = new Date(s.t*1000).toLocaleDateString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    const outcome = s.outcome?.rank_pct;
+    const oc = outcome>=0.65?'#15803d':outcome>=0.4?'#888':'#dc2626';
+    const flags = [
+      (isAdmin && s.silent_inv) ? '<span style="color:#0891b2;font-weight:700">SILENT_INV</span>' : '',
+      (isAdmin && !s.student_id_confirmed) ? '<span style="color:#d97706">name-hash</span>' : '',
+      (isAdmin && s.compiler_generated) ? '<span style="color:#15803d">compiler</span>' : '',
+    ].filter(Boolean).join(' · ');
+    const cls = s.silent_inv ? ' sess-inv' : '';
+    return `<div class="sess-row${cls}" title="session_id: ${s.session_id}">
+      <span style="color:#bbb">${n}</span>
+      <span style="color:${MODE_COLORS[mode]||'#888'};font-weight:700">${mode||'?'}</span>
+      <span style="color:${oc}">${outcome!=null?(outcome*100).toFixed(0)+'%':'—'}</span>
+      <span>${deltaStr}</span>
+      <span style="font-size:8px;color:#888">${dt}${flags?' · '+flags:''}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Calibration scatter
+function renderCalibration(sessions) {
+  if (!sessions.length) return;
+  const preds = computePredictions(sessions);
+  if (!preds.length) return;
+  const mae=(preds.reduce((s,p)=>s+Math.abs(p.delta),0)/preds.length).toFixed(3);
+  const bias=(preds.reduce((s,p)=>s+p.delta,0)/preds.length).toFixed(3);
+  const n_over=preds.filter(p=>p.delta>0.10).length;
+  const n_under=preds.filter(p=>p.delta<-0.10).length;
+  const verdict=Math.abs(n_over-n_under)<=1?'CALIBRATED':n_over>n_under?'UNDERESTIMATES':'OVERESTIMATES';
+  const vc=verdict==='CALIBRATED'?'#15803d':'#dc2626';
+  document.getElementById('calib-stats').innerHTML=`
+    <div><div style="font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888">Sessions</div><div style="font-size:13px;font-weight:700;font-family:monospace">${preds.length}</div></div>
+    <div><div style="font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888">MAE</div><div style="font-size:13px;font-weight:700;font-family:monospace">${mae}</div></div>
+    <div><div style="font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888">Bias</div><div style="font-size:13px;font-weight:700;font-family:monospace;color:${parseFloat(bias)>=0?'#15803d':'#dc2626'}">${parseFloat(bias)>=0?'+':''}${bias}</div></div>
+    <div><div style="font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888">System</div><div style="font-size:10px;font-weight:700;color:${vc}">${verdict}</div></div>`;
+  const cv=document.getElementById('calib-canvas');
+  const W=cv.offsetWidth||260,H=240;
+  cv.setAttribute('width',W); cv.setAttribute('height',H);
+  const ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  const PAD=28,IW=W-PAD*2,IH=H-PAD*2;
+  [0,0.25,0.5,0.75,1].forEach(v=>{
+    ctx.strokeStyle='#f0f0f0';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(PAD+v*IW,PAD);ctx.lineTo(PAD+v*IW,PAD+IH);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(PAD,PAD+(1-v)*IH);ctx.lineTo(PAD+IW,PAD+(1-v)*IH);ctx.stroke();
+    ctx.fillStyle='#ccc';ctx.font='7px Arial';ctx.textAlign='center';
+    ctx.fillText((v*100|0)+'%',PAD+v*IW,PAD+IH+10);
+    if(v>0){ctx.textAlign='right';ctx.fillText((v*100|0)+'%',PAD-3,PAD+(1-v)*IH+3);}
+  });
+  ctx.fillStyle='rgba(0,0,0,0.04)';
+  ctx.beginPath();
+  ctx.moveTo(PAD,PAD+IH+0.10*IH);ctx.lineTo(PAD+IW,PAD+0.10*IH);ctx.lineTo(PAD+IW,PAD-0.10*IH);ctx.lineTo(PAD,PAD+IH-0.10*IH);
+  ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#000';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(PAD,PAD+IH);ctx.lineTo(PAD+IW,PAD);ctx.stroke();ctx.setLineDash([]);
+  preds.forEach(p=>{
+    const x=PAD+p.predicted*IW,y=PAD+(1-p.actual)*IH;
+    const r=3+Math.abs(p.delta)*7;
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle=(MODE_COLORS[p.mode]||'#888')+'bb';ctx.fill();
+    ctx.strokeStyle=MODE_COLORS[p.mode]||'#888';ctx.lineWidth=1;ctx.stroke();
+  });
+  ctx.fillStyle='#555';ctx.font='7px Arial';ctx.textAlign='center';
+  ctx.fillText('predicted rank_pct →',PAD+IW/2,H-2);
+  ctx.save();ctx.translate(10,PAD+IH/2);ctx.rotate(-Math.PI/2);ctx.fillText('actual rank_pct →',0,0);ctx.restore();
+}
+
+// ── Bayesian state pane
+function renderBayesian(state, comp) {
+  var el = document.getElementById('bayesian-content');
+  if (!state) { el.innerHTML = '<div class="loading">Select a student</div>'; return; }
+  var ms = computeModeScores(state);
+  var maxI = Math.max.apply(null, MODES.map(function(m) { return ms.scores[m] ? ms.scores[m].I : 0; }));
+  var rows = MODES.map(function(m) {
+    var d = state[m] || {};
+    var b = ms.scores[m] || {};
+    var isSel = (m === ms.selected);
+    var n = d.n || 0;
+    var mu = d.mu || d.elo || MU_PRIOR;
+    var tau = d.tau != null ? d.tau : (d.since_days != null ? d.since_days : 0);
+    var sigma = Math.round(Math.sqrt(b.sigma2 || SIGMA2_PRIOR));
+    var sigma_fwd = Math.round(Math.sqrt(b.sigma2_pred || SIGMA2_PRIOR));
+    var mu_fwd = Math.round(b.mu_pred || MU_PRIOR);
+    var I = b.I || 0;
+    var iBarW = Math.round((I / (maxI||1)) * 120);
+    var selBg = isSel ? 'background:#f5f5f5;border-left:3px solid ' + MODE_COLORS[m] + ';padding-left:5px' : '';
+    var muDir = mu_fwd < mu ? ' ↓' : mu_fwd > mu ? ' ↑' : '';
+    return '<div class="bay-row" style="grid-template-columns:1fr;' + selBg + '">' +
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">' +
+        '<span class="bay-mode-lbl" style="color:' + MODE_COLORS[m] + '">' + m + '</span>' +
+        (isSel ? '<span style="font-size:7px;font-weight:700;color:#15803d;letter-spacing:1px">SELECTED</span>' : '') +
+        (n===0 ? '<span style="font-size:7px;color:#bbb;font-style:italic">no sessions</span>' : '') +
+      '</div>' +
+      '<div class="bay-kv">' +
+        '<span class="bay-k">μ</span><span class="bay-v">' + mu + '</span>' +
+        '<span class="bay-k">σ</span><span class="bay-v" style="color:' + (sigma>100?'#d97706':sigma>50?'#888':'#15803d') + '">±' + sigma + '</span>' +
+        '<span class="bay-k">τ</span><span class="bay-v">' + (tau > 0 ? tau + 'd' : 'today') + '</span>' +
+        '<span class="bay-k">n</span><span class="bay-v">' + n + '</span>' +
+      '</div>' +
+      '<div class="bay-kv" style="margin-top:2px;padding-top:2px;border-top:1px dotted #eee">' +
+        '<span class="bay-k">μₚᵣᵉᵈ</span><span class="bay-v">' + mu_fwd + muDir + '</span>' +
+        '<span class="bay-k">σₚᵣᵉᵈ</span><span class="bay-v" style="color:' + (sigma_fwd>100?'#d97706':sigma_fwd>50?'#888':'#15803d') + '">±' + sigma_fwd + '</span>' +
+      '</div>' +
+      '<div style="margin-top:4px;display:flex;align-items:center;gap:4px">' +
+        '<span style="font-size:7px;font-weight:700;letter-spacing:.5px;color:#999;min-width:28px">I(d)</span>' +
+        '<div style="height:6px;background:' + (isSel?MODE_COLORS[m]:'#e0e0e0') + ';width:' + iBarW + 'px;border-radius:2px;flex-shrink:0"></div>' +
+        '<span style="font-family:monospace;font-size:9px;font-weight:' + (isSel?'700':'400') + ';color:' + (isSel?MODE_COLORS[m]:'#555') + '">' + I.toFixed(4) + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  var selMode = ms.selected;
+  var selI = ms.scores[selMode] ? ms.scores[selMode].I : 0;
+  var gameId = (comp && comp.game_id) ? comp.game_id.toUpperCase() : 'CONSTELLATION';
+  el.innerHTML =
+    '<div class="bay-section">' +
+      '<div class="bay-hd">Selection: argmax I(d) = ½ log(1 + σ²ₚᵣᵉᵈ/R) — Game: ' + gameId + '</div>' +
+      '<div style="font-size:8px;color:#888;padding:0 0 8px;line-height:1.7">' +
+        'Selected <strong style="color:' + (MODE_COLORS[selMode]||'#000') + '">' + selMode + '</strong> with I=' + selI.toFixed(4) + '. ' +
+        'σₚᵣᵉᵈ accounts for forgetting since last session (λ=1/30d ASSERTED). ' +
+        'Higher σₚᵣᵉᵈ = more uncertain = more to learn.' +
+      '</div>' +
+      rows +
+    '</div>' +
+    '<div class="bay-section">' +
+      '<div class="bay-hd">Posterior Parameters [ASSERTED — Phase 1]</div>' +
+      '<div style="font-size:8px;color:#888;line-height:1.9;padding-top:4px">' +
+        'σ²₀ = 22500 (σ₀=150 Elo prior) · λ = 1/30 d⁻¹ · R = 3600 (σ₀bs=60 Elo)<br>' +
+        '<em>Phase 2: σ² stored per session. Phase 3: λ fitted from return residuals.</em>' +
+      '</div>' +
+    '</div>';
+}
+
+// ── Parameter registry pane
+function renderParams() {
+  var el = document.getElementById('params-content');
+  var PARAMS = [
+    { group: 'Elo Model', items: [
+      { name: 'K_high',      val: '40',           status: 'ASSERTED', refute: 'Replace with Kalman gain K=σ²/(σ²+R) when σ² stored per session (Phase 2)' },
+      { name: 'K_mid',       val: '20',           status: 'ASSERTED', refute: 'Same — both dissolve in Phase 2 when Kalman update is live' },
+      { name: 'K_low',       val: '10',           status: 'ASSERTED', refute: 'Same — both dissolve in Phase 2 when Kalman update is live' },
+      { name: 'elo_scale',   val: '400',          status: 'ASSERTED', refute: 'Fit from logistic regression on outcome vs Elo delta when N≥50 students with 20+ sessions' },
+      { name: 'r_bot',       val: '520',          status: 'ASSERTED', refute: 'Measure actual bot win rate vs student Elo distribution; refutes when measured rate deviates >5% from expected' },
+    ]},
+    { group: 'Forgetting Model (λ, Ornstein-Uhlenbeck)', items: [
+      { name: 'lambda_0',     val: '1/30 d⁻¹', status: 'ASSERTED', refute: 'Fit from return-session residuals when N≥10 students with 5+ return events per mode. Expected toward 1/45–1/60d (game skill decays slower than verbal memory)' },
+      { name: 'SIGMA2_PRIOR', val: '22500 (σ₀=150)', status: 'ASSERTED', refute: 'Measure spread of first-session outcomes; refutes if std(rank_pct, first sessions) implies different σ₀ by >20%' },
+      { name: 'R_OBS',        val: '3600 (σ=60)',      status: 'ASSERTED', refute: 'Fit from variance of repeated sessions at same Elo level. Refutes when N≥30 repeated-conditions pairs exist' },
+    ]},
+    { group: 'ZPD / Difficulty', items: [
+      { name: 'zpd_coeff',        val: '0.85', status: 'ASSERTED', refute: 'Fit from engagement vs difficulty curve. Refutes when MAE of rank_pct vs expected drops <0.05 with a different coefficient' },
+      { name: 'forgetting_tau_d', val: '14d',  status: 'ASSERTED', refute: 'Legacy field for zpd_target only. Superseded by λ in the OU forgetting model' },
+    ]},
+    { group: 'Mode Selection (Legacy Heuristic)', items: [
+      { name: 'w_deficit',   val: '0.50', status: 'ASSERTED', refute: 'Superseded by argmax I(d). Preserved for audit. Removed in Phase 3' },
+      { name: 'w_staleness', val: '0.30', status: 'ASSERTED', refute: 'Superseded by σ² forgetting in I(d). Same removal timeline' },
+      { name: 'w_gap',       val: '0.20', status: 'ASSERTED', refute: 'Superseded by BT gap inflating σ² (Phase 2). Same removal timeline' },
+    ]},
+    { group: 'Game Registry', items: [
+      { name: 'Constellation', val: 'AVAILABLE', status: 'MEASURED', refute: 'N/A — live. Adapter: compiler.js. Dimensions: QTY/SPT/FRT/DST/WRM/INV' },
+      { name: 'GOLAD',         val: 'PENDING',   status: 'ASSERTED', refute: 'Enable when game server writes to shared ledger. Dimensions: SIM, ADP' },
+      { name: 'Geobridge',     val: 'PENDING',   status: 'ASSERTED', refute: 'Enable when game server writes to shared ledger. Dimensions: COM, OPP, KNW' },
+      { name: 'C4D',           val: 'PENDING',   status: 'ASSERTED', refute: 'Enable when game server writes to shared ledger. Dimensions: TOP' },
+    ]},
+    { group: 'Cross-Game Transfer Matrix', items: [
+      { name: 'transfer_matrix', val: 'ALL ASSERTED', status: 'ASSERTED', refute: 'Compute Pearson r per (dimension, game pair) when N≥15 students with 5+ sessions in both games. CI: Fisher z ± 1.96/√(n-3). Status: CORROBORATED when |r|>0.4 and p<0.05' },
+      { name: 'alpha_transfer',  val: '0.001',         status: 'ASSERTED', refute: 'Scale gap² → σ² bonus. Dormant until BT bridge live (Phase 2). Fit from cross-channel residuals' },
+    ]},
+  ];
+  el.innerHTML = PARAMS.map(function(g) {
+    var items = g.items.map(function(p) {
+      var sc = p.status === 'MEASURED' ? 'ps-measured' : p.status === 'CORROBORATED' ? 'ps-corroborated' : 'ps-asserted';
+      return '<div class="param-row">' +
+        '<div><span class="param-name">' + p.name + '</span> ' +
+        '<span class="param-val">' + p.val + '</span> ' +
+        '<span class="param-status ' + sc + '">' + p.status + '</span></div>' +
+        '<div class="param-refute">Refutes when: ' + p.refute + '</div>' +
+      '</div>';
+    }).join('');
+    return '<div class="param-group"><div class="param-ghd">' + g.group + '</div>' + items + '</div>';
+  }).join('');
+}
+
+// ── Tab switching
+function setTab(name, el) {
+  document.querySelectorAll('.t-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  ['compiler','sessions','calibration','actions','layer0','bayesian','params'].forEach(function(n){
+    document.getElementById('pane-'+n).style.display = n===name ? '' : 'none';
+  });
+  if (name === 'layer0' && document.getElementById('layer0-feed').querySelector('.loading')) loadLayer0();
+  if (name === 'params') renderParams();
+}
+
+// ── Admin / student toggle
+function toggleAdmin() {
+  isAdmin = !isAdmin;
+  const btn = document.getElementById('admin-toggle-btn');
+  btn.textContent = isAdmin ? 'ADMIN VIEW' : 'STUDENT VIEW';
+  btn.classList.toggle('on', isAdmin);
+  // Swap tab visibility
+  document.getElementById('tab-calibration').style.display = isAdmin ? 'none' : '';
+  document.getElementById('tab-actions').style.display     = isAdmin ? '' : 'none';
+  document.getElementById('tab-layer0').style.display      = isAdmin ? '' : 'none';
+  // Bayesian and Parameters tabs: visible in both modes
+  // If calibration was active and switched to admin, jump to compiler
+  const activeTab = document.querySelector('.t-btn.active');
+  if (isAdmin && activeTab && activeTab.id === 'tab-calibration') {
+    setTab('compiler', document.querySelector('.t-btn'));
+  }
+  // If actions/layer0 was active and switched to student, jump to compiler
+  if (!isAdmin && activeTab && (activeTab.id === 'tab-actions' || activeTab.id === 'tab-layer0')) {
+    setTab('compiler', document.querySelector('.t-btn'));
+  }
+  if (currentCompiler) renderCompiler(currentCompiler);
+  if (currentSessions.length) renderSessions(currentSessions);
+}
+
+// ── Push compiler to room
+async function pushCompilerToRoom() {
+  if (!currentStudent || !currentCompiler) return;
+  const roomId = document.getElementById('push-room-id').value.trim();
+  const result = document.getElementById('push-result');
+  if (!roomId) { result.textContent = 'Enter a room ID.'; return; }
+  result.textContent = 'Applying…';
+  try {
+    const r = await fetch(`/api/rooms/${encodeURIComponent(roomId)}/apply-compiler`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentId: currentStudent })
+    });
+    const data = await r.json();
+    if (!r.ok) { result.style.color='#dc2626'; result.textContent = data.error; return; }
+    result.style.color = '#15803d';
+    result.textContent = `Applied: mode=${data.mode} zone=${data.zone} bot=${data.bot_profile} map=${data.map_filename||'none'}`;
+  } catch(err) { result.style.color='#dc2626'; result.textContent = err.message; }
+}
+
+// ── Ledger health check
+async function checkHealth() {
+  const badge = document.getElementById('health-badge');
+  const result = document.getElementById('health-result');
+  badge.textContent = '…';
+  try {
+    const h = await apiFetch('/api/ledger/health');
+    const ok = h.invalid === 0;
+    badge.textContent = ok ? `HEALTHY · ${h.valid} records` : `${h.invalid} CORRUPTED`;
+    badge.style.borderColor = ok ? '#15803d' : '#dc2626';
+    badge.style.color = ok ? '#15803d' : '#dc2626';
+    if (result) result.innerHTML = h.files.map(f =>
+      `<div style="font-family:'Courier New',monospace;margin-bottom:3px">
+        <span style="color:${f.invalid>0?'#dc2626':'#15803d'}">${f.invalid>0?'✗':'✓'}</span>
+        ${f.file}: ${f.valid} valid${f.invalid?' · <span style="color:#dc2626">'+f.invalid+' corrupted</span>':''}
+      </div>`
+    ).join('') + (h.files.length===0?'<div style="color:#888;font-style:italic">No .jsonl files yet.</div>':'');
+  } catch(err) {
+    badge.textContent = 'OFFLINE';
+    badge.style.borderColor = '#dc2626';
+    badge.style.color = '#dc2626';
+    if (result) result.textContent = err.message;
+  }
+}
+
+// ── Merge students
+async function mergeStudents() {
+  const primary = document.getElementById('merge-primary').value.trim();
+  const secondary = document.getElementById('merge-secondary').value.trim();
+  const resultEl = document.getElementById('merge-result');
+  if (!primary || !secondary) { resultEl.textContent = 'Both fields required.'; return; }
+  if (!confirm(`Merge "${secondary}" → "${primary}"?\n\nThis cannot be undone (original records remain).`)) return;
+  try {
+    const r = await fetch('/api/ledger/students/merge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ primary, secondary })
+    });
+    const data = await r.json();
+    if (!r.ok) { resultEl.style.color='#dc2626'; resultEl.textContent = data.error; return; }
+    resultEl.style.color='#15803d';
+    resultEl.textContent = `Merged. ${data.alias_count} alias(es) active. Refreshing…`;
+    document.getElementById('merge-primary').value = '';
+    document.getElementById('merge-secondary').value = '';
+    setTimeout(refresh, 800);
+  } catch(err) { resultEl.style.color='#dc2626'; resultEl.textContent = err.message; }
+}
+
+// ── Layer 0 raw feed
+async function loadLayer0() {
+  const feed = document.getElementById('layer0-feed');
+  feed.innerHTML = '<div class="loading">Loading Layer 0…</div>';
+  try {
+    const data = await apiFetch('/api/ledger/raw?limit=100');
+    if (!data.length) { feed.innerHTML = '<div class="loading">No records yet.</div>'; return; }
+    feed.innerHTML = data.map(r => {
+      const dt = r.ts ? new Date(r.ts*1000).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+      const name = r.student_name || (r.student_id||'').replace('name:','').slice(0,14) || '?';
+      const vec = Array.isArray(r.config_vector) ? r.config_vector.join(',') : '';
+      const outC = r.outcome==='win'?'#15803d':r.outcome==='loss'?'#dc2626':'#888';
+      return `<div class="raw-row">
+        <div class="raw-hash">${(r.hash||'').slice(0,8)} · ${dt}</div>
+        <div class="raw-name">${name}</div>
+        ${vec?`<div class="raw-vec">[${vec}]</div>`:''}
+        ${r.outcome?`<span class="raw-out" style="color:${outC};border-color:${outC}">${r.outcome.toUpperCase()}</span>`:''}
+      </div>`;
+    }).join('');
+  } catch(err) {
+    feed.innerHTML = `<div class="err-box">${err.message}</div>`;
+  }
+}
+
+// ── Init
+document.addEventListener('DOMContentLoaded', refresh);
+</script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Constellation — Hub</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+
+/* ── PUSH MODE (default): topbar in flow, iframe fills rest ── */
+body{display:flex;flex-direction:column;height:100vh;overflow:hidden;font-family:Arial,sans-serif}
+.topbar{flex-shrink:0;position:relative;z-index:100}
+#frame-wrap{flex:1;min-height:0;position:relative}
+#main-frame{width:100%;height:100%;border:none;display:block}
+
+/* ── OVERLAY MODE: topbar fixed, iframe is full 100vh ── */
+body.overlay .topbar{position:fixed;top:0;left:0;right:0}
+body.overlay #frame-wrap{height:100vh;flex:none}
+
+/* ── TOPBAR ── */
+.topbar{
+  height:38px;background:#fff;border-bottom:2px solid #000;
+  display:flex;align-items:center;padding:0 14px;gap:0;
+}
+.tb-logo{
+  font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;
+  color:#000;margin-right:18px;white-space:nowrap;user-select:none;
+}
+.tb-tabs{display:flex;height:100%}
+.tb-tab{
+  height:100%;padding:0 13px;font-size:8px;font-weight:700;letter-spacing:2px;
+  text-transform:uppercase;background:none;border:none;
+  border-bottom:2px solid transparent;margin-bottom:-2px;
+  cursor:pointer;color:#888;font-family:Arial,sans-serif;
+}
+.tb-tab:hover{color:#000}
+.tb-tab.active{color:#000;border-bottom-color:#000}
+.tb-sep{width:1px;height:18px;background:#ddd;margin:0 8px;align-self:center}
+.tb-spacer{flex:1}
+.tb-right{display:flex;align-items:center;gap:8px}
+.tb-badge{
+  font-size:7px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  padding:2px 7px;border:1px solid;
+}
+.tb-live{border-color:#15803d;color:#15803d;background:#f0fdf4}
+.tb-offline{border-color:#dc2626;color:#dc2626;background:#fff0f0}
+.tb-warn{border-color:#d97706;color:#d97706;background:#fef3c7}
+.tb-btn{
+  font-size:7px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  padding:2px 8px;border:1px solid #ccc;background:#fff;cursor:pointer;
+  font-family:Arial,sans-serif;color:#555;
+}
+.tb-btn:hover{border-color:#000;color:#000}
+.tb-overlay-on{border-color:#000;color:#000;background:#f5f5f5}
+.tb-count{font-size:8px;color:#aaa;letter-spacing:1px}
+</style>
+</head>
+<body>
+
+<div class="topbar" id="topbar">
+  <span class="tb-logo">◈ Constellation</span>
+  <div class="tb-tabs" id="tab-bar">
+    <button class="tb-tab active" onclick="go('/admin',this)">Admin</button>
+    <button class="tb-tab" onclick="go('/observatory',this)">Observatory</button>
+    <button class="tb-tab" onclick="go('/ledger',this)">Ledger</button>
+    <button class="tb-tab" onclick="go('/student-dossier',this)">Dossier</button>
+  </div>
+  <div class="tb-sep"></div>
+  <div class="tb-spacer"></div>
+  <div class="tb-right">
+    <span id="live-badge" class="tb-badge tb-warn">…</span>
+    <span id="stu-count" class="tb-count"></span>
+    <button class="tb-btn" id="overlay-btn" onclick="toggleMode()" title="Push: topbar shifts content down. Overlay: topbar floats over content.">PUSH ↕</button>
+  </div>
+</div>
+
+<div id="frame-wrap">
+  <iframe id="main-frame" src="/admin" title="Constellation panel"></iframe>
+</div>
+
+<script>
+let overlayMode = false;
+
+function go(url, btn) {
+  document.querySelectorAll('.tb-tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.getElementById('main-frame').src = url;
+}
+
+function toggleMode() {
+  overlayMode = !overlayMode;
+  document.body.classList.toggle('overlay', overlayMode);
+  const btn = document.getElementById('overlay-btn');
+  btn.textContent = overlayMode ? 'OVERLAY ◈' : 'PUSH ↕';
+  btn.classList.toggle('tb-overlay-on', overlayMode);
+}
+
+// Ping /api/ledger/students to show live status + student count
+async function pingServer() {
+  try {
+    const r = await fetch('/api/ledger/students');
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    const badge = document.getElementById('live-badge');
+    badge.textContent = 'LIVE';
+    badge.className = 'tb-badge tb-live';
+    document.getElementById('stu-count').textContent = data.length + ' students';
+  } catch {
+    const badge = document.getElementById('live-badge');
+    badge.textContent = 'OFFLINE';
+    badge.className = 'tb-badge tb-offline';
+  }
+}
+
+pingServer();
+setInterval(pingServer, 30000);
+</script>
+</body>
+</html>

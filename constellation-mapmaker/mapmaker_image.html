@@ -1,0 +1,3055 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Map Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .section {
+            background: #2a2a2a;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #444;
+        }
+
+        .section h2 {
+            margin-bottom: 15px;
+            font-size: 18px;
+            color: #4af;
+        }
+
+        input,
+        textarea,
+        select,
+        button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            background: #333;
+            border: 1px solid #555;
+            color: #fff;
+            font-family: monospace;
+        }
+
+        button {
+            cursor: pointer;
+            background: #4af;
+            color: #000;
+            font-weight: bold;
+            border: none;
+        }
+
+        button:hover {
+            background: #6cf;
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        .api-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .output {
+            background: #1a1a1a;
+            padding: 15px;
+            border: 1px solid #555;
+            font-size: 12px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            background: #333;
+            border-left: 3px solid #4af;
+        }
+
+        .error {
+            border-left-color: #f44;
+        }
+
+        .success {
+            border-left-color: #4f4;
+        }
+
+        .preview {
+            background: #000;
+            height: 300px;
+            border: 1px solid #555;
+            position: relative;
+            margin: 10px 0;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+        }
+
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-size: 14px;
+        }
+
+        .info {
+            font-size: 12px;
+            color: #888;
+            margin: 5px 0;
+        }
+
+        .counter {
+            text-align: right;
+            font-size: 11px;
+            color: #888;
+            margin-top: -5px;
+        }
+
+        .api-status {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .api-indicator {
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+
+        .api-active {
+            background: #4f4;
+            color: #000;
+        }
+
+        .api-inactive {
+            background: #555;
+            color: #888;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #333;
+            border-top: 4px solid #4af;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #processingLoader {
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>AI Strategic Map Generator</h1>
+
+        <div class="section">
+            <h2>API Configuration</h2>
+            <div class="api-inputs">
+                <div>
+                    <label>Groq API Key:</label>
+                    <input type="password" id="groqKey" placeholder="gsk_..." disabled>
+                    <div class="info" style="color: #f44;">⚠️ Unavailable in browsers (CORS restriction)</div>
+                </div>
+                <div>
+                    <label>Google Gemini API Key:</label>
+                    <input type="password" id="geminiKey" placeholder="AIza..."
+                        value="AIzaSyCsTdNoSmc0BPKXEQBmT6AV5hMxoUz-EY0">
+                    <div class="info">Get your free key at: aistudio.google.com/app/apikey</div>
+                </div>
+            </div>
+            <div class="api-status">
+                <div class="api-indicator api-inactive" id="groqStatus">Groq: Unavailable</div>
+                <div class="api-indicator api-inactive" id="geminiStatus">Gemini: Not configured</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Map Generation</h2>
+
+            <label>Map Title:</label>
+            <input type="text" id="mapTitle" placeholder="My Strategic Map" value="Untitled Map">
+
+            <label>Map Dimensions:</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <input type="number" id="dimX" value="320" placeholder="Width">
+                <input type="number" id="dimY" value="180" placeholder="Height">
+            </div>
+
+            <label>AI Model:</label>
+            <select id="modelSelect">
+                <option value="">Loading models...</option>
+            </select>
+            <div class="info">Available Gemini models will be loaded automatically</div>
+
+            <label>Strategy Description (min 100 chars for quality control):</label>
+            <textarea id="prompt"
+                placeholder="Describe the strategic map layout you want. Be specific about placement, connections, and strategic elements. Example: 'Create a symmetric battlefield with a central contested area containing type 3 victory dots. Place type 4 explosive dots at strategic choke points. Include long connecting lines for high-value paths and cluster normal dots around key positions.'">First analyze the image, then create the perfect strategy derived most logically seamlessly from it.</textarea>
+            <div class="counter" id="charCount">0 / 100 minimum</div>
+
+            <label>Upload Reference Image (optional):</label>
+            <input type="file" id="imageUpload" accept="image/*">
+            <div class="info">Image will be processed using advanced reconstruction algorithms</div>
+
+            <label>Image Processing Algorithm:</label>
+            <select id="algorithmSelect">
+                <option value="sobel">Sobel Edge Detection (Basic)</option>
+                <option value="canny">Canny Edge Detection (Advanced)</option>
+                <option value="harris">Harris Corner Detection</option>
+                <option value="sift">SIFT-like Feature Points</option>
+                <option value="delaunay">Delaunay Triangulation</option>
+                <option value="voronoi">Voronoi Diagram</option>
+                <option value="watershed">Watershed Segmentation</option>
+                <option value="contour">Contour Tracing</option>
+                <option value="skeleton">Morphological Skeleton</option>
+                <option value="stippling">Weighted Stippling</option>
+                <option value="halftone">Halftone Dots</option>
+                <option value="poisson">Poisson Disk Sampling</option>
+            </select>
+            <div class="info">Each algorithm creates different dot patterns and connection strategies</div>
+
+            <div id="imagePreview" style="display:none; margin: 10px 0;">
+                <label>Original Image:</label>
+                <canvas id="originalCanvas" style="max-width: 300px; border: 1px solid #555;"></canvas>
+                <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+                    <label style="margin: 0;">Processed Result:</label>
+                    <button id="copyProcessedBtn" style="display: none; width: auto; padding: 5px 15px; font-size: 11px;" title="Copy processed image data as JSON">Copy JSON</button>
+                </div>
+                <div style="position: relative;">
+                    <canvas id="processedCanvas" style="max-width: 300px; border: 1px solid #555;"></canvas>
+                    <div id="processingLoader" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); padding: 20px; border-radius: 5px; text-align: center;">
+                        <div class="spinner"></div>
+                        <div id="processingStatus" style="margin-top: 10px; color: #4af;">Processing...</div>
+                    </div>
+                </div>
+                <div id="algorithmInfo" class="info" style="margin-top: 10px;"></div>
+            </div>
+
+            <button id="generateBtn">Generate Map</button>
+            <div id="status"></div>
+        </div>
+
+        <div class="section">
+            <h2>Preview</h2>
+            <canvas id="preview" class="preview" width="640" height="360"></canvas>
+        </div>
+
+        <div class="section">
+            <h2>Generated JSON</h2>
+            <div class="output" id="output">Map data will appear here...</div>
+            <button id="copyBtn" style="display:none;">Copy to Clipboard</button>
+            <button id="downloadBtn" style="display:none;">Download JSON</button>
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "@google/generative-ai": "https://esm.run/@google/generative-ai"
+            }
+        }
+    </script>
+    <script type="module">
+        import { GoogleGenerativeAI } from "@google/generative-ai";
+
+        const state = {
+            geminiKey: '',
+            geminiCount: 0,
+            geminiResetTime: Date.now() + 60000,
+            generatedMap: null,
+            genAI: null
+        };
+
+        // Initialize with default key if present
+        window.addEventListener('load', () => {
+            console.log('Page loaded, initializing...');
+            const keyInput = document.getElementById('geminiKey');
+            console.log('Key input found:', keyInput);
+            console.log('Key value:', keyInput ? keyInput.value : 'null');
+            
+            if (keyInput && keyInput.value) {
+                console.log('Initializing Gemini with key');
+                state.geminiKey = keyInput.value;
+                state.genAI = new GoogleGenerativeAI(state.geminiKey);
+                document.getElementById('geminiStatus').textContent = 'Gemini: Ready';
+                document.getElementById('geminiStatus').className = 'api-indicator api-active';
+                loadAvailableModels();
+            } else {
+                console.log('No API key found, skipping initialization');
+            }
+        });
+
+        async function loadAvailableModels() {
+            console.log('loadAvailableModels called');
+            if (!state.genAI) {
+                console.log('No genAI instance, returning');
+                return;
+            }
+
+            const modelSelect = document.getElementById('modelSelect');
+            console.log('Model select element:', modelSelect);
+            
+            if (!modelSelect) {
+                console.error('Model select element not found');
+                return;
+            }
+            
+            modelSelect.innerHTML = '<option value="">Loading models...</option>';
+            console.log('Set loading message');
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${state.geminiKey}`);
+                const data = await response.json();
+
+                modelSelect.innerHTML = '<option value="">Select a model...</option>';
+
+                if (data.models) {
+                    const textModels = data.models.filter(model =>
+                        model.supportedGenerationMethods &&
+                        model.supportedGenerationMethods.includes('generateContent')
+                    );
+
+                    // Sort models to prioritize nano and free-tier friendly ones
+                    const freeTierPriority = ['gemini-1.5-flash', 'gemini-1.5-flash-8b', 'gemini-pro', 'gemini-1.5-pro'];
+                    textModels.sort((a, b) => {
+                        const aName = a.name.split('/').pop();
+                        const bName = b.name.split('/').pop();
+                        const aPriority = freeTierPriority.indexOf(aName);
+                        const bPriority = freeTierPriority.indexOf(bName);
+
+                        if (aPriority !== -1 && bPriority !== -1) return aPriority - bPriority;
+                        if (aPriority !== -1) return -1;
+                        if (bPriority !== -1) return 1;
+                        return 0;
+                    });
+
+                    textModels.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.name;
+                        const modelName = model.name.split('/').pop();
+                        const isFreeTier = freeTierPriority.includes(modelName);
+                        option.textContent = `${model.displayName || modelName}${isFreeTier ? ' (Free Tier)' : ''} - ${model.description || 'No description'}`;
+                        modelSelect.appendChild(option);
+                    });
+
+                    // Auto-select the first free-tier model
+                    const preferredModel = textModels.find(model =>
+                        freeTierPriority.includes(model.name.split('/').pop())
+                    );
+                    if (preferredModel) {
+                        modelSelect.value = preferredModel.name;
+                    } else if (textModels.length > 0) {
+                        modelSelect.value = textModels[0].name;
+                    }
+                } else {
+                    modelSelect.innerHTML = '<option value="">No models available</option>';
+                }
+            } catch (error) {
+                console.error('Error loading models:', error);
+                modelSelect.innerHTML = '<option value="">Error loading models</option>';
+
+                // Fallback to common model names
+                const fallbackModels = [
+                    'models/gemini-pro',
+                    'models/gemini-1.5-flash',
+                    'models/gemini-1.5-pro',
+                    'gemini-pro',
+                    'gemini-1.5-flash',
+                    'gemini-1.5-pro'
+                ];
+
+                fallbackModels.forEach(modelName => {
+                    const option = document.createElement('option');
+                    option.value = modelName;
+                    option.textContent = modelName;
+                    modelSelect.appendChild(option);
+                });
+
+                modelSelect.value = 'models/gemini-pro';
+            }
+        }
+
+        const SYSTEM_PROMPT = `You are a strategic map generator for a competitive connection game. Generate maps in JSON format.
+
+GAME RULES:
+- Players claim dots (stars) and draw lines between them
+- Scoring: points = (number of connections) × (line length)
+- Dot type 1: Normal dot (default)
+- Dot type 2: Special marker dot
+- Dot type 3: Victory condition - connect N type-3 dots to win (no line reuse)
+- Dot type 4: Explosive - connect N type-4 dots to destroy those connections (lines can be reused)
+
+IMAGE ANALYSIS INSTRUCTIONS (when image provided):
+The image has been processed using advanced computer vision algorithms to extract strategic patterns:
+
+AVAILABLE ALGORITHMS:
+- Sobel/Canny Edge Detection: Extracts boundaries and contours for tactical positioning
+- Harris Corner Detection: Identifies key strategic points and decision nodes
+- SIFT Feature Points: Finds distinctive landmarks for navigation and control
+- Delaunay Triangulation: Creates natural connection networks from image sampling
+- Voronoi Diagrams: Establishes territorial control zones and influence areas
+- Watershed Segmentation: Identifies natural regions and strategic divisions
+- Contour Tracing: Follows paths and boundaries for movement corridors
+- Morphological Skeleton: Extracts the core structure and main pathways
+- Weighted Stippling: Distributes dots based on image intensity and importance
+- Halftone Dots: Creates regular patterns with varying strategic density
+- Poisson Disk Sampling: Ensures optimal spacing for balanced gameplay
+
+STRATEGIC INTERPRETATION:
+1. CAREFULLY analyze the processed dot patterns and their connections
+2. Interpret algorithm-generated features as strategic elements:
+   - Dense clusters = contested areas or strategic objectives
+   - Sparse regions = safe zones or difficult terrain
+   - Connection patterns = movement corridors and tactical routes
+   - Feature points = key strategic locations for special dots
+3. Preserve the algorithm's spatial relationships and connectivity
+4. Assign dot types based on strategic importance derived from processing
+5. Maintain the mathematical precision of the chosen algorithm
+
+DOT TYPE ASSIGNMENT FROM PROCESSED DATA:
+- Type 3 (Victory): High-weight/importance points from algorithm processing
+- Type 2 (Special): Medium-weight strategic locations
+- Type 4 (Explosive): Low-weight or isolated tactical disruption points
+- Type 1 (Normal): Standard connectivity and flow points
+
+CONNECTION STRATEGY:
+- Each dot should connect to 2-6 other dots (not random)
+- Prioritize connections that create strategic choices
+- Build multiple viable paths between key areas
+- Create natural choke points and decision nodes
+- Avoid purely random connections - every line serves strategic purpose
+- Form networks that reward both local tactics and global strategy
+
+FORMAT (strict JSON):
+{"author":"AI","dimensions":[width,height],"lines":[[dotIdx1,dotIdx2],...],"stars":[[x,y,1],...],"title":"Map Name"}
+
+CRITICAL RULES:
+- stars format: [x, y, type] - ALWAYS include type (1,2,3,or 4)
+- lines use 0-indexed positions (0 to stars.length-1)
+- Every connection must serve strategic purpose
+- Follow image analysis when provided
+- Create coherent strategic networks, not random clusters`;
+
+        document.getElementById('geminiKey').addEventListener('input', (e) => {
+            state.geminiKey = e.target.value;
+            if (state.geminiKey) {
+                state.genAI = new GoogleGenerativeAI(state.geminiKey);
+                document.getElementById('geminiStatus').textContent = 'Gemini: Ready';
+                document.getElementById('geminiStatus').className = 'api-indicator api-active';
+                loadAvailableModels();
+            } else {
+                document.getElementById('geminiStatus').textContent = 'Gemini: Not configured';
+                document.getElementById('geminiStatus').className = 'api-indicator api-inactive';
+                document.getElementById('modelSelect').innerHTML = '<option value="">Configure API key first</option>';
+            }
+        });
+
+        document.getElementById('prompt').addEventListener('input', (e) => {
+            const len = e.target.value.length;
+            document.getElementById('charCount').textContent = `${len} / 100 minimum`;
+            document.getElementById('charCount').style.color = len >= 100 ? '#4f4' : '#888';
+        });
+
+        document.getElementById('imageUpload').addEventListener('change', (e) => {
+            console.log('Image upload changed');
+            const file = e.target.files[0];
+            console.log('Selected file:', file);
+            if (file) {
+                console.log('Processing image...');
+                processImageToDots(file);
+            }
+        });
+
+        document.getElementById('algorithmSelect').addEventListener('change', (e) => {
+            const fileInput = document.getElementById('imageUpload');
+            const file = fileInput.files[0];
+            if (file) {
+                processImageToDots(file);
+            }
+        });
+
+        async function processImageToDots(file) {
+            console.log('processImageToDots called with file:', file);
+            
+            const preview = document.getElementById('imagePreview');
+            const originalCanvas = document.getElementById('originalCanvas');
+            const processedCanvas = document.getElementById('processedCanvas');
+            const processingLoader = document.getElementById('processingLoader');
+            const processingStatus = document.getElementById('processingStatus');
+            
+            console.log('Elements found:', {
+                preview: !!preview,
+                originalCanvas: !!originalCanvas,
+                processedCanvas: !!processedCanvas,
+                processingLoader: !!processingLoader
+            });
+            
+            if (!preview || !originalCanvas || !processedCanvas || !processingLoader) {
+                console.error('Missing required elements for image processing');
+                return;
+            }
+            
+            const originalCtx = originalCanvas.getContext('2d');
+            const processedCtx = processedCanvas.getContext('2d');
+            const algorithmSelect = document.getElementById('algorithmSelect');
+            const algorithmInfo = document.getElementById('algorithmInfo');
+
+            preview.style.display = 'block';
+            processingLoader.style.display = 'block';
+            processingStatus.textContent = 'Loading image...';
+            console.log('Preview display set to block, loader shown');
+
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = async () => {
+                    try {
+                        processingStatus.textContent = 'Preparing image...';
+                        
+                        // Calculate dimensions: small edge = 180, large edge proportional
+                        const aspectRatio = img.width / img.height;
+                        let targetWidth, targetHeight;
+                        
+                        if (img.width > img.height) {
+                            // Landscape: height is smaller, set to 180
+                            targetHeight = 180;
+                            targetWidth = Math.round(180 * aspectRatio);
+                        } else {
+                            // Portrait: width is smaller, set to 180
+                            targetWidth = 180;
+                            targetHeight = Math.round(180 / aspectRatio);
+                        }
+                        
+                        console.log(`Image: ${img.width}x${img.height}, Aspect: ${aspectRatio.toFixed(2)}, Target: ${targetWidth}x${targetHeight}`);
+                        
+                        // Calculate display size (for preview, max 300px)
+                        const scale = Math.min(300 / targetWidth, 300 / targetHeight);
+                        const displayWidth = targetWidth * scale;
+                        const displayHeight = targetHeight * scale;
+
+                        // Set canvases to actual target dimensions for processing
+                        originalCanvas.width = targetWidth;
+                        originalCanvas.height = targetHeight;
+                        processedCanvas.width = targetWidth;
+                        processedCanvas.height = targetHeight;
+
+                        // Draw original at target resolution
+                        originalCtx.drawImage(img, 0, 0, targetWidth, targetHeight);
+                        
+                        processingStatus.textContent = 'Extracting image data...';
+                        await new Promise(resolve => setTimeout(resolve, 100)); // Allow UI update
+
+                        // Get image data at target resolution
+                        const imageData = originalCtx.getImageData(0, 0, targetWidth, targetHeight);
+
+                        // Apply selected algorithm
+                        const algorithm = algorithmSelect.value;
+                        const algorithmName = getAlgorithmName(algorithm);
+                        processingStatus.textContent = `Running ${algorithmName}...`;
+                        await new Promise(resolve => setTimeout(resolve, 100)); // Allow UI update
+                        
+                        const result = await applyImageAlgorithmAsync(imageData, algorithm, targetWidth, targetHeight, processingStatus);
+
+                        processingStatus.textContent = 'Rendering results...';
+                        await new Promise(resolve => setTimeout(resolve, 100)); // Allow UI update
+
+                        // Clear processed canvas
+                        processedCtx.fillStyle = '#000';
+                        processedCtx.fillRect(0, 0, targetWidth, targetHeight);
+
+                        // Update dimension inputs to match image orientation
+                        document.getElementById('dimX').value = targetWidth;
+                        document.getElementById('dimY').value = targetHeight;
+                        
+                        // Store for later use (dots are already at target dimensions)
+                        processedCanvas.algorithmData = {
+                            dots: result.dots.map(dot => ({
+                                x: dot.x,
+                                y: dot.y,
+                                type: 1, // Always type 1 (regular stars)
+                                weight: dot.weight || 1
+                            })),
+                            connections: result.connections,
+                            algorithm: algorithm
+                        };
+
+                        // Draw visualization
+                        drawAlgorithmResult(processedCtx, result, targetWidth, targetHeight);
+
+                        // Update info and hide loader
+                        algorithmInfo.textContent = `${algorithmName}: ${result.dots.length} dots, ${result.connections.length} connections`;
+                        processingLoader.style.display = 'none';
+                        
+                        // Show copy button
+                        const copyProcessedBtn = document.getElementById('copyProcessedBtn');
+                        if (copyProcessedBtn) {
+                            copyProcessedBtn.style.display = 'inline-block';
+                        }
+                        
+                        showStatus(`${algorithmName}: ${result.dots.length} strategic dots, ${result.connections.length} connections`, 'success');
+                        resolve();
+                    } catch (error) {
+                        console.error('Error processing image:', error);
+                        processingStatus.textContent = 'Error processing image';
+                        setTimeout(() => {
+                            processingLoader.style.display = 'none';
+                        }, 2000);
+                        showStatus('Error processing image: ' + error.message, 'error');
+                        resolve();
+                    }
+                };
+                
+                img.onerror = () => {
+                    processingStatus.textContent = 'Error loading image';
+                    setTimeout(() => {
+                        processingLoader.style.display = 'none';
+                    }, 2000);
+                    showStatus('Error loading image file', 'error');
+                    resolve();
+                };
+                
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        function applyImageAlgorithm(imageData, algorithm, width, height) {
+            const data = imageData.data;
+            
+            // Convert to grayscale
+            const gray = new Array(width * height);
+            for (let i = 0; i < data.length; i += 4) {
+                const idx = i / 4;
+                gray[idx] = (data[i] + data[i + 1] + data[i + 2]) / 3;
+            }
+
+            try {
+                switch (algorithm) {
+                    case 'sobel': return applySobelEdgeDetection(gray, width, height);
+                    case 'canny': return applyCannyEdgeDetection(gray, width, height);
+                    case 'harris': return applyHarrisCornerDetection(gray, width, height);
+                    case 'sift': return applySIFTFeatureDetection(gray, width, height);
+                    case 'delaunay': return applyDelaunayTriangulation(gray, width, height);
+                    case 'voronoi': return applyVoronoiDiagram(gray, width, height);
+                    case 'watershed': return applyWatershedSegmentation(gray, width, height);
+                    case 'contour': return applyContourTracing(gray, width, height);
+                    case 'skeleton': return applyMorphologicalSkeleton(gray, width, height);
+                    case 'stippling': return applyWeightedStippling(gray, width, height);
+                    case 'halftone': return applyHalftoneDots(gray, width, height);
+                    case 'poisson': return applyPoissonDiskSampling(gray, width, height);
+                    default: return applySobelEdgeDetection(gray, width, height);
+                }
+            } catch (error) {
+                console.error(`Error in ${algorithm} algorithm:`, error);
+                // Fallback to simple grid-based algorithm
+                return createSimpleFallbackAlgorithm(gray, width, height);
+            }
+        }
+
+        async function applyImageAlgorithmAsync(imageData, algorithm, width, height, statusElement) {
+            const data = imageData.data;
+            
+            statusElement.textContent = 'Converting to grayscale...';
+            await new Promise(resolve => setTimeout(resolve, 50));
+            
+            // Convert to grayscale
+            const gray = new Array(width * height);
+            for (let i = 0; i < data.length; i += 4) {
+                const idx = i / 4;
+                gray[idx] = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                
+                // Update progress for large images
+                if (i % 10000 === 0) {
+                    const progress = Math.floor((i / data.length) * 100);
+                    statusElement.textContent = `Converting to grayscale... ${progress}%`;
+                    await new Promise(resolve => setTimeout(resolve, 1));
+                }
+            }
+
+            statusElement.textContent = `Applying ${getAlgorithmName(algorithm)}...`;
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            try {
+                let result;
+                switch (algorithm) {
+                    case 'sobel': 
+                        statusElement.textContent = 'Detecting edges...';
+                        result = applySobelEdgeDetection(gray, width, height);
+                        break;
+                    case 'canny': 
+                        statusElement.textContent = 'Advanced edge detection...';
+                        result = applyCannyEdgeDetection(gray, width, height);
+                        break;
+                    case 'harris': 
+                        statusElement.textContent = 'Finding corner features...';
+                        result = applyHarrisCornerDetection(gray, width, height);
+                        break;
+                    case 'sift': 
+                        statusElement.textContent = 'Extracting SIFT features...';
+                        result = applySIFTFeatureDetection(gray, width, height);
+                        break;
+                    case 'delaunay': 
+                        statusElement.textContent = 'Creating triangulation...';
+                        result = applyDelaunayTriangulation(gray, width, height);
+                        break;
+                    case 'voronoi': 
+                        statusElement.textContent = 'Generating Voronoi cells...';
+                        result = applyVoronoiDiagram(gray, width, height);
+                        break;
+                    case 'watershed': 
+                        statusElement.textContent = 'Watershed segmentation...';
+                        result = applyWatershedSegmentation(gray, width, height);
+                        break;
+                    case 'contour': 
+                        statusElement.textContent = 'Tracing contours...';
+                        result = applyContourTracing(gray, width, height);
+                        break;
+                    case 'skeleton': 
+                        statusElement.textContent = 'Extracting skeleton...';
+                        result = applyMorphologicalSkeleton(gray, width, height);
+                        break;
+                    case 'stippling': 
+                        statusElement.textContent = 'Weighted stippling...';
+                        result = applyWeightedStippling(gray, width, height);
+                        break;
+                    case 'halftone': 
+                        statusElement.textContent = 'Creating halftone pattern...';
+                        result = applyHalftoneDots(gray, width, height);
+                        break;
+                    case 'poisson': 
+                        statusElement.textContent = 'Poisson disk sampling...';
+                        result = applyPoissonDiskSampling(gray, width, height);
+                        break;
+                    default: 
+                        statusElement.textContent = 'Detecting edges...';
+                        result = applySobelEdgeDetection(gray, width, height);
+                }
+                
+                statusElement.textContent = 'Generating connections...';
+                await new Promise(resolve => setTimeout(resolve, 50));
+                
+                return result;
+            } catch (error) {
+                console.error(`Error in ${algorithm} algorithm:`, error);
+                statusElement.textContent = 'Using fallback algorithm...';
+                await new Promise(resolve => setTimeout(resolve, 50));
+                // Fallback to simple grid-based algorithm
+                return createSimpleFallbackAlgorithm(gray, width, height);
+            }
+        }
+
+        function createSimpleFallbackAlgorithm(gray, width, height) {
+            const dots = [];
+            const connections = [];
+            
+            // Create a simple grid of dots based on image intensity
+            const spacing = 8;
+            for (let y = spacing; y < height; y += spacing) {
+                for (let x = spacing; x < width; x += spacing) {
+                    const idx = y * width + x;
+                    const intensity = gray[idx];
+                    
+                    if (intensity < 200) { // Add dots in darker areas
+                        dots.push({ x, y, weight: (255 - intensity) / 255 });
+                    }
+                }
+            }
+            
+            // Connect nearby dots
+            for (let i = 0; i < dots.length; i++) {
+                for (let j = i + 1; j < dots.length; j++) {
+                    const dot1 = dots[i];
+                    const dot2 = dots[j];
+                    const distance = Math.sqrt(
+                        Math.pow(dot1.x - dot2.x, 2) + Math.pow(dot1.y - dot2.y, 2)
+                    );
+                    
+                    if (distance < spacing * 2) {
+                        connections.push([i, j]);
+                    }
+                }
+            }
+            
+            return { dots, connections };
+        }
+
+        function applySobelEdgeDetection(gray, width, height) {
+            const edges = new Array(width * height).fill(0);
+            const sobelX = [-1, 0, 1, -2, 0, 2, -1, 0, 1];
+            const sobelY = [-1, -2, -1, 0, 0, 0, 1, 2, 1];
+
+            // Find edge pixels
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    let gx = 0, gy = 0;
+                    for (let ky = -1; ky <= 1; ky++) {
+                        for (let kx = -1; kx <= 1; kx++) {
+                            const idx = (y + ky) * width + (x + kx);
+                            const kernelIdx = (ky + 1) * 3 + (kx + 1);
+                            gx += gray[idx] * sobelX[kernelIdx];
+                            gy += gray[idx] * sobelY[kernelIdx];
+                        }
+                    }
+                    const magnitude = Math.sqrt(gx * gx + gy * gy);
+                    edges[y * width + x] = magnitude > 50 ? magnitude : 0;
+                }
+            }
+
+            // Extract dots from edges with higher density
+            const dots = [];
+            const dotSpacing = 4; // Smaller spacing for more dots
+            
+            for (let y = 0; y < height; y += dotSpacing) {
+                for (let x = 0; x < width; x += dotSpacing) {
+                    const idx = y * width + x;
+                    if (edges[idx] > 0) {
+                        let maxEdge = 0;
+                        let bestX = x, bestY = y;
+
+                        for (let dy = -dotSpacing; dy <= dotSpacing; dy++) {
+                            for (let dx = -dotSpacing; dx <= dotSpacing; dx++) {
+                                const nx = x + dx, ny = y + dy;
+                                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                    const nidx = ny * width + nx;
+                                    if (edges[nidx] > maxEdge) {
+                                        maxEdge = edges[nidx];
+                                        bestX = nx;
+                                        bestY = ny;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (maxEdge > 80) {
+                            dots.push({ x: bestX, y: bestY, strength: maxEdge });
+                        }
+                    }
+                }
+            }
+
+            // Generate many more connections
+            const connections = generateProximityConnections(dots, width, height);
+            
+            return { dots, connections };
+        }
+
+        function applyCannyEdgeDetection(gray, width, height) {
+            // Gaussian blur
+            const blurred = gaussianBlur(gray, width, height, 1.4);
+            
+            // Gradient calculation
+            const gradients = calculateGradients(blurred, width, height);
+            
+            // Non-maximum suppression
+            const suppressed = nonMaximumSuppression(gradients, width, height);
+            
+            // Double thresholding and edge tracking
+            const edges = doubleThreshold(suppressed, width, height, 50, 150);
+            
+            return edgesToDotsAndConnections({ edges, width, height });
+        }
+
+        function applyHarrisCornerDetection(gray, width, height) {
+            const corners = [];
+            const windowSize = 3;
+            const k = 0.04;
+            const threshold = 100000;
+
+            for (let y = windowSize; y < height - windowSize; y++) {
+                for (let x = windowSize; x < width - windowSize; x++) {
+                    let Ixx = 0, Iyy = 0, Ixy = 0;
+                    
+                    for (let dy = -windowSize; dy <= windowSize; dy++) {
+                        for (let dx = -windowSize; dx <= windowSize; dx++) {
+                            const idx1 = (y + dy) * width + (x + dx + 1);
+                            const idx2 = (y + dy) * width + (x + dx - 1);
+                            const idx3 = (y + dy + 1) * width + (x + dx);
+                            const idx4 = (y + dy - 1) * width + (x + dx);
+                            
+                            const Ix = (gray[idx1] || 0) - (gray[idx2] || 0);
+                            const Iy = (gray[idx3] || 0) - (gray[idx4] || 0);
+                            
+                            Ixx += Ix * Ix;
+                            Iyy += Iy * Iy;
+                            Ixy += Ix * Iy;
+                        }
+                    }
+                    
+                    const det = Ixx * Iyy - Ixy * Ixy;
+                    const trace = Ixx + Iyy;
+                    const response = det - k * trace * trace;
+                    
+                    if (response > threshold) {
+                        corners.push({ x, y, strength: response });
+                    }
+                }
+            }
+            
+            // Sort by strength and take top corners
+            corners.sort((a, b) => b.strength - a.strength);
+            const dots = corners.slice(0, Math.min(800, corners.length));
+            const connections = generateProximityConnections(dots, width, height);
+            
+            return { dots, connections };
+        }
+
+        function applySIFTFeatureDetection(gray, width, height) {
+            const features = [];
+            const scales = [1, 1.4, 2, 2.8, 4];
+            
+            for (const scale of scales) {
+                const blurred = gaussianBlur(gray, width, height, scale);
+                const gradients = calculateGradients(blurred, width, height);
+                
+                for (let y = 8; y < height - 8; y += 4) {
+                    for (let x = 8; x < width - 8; x += 4) {
+                        const idx = y * width + x;
+                        if (gradients.magnitude[idx] > 30) {
+                            const descriptor = computeDescriptor(gradients, x, y, width, height);
+                            features.push({ 
+                                x, y, 
+                                scale, 
+                                strength: gradients.magnitude[idx],
+                                descriptor 
+                            });
+                        }
+                    }
+                }
+            }
+            
+            features.sort((a, b) => b.strength - a.strength);
+            const dots = features.slice(0, Math.min(600, features.length));
+            const connections = generateDescriptorConnections(dots);
+            
+            return { dots, connections };
+        }
+
+        function applyDelaunayTriangulation(gray, width, height) {
+            // Sample points based on image intensity with higher density
+            const points = [];
+            const sampleRate = 4; // Smaller sample rate for more points
+            
+            for (let y = 0; y < height; y += sampleRate) {
+                for (let x = 0; x < width; x += sampleRate) {
+                    const idx = y * width + x;
+                    const intensity = gray[idx];
+                    
+                    // Higher probability for darker areas, increased overall density
+                    if (Math.random() < (255 - intensity) / 255 * 0.7 + 0.2) {
+                        points.push({ x, y, intensity, weight: (255 - intensity) / 255 });
+                    }
+                }
+            }
+            
+            // Add strategic boundary and grid points
+            const gridSpacing = 12;
+            for (let y = 0; y < height; y += gridSpacing) {
+                for (let x = 0; x < width; x += gridSpacing) {
+                    points.push({ x, y, intensity: 128, weight: 0.5 });
+                }
+            }
+            
+            // Add corner and edge points for connectivity
+            points.push(
+                { x: 0, y: 0 }, { x: width-1, y: 0 }, 
+                { x: 0, y: height-1 }, { x: width-1, y: height-1 },
+                { x: width/2, y: 0 }, { x: width/2, y: height-1 },
+                { x: 0, y: height/2 }, { x: width-1, y: height/2 }
+            );
+            
+            // Simple triangulation - connect each point to nearby points
+            const connections = [];
+            const maxDistance = Math.min(width, height) * 0.3;
+            
+            for (let i = 0; i < points.length; i++) {
+                const point1 = points[i];
+                const candidates = [];
+                
+                for (let j = 0; j < points.length; j++) {
+                    if (i === j) continue;
+                    const point2 = points[j];
+                    const distance = Math.sqrt(
+                        Math.pow(point1.x - point2.x, 2) + Math.pow(point1.y - point2.y, 2)
+                    );
+                    
+                    if (distance <= maxDistance) {
+                        candidates.push({ index: j, distance });
+                    }
+                }
+                
+                // Connect to multiple nearby points
+                candidates.sort((a, b) => a.distance - b.distance);
+                for (const candidate of candidates.slice(0, 8)) {
+                    const lineExists = connections.some(conn =>
+                        (conn[0] === i && conn[1] === candidate.index) ||
+                        (conn[0] === candidate.index && conn[1] === i)
+                    );
+                    if (!lineExists) {
+                        connections.push([i, candidate.index]);
+                    }
+                }
+            }
+            
+            return { dots: points, connections };
+        }
+
+        function applyVoronoiDiagram(gray, width, height) {
+            // Generate seed points based on image features
+            const seeds = [];
+            const cellSize = 8;
+            
+            for (let y = cellSize/2; y < height; y += cellSize) {
+                for (let x = cellSize/2; x < width; x += cellSize) {
+                    // Find the most interesting point in this cell
+                    let bestX = x, bestY = y, bestScore = 0;
+                    
+                    for (let dy = -cellSize/2; dy < cellSize/2; dy++) {
+                        for (let dx = -cellSize/2; dx < cellSize/2; dx++) {
+                            const nx = x + dx, ny = y + dy;
+                            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                const idx = ny * width + nx;
+                                const score = Math.abs(gray[idx] - 128);
+                                if (score > bestScore) {
+                                    bestScore = score;
+                                    bestX = nx;
+                                    bestY = ny;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (bestScore > 15) {
+                        seeds.push({ x: bestX, y: bestY, weight: bestScore });
+                    }
+                }
+            }
+            
+            // Generate many connections between seeds
+            const connections = generateVoronoiConnections(seeds, width, height);
+            
+            return { dots: seeds, connections };
+        }
+
+        function applyWatershedSegmentation(gray, width, height) {
+            // Find local minima as watershed seeds
+            const seeds = [];
+            const visited = new Array(width * height).fill(false);
+            
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    const idx = y * width + x;
+                    const current = gray[idx];
+                    
+                    // Check if this is a local minimum
+                    let isMinimum = true;
+                    for (let dy = -1; dy <= 1; dy++) {
+                        for (let dx = -1; dx <= 1; dx++) {
+                            if (dx === 0 && dy === 0) continue;
+                            const nidx = (y + dy) * width + (x + dx);
+                            if (gray[nidx] < current) {
+                                isMinimum = false;
+                                break;
+                            }
+                        }
+                        if (!isMinimum) break;
+                    }
+                    
+                    if (isMinimum && current < 200) {
+                        seeds.push({ x, y, depth: 255 - current });
+                    }
+                }
+            }
+            
+            // Connect watershed regions
+            const connections = generateWatershedConnections(seeds, gray, width, height);
+            
+            return { dots: seeds, connections };
+        }
+
+        function applyContourTracing(gray, width, height) {
+            // Threshold the image
+            const binary = gray.map(val => val < 128 ? 0 : 255);
+            const contours = [];
+            const visited = new Array(width * height).fill(false);
+            
+            // Find contour starting points
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    const idx = y * width + x;
+                    if (binary[idx] === 255 && !visited[idx]) {
+                        const contour = traceContour(binary, x, y, width, height, visited);
+                        if (contour.length > 8) {
+                            contours.push(contour);
+                        }
+                    }
+                }
+            }
+            
+            // Sample points along contours with more connections
+            const dots = [];
+            const connections = [];
+            let dotIndex = 0;
+            
+            for (const contour of contours) {
+                const startIndex = dotIndex;
+                const step = Math.max(1, Math.floor(contour.length / 15)); // More points per contour
+                
+                for (let i = 0; i < contour.length; i += step) {
+                    dots.push(contour[i]);
+                    if (dotIndex > startIndex) {
+                        connections.push([dotIndex - 1, dotIndex]);
+                    }
+                    dotIndex++;
+                }
+                
+                // Close the contour
+                if (dotIndex > startIndex + 1) {
+                    connections.push([dotIndex - 1, startIndex]);
+                }
+            }
+            
+            // Add many more cross-connections between contours
+            const extraConnections = Math.floor(dots.length * 1.5);
+            for (let i = 0; i < extraConnections; i++) {
+                const idx1 = Math.floor(Math.random() * dots.length);
+                const idx2 = Math.floor(Math.random() * dots.length);
+                
+                if (idx1 !== idx2) {
+                    const exists = connections.some(conn => 
+                        (conn[0] === idx1 && conn[1] === idx2) || 
+                        (conn[0] === idx2 && conn[1] === idx1)
+                    );
+                    if (!exists) {
+                        connections.push([idx1, idx2]);
+                    }
+                }
+            }
+            
+            return { dots, connections };
+        }
+
+        function applyMorphologicalSkeleton(gray, width, height) {
+            // Threshold and skeletonize
+            const binary = gray.map(val => val < 128 ? 1 : 0);
+            const skeleton = morphologicalSkeleton(binary, width, height);
+            
+            // Extract skeleton points
+            const dots = [];
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const idx = y * width + x;
+                    if (skeleton[idx] === 1) {
+                        dots.push({ x, y });
+                    }
+                }
+            }
+            
+            // Connect skeleton points
+            const connections = generateSkeletonConnections(dots, width, height);
+            
+            return { dots, connections };
+        }
+
+        function applyWeightedStippling(gray, width, height) {
+            const dots = [];
+            const targetDots = 600;
+            
+            // Lloyd's relaxation for weighted stippling
+            for (let iteration = 0; iteration < 10; iteration++) {
+                if (iteration === 0) {
+                    // Initial random placement weighted by image intensity
+                    for (let i = 0; i < targetDots; i++) {
+                        let x, y;
+                        do {
+                            x = Math.floor(Math.random() * width);
+                            y = Math.floor(Math.random() * height);
+                            const idx = y * width + x;
+                            const weight = (255 - gray[idx]) / 255;
+                        } while (Math.random() > weight);
+                        
+                        dots.push({ x, y, weight: (255 - gray[y * width + x]) / 255 });
+                    }
+                } else {
+                    // Relax positions
+                    relaxStipplingPositions(dots, gray, width, height);
+                }
+            }
+            
+            const connections = generateDelaunayConnections(dots);
+            
+            return { dots, connections };
+        }
+
+        function applyHalftoneDots(gray, width, height) {
+            const dots = [];
+            const dotSize = 6;
+            
+            for (let y = dotSize/2; y < height; y += dotSize) {
+                for (let x = dotSize/2; x < width; x += dotSize) {
+                    // Calculate average intensity in this cell
+                    let totalIntensity = 0;
+                    let count = 0;
+                    
+                    for (let dy = -dotSize/2; dy < dotSize/2; dy++) {
+                        for (let dx = -dotSize/2; dx < dotSize/2; dx++) {
+                            const nx = x + dx, ny = y + dy;
+                            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                totalIntensity += gray[ny * width + nx];
+                                count++;
+                            }
+                        }
+                    }
+                    
+                    const avgIntensity = totalIntensity / count;
+                    const dotRadius = ((255 - avgIntensity) / 255) * (dotSize / 2);
+                    
+                    if (dotRadius > 0.5) {
+                        dots.push({ 
+                            x, y, 
+                            radius: dotRadius,
+                            weight: (255 - avgIntensity) / 255 
+                        });
+                    }
+                }
+            }
+            
+            const connections = generateGridConnections(dots, dotSize);
+            
+            return { dots, connections };
+        }
+
+        function applyPoissonDiskSampling(gray, width, height) {
+            const minDistance = 8;
+            const maxAttempts = 30;
+            const dots = [];
+            const grid = [];
+            const cellSize = minDistance / Math.sqrt(2);
+            const gridWidth = Math.ceil(width / cellSize);
+            const gridHeight = Math.ceil(height / cellSize);
+            
+            // Initialize grid
+            for (let i = 0; i < gridWidth * gridHeight; i++) {
+                grid[i] = -1;
+            }
+            
+            // Start with a random point
+            const startX = Math.floor(Math.random() * width);
+            const startY = Math.floor(Math.random() * height);
+            const activeList = [{ x: startX, y: startY }];
+            dots.push(activeList[0]);
+            
+            const gridX = Math.floor(startX / cellSize);
+            const gridY = Math.floor(startY / cellSize);
+            grid[gridY * gridWidth + gridX] = 0;
+            
+            while (activeList.length > 0) {
+                const randomIndex = Math.floor(Math.random() * activeList.length);
+                const point = activeList[randomIndex];
+                let found = false;
+                
+                for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                    const angle = Math.random() * 2 * Math.PI;
+                    const distance = minDistance + Math.random() * minDistance;
+                    const newX = point.x + Math.cos(angle) * distance;
+                    const newY = point.y + Math.sin(angle) * distance;
+                    
+                    if (newX >= 0 && newX < width && newY >= 0 && newY < height) {
+                        const newGridX = Math.floor(newX / cellSize);
+                        const newGridY = Math.floor(newY / cellSize);
+                        
+                        if (isValidPoissonPoint(newX, newY, dots, grid, gridWidth, gridHeight, cellSize, minDistance)) {
+                            const idx = Math.floor(newY) * width + Math.floor(newX);
+                            const weight = (255 - gray[idx]) / 255;
+                            
+                            if (Math.random() < weight * 0.5 + 0.1) {
+                                const newPoint = { x: newX, y: newY, weight };
+                                dots.push(newPoint);
+                                activeList.push(newPoint);
+                                grid[newGridY * gridWidth + newGridX] = dots.length - 1;
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                if (!found) {
+                    activeList.splice(randomIndex, 1);
+                }
+            }
+            
+            const connections = generateDelaunayConnections(dots);
+            
+            return { dots, connections };
+        }
+
+        // Helper functions for image processing algorithms
+        
+        function edgesToDotsAndConnections(edgeData) {
+            const { edges, width, height } = edgeData;
+            const dots = [];
+            const dotSpacing = 8;
+
+            for (let y = 0; y < height; y += dotSpacing) {
+                for (let x = 0; x < width; x += dotSpacing) {
+                    const idx = y * width + x;
+                    if (edges[idx] > 0) {
+                        let maxEdge = 0;
+                        let bestX = x, bestY = y;
+
+                        for (let dy = -dotSpacing / 2; dy <= dotSpacing / 2; dy++) {
+                            for (let dx = -dotSpacing / 2; dx <= dotSpacing / 2; dx++) {
+                                const nx = x + dx, ny = y + dy;
+                                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                    const nidx = ny * width + nx;
+                                    if (edges[nidx] > maxEdge) {
+                                        maxEdge = edges[nidx];
+                                        bestX = nx;
+                                        bestY = ny;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (maxEdge > 80) {
+                            dots.push({ x: bestX, y: bestY, strength: maxEdge });
+                        }
+                    }
+                }
+            }
+
+            const connections = generateProximityConnections(dots, width, height);
+            return { dots, connections };
+        }
+
+        function gaussianBlur(data, width, height, sigma) {
+            const kernel = createGaussianKernel(sigma);
+            const result = new Array(width * height);
+            const radius = Math.floor(kernel.length / 2);
+
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    let sum = 0;
+                    let weightSum = 0;
+
+                    for (let ky = -radius; ky <= radius; ky++) {
+                        for (let kx = -radius; kx <= radius; kx++) {
+                            const nx = x + kx, ny = y + ky;
+                            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                const weight = kernel[ky + radius] * kernel[kx + radius];
+                                sum += data[ny * width + nx] * weight;
+                                weightSum += weight;
+                            }
+                        }
+                    }
+
+                    result[y * width + x] = sum / weightSum;
+                }
+            }
+
+            return result;
+        }
+
+        function createGaussianKernel(sigma) {
+            const size = Math.ceil(sigma * 3) * 2 + 1;
+            const kernel = new Array(size);
+            const center = Math.floor(size / 2);
+
+            for (let i = 0; i < size; i++) {
+                const x = i - center;
+                kernel[i] = Math.exp(-(x * x) / (2 * sigma * sigma));
+            }
+
+            return kernel;
+        }
+
+        function calculateGradients(data, width, height) {
+            const magnitude = new Array(width * height);
+            const direction = new Array(width * height);
+
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    const gx = data[y * width + (x + 1)] - data[y * width + (x - 1)];
+                    const gy = data[(y + 1) * width + x] - data[(y - 1) * width + x];
+                    
+                    magnitude[y * width + x] = Math.sqrt(gx * gx + gy * gy);
+                    direction[y * width + x] = Math.atan2(gy, gx);
+                }
+            }
+
+            return { magnitude, direction };
+        }
+
+        function nonMaximumSuppression(gradients, width, height) {
+            const { magnitude, direction } = gradients;
+            const result = new Array(width * height).fill(0);
+
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    const idx = y * width + x;
+                    const angle = direction[idx];
+                    const mag = magnitude[idx];
+
+                    // Determine neighboring pixels based on gradient direction
+                    let n1, n2;
+                    const angleRad = Math.abs(angle);
+
+                    if (angleRad < Math.PI / 8 || angleRad > 7 * Math.PI / 8) {
+                        n1 = magnitude[y * width + (x - 1)];
+                        n2 = magnitude[y * width + (x + 1)];
+                    } else if (angleRad < 3 * Math.PI / 8) {
+                        n1 = magnitude[(y - 1) * width + (x + 1)];
+                        n2 = magnitude[(y + 1) * width + (x - 1)];
+                    } else if (angleRad < 5 * Math.PI / 8) {
+                        n1 = magnitude[(y - 1) * width + x];
+                        n2 = magnitude[(y + 1) * width + x];
+                    } else {
+                        n1 = magnitude[(y - 1) * width + (x - 1)];
+                        n2 = magnitude[(y + 1) * width + (x + 1)];
+                    }
+
+                    if (mag >= n1 && mag >= n2) {
+                        result[idx] = mag;
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        function doubleThreshold(data, width, height, lowThreshold, highThreshold) {
+            const result = new Array(width * height).fill(0);
+            const strong = 255;
+            const weak = 75;
+
+            for (let i = 0; i < data.length; i++) {
+                if (data[i] >= highThreshold) {
+                    result[i] = strong;
+                } else if (data[i] >= lowThreshold) {
+                    result[i] = weak;
+                }
+            }
+
+            // Edge tracking by hysteresis
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    const idx = y * width + x;
+                    if (result[idx] === weak) {
+                        let hasStrongNeighbor = false;
+                        for (let dy = -1; dy <= 1; dy++) {
+                            for (let dx = -1; dx <= 1; dx++) {
+                                if (result[(y + dy) * width + (x + dx)] === strong) {
+                                    hasStrongNeighbor = true;
+                                    break;
+                                }
+                            }
+                            if (hasStrongNeighbor) break;
+                        }
+                        result[idx] = hasStrongNeighbor ? strong : 0;
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        function generateProximityConnections(dots, width, height) {
+            const connections = [];
+            const maxDistance = Math.min(width, height) * 0.4; // Much larger connection range
+
+            // Connect each dot to many nearby dots
+            for (let i = 0; i < dots.length; i++) {
+                const dot1 = dots[i];
+                const candidates = [];
+
+                for (let j = 0; j < dots.length; j++) {
+                    if (i === j) continue;
+                    const dot2 = dots[j];
+                    const distance = Math.sqrt(
+                        Math.pow(dot1.x - dot2.x, 2) + Math.pow(dot1.y - dot2.y, 2)
+                    );
+
+                    if (distance <= maxDistance) {
+                        candidates.push({ index: j, distance });
+                    }
+                }
+
+                // Connect to ALL nearby dots within range
+                for (const candidate of candidates) {
+                    const lineExists = connections.some(conn =>
+                        (conn[0] === i && conn[1] === candidate.index) ||
+                        (conn[0] === candidate.index && conn[1] === i)
+                    );
+                    if (!lineExists) {
+                        connections.push([i, candidate.index]);
+                    }
+                }
+            }
+
+            // Add even more random connections
+            const extraConnections = Math.floor(dots.length * 2); // 2x more random connections
+            for (let i = 0; i < extraConnections; i++) {
+                const dot1Index = Math.floor(Math.random() * dots.length);
+                const dot2Index = Math.floor(Math.random() * dots.length);
+
+                if (dot1Index !== dot2Index) {
+                    const lineExists = connections.some(conn =>
+                        (conn[0] === dot1Index && conn[1] === dot2Index) ||
+                        (conn[0] === dot2Index && conn[1] === dot1Index)
+                    );
+                    if (!lineExists) {
+                        connections.push([dot1Index, dot2Index]);
+                    }
+                }
+            }
+
+            return connections;
+        }
+
+        function computeDescriptor(gradients, x, y, width, height) {
+            // Simplified SIFT-like descriptor
+            const descriptor = new Array(16).fill(0);
+            const windowSize = 8;
+
+            for (let dy = -windowSize; dy < windowSize; dy++) {
+                for (let dx = -windowSize; dx < windowSize; dx++) {
+                    const nx = x + dx, ny = y + dy;
+                    if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                        const idx = ny * width + nx;
+                        const angle = gradients.direction[idx];
+                        const mag = gradients.magnitude[idx];
+                        
+                        const binIndex = Math.floor(((angle + Math.PI) / (2 * Math.PI)) * 16) % 16;
+                        descriptor[binIndex] += mag;
+                    }
+                }
+            }
+
+            return descriptor;
+        }
+
+        function generateDescriptorConnections(dots) {
+            const connections = [];
+
+            // Connect based on descriptor similarity with much lower threshold
+            for (let i = 0; i < dots.length; i++) {
+                const dot1 = dots[i];
+
+                for (let j = i + 1; j < dots.length; j++) {
+                    const dot2 = dots[j];
+                    const similarity = computeDescriptorSimilarity(dot1.descriptor, dot2.descriptor);
+                    
+                    // Much lower threshold - connect more dots
+                    if (similarity > 0.1) {
+                        connections.push([i, j]);
+                    }
+                }
+            }
+
+            // Add proximity-based connections too
+            const proximityConnections = generateProximityConnections(dots, 320, 180);
+            connections.push(...proximityConnections);
+
+            return connections;
+        }
+
+        function computeDescriptorSimilarity(desc1, desc2) {
+            let dotProduct = 0, norm1 = 0, norm2 = 0;
+
+            for (let i = 0; i < desc1.length; i++) {
+                dotProduct += desc1[i] * desc2[i];
+                norm1 += desc1[i] * desc1[i];
+                norm2 += desc2[i] * desc2[i];
+            }
+
+            return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2) + 1e-10);
+        }
+
+        function delaunayTriangulate(points) {
+            // Simplified Delaunay triangulation using incremental algorithm
+            if (points.length < 3) return [];
+
+            const triangles = [];
+            
+            // Create super triangle
+            const minX = Math.min(...points.map(p => p.x));
+            const minY = Math.min(...points.map(p => p.y));
+            const maxX = Math.max(...points.map(p => p.x));
+            const maxY = Math.max(...points.map(p => p.y));
+            
+            const dx = maxX - minX;
+            const dy = maxY - minY;
+            const deltaMax = Math.max(dx, dy);
+            const midX = (minX + maxX) / 2;
+            const midY = (minY + maxY) / 2;
+
+            const superTriangle = [
+                { x: midX - 20 * deltaMax, y: midY - deltaMax },
+                { x: midX, y: midY + 20 * deltaMax },
+                { x: midX + 20 * deltaMax, y: midY - deltaMax }
+            ];
+
+            triangles.push({ a: 0, b: 1, c: 2, points: superTriangle });
+
+            // Add points incrementally
+            for (let i = 0; i < points.length; i++) {
+                const point = points[i];
+                const badTriangles = [];
+
+                // Find triangles whose circumcircle contains the point
+                for (let j = 0; j < triangles.length; j++) {
+                    const tri = triangles[j];
+                    if (inCircumcircle(point, tri.points[0], tri.points[1], tri.points[2])) {
+                        badTriangles.push(j);
+                    }
+                }
+
+                // Remove bad triangles and create new ones
+                const polygon = [];
+                for (const triIndex of badTriangles) {
+                    const tri = triangles[triIndex];
+                    polygon.push([tri.a, tri.b], [tri.b, tri.c], [tri.c, tri.a]);
+                }
+
+                // Remove triangles
+                for (let j = badTriangles.length - 1; j >= 0; j--) {
+                    triangles.splice(badTriangles[j], 1);
+                }
+
+                // Add new triangles
+                const uniqueEdges = getUniqueEdges(polygon);
+                for (const edge of uniqueEdges) {
+                    triangles.push({
+                        a: edge[0],
+                        b: edge[1],
+                        c: points.length + 3 + i,
+                        points: [points[edge[0]], points[edge[1]], point]
+                    });
+                }
+            }
+
+            return triangles.filter(tri => 
+                tri.a < points.length && tri.b < points.length && tri.c < points.length
+            );
+        }
+
+        function inCircumcircle(point, a, b, c) {
+            const ax = a.x - point.x;
+            const ay = a.y - point.y;
+            const bx = b.x - point.x;
+            const by = b.y - point.y;
+            const cx = c.x - point.x;
+            const cy = c.y - point.y;
+
+            const det = (ax * ax + ay * ay) * (bx * cy - cx * by) -
+                       (bx * bx + by * by) * (ax * cy - cx * ay) +
+                       (cx * cx + cy * cy) * (ax * by - bx * ay);
+
+            return det > 0;
+        }
+
+        function getUniqueEdges(polygon) {
+            const edges = [];
+            const edgeCount = {};
+
+            for (const edge of polygon) {
+                const key = edge[0] < edge[1] ? `${edge[0]}-${edge[1]}` : `${edge[1]}-${edge[0]}`;
+                edgeCount[key] = (edgeCount[key] || 0) + 1;
+            }
+
+            for (const [key, count] of Object.entries(edgeCount)) {
+                if (count === 1) {
+                    const [a, b] = key.split('-').map(Number);
+                    edges.push([a, b]);
+                }
+            }
+
+            return edges;
+        }
+
+        function removeDuplicateConnections(connections) {
+            const seen = new Set();
+            return connections.filter(conn => {
+                const key = conn[0] < conn[1] ? `${conn[0]}-${conn[1]}` : `${conn[1]}-${conn[0]}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+        }
+
+        function generateVoronoiConnections(seeds, width, height) {
+            const connections = [];
+            const maxDistance = Math.min(width, height) * 0.3; // Much larger connection range
+
+            // Connect each seed to many others within range
+            for (let i = 0; i < seeds.length; i++) {
+                const seed1 = seeds[i];
+
+                for (let j = i + 1; j < seeds.length; j++) {
+                    const seed2 = seeds[j];
+                    const distance = Math.sqrt(
+                        Math.pow(seed1.x - seed2.x, 2) + Math.pow(seed1.y - seed2.y, 2)
+                    );
+
+                    // Connect if within range
+                    if (distance < maxDistance) {
+                        connections.push([i, j]);
+                    }
+                }
+            }
+
+            // Add additional random connections
+            const extraConnections = Math.floor(seeds.length * 1.5);
+            for (let i = 0; i < extraConnections; i++) {
+                const idx1 = Math.floor(Math.random() * seeds.length);
+                const idx2 = Math.floor(Math.random() * seeds.length);
+                
+                if (idx1 !== idx2) {
+                    const exists = connections.some(conn => 
+                        (conn[0] === idx1 && conn[1] === idx2) || 
+                        (conn[0] === idx2 && conn[1] === idx1)
+                    );
+                    if (!exists) {
+                        connections.push([idx1, idx2]);
+                    }
+                }
+            }
+
+            return connections;
+        }
+
+        function generateWatershedConnections(seeds, gray, width, height) {
+            const connections = [];
+            
+            for (let i = 0; i < seeds.length; i++) {
+                const seed1 = seeds[i];
+                const candidates = [];
+
+                for (let j = i + 1; j < seeds.length; j++) {
+                    const seed2 = seeds[j];
+                    const distance = Math.sqrt(
+                        Math.pow(seed1.x - seed2.x, 2) + Math.pow(seed1.y - seed2.y, 2)
+                    );
+
+                    // Check if there's a valley between seeds
+                    const pathHeight = getPathHeight(gray, width, seed1, seed2);
+                    if (distance < 50 && pathHeight < 200) {
+                        candidates.push({ index: j, score: pathHeight / (distance + 1) });
+                    }
+                }
+
+                candidates.sort((a, b) => a.score - b.score);
+                for (const candidate of candidates.slice(0, 3)) {
+                    connections.push([i, candidate.index]);
+                }
+            }
+
+            return connections;
+        }
+
+        function getPathHeight(gray, width, start, end) {
+            const steps = Math.max(Math.abs(end.x - start.x), Math.abs(end.y - start.y));
+            let maxHeight = 0;
+
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                const x = Math.round(start.x + (end.x - start.x) * t);
+                const y = Math.round(start.y + (end.y - start.y) * t);
+                const idx = y * width + x;
+                maxHeight = Math.max(maxHeight, gray[idx] || 0);
+            }
+
+            return maxHeight;
+        }
+
+        function traceContour(binary, startX, startY, width, height, visited) {
+            const contour = [];
+            const directions = [
+                [-1, -1], [0, -1], [1, -1],
+                [1, 0], [1, 1], [0, 1],
+                [-1, 1], [-1, 0]
+            ];
+
+            let x = startX, y = startY;
+            let dir = 0;
+
+            do {
+                contour.push({ x, y });
+                visited[y * width + x] = true;
+
+                // Find next contour point
+                let found = false;
+                for (let i = 0; i < 8; i++) {
+                    const newDir = (dir + i) % 8;
+                    const dx = directions[newDir][0];
+                    const dy = directions[newDir][1];
+                    const nx = x + dx;
+                    const ny = y + dy;
+
+                    if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                        const idx = ny * width + nx;
+                        if (binary[idx] === 255 && !visited[idx]) {
+                            x = nx;
+                            y = ny;
+                            dir = (newDir + 6) % 8; // Turn left
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!found) break;
+            } while (x !== startX || y !== startY);
+
+            return contour;
+        }
+
+        function morphologicalSkeleton(binary, width, height) {
+            const skeleton = new Array(width * height).fill(0);
+            const temp = [...binary];
+
+            // Iterative thinning
+            let changed = true;
+            while (changed) {
+                changed = false;
+                const toRemove = [];
+
+                for (let y = 1; y < height - 1; y++) {
+                    for (let x = 1; x < width - 1; x++) {
+                        const idx = y * width + x;
+                        if (temp[idx] === 1) {
+                            if (canRemovePixel(temp, x, y, width, height)) {
+                                toRemove.push(idx);
+                                changed = true;
+                            }
+                        }
+                    }
+                }
+
+                for (const idx of toRemove) {
+                    temp[idx] = 0;
+                }
+            }
+
+            return temp;
+        }
+
+        function canRemovePixel(binary, x, y, width, height) {
+            // Check if removing this pixel breaks connectivity
+            const neighbors = [];
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    if (dx === 0 && dy === 0) continue;
+                    const nx = x + dx, ny = y + dy;
+                    if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                        neighbors.push(binary[ny * width + nx]);
+                    } else {
+                        neighbors.push(0);
+                    }
+                }
+            }
+
+            // Count transitions from 0 to 1
+            let transitions = 0;
+            for (let i = 0; i < neighbors.length; i++) {
+                if (neighbors[i] === 0 && neighbors[(i + 1) % neighbors.length] === 1) {
+                    transitions++;
+                }
+            }
+
+            // Count 1-neighbors
+            const oneNeighbors = neighbors.filter(n => n === 1).length;
+
+            return transitions === 1 && oneNeighbors >= 2 && oneNeighbors <= 6;
+        }
+
+        function generateSkeletonConnections(dots, width, height) {
+            const connections = [];
+            const maxDistance = Math.min(width, height) * 0.25; // Much larger range
+
+            // Connect each dot to all nearby dots
+            for (let i = 0; i < dots.length; i++) {
+                const dot1 = dots[i];
+
+                for (let j = i + 1; j < dots.length; j++) {
+                    const dot2 = dots[j];
+                    const distance = Math.sqrt(
+                        Math.pow(dot1.x - dot2.x, 2) + Math.pow(dot1.y - dot2.y, 2)
+                    );
+
+                    if (distance <= maxDistance) {
+                        connections.push([i, j]);
+                    }
+                }
+            }
+
+            // Add more random long-distance connections
+            const longConnections = Math.floor(dots.length * 0.8);
+            for (let i = 0; i < longConnections; i++) {
+                const idx1 = Math.floor(Math.random() * dots.length);
+                const idx2 = Math.floor(Math.random() * dots.length);
+                
+                if (idx1 !== idx2) {
+                    const exists = connections.some(conn => 
+                        (conn[0] === idx1 && conn[1] === idx2) || 
+                        (conn[0] === idx2 && conn[1] === idx1)
+                    );
+                    if (!exists) {
+                        connections.push([idx1, idx2]);
+                    }
+                }
+            }
+
+            return connections;
+        }
+
+        function relaxStipplingPositions(dots, gray, width, height) {
+            for (const dot of dots) {
+                let sumX = 0, sumY = 0, totalWeight = 0;
+                const radius = 20;
+
+                for (let dy = -radius; dy <= radius; dy++) {
+                    for (let dx = -radius; dx <= radius; dx++) {
+                        const x = dot.x + dx;
+                        const y = dot.y + dy;
+                        
+                        if (x >= 0 && x < width && y >= 0 && y < height) {
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            if (distance <= radius) {
+                                const idx = y * width + x;
+                                const weight = (255 - gray[idx]) / 255;
+                                sumX += x * weight;
+                                sumY += y * weight;
+                                totalWeight += weight;
+                            }
+                        }
+                    }
+                }
+
+                if (totalWeight > 0) {
+                    dot.x = sumX / totalWeight;
+                    dot.y = sumY / totalWeight;
+                }
+            }
+        }
+
+        function generateDelaunayConnections(dots) {
+            if (dots.length < 3) return [];
+            
+            const triangulation = delaunayTriangulate(dots);
+            const connections = [];
+            
+            for (const tri of triangulation) {
+                connections.push([tri.a, tri.b], [tri.b, tri.c], [tri.c, tri.a]);
+            }
+            
+            return removeDuplicateConnections(connections);
+        }
+
+        function generateGridConnections(dots, gridSize) {
+            const connections = [];
+            const grid = {};
+            const maxDistance = gridSize * 3; // Larger connection range
+
+            // Build spatial grid
+            for (let i = 0; i < dots.length; i++) {
+                const dot = dots[i];
+                const gx = Math.floor(dot.x / gridSize);
+                const gy = Math.floor(dot.y / gridSize);
+                const key = `${gx},${gy}`;
+                
+                if (!grid[key]) grid[key] = [];
+                grid[key].push(i);
+            }
+
+            // Connect within and between cells in larger radius
+            for (const [key, indices] of Object.entries(grid)) {
+                const [gx, gy] = key.split(',').map(Number);
+                
+                // Connect ALL dots within cell to each other
+                for (let i = 0; i < indices.length; i++) {
+                    for (let j = i + 1; j < indices.length; j++) {
+                        connections.push([indices[i], indices[j]]);
+                    }
+                }
+
+                // Connect to cells in larger radius (3x3 -> 5x5)
+                for (let dy = -2; dy <= 2; dy++) {
+                    for (let dx = -2; dx <= 2; dx++) {
+                        if (dx === 0 && dy === 0) continue;
+                        
+                        const adjKey = `${gx + dx},${gy + dy}`;
+                        const adjIndices = grid[adjKey];
+                        
+                        if (adjIndices) {
+                            for (const idx1 of indices) {
+                                for (const idx2 of adjIndices) {
+                                    const dot1 = dots[idx1];
+                                    const dot2 = dots[idx2];
+                                    const distance = Math.sqrt(
+                                        Math.pow(dot1.x - dot2.x, 2) + Math.pow(dot1.y - dot2.y, 2)
+                                    );
+                                    
+                                    if (distance < maxDistance) {
+                                        connections.push([idx1, idx2]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Add many more random connections
+            const extraConnections = Math.floor(dots.length * 2);
+            for (let i = 0; i < extraConnections; i++) {
+                const idx1 = Math.floor(Math.random() * dots.length);
+                const idx2 = Math.floor(Math.random() * dots.length);
+                
+                if (idx1 !== idx2) {
+                    connections.push([idx1, idx2]);
+                }
+            }
+
+            return removeDuplicateConnections(connections);
+        }
+
+        function isValidPoissonPoint(x, y, dots, grid, gridWidth, gridHeight, cellSize, minDistance) {
+            const gridX = Math.floor(x / cellSize);
+            const gridY = Math.floor(y / cellSize);
+
+            for (let dy = -2; dy <= 2; dy++) {
+                for (let dx = -2; dx <= 2; dx++) {
+                    const nx = gridX + dx;
+                    const ny = gridY + dy;
+                    
+                    if (nx >= 0 && nx < gridWidth && ny >= 0 && ny < gridHeight) {
+                        const idx = grid[ny * gridWidth + nx];
+                        if (idx !== -1) {
+                            const dot = dots[idx];
+                            const distance = Math.sqrt(
+                                Math.pow(x - dot.x, 2) + Math.pow(y - dot.y, 2)
+                            );
+                            if (distance < minDistance) {
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        // New line-centric helper functions
+        
+        function traceEdgeLines(edges, width, height) {
+            const visited = new Array(width * height).fill(false);
+            const lineSegments = [];
+            
+            for (const edge of edges) {
+                const idx = edge.y * width + edge.x;
+                if (visited[idx]) continue;
+                
+                const segment = [];
+                let current = edge;
+                
+                // Trace line in both directions
+                while (current) {
+                    const idx = current.y * width + current.x;
+                    if (visited[idx]) break;
+                    
+                    visited[idx] = true;
+                    segment.push({ x: current.x, y: current.y });
+                    
+                    // Find next edge pixel in line direction
+                    current = findNextEdgePixel(edges, current, visited, width, height);
+                }
+                
+                if (segment.length > 3) {
+                    lineSegments.push(segment);
+                }
+            }
+            
+            return lineSegments;
+        }
+        
+        function findNextEdgePixel(edges, current, visited, width, height) {
+            const directions = [
+                [-1, -1], [0, -1], [1, -1],
+                [-1, 0],           [1, 0],
+                [-1, 1],  [0, 1],  [1, 1]
+            ];
+            
+            for (const [dx, dy] of directions) {
+                const nx = current.x + dx;
+                const ny = current.y + dy;
+                
+                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                    const idx = ny * width + nx;
+                    if (!visited[idx]) {
+                        const edge = edges.find(e => e.x === nx && e.y === ny);
+                        if (edge) return edge;
+                    }
+                }
+            }
+            
+            return null;
+        }
+        
+        function createIntersectionNetwork(dots, width, height) {
+            const lines = [];
+            const intersectionPoints = [];
+            
+            // Find potential intersection points
+            for (let i = 0; i < dots.length; i++) {
+                for (let j = i + 2; j < dots.length; j++) {
+                    const dot1 = dots[i];
+                    const dot2 = dots[j];
+                    
+                    // Create lines that would intersect with existing structure
+                    const midX = (dot1.x + dot2.x) / 2;
+                    const midY = (dot1.y + dot2.y) / 2;
+                    
+                    // Find dots near the midpoint to create intersections
+                    for (let k = 0; k < dots.length; k++) {
+                        if (k === i || k === j) continue;
+                        
+                        const dot3 = dots[k];
+                        const distToMid = Math.sqrt(
+                            Math.pow(dot3.x - midX, 2) + Math.pow(dot3.y - midY, 2)
+                        );
+                        
+                        if (distToMid < 20) {
+                            lines.push([i, k], [k, j]);
+                        }
+                    }
+                }
+            }
+            
+            return lines;
+        }
+        
+        function generateCrossingLines(points, width, height) {
+            const lines = [];
+            
+            // Create crossing patterns
+            for (let i = 0; i < points.length; i++) {
+                const point1 = points[i];
+                
+                // Find points that would create good crossing angles
+                for (let j = i + 1; j < points.length; j++) {
+                    const point2 = points[j];
+                    const distance = Math.sqrt(
+                        Math.pow(point1.x - point2.x, 2) + Math.pow(point1.y - point2.y, 2)
+                    );
+                    
+                    // Create crossing lines at various distances
+                    if (distance > 30 && distance < 100) {
+                        // Find a third point to create crossing
+                        for (let k = j + 1; k < points.length; k++) {
+                            const point3 = points[k];
+                            
+                            // Check if this creates a good crossing angle
+                            const angle1 = Math.atan2(point2.y - point1.y, point2.x - point1.x);
+                            const angle2 = Math.atan2(point3.y - point1.y, point3.x - point1.x);
+                            const angleDiff = Math.abs(angle1 - angle2);
+                            
+                            if (angleDiff > Math.PI / 4 && angleDiff < 3 * Math.PI / 4) {
+                                lines.push([i, j], [i, k]);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return lines;
+        }
+        
+        function generateRadialLines(points, width, height) {
+            const lines = [];
+            
+            // Find high-density points to use as radial centers
+            const centers = points.filter(p => p.density && p.density > 0.7);
+            
+            for (const center of centers) {
+                const centerIndex = points.indexOf(center);
+                const candidates = [];
+                
+                // Find points around this center
+                for (let i = 0; i < points.length; i++) {
+                    if (i === centerIndex) continue;
+                    
+                    const point = points[i];
+                    const distance = Math.sqrt(
+                        Math.pow(center.x - point.x, 2) + Math.pow(center.y - point.y, 2)
+                    );
+                    
+                    if (distance < 50) {
+                        candidates.push({ index: i, distance, angle: Math.atan2(point.y - center.y, point.x - center.x) });
+                    }
+                }
+                
+                // Sort by angle and create radial connections
+                candidates.sort((a, b) => a.angle - b.angle);
+                
+                for (const candidate of candidates) {
+                    lines.push([centerIndex, candidate.index]);
+                }
+            }
+            
+            return lines;
+        }
+        
+        function generateParallelLineFamilies(points, width, height) {
+            const lines = [];
+            const angles = [0, Math.PI/4, Math.PI/2, 3*Math.PI/4]; // Different line orientations
+            
+            for (const angle of angles) {
+                const cos = Math.cos(angle);
+                const sin = Math.sin(angle);
+                
+                // Group points by their projection onto perpendicular to the line direction
+                const groups = {};
+                
+                for (let i = 0; i < points.length; i++) {
+                    const point = points[i];
+                    const projection = -point.x * sin + point.y * cos;
+                    const groupKey = Math.floor(projection / 15); // Group spacing
+                    
+                    if (!groups[groupKey]) groups[groupKey] = [];
+                    groups[groupKey].push({ index: i, projection: point.x * cos + point.y * sin });
+                }
+                
+                // Create parallel lines within each group
+                for (const group of Object.values(groups)) {
+                    if (group.length < 2) continue;
+                    
+                    group.sort((a, b) => a.projection - b.projection);
+                    
+                    // Connect consecutive points in the group
+                    for (let i = 0; i < group.length - 1; i++) {
+                        lines.push([group[i].index, group[i + 1].index]);
+                    }
+                }
+            }
+            
+            return lines;
+        }
+        
+        function generateVoronoiCellBoundaries(seeds, width, height) {
+            const boundaries = [];
+            const resolution = 2; // Sample every 2 pixels for boundary detection
+            
+            // For each cell, trace its boundary
+            for (let seedIndex = 0; seedIndex < seeds.length; seedIndex++) {
+                const boundary = [];
+                const seed = seeds[seedIndex];
+                
+                // Sample points around the seed to find boundary
+                const radius = 30;
+                const angleStep = Math.PI / 16;
+                
+                for (let angle = 0; angle < 2 * Math.PI; angle += angleStep) {
+                    const x = seed.x + Math.cos(angle) * radius;
+                    const y = seed.y + Math.sin(angle) * radius;
+                    
+                    if (x >= 0 && x < width && y >= 0 && y < height) {
+                        // Find the boundary point in this direction
+                        const boundaryPoint = findVoronoiBoundaryPoint(seed, seeds, x, y, seedIndex);
+                        if (boundaryPoint) {
+                            boundary.push(boundaryPoint);
+                        }
+                    }
+                }
+                
+                if (boundary.length > 3) {
+                    boundaries.push(boundary);
+                }
+            }
+            
+            return boundaries;
+        }
+        
+        function findVoronoiBoundaryPoint(seed, allSeeds, x, y, seedIndex) {
+            let closestDistance = Infinity;
+            let closestSeed = seedIndex;
+            
+            // Find which seed this point belongs to
+            for (let i = 0; i < allSeeds.length; i++) {
+                const otherSeed = allSeeds[i];
+                const distance = Math.sqrt(
+                    Math.pow(x - otherSeed.x, 2) + Math.pow(y - otherSeed.y, 2)
+                );
+                
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestSeed = i;
+                }
+            }
+            
+            // If this point is on the boundary between our seed and another
+            if (closestSeed !== seedIndex) {
+                const distanceToOurSeed = Math.sqrt(
+                    Math.pow(x - seed.x, 2) + Math.pow(y - seed.y, 2)
+                );
+                
+                if (Math.abs(distanceToOurSeed - closestDistance) < 2) {
+                    return { x, y };
+                }
+            }
+            
+            return null;
+        }
+        
+        function generateDiagonalCellLines(seeds, width, height) {
+            const diagonals = [];
+            
+            // Create diagonal lines across Voronoi cells
+            for (let i = 0; i < seeds.length; i++) {
+                const seed = seeds[i];
+                
+                // Find nearby seeds to create diagonals to
+                for (let j = i + 1; j < seeds.length; j++) {
+                    const otherSeed = seeds[j];
+                    const distance = Math.sqrt(
+                        Math.pow(seed.x - otherSeed.x, 2) + Math.pow(seed.y - otherSeed.y, 2)
+                    );
+                    
+                    if (distance < 40) {
+                        diagonals.push({
+                            start: { x: seed.x, y: seed.y },
+                            end: { x: otherSeed.x, y: otherSeed.y }
+                        });
+                    }
+                }
+            }
+            
+            return diagonals;
+        }
+        
+        function generateCrossContourLines(dots, existingLines, width, height) {
+            const crossLines = [];
+            
+            // Find contour intersections and create crossing lines
+            for (let i = 0; i < dots.length; i++) {
+                const dot1 = dots[i];
+                
+                for (let j = i + 10; j < dots.length; j++) { // Skip nearby dots
+                    const dot2 = dots[j];
+                    const distance = Math.sqrt(
+                        Math.pow(dot1.x - dot2.x, 2) + Math.pow(dot1.y - dot2.y, 2)
+                    );
+                    
+                    // Create crossing lines at medium distances
+                    if (distance > 20 && distance < 60) {
+                        // Check if this line would intersect existing contours
+                        const intersectionCount = countLineIntersections(dot1, dot2, dots, existingLines);
+                        
+                        if (intersectionCount > 0) {
+                            crossLines.push([i, j]);
+                        }
+                    }
+                }
+            }
+            
+            return crossLines;
+        }
+        
+        function generateConcentricLines(dots, existingLines, width, height) {
+            const concentricLines = [];
+            
+            // Find contour centers and create concentric patterns
+            const centers = findContourCenters(dots, existingLines);
+            
+            for (const center of centers) {
+                const centerIndex = dots.length;
+                dots.push(center);
+                
+                // Create concentric circles around this center
+                const radii = [15, 25, 35];
+                
+                for (const radius of radii) {
+                    const circlePoints = [];
+                    const angleStep = Math.PI / 8;
+                    
+                    for (let angle = 0; angle < 2 * Math.PI; angle += angleStep) {
+                        const x = center.x + Math.cos(angle) * radius;
+                        const y = center.y + Math.sin(angle) * radius;
+                        
+                        if (x >= 0 && x < width && y >= 0 && y < height) {
+                            const pointIndex = dots.length;
+                            dots.push({ x, y });
+                            circlePoints.push(pointIndex);
+                        }
+                    }
+                    
+                    // Connect circle points
+                    for (let i = 0; i < circlePoints.length; i++) {
+                        const next = (i + 1) % circlePoints.length;
+                        concentricLines.push([circlePoints[i], circlePoints[next]]);
+                        
+                        // Connect to center
+                        concentricLines.push([centerIndex, circlePoints[i]]);
+                    }
+                }
+            }
+            
+            return concentricLines;
+        }
+        
+        function countLineIntersections(point1, point2, dots, lines) {
+            let intersections = 0;
+            
+            for (const line of lines) {
+                const lineStart = dots[line[0]];
+                const lineEnd = dots[line[1]];
+                
+                if (lineStart && lineEnd) {
+                    if (linesIntersect(point1, point2, lineStart, lineEnd)) {
+                        intersections++;
+                    }
+                }
+            }
+            
+            return intersections;
+        }
+        
+        function linesIntersect(p1, p2, p3, p4) {
+            const denom = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x);
+            if (Math.abs(denom) < 1e-10) return false; // Parallel lines
+            
+            const t = ((p1.x - p3.x) * (p3.y - p4.y) - (p1.y - p3.y) * (p3.x - p4.x)) / denom;
+            const u = -((p1.x - p2.x) * (p1.y - p3.y) - (p1.y - p2.y) * (p1.x - p3.x)) / denom;
+            
+            return t >= 0 && t <= 1 && u >= 0 && u <= 1;
+        }
+        
+        function findContourCenters(dots, lines) {
+            const centers = [];
+            const visited = new Array(dots.length).fill(false);
+            
+            // Find closed contours and calculate their centers
+            for (let i = 0; i < lines.length; i++) {
+                if (visited[i]) continue;
+                
+                const contour = traceContourFromLines(lines, i, visited);
+                if (contour.length > 4) {
+                    const center = calculateContourCenter(contour, dots);
+                    if (center) {
+                        centers.push(center);
+                    }
+                }
+            }
+            
+            return centers;
+        }
+        
+        function traceContourFromLines(lines, startIndex, visited) {
+            const contour = [];
+            let currentLine = startIndex;
+            
+            while (currentLine !== -1 && !visited[currentLine]) {
+                visited[currentLine] = true;
+                contour.push(currentLine);
+                
+                // Find next connected line
+                currentLine = findNextConnectedLine(lines, currentLine, visited);
+            }
+            
+            return contour;
+        }
+        
+        function findNextConnectedLine(lines, currentIndex, visited) {
+            const currentLine = lines[currentIndex];
+            const endPoint = currentLine[1];
+            
+            for (let i = 0; i < lines.length; i++) {
+                if (i === currentIndex || visited[i]) continue;
+                
+                const line = lines[i];
+                if (line[0] === endPoint) {
+                    return i;
+                }
+            }
+            
+            return -1;
+        }
+        
+        function calculateContourCenter(contourIndices, dots) {
+            if (contourIndices.length === 0) return null;
+            
+            let sumX = 0, sumY = 0, count = 0;
+            
+            for (const lineIndex of contourIndices) {
+                // This is simplified - in a real implementation you'd need to access the actual line data
+                count++;
+            }
+            
+            // Return a center point (simplified calculation)
+            return { x: 160, y: 90 }; // Placeholder center
+        }
+
+        // Add missing function stubs to prevent crashes
+
+
+
+        function getAlgorithmName(algorithm) {
+            const names = {
+                'sobel': 'Sobel Edge Detection',
+                'canny': 'Canny Edge Detection',
+                'harris': 'Harris Corner Detection',
+                'sift': 'SIFT Feature Points',
+                'delaunay': 'Delaunay Triangulation',
+                'voronoi': 'Voronoi Diagram',
+                'watershed': 'Watershed Segmentation',
+                'contour': 'Contour Tracing',
+                'skeleton': 'Morphological Skeleton',
+                'stippling': 'Weighted Stippling',
+                'halftone': 'Halftone Dots',
+                'poisson': 'Poisson Disk Sampling'
+            };
+            return names[algorithm] || algorithm;
+        }
+
+        function drawAlgorithmResult(ctx, result, width, height) {
+            const { dots, connections } = result;
+
+            // Draw connections first
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 1;
+            for (const conn of connections) {
+                const dot1 = dots[conn[0]];
+                const dot2 = dots[conn[1]];
+                if (dot1 && dot2) {
+                    ctx.beginPath();
+                    ctx.moveTo(dot1.x, dot1.y);
+                    ctx.lineTo(dot2.x, dot2.y);
+                    ctx.stroke();
+                }
+            }
+
+            // Draw dots
+            for (const dot of dots) {
+                ctx.beginPath();
+                const radius = dot.radius || (dot.weight ? dot.weight * 3 + 1 : 2);
+                ctx.arc(dot.x, dot.y, radius, 0, Math.PI * 2);
+                
+                // Color based on dot properties
+                if (dot.type === 2) ctx.fillStyle = '#ff0';
+                else if (dot.type === 3) ctx.fillStyle = '#0f0';
+                else if (dot.type === 4) ctx.fillStyle = '#f00';
+                else if (dot.weight) {
+                    const intensity = Math.floor(255 * dot.weight);
+                    ctx.fillStyle = `rgb(${intensity}, ${intensity}, ${intensity})`;
+                } else {
+                    ctx.fillStyle = '#fff';
+                }
+                
+                ctx.fill();
+            }
+        }
+
+        function checkEdgePath(edges, width, dot1, dot2) {
+            const steps = Math.max(Math.abs(dot2.x - dot1.x), Math.abs(dot2.y - dot1.y));
+            if (steps === 0) return 0;
+
+            let totalStrength = 0;
+            let validPoints = 0;
+
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                const x = Math.round(dot1.x + (dot2.x - dot1.x) * t);
+                const y = Math.round(dot1.y + (dot2.y - dot1.y) * t);
+                const idx = y * width + x;
+
+                if (edges[idx] > 0) {
+                    totalStrength += edges[idx];
+                    validPoints++;
+                }
+            }
+
+            return validPoints > 0 ? (validPoints / steps) * (totalStrength / (validPoints * 255)) : 0;
+        }
+
+        function generateDotsFromImage() {
+            const processedCanvas = document.getElementById('processedCanvas');
+            if (!processedCanvas.width || !processedCanvas.algorithmData) return null;
+
+            const { dots: algorithmDots } = processedCanvas.algorithmData;
+            const dimX = parseInt(document.getElementById('dimX').value);
+            const dimY = parseInt(document.getElementById('dimY').value);
+
+            // Convert algorithm dots to map coordinates - all type 1 (regular stars)
+            const mapDots = algorithmDots.map(dot => [
+                Math.round(Math.max(0, Math.min(dimX - 1, dot.x))),
+                Math.round(Math.max(0, Math.min(dimY - 1, dot.y))),
+                1 // Always use type 1 (regular stars)
+            ]);
+
+            return mapDots;
+        }
+
+        function generateStrategicConnections(dots, mapWidth, mapHeight) {
+            if (dots.length < 2) return [];
+
+            const lines = [];
+            const maxDistance = Math.sqrt(mapWidth * mapWidth + mapHeight * mapHeight) * 0.15; // 15% of diagonal
+
+            // Create connections based on proximity and strategic value
+            for (let i = 0; i < dots.length; i++) {
+                const dot1 = dots[i];
+                let connections = 0;
+                const maxConnections = Math.min(6, Math.floor(dots.length / 100) + 2);
+
+                // Find nearby dots to connect
+                const distances = [];
+                for (let j = 0; j < dots.length; j++) {
+                    if (i === j) continue;
+
+                    const dot2 = dots[j];
+                    const distance = Math.sqrt(
+                        Math.pow(dot1[0] - dot2[0], 2) +
+                        Math.pow(dot1[1] - dot2[1], 2)
+                    );
+
+                    if (distance <= maxDistance) {
+                        distances.push({ index: j, distance: distance });
+                    }
+                }
+
+                // Sort by distance and connect to closest dots
+                distances.sort((a, b) => a.distance - b.distance);
+
+                for (const nearby of distances.slice(0, maxConnections)) {
+                    if (connections >= maxConnections) break;
+
+                    // Avoid duplicate connections
+                    const lineExists = lines.some(line =>
+                        (line[0] === i && line[1] === nearby.index) ||
+                        (line[0] === nearby.index && line[1] === i)
+                    );
+
+                    if (!lineExists) {
+                        lines.push([i, nearby.index]);
+                        connections++;
+                    }
+                }
+            }
+
+            // Add some strategic long-distance connections
+            const longConnections = Math.floor(dots.length / 50);
+            for (let i = 0; i < longConnections; i++) {
+                const dot1Index = Math.floor(Math.random() * dots.length);
+                const dot2Index = Math.floor(Math.random() * dots.length);
+
+                if (dot1Index !== dot2Index) {
+                    const lineExists = lines.some(line =>
+                        (line[0] === dot1Index && line[1] === dot2Index) ||
+                        (line[0] === dot2Index && line[1] === dot1Index)
+                    );
+
+                    if (!lineExists) {
+                        lines.push([dot1Index, dot2Index]);
+                    }
+                }
+            }
+
+            return lines;
+        }
+
+        async function generateWithGemini(prompt, imageBase64 = null, retryCount = 0) {
+            if (!state.genAI) {
+                throw new Error('Gemini not initialized');
+            }
+
+            const modelSelect = document.getElementById('modelSelect');
+            const selectedModel = modelSelect.value;
+            if (!selectedModel) {
+                throw new Error('Please select a model');
+            }
+
+            // Use vision model if image is provided
+            const modelName = imageBase64 ?
+                selectedModel.replace('pro', 'pro-vision').replace('flash', 'flash') :
+                selectedModel;
+
+            const model = state.genAI.getGenerativeModel({
+                model: modelName
+            });
+
+            let parts;
+            if (imageBase64) {
+                const base64Data = imageBase64.split(',')[1];
+                const mimeType = imageBase64.split(':')[1].split(';')[0];
+
+                parts = [
+                    {
+                        text: SYSTEM_PROMPT + '\n\nIMAGE PROVIDED: Analyze this image carefully for strategic patterns, spatial relationships, and structural elements. Then create a map that logically derives from the image\'s strategic layout.\n\nUser request: ' + prompt
+                    },
+                    {
+                        inlineData: {
+                            mimeType: mimeType,
+                            data: base64Data
+                        }
+                    }
+                ];
+            } else {
+                parts = [SYSTEM_PROMPT + '\n\nUser request: ' + prompt];
+            }
+
+            try {
+                const result = await model.generateContent(parts);
+                const response = await result.response;
+                return response.text();
+            } catch (error) {
+                // Handle quota exceeded errors
+                if (error.message.includes('429') || error.message.includes('quota')) {
+                    // Extract retry delay from error message
+                    const retryMatch = error.message.match(/retry in (\d+(?:\.\d+)?)s/);
+                    const retryDelay = retryMatch ? parseFloat(retryMatch[1]) * 1000 : 60000;
+
+                    // Try to switch to a different model if available
+                    const allOptions = Array.from(modelSelect.options);
+                    const currentIndex = allOptions.findIndex(opt => opt.value === selectedModel);
+                    const nextModel = allOptions[currentIndex + 1];
+
+                    if (nextModel && nextModel.value && retryCount < 3) {
+                        showStatus(`Quota exceeded for ${selectedModel.split('/').pop()}. Trying ${nextModel.value.split('/').pop()}...`, 'info');
+                        modelSelect.value = nextModel.value;
+                        return await generateWithGemini(prompt, imageBase64, retryCount + 1);
+                    }
+
+                    // If no other models available, wait and retry
+                    if (retryCount < 2) {
+                        const waitTime = Math.min(retryDelay, 10000); // Cap at 10 seconds for UX
+                        showStatus(`Rate limited. Retrying in ${Math.ceil(waitTime / 1000)} seconds...`, 'info');
+                        await new Promise(resolve => setTimeout(resolve, waitTime));
+                        return await generateWithGemini(prompt, imageBase64, retryCount + 1);
+                    }
+
+                    throw new Error(`Rate limit exceeded. Please wait ${Math.ceil(retryDelay / 1000)} seconds or try a different model.`);
+                }
+
+                throw error;
+            }
+        }
+
+        function extractJSON(text) {
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) throw new Error('No JSON found in response');
+
+            let map;
+            try {
+                map = JSON.parse(jsonMatch[0]);
+            } catch (e) {
+                throw new Error('Invalid JSON format in response');
+            }
+
+            // Fix malformed stars array
+            if (map.stars && Array.isArray(map.stars)) {
+                map.stars = map.stars.map((star, index) => {
+                    if (!Array.isArray(star)) {
+                        throw new Error(`Star ${index} must be an array with at least [x, y, type]`);
+                    }
+                    if (star.length < 2) {
+                        throw new Error(`Star ${index} must have at least [x, y] coordinates`);
+                    }
+                    // Ensure star has proper format [x, y, type]
+                    return [
+                        parseFloat(star[0]) || 0,
+                        parseFloat(star[1]) || 0,
+                        parseInt(star[2]) || 1
+                    ];
+                });
+            }
+
+            return map;
+        }
+
+        function validateMap(map) {
+            if (!map.dimensions || map.dimensions.length !== 2)
+                throw new Error('Invalid dimensions');
+            if (!Array.isArray(map.stars) || map.stars.length < 5)
+                throw new Error('Need at least 5 dots');
+            if (!Array.isArray(map.lines))
+                throw new Error('Invalid lines array');
+
+            for (const star of map.stars) {
+                if (star[0] < 0 || star[0] > map.dimensions[0] ||
+                    star[1] < 0 || star[1] > map.dimensions[1]) {
+                    throw new Error('Star coordinates out of bounds');
+                }
+            }
+
+            // Auto-fix invalid line references instead of throwing error
+            const maxIndex = map.stars.length - 1;
+            const validLines = [];
+            let fixedCount = 0;
+
+            for (const line of map.lines) {
+                if (line[0] >= 0 && line[0] <= maxIndex &&
+                    line[1] >= 0 && line[1] <= maxIndex &&
+                    line[0] !== line[1]) {
+                    validLines.push(line);
+                } else {
+                    fixedCount++;
+                }
+            }
+
+            if (fixedCount > 0) {
+                map.lines = validLines;
+                showStatus(`Auto-fixed ${fixedCount} invalid line references. Map has ${map.stars.length} dots and ${validLines.length} valid connections.`, 'info');
+            }
+
+            return true;
+        }
+
+        function drawPreview(map) {
+            const canvas = document.getElementById('preview');
+            const ctx = canvas.getContext('2d');
+            const scaleX = canvas.width / map.dimensions[0];
+            const scaleY = canvas.height / map.dimensions[1];
+
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = '#444';
+            for (const line of map.lines) {
+                const star1 = map.stars[line[0]];
+                const star2 = map.stars[line[1]];
+                ctx.beginPath();
+                ctx.moveTo(star1[0] * scaleX, star1[1] * scaleY);
+                ctx.lineTo(star2[0] * scaleX, star2[1] * scaleY);
+                ctx.stroke();
+            }
+
+            for (const star of map.stars) {
+                const x = star[0] * scaleX;
+                const y = star[1] * scaleY;
+                const type = star[2] || 1;
+
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, Math.PI * 2);
+
+                switch (type) {
+                    case 2: ctx.fillStyle = '#ff0'; break;
+                    case 3: ctx.fillStyle = '#0f0'; break;
+                    case 4: ctx.fillStyle = '#f00'; break;
+                    default: ctx.fillStyle = '#fff';
+                }
+                ctx.fill();
+            }
+        }
+
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        document.getElementById('generateBtn').addEventListener('click', async () => {
+            const prompt = document.getElementById('prompt').value.trim();
+            const title = document.getElementById('mapTitle').value.trim();
+            const dimX = parseInt(document.getElementById('dimX').value);
+            const dimY = parseInt(document.getElementById('dimY').value);
+            const imageFile = document.getElementById('imageUpload').files[0];
+
+            if (prompt.length < 100) {
+                showStatus('Description must be at least 100 characters for quality control', 'error');
+                return;
+            }
+
+            if (!state.geminiKey) {
+                showStatus('Please configure Gemini API key', 'error');
+                return;
+            }
+
+            const selectedModel = document.getElementById('modelSelect').value;
+            if (!selectedModel) {
+                showStatus('Please select a model', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('generateBtn');
+            btn.disabled = true;
+            btn.textContent = 'Generating...';
+            showStatus('Processing...', 'info');
+
+            try {
+                let map;
+
+                if (imageFile && document.getElementById('processedCanvas').width) {
+                    // Mathematical approach: generate from processed image
+                    showStatus('Generating map from processed image...', 'info');
+
+                    const imageDots = generateDotsFromImage();
+                    if (imageDots && imageDots.length > 0) {
+                        map = {
+                            author: "AI",
+                            dimensions: [dimX, dimY],
+                            title: title,
+                            stars: imageDots,
+                            lines: []
+                        };
+
+                        // Use edge-based connections from image processing
+                        const processedCanvas = document.getElementById('processedCanvas');
+                        const { connections } = processedCanvas.edgeData;
+                        map.lines = connections;
+
+                        showStatus('Map generated mathematically from image', 'success');
+                    } else {
+                        throw new Error('No dots found in processed image');
+                    }
+                } else {
+                    // AI approach: use Gemini
+                    let imageBase64 = null;
+                    if (imageFile) {
+                        imageBase64 = await new Promise((resolve) => {
+                            const reader = new FileReader();
+                            reader.onload = (e) => resolve(e.target.result);
+                            reader.readAsDataURL(imageFile);
+                        });
+                    }
+
+                    const fullPrompt = `${prompt}\n\nMap dimensions: ${dimX}x${dimY}\nTitle: ${title}`;
+
+                    showStatus('Generating with Gemini...', 'info');
+
+                    const response = await generateWithGemini(fullPrompt, imageBase64);
+
+                    map = extractJSON(response);
+                    map.title = title;
+                    map.dimensions = [dimX, dimY];
+                    map.author = "AI";
+                }
+
+                validateMap(map);
+
+                state.generatedMap = map;
+                const jsonStr = JSON.stringify(map, null, 2);
+                document.getElementById('output').textContent = jsonStr;
+                document.getElementById('copyBtn').style.display = 'block';
+                document.getElementById('downloadBtn').style.display = 'block';
+
+                drawPreview(map);
+
+                showStatus('Map generated successfully!', 'success');
+            } catch (error) {
+                showStatus(`Error: ${error.message}`, 'error');
+                console.error(error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Generate Map';
+            }
+        });
+
+        document.getElementById('copyBtn').addEventListener('click', () => {
+            const text = document.getElementById('output').textContent;
+            navigator.clipboard.writeText(text);
+            showStatus('Copied to clipboard!', 'success');
+        });
+
+        document.getElementById('copyProcessedBtn').addEventListener('click', () => {
+            const processedCanvas = document.getElementById('processedCanvas');
+            
+            if (!processedCanvas.algorithmData) {
+                showStatus('No processed image data available', 'error');
+                return;
+            }
+
+            const { dots, connections, algorithm } = processedCanvas.algorithmData;
+            const dimX = parseInt(document.getElementById('dimX').value);
+            const dimY = parseInt(document.getElementById('dimY').value);
+            const mapTitle = document.getElementById('mapTitle').value.trim() || 'Untitled Map';
+
+            // Convert algorithm dots to map format - all type 1 (regular stars)
+            const stars = dots.map(dot => [
+                Math.round(Math.max(0, Math.min(dimX - 1, dot.x))),
+                Math.round(Math.max(0, Math.min(dimY - 1, dot.y))),
+                1 // Always use type 1 (regular stars)
+            ]);
+
+            // Create the map JSON
+            const mapData = {
+                author: "AI - " + getAlgorithmName(algorithm),
+                dimensions: [dimX, dimY],
+                lines: connections,
+                stars: stars,
+                title: mapTitle + " (" + getAlgorithmName(algorithm) + ")"
+            };
+
+            const jsonText = JSON.stringify(mapData, null, 2);
+            
+            navigator.clipboard.writeText(jsonText).then(() => {
+                showStatus(`Copied ${stars.length} dots and ${connections.length} connections to clipboard!`, 'success');
+                
+                // Also update the main output display
+                document.getElementById('output').textContent = jsonText;
+                document.getElementById('copyBtn').style.display = 'block';
+                document.getElementById('downloadBtn').style.display = 'block';
+                
+                // Store in state for download
+                state.generatedMap = mapData;
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                showStatus('Failed to copy to clipboard', 'error');
+            });
+        });
+
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            const text = document.getElementById('output').textContent;
+            const blob = new Blob([text], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${state.generatedMap.title.replace(/\s+/g, '_')}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+
+</html>

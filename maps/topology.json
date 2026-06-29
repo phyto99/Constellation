@@ -1,0 +1,660 @@
+{
+  "6 Syn Wormholes.json": {
+    "filename": "6 Syn Wormholes.json",
+    "title": "6SynWormholes",
+    "author": "Creator",
+    "dimensions": [
+      320,
+      180
+    ],
+    "topology_version": "1.0.0",
+    "star_count": 243,
+    "hq_count": 0,
+    "hq_positions": [],
+    "connection_count": 503,
+    "avg_degree": 4.14,
+    "chokepoint_count": 70,
+    "chokepoint_ratio": 0.288,
+    "hq_distance_norm": 0.5,
+    "spatial_spread": 0.863,
+    "connection_density": 0.0171,
+    "mode_affinity": {
+      "qty": 0.68,
+      "spt": 0.66,
+      "frt": 0.28,
+      "dst": 0.52,
+      "wrm": 0.5,
+      "inv": 0.67
+    }
+  },
+  "6 Syn.json": {
+    "filename": "6 Syn.json",
+    "title": "Untitled Map",
+    "author": "Josiah Wittrock",
+    "dimensions": [
+      320,
+      180
+    ],
+    "topology_version": "1.0.0",
+    "star_count": 292,
+    "hq_count": 0,
+    "hq_positions": [],
+    "connection_count": 404,
+    "avg_degree": 2.77,
+    "chokepoint_count": 36,
+    "chokepoint_ratio": 0.123,
+    "hq_distance_norm": 0.5,
+    "spatial_spread": 0.863,
+    "connection_density": 0.0095,
+    "mode_affinity": {
+      "qty": 0.69,
+      "spt": 0.66,
+      "frt": 0.28,
+      "dst": 0.39,
+      "wrm": 0.5,
+      "inv": 0.62
+    }
+  },
+  "Ad Astra by Josh Dahn.json": {
+    "filename": "Ad Astra by Josh Dahn.json",
+    "title": "Ad Astra",
+    "author": "J D",
+    "dimensions": [
+      320,
+      180
+    ],
+    "topology_version": "1.0.0",
+    "star_count": 384,
+    "hq_count": 16,
+    "hq_positions": [
+      [
+        1,
+        1
+      ],
+      [
+        13,
+        26
+      ],
+      [
+        50,
+        5
+      ],
+      [
+        25,
+        48
+      ],
+      [
+        44,
+        67
+      ],
+      [
+        50,
+        20
+      ],
+      [
+        55,
+        53
+      ],
+      [
+        76,
+        15
+      ],
+      [
+        158,
+        1
+      ],
+      [
+        132,
+        17
+      ],
+      [
+        106,
+        36
+      ],
+      [
+        92,
+        55
+      ],
+      [
+        92,
+        69
+      ],
+      [
+        1,
+        88
+      ],
+      [
+        71,
+        88
+      ],
+      [
+        131,
+        66
+      ]
+    ],
+    "connection_count": 515,
+    "avg_degree": 2.68,
+    "chokepoint_count": 260,
+    "chokepoint_ratio": 0.677,
+    "hq_distance_norm": 0.196,
+    "spatial_spread": 0.487,
+    "connection_density": 0.007,
+    "mode_affinity": {
+      "qty": 0.6,
+      "spt": 0.33,
+      "frt": 0.89,
+      "dst": 0.4,
+      "wrm": 0.5,
+      "inv": 0.64
+    }
+  },
+  "Butterfly Effect by Kavi Amrhein.json": {
+    "filename": "Butterfly Effect by Kavi Amrhein.json",
+    "title": "Butterfly",
+    "author": "Effect",
+    "dimensions": [
+      320,
+      180
+    ],
+    "topology_version": "1.0.0",
+    "star_count": 277,
+    "hq_count": 1,
+    "hq_positions": [
+      [
+        35,
+        18
+      ]
+    ],
+    "connection_count": 667,
+    "avg_degree": 4.82,
+    "chokepoint_count": 36,
+    "chokepoint_ratio": 0.13,
+    "hq_distance_norm": 0.5,
+    "spatial_spread": 0.956,
+    "connection_density": 0.0174,
+    "mode_affinity": {
+      "qty": 0.72,
+      "spt": 0.71,
+      "frt": 0.39,
+      "dst": 0.6,
+      "wrm": 0.5,
+      "inv": 0.7
+    }
+  },
+  "CITYSCAPE.json": {
+    "filename": "CITYSCAPE.json",
+    "title": "* CITYSCAPE *",
+    "author": "Creator",
+    "dimensions": [
+      320,
+      180
+    ],
+    "topology_version": "1.0.0",
+    "star_count": 1027,
+    "hq_count": 15,
+    "hq_positions": [
+      [
+        53,
+        70
+      ],
+      [
+        146,
+        72
+      ],
+      [
+        85,
+        109
+      ],
+      [
+        53,
+        124
+      ],
+      [
+        125,
+        90
+      ],
+      [
+        85,
+        158
+      ],
+      [
+        171,
+        1
+      ],
+      [
+        111,
+        169
+      ],
+      [
+        256,
+        62
+      ],
+      [
+        194,
+        72
+      ],
+      [
+        194,
+        96
+      ],
+      [
+        220,
+        111
+      ],
+      [
+        265,
+        92
+      ],
+      [
+        317,
+        178
+      ],
+      [
+        1,
+        178
+      ]
+    ],
+    "connection_count": 2051,
+    "avg_degree": 3.99,
+    "chokepoint_count": 214,
+    "chokepoint_ratio": 0.208,
+    "hq_distance_norm": 0.352,
+    "spatial_spread": 0.987,
+    "connection_density": 0.0039,
+    "mode_affinity": {
+      "qty": 0.83,
+      "spt": 0.64,
+      "frt": 0.81,
+      "dst": 0.62,
+      "wrm": 0.5,
+      "inv": 0.77
+    }
+  },
+  "Castle Conundrum.json": {
+    "filename": "Castle Conundrum.json",
+    "title": "Castle Conundrum",
+    "author": "JD",
+    "dimensions": [
+      320,
+      180
+    ],
+    "topology_version": "1.0.0",
+    "star_count": 252,
+    "hq_count": 7,
+    "hq_positions": [
+      [
+        0,
+        180
+      ],
+      [
+        108,
+        123
+      ],
+      [
+        113,
+        123
+      ],
+      [
+        13,
+        10
+      ],
+      [
+        80,
+        11
+      ],
+      [
+        160,
+        7
+      ],
+      [
+        112,
+        75
+      ]
+    ],
+    "connection_count": 443,
+    "avg_degree": 3.52,
+    "chokepoint_count": 135,
+    "chokepoint_ratio": 0.536,
+    "hq_distance_norm": 0.317,
+    "spatial_spread": 0.742,
+    "connection_density": 0.014,
+    "mode_affinity": {
+      "qty": 0.65,
+      "spt": 0.51,
+      "frt": 0.83,
+      "dst": 0.46,
+      "wrm": 0.5,
+      "inv": 0.64
+    }
+  },
+  "Championship.json": {
+    "filename": "Championship.json",
+    "title": "Championship",
+    "author": "Creator",
+    "dimensions": [
+      320,
+      180
+    ],
+    "topology_version": "1.0.0",
+    "star_count": 231,
+    "hq_count": 22,
+    "hq_positions": [
+      [
+        0,
+        100
+      ],
+      [
+        17,
+        90
+      ],
+      [
+        0,
+        72
+      ],
+      [
+        44,
+        50
+      ],
+      [
+        0,
+        50
+      ],
+      [
+        75,
+        60
+      ],
+      [
+        66,
+        46
+      ],
+      [
+        67,
+        21
+      ],
+      [
+        75,
+        76
+      ],
+      [
+        33,
+        13
+      ],
+      [
+        0,
+        13
+      ],
+      [
+        97,
+        14
+      ],
+      [
+        95,
+        54
+      ],
+      [
+        119,
+        27
+      ],
+      [
+        157,
+        13
+      ],
+      [
+        157,
+        50
+      ],
+      [
+        62,
+        100
+      ],
+      [
+        113,
+        72
+      ],
+      [
+        109,
+        100
+      ],
+      [
+        148,
+        64
+      ],
+      [
+        157,
+        72
+      ],
+      [
+        157,
+        100
+      ]
+    ],
+    "connection_count": 571,
+    "avg_degree": 4.94,
+    "chokepoint_count": 27,
+    "chokepoint_ratio": 0.117,
+    "hq_distance_norm": 0.222,
+    "spatial_spread": 0.487,
+    "connection_density": 0.0215,
+    "mode_affinity": {
+      "qty": 0.57,
+      "spt": 0.34,
+      "frt": 0.88,
+      "dst": 0.6,
+      "wrm": 0.5,
+      "inv": 0.69
+    }
+  },
+  "FLOW by Winston Tang.json": {
+    "filename": "FLOW by Winston Tang.json",
+    "title": "FLOW",
+    "author": "Creator",
+    "dimensions": [
+      320,
+      180
+    ],
+    "topology_version": "1.0.0",
+    "star_count": 732,
+    "hq_count": 0,
+    "hq_positions": [],
+    "connection_count": 1381,
+    "avg_degree": 3.77,
+    "chokepoint_count": 238,
+    "chokepoint_ratio": 0.325,
+    "hq_distance_norm": 0.5,
+    "spatial_spread": 0.648,
+    "connection_density": 0.0052,
+    "mode_affinity": {
+      "qty": 0.7,
+      "spt": 0.57,
+      "frt": 0.28,
+      "dst": 0.56,
+      "wrm": 0.5,
+      "inv": 0.73
+    }
+  },
+  "Hand.json": {
+    "filename": "Hand.json",
+    "title": "Untitled Map",
+    "author": "Creator",
+    "dimensions": [
+      320,
+      180
+    ],
+    "topology_version": "1.0.0",
+    "star_count": 667,
+    "hq_count": 0,
+    "hq_positions": [],
+    "connection_count": 729,
+    "avg_degree": 2.19,
+    "chokepoint_count": 524,
+    "chokepoint_ratio": 0.786,
+    "hq_distance_norm": 0.5,
+    "spatial_spread": 0.619,
+    "connection_density": 0.0033,
+    "mode_affinity": {
+      "qty": 0.68,
+      "spt": 0.55,
+      "frt": 0.28,
+      "dst": 0.4,
+      "wrm": 0.5,
+      "inv": 0.66
+    }
+  },
+  "LOTR ROSE.json": {
+    "filename": "LOTR ROSE.json",
+    "title": "LOTR ROSE",
+    "author": "Creator",
+    "dimensions": [
+      320,
+      180
+    ],
+    "topology_version": "1.0.0",
+    "star_count": 2007,
+    "hq_count": 0,
+    "hq_positions": [],
+    "connection_count": 3293,
+    "avg_degree": 3.28,
+    "chokepoint_count": 651,
+    "chokepoint_ratio": 0.324,
+    "hq_distance_norm": 0.5,
+    "spatial_spread": 1.037,
+    "connection_density": 0.0016,
+    "mode_affinity": {
+      "qty": 0.94,
+      "spt": 0.74,
+      "frt": 0.28,
+      "dst": 0.64,
+      "wrm": 0.5,
+      "inv": 0.84
+    }
+  },
+  "Last map (goodbye).json": {
+    "filename": "Last map (goodbye).json",
+    "title": "Untitled Map",
+    "author": "unknown",
+    "dimensions": [
+      320,
+      180
+    ],
+    "topology_version": "1.0.0",
+    "star_count": 2571,
+    "hq_count": 0,
+    "hq_positions": [],
+    "connection_count": 8360,
+    "avg_degree": 6.5,
+    "chokepoint_count": 238,
+    "chokepoint_ratio": 0.093,
+    "hq_distance_norm": 0.5,
+    "spatial_spread": 0.991,
+    "connection_density": 0.0025,
+    "mode_affinity": {
+      "qty": 0.96,
+      "spt": 0.72,
+      "frt": 0.28,
+      "dst": 1,
+      "wrm": 0.5,
+      "inv": 1
+    }
+  },
+  "PROVIDENCE.json": {
+    "filename": "PROVIDENCE.json",
+    "title": "Providence",
+    "author": "unknown",
+    "dimensions": [
+      320,
+      180
+    ],
+    "topology_version": "1.0.0",
+    "star_count": 505,
+    "hq_count": 0,
+    "hq_positions": [],
+    "connection_count": 1232,
+    "avg_degree": 4.88,
+    "chokepoint_count": 79,
+    "chokepoint_ratio": 0.156,
+    "hq_distance_norm": 0.5,
+    "spatial_spread": 0.987,
+    "connection_density": 0.0097,
+    "mode_affinity": {
+      "qty": 0.77,
+      "spt": 0.72,
+      "frt": 0.28,
+      "dst": 0.64,
+      "wrm": 0.5,
+      "inv": 0.74
+    }
+  },
+  "Pattern Recognition (alt).json": {
+    "filename": "Pattern Recognition (alt).json",
+    "title": "Pattern Recognition (alt)",
+    "author": "Creator",
+    "dimensions": [
+      320,
+      180
+    ],
+    "topology_version": "1.0.0",
+    "star_count": 1713,
+    "hq_count": 4,
+    "hq_positions": [
+      [
+        26,
+        87
+      ],
+      [
+        294,
+        87
+      ],
+      [
+        162,
+        87
+      ],
+      [
+        158,
+        87
+      ]
+    ],
+    "connection_count": 3487,
+    "avg_degree": 4.07,
+    "chokepoint_count": 978,
+    "chokepoint_ratio": 0.571,
+    "hq_distance_norm": 0.367,
+    "spatial_spread": 0.983,
+    "connection_density": 0.0024,
+    "mode_affinity": {
+      "qty": 0.9,
+      "spt": 0.64,
+      "frt": 0.8,
+      "dst": 0.69,
+      "wrm": 0.5,
+      "inv": 0.84
+    }
+  },
+  "Suzanne.json": {
+    "filename": "Suzanne.json",
+    "title": "Untitled Map",
+    "author": "Creator",
+    "dimensions": [
+      160,
+      130
+    ],
+    "topology_version": "1.0.0",
+    "star_count": 256,
+    "hq_count": 0,
+    "hq_positions": [],
+    "connection_count": 521,
+    "avg_degree": 4.07,
+    "chokepoint_count": 96,
+    "chokepoint_ratio": 0.375,
+    "hq_distance_norm": 0.5,
+    "spatial_spread": 0.93,
+    "connection_density": 0.016,
+    "mode_affinity": {
+      "qty": 0.7,
+      "spt": 0.69,
+      "frt": 0.28,
+      "dst": 0.52,
+      "wrm": 0.5,
+      "inv": 0.67
+    }
+  }
+}

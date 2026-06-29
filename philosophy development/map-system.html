@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Map System — Intelligence, Topology & AI Creation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.6}
+header{border-bottom:2px solid #000;padding:20px 28px 14px;position:sticky;top:0;background:#fff;z-index:10}
+.hd-title{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:4px}
+.hd-main{font-size:20px;font-weight:700;line-height:1.2;margin-bottom:6px}
+.hd-sub{font-size:11px;color:#555;max-width:740px;line-height:1.6}
+.nav-parts{display:flex;gap:0;margin-top:12px;border-top:1px solid #eee}
+.nav-part{padding:8px 0 0}
+.nav-part+.nav-part{margin-left:28px;padding-left:28px;border-left:1px solid #eee}
+.nav-part-label{font-size:7px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#bbb;margin-bottom:5px}
+.nav{display:flex;gap:16px;flex-wrap:wrap}
+.nav a{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;text-decoration:none;padding:3px 0;border-bottom:2px solid transparent}
+.nav a:hover,.nav a.active{color:#000;border-bottom-color:#000}
+.content{max-width:1000px;margin:0 auto;padding:32px 28px 80px}
+.section{margin-bottom:52px}
+.section-label{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:6px}
+.section-title{font-size:18px;font-weight:700;margin-bottom:14px;line-height:1.3}
+.body,.section-body{font-size:12px;color:#333;line-height:1.8;max-width:700px}
+.body p,.section-body p{margin-bottom:12px}
+.body strong,.section-body strong{color:#000}
+.rule{border:none;border-top:1px solid #eee;margin:36px 0}
+.part-divider{border:none;border-top:3px solid #000;margin:56px 0 48px;display:flex;align-items:center;gap:16px}
+.part-divider-label{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;background:#fff;padding-right:12px;white-space:nowrap}
+
+/* tags */
+.asserted{display:inline-block;font-size:8px;font-weight:700;color:#d97706;border:1px solid #d97706;padding:0 4px;letter-spacing:.5px;vertical-align:middle;margin-left:4px}
+.future{display:inline-block;font-size:8px;font-weight:700;color:#7c3aed;border:1px solid #7c3aed;padding:0 4px;letter-spacing:.5px;vertical-align:middle;margin-left:4px}
+.phase-chip{display:inline-block;font-size:8px;font-weight:700;padding:1px 7px;border:1px solid;text-transform:uppercase;letter-spacing:1px;vertical-align:middle}
+
+/* tables */
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:11px}
+th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px 10px;border-bottom:2px solid #000;text-align:left;background:#f5f5f5}
+td{padding:9px 10px;border-bottom:1px solid #eee;vertical-align:top;line-height:1.6}
+tr:last-child td{border-bottom:none}
+
+/* ── PART I: MAP INTELLIGENCE ── */
+.bot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px;margin:16px 0}
+.bot-card{border:1px solid #ddd;padding:14px 16px}
+.bot-name{font-size:14px;font-weight:700;letter-spacing:2px;margin-bottom:2px}
+.bot-target{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:8px}
+.bot-body{font-size:11px;color:#333;line-height:1.6;margin-bottom:8px}
+.bot-deploy{font-size:10px;color:#555;border-top:1px solid #eee;padding-top:6px;margin-top:6px;line-height:1.6}
+.bot-deploy strong{color:#000;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.bot-signal{font-size:9px;color:#888;font-style:italic;margin-top:4px}
+.map-property-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin:16px 0}
+.map-prop{border:1px solid #eee;padding:10px 12px}
+.prop-name{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:4px}
+.prop-body{font-size:11px;color:#333;line-height:1.5}
+.pipeline{display:flex;flex-direction:column;gap:0;margin:16px 0}
+.pipe-step{display:grid;grid-template-columns:32px 1fr 120px;gap:12px;align-items:start;padding:10px 0;border-bottom:1px solid #eee}
+.pipe-step:last-child{border-bottom:none}
+.pipe-num{font-size:14px;font-weight:700;color:#ccc;text-align:center;padding-top:2px}
+.pipe-title{font-size:12px;font-weight:700;margin-bottom:3px}
+.pipe-desc{font-size:11px;color:#555;line-height:1.6}
+.pipe-status{text-align:right;padding-top:3px}
+.signal-block{background:#fafafa;border-left:3px solid #000;padding:10px 14px;margin:10px 0;font-family:'Courier New',monospace;font-size:10px;line-height:1.8}
+.signal-block .sk{color:#555}
+.signal-block .sv{color:#000}
+.signal-block .sc{color:#999}
+.formula{background:#f5f5f5;border:1px solid #ddd;padding:10px 14px;margin:10px 0;font-family:'Courier New',monospace;font-size:11px;color:#000}
+
+/* ── PART II: MAPMAKER ── */
+.mech-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin:16px 0}
+.mech-card{border:1px solid #ddd;padding:14px 16px}
+.mech-name{font-size:13px;font-weight:700;margin-bottom:4px}
+.mech-body{font-size:11px;color:#333;line-height:1.6}
+.mech-map{font-size:9px;font-style:italic;color:#888;margin-top:6px;border-top:1px solid #eee;padding-top:5px}
+.spec{background:#f5f5f5;border-left:3px solid #000;padding:12px 16px;margin:12px 0;font-family:'Courier New',monospace;font-size:10px;line-height:1.9}
+.spec .k{color:#555}
+.spec .v{color:#000;font-weight:700}
+.spec .c{color:#888;font-weight:400}
+.mk-pipe{display:flex;flex-direction:column;gap:0;margin:16px 0}
+.mk-pipe-step{display:grid;grid-template-columns:24px 1fr 80px;gap:12px;padding:12px 0;border-bottom:1px solid #eee;align-items:start}
+.mk-pipe-step:last-child{border-bottom:none}
+.mk-pipe-n{font-size:14px;font-weight:700;color:#ccc}
+#map-canvas-demo{border:1px solid #ddd;display:block;margin:12px 0;cursor:crosshair}
+.canvas-controls{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.ctrl-btn{border:1px solid #ddd;padding:4px 10px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;background:#fff}
+.ctrl-btn.active{background:#000;color:#fff;border-color:#000}
+.ctrl-label{font-size:9px;color:#888;margin-left:4px;line-height:28px}
+
+@media(max-width:768px){
+  header{padding:14px 14px 10px;position:relative}
+  .content{padding:20px 14px 40px}
+  .hd-main{font-size:16px}
+  .bot-grid,.map-property-grid,.mech-grid{grid-template-columns:1fr}
+  .pipe-step{grid-template-columns:24px 1fr;grid-template-rows:auto auto}
+  .pipe-status{grid-column:2;text-align:left}
+  .mk-pipe-step{grid-template-columns:20px 1fr;grid-template-rows:auto auto}
+  .mk-pipe-step>:last-child{grid-column:2}
+  table{font-size:10px}
+  th,td{padding:6px 8px}
+  .nav-parts{flex-direction:column;gap:10px}
+  .nav-part+.nav-part{margin-left:0;padding-left:0;border-left:none;border-top:1px solid #eee;padding-top:10px}
+  #map-canvas-demo{width:100%}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd-title">Architectural Layer — Environment Intelligence</div>
+  <div class="hd-main">Map System — Intelligence, Topology & AI Creation</div>
+  <div class="hd-sub">Part I: what the system must know about maps (topology, strategy patterns, bot calibration, compiler integration). Part II: what an AI mapmaker must know to create maps that produce cognitive signal (game mechanics, JSON format, strategic catalogue, image-to-map pipeline).</div>
+  <div class="nav-parts">
+    <div class="nav-part">
+      <div class="nav-part-label">Part I — Map Intelligence</div>
+      <nav class="nav">
+        <a href="#map-as-variable">Map as Variable</a>
+        <a href="#topology">Topology Registry</a>
+        <a href="#patterns">Strategy Patterns</a>
+        <a href="#bot-profiles">Bot Profiles</a>
+        <a href="#composition">Composition</a>
+        <a href="#ledger-additions">Ledger Additions</a>
+        <a href="#pipeline">Build Pipeline</a>
+      </nav>
+    </div>
+    <div class="nav-part">
+      <div class="nav-part-label">Part II — AI Mapmaker</div>
+      <nav class="nav">
+        <a href="#mechanics">Game Mechanics</a>
+        <a href="#map-language">Map Language</a>
+        <a href="#strategic-catalogue">Strategic Catalogue</a>
+        <a href="#ai-pipeline">AI Pipeline</a>
+        <a href="#image-formula">Image → Map</a>
+        <a href="#information">Info Balance</a>
+        <a href="#validation">Validation</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<div class="content">
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!--  PART I — MAP INTELLIGENCE                                                -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+
+<div class="section" id="map-as-variable">
+  <div class="section-label">Part I · Section 1</div>
+  <div class="section-title">The Map as a Structured Variable</div>
+  <div class="section-body">
+    <p>Currently, <code>map_idx</code> is a single integer in the config vector — treated identically to <code>round_length_s</code> or <code>steals</code>. The system knows it used map 3, but knows nothing <em>about</em> map 3. This is the same as a chess engine that records which board was used but doesn't know the rules vary by board.</p>
+    <p>A map is a <strong>structured environment</strong> with topological properties that determine which cognitive modes are favored, which human strategies emerge, and which bot behaviors produce the most informative sessions. The compiler must understand this to select the right map for a given student's development target.</p>
+    <p><strong>The current blind spot:</strong> a student with high QTY Elo placed on a map where quantity play is impossible gets a contaminated signal — the outcome reflects map topology, not cognitive skill. The system currently cannot distinguish these.</p>
+    <p>The resolution requires three layers: a <strong>topology registry</strong> (what is each map), a <strong>strategy pattern library</strong> (what humans do on each map), and a <strong>bot calibration system</strong> (how to create the maximally informative opponent for each student-map combination).</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="topology">
+  <div class="section-label">Part I · Section 2</div>
+  <div class="section-title">Map Topology Registry — What the System Needs to Know</div>
+  <div class="section-body">
+    <p>Every map needs a topology record. This is not derived from play data — it is structural, derivable from the map definition itself. Some properties can be computed algorithmically; others require manual annotation.</p>
+  </div>
+
+  <div class="map-property-grid">
+    <div class="map-prop">
+      <div class="prop-name">Symmetry Class</div>
+      <div class="prop-body">Rotationally symmetric, bilaterally symmetric, or asymmetric. Symmetric maps make QTY/SPT strategies predictable across player positions. Asymmetric maps favor positional reasoning and force role differentiation.</div>
+    </div>
+    <div class="map-prop">
+      <div class="prop-name">HQ Geometry</div>
+      <div class="prop-body">How far are HQs from each other, from the map center, and from neutral resource clusters? Short HQ distance favors FORTRESS play. Long HQ distance favors SPT/distance-seeking strategies.</div>
+    </div>
+    <div class="map-prop">
+      <div class="prop-name">Resource Density</div>
+      <div class="prop-body">How many capturable positions exist, and how clustered or dispersed are they? High-density maps favor QTY (capture everything). Sparse maps force selective sequencing and spatial planning.</div>
+    </div>
+    <div class="map-prop">
+      <div class="prop-name">Chokepoint Count</div>
+      <div class="prop-body">How many bottleneck positions exist where territory control is decisive? High chokepoint maps reward spatial occupation and position holding. Low chokepoint maps reward open maneuvering.</div>
+    </div>
+    <div class="map-prop">
+      <div class="prop-name">Mode Affinity Vector</div>
+      <div class="prop-body">A [6]-dim vector over [QTY, SPT, FRT, DST, WRM, INV] rating how much each mode's scoring strategy is viable on this map. Example: a tight, HQ-centric map: [0.4, 0.6, 0.9, 0.3, 0.5, 0.7]. Used by compiler to select maps that match the target mode.</div>
+    </div>
+    <div class="map-prop">
+      <div class="prop-name">Opening Divergence</div>
+      <div class="prop-body">Do most players open similarly, or do opening moves diverge widely? Low-divergence maps have a dominant first move. High-divergence maps produce more varied data per session.</div>
+    </div>
+    <div class="map-prop">
+      <div class="prop-name">Theoretical Optimal</div>
+      <div class="prop-body">The provably or empirically best strategy for each mode on this map. Derived from top-percentile sessions or simulation. Used as the THEORETICIAN bot's playbook and as the baseline for measuring student gap.</div>
+    </div>
+    <div class="map-prop">
+      <div class="prop-name">Difficulty Rating per Mode</div>
+      <div class="prop-body">How much does this map add to cognitive load for each mode? A map where QTY is easy (many close clusters) vs where QTY is hard (resources dispersed). <span class="asserted">NOT YET ASSERTED</span> — needs empirical data from Phase 1.</div>
+    </div>
+  </div>
+
+  <div class="section-body" style="margin-top:16px">
+    <p>The topology record is stored as a static JSON file (<code>maps/topology.json</code>), updated when new maps are added, and loaded by the compiler at session generation time. It does not go in the Ledger — it is environmental metadata, not an observation.</p>
+  </div>
+
+  <div class="signal-block">
+<span class="sc">// maps/topology.json — structure</span>
+<span class="sk">{</span>
+  <span class="sk">"0": {</span>
+    <span class="sk">"name":</span> <span class="sv">"Map Alpha"</span>,
+    <span class="sk">"symmetry":</span> <span class="sv">"bilateral"</span>,
+    <span class="sk">"hq_distance_norm":</span> <span class="sv">0.72</span>,        <span class="sc">// 0=adjacent 1=opposite corners</span>
+    <span class="sk">"resource_density":</span> <span class="sv">0.61</span>,          <span class="sc">// 0=sparse 1=saturated</span>
+    <span class="sk">"chokepoints":</span> <span class="sv">3</span>,
+    <span class="sk">"mode_affinity":</span> <span class="sv">[0.7, 0.5, 0.8, 0.4, 0.5, 0.6]</span>,  <span class="sc">// [qty,spt,frt,dst,wrm,inv]</span>
+    <span class="sk">"opening_divergence":</span> <span class="sv">0.4</span>,          <span class="sc">// 0=everyone plays the same, 1=fully random</span>
+    <span class="sk">"theoretical_optimal":</span> <span class="sv">{ "qty": [...], "spt": [...] }</span>,
+    <span class="sk">"difficulty":</span> <span class="sv">{ "qty": 0.45, "spt": 0.65, "frt": 0.30 }</span>
+  <span class="sk">}</span>
+<span class="sk">}</span>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="patterns">
+  <div class="section-label">Part I · Section 3</div>
+  <div class="section-title">Strategy Pattern Library — What Humans Actually Do</div>
+  <div class="section-body">
+    <p>Beyond the topology, the system needs to know what human players actually do when placed on each map. This is empirical knowledge accumulated from the Ledger — not derivable from the map structure alone.</p>
+    <p>The pattern library serves two purposes: it tells the compiler what <em>this</em> student's behavior on this map looks like vs. what most students do, and it gives the bot calibration system enough context to create a bot that plays against the student's specific tendencies — not just against generic play.</p>
+  </div>
+
+  <table>
+    <thead><tr><th>Pattern Dimension</th><th>What it measures</th><th>How it's captured</th><th>How it's used</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>First-move distribution</strong></td>
+        <td>Where do most players send their first piece on this map? What % claim the central resource vs. the HQ-adjacent resource vs. the far edge?</td>
+        <td>Round 1, move 1 position from Ledger records. Aggregated across all sessions on map_idx=X.</td>
+        <td>Bot can be configured to either play the statistically dominant first move (THEORETICIAN) or to counter the student's documented first move (CONTESTER).</td>
+      </tr>
+      <tr>
+        <td><strong>Phase distribution</strong></td>
+        <td>How does the average player's board position evolve round-by-round? Do most players expand in early rounds and consolidate later, or hold and then push?</td>
+        <td>round_snapshots from Ledger → per-round rank_pct curves, averaged across all students on this map.</td>
+        <td>Identifies the typical tempo of the map. A student who is significantly ahead or behind the average tempo curve at round 3 is showing map-specific tempo skill or deficit.</td>
+      </tr>
+      <tr>
+        <td><strong>Common archetypes</strong></td>
+        <td>On this map, what strategic archetypes emerge? e.g. "Rusher" (early all-in expansion), "Turtler" (consolidate own territory), "HQ Sniper" (ignore resources, target opponent HQ), "Opportunist" (react to opponent moves).</td>
+        <td>Session-level behavioral signals: early_expansion_rate, hq_attack_frequency, contested_zone_entry, reactive_vs_proactive_ratio.</td>
+        <td>Student gets tagged with their dominant archetype on each map. The bot is selected to counter or mirror that archetype depending on the development target.</td>
+      </tr>
+      <tr>
+        <td><strong>Student map fingerprint</strong></td>
+        <td>For a specific student: how does their play on map X differ from their play overall? Do they default to the same strategy regardless of map, or do they adapt?</td>
+        <td>Compare per-map behavioral signals to student's overall mean. High deviation = map-aware player. Low deviation = map-blind player (applies same strategy everywhere).</td>
+        <td>Map-blind players need maps that punish their default strategy. Map-aware players need more complex maps that force higher-order adaptation.</td>
+      </tr>
+      <tr>
+        <td><strong>Chokepoint behavior</strong></td>
+        <td>When a chokepoint is available, what % of players take it vs. bypass it? How long do players who take chokepoints hold them?</td>
+        <td>Requires positional data in Ledger (currently not stored). <span class="future">FUTURE</span></td>
+        <td>Identifies whether students understand positional leverage. A student who consistently bypasses high-value chokepoints is showing SPT deficit on positional maps.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="section-body" style="margin-top:16px">
+    <p><strong>Privacy note:</strong> Pattern data is aggregated at the cohort level before being used in compiler decisions. The system does not expose "what most students do" to students — only to the admin panel and to bot calibration. The pattern library is a system resource, not a student-facing feature.</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="bot-profiles">
+  <div class="section-label">Part I · Section 4</div>
+  <div class="section-title">Bot Strategy Profiles — Six Personalities for Maximum Development</div>
+  <div class="section-body">
+    <p>The current system treats bot configuration as a single parameter: <code>bot_aggression</code> (0–10). This is a scalar on a behavior that needs to be a vector. Aggression is one dimension of bot strategy. The others are: target selection logic, tempo, and adaptive vs. fixed behavior.</p>
+    <p>The following six profiles cover the full space of what a bot can do to develop a specific student. Each is defined by its <em>development target</em> — the cognitive dimension in the student it is designed to stress-test.</p>
+  </div>
+
+  <div class="bot-grid">
+    <div class="bot-card">
+      <div class="bot-name">MIRROR</div>
+      <div class="bot-target">Target: self-model accuracy</div>
+      <div class="bot-body">The bot replicates the student's dominant strategy from their Ledger history. If the student always starts with a northern expansion, the bot opens with a northern expansion. The student is playing against a projection of themselves.</div>
+      <div class="bot-deploy">
+        <strong>Deploy when:</strong> student has a strong, consistent strategy and the question is whether that strategy is fundamentally sound or exploitable.<br>
+        <span class="bot-signal">Signal: rank_pct vs. own historical baseline. If the MIRROR bot beats the student more often than vice versa, the strategy has an exploitable weakness.</span>
+      </div>
+    </div>
+    <div class="bot-card">
+      <div class="bot-name">CONTESTER</div>
+      <div class="bot-target">Target: adaptability under pressure</div>
+      <div class="bot-body">The bot specifically targets and contests the zones the student is developing — not the strategically optimal zones. If the student typically develops the right side, the bot occupies and defends the right side, forcing development somewhere unfamiliar.</div>
+      <div class="bot-deploy">
+        <strong>Deploy when:</strong> student is map-blind (plays the same opening regardless of map) or shows low variance in strategy.<br>
+        <span class="bot-signal">Signal: strategy_shift_speed, alternative_axis_discovery. Students who find new approaches quickly show genuine adaptability.</span>
+      </div>
+    </div>
+    <div class="bot-card">
+      <div class="bot-name">ACCELERANT</div>
+      <div class="bot-target">Target: tempo and decision speed</div>
+      <div class="bot-body">The bot plays at maximum aggression in early rounds — claiming as many positions as possible as fast as possible. By round 3, the board state is already contested. The student must respond at a tempo faster than they are comfortable with.</div>
+      <div class="bot-deploy">
+        <strong>Deploy when:</strong> student shows slow early development (round 1–2 rank_pct below average) or high unused move_pool_rate.<br>
+        <span class="bot-signal">Signal: early_response_latency, round_1_rank_pct. Adapting to the accelerant's pace shows temporal flexibility.</span>
+      </div>
+    </div>
+    <div class="bot-card">
+      <div class="bot-name">TURTLER</div>
+      <div class="bot-target">Target: initiative and aggression</div>
+      <div class="bot-body">The bot plays defensively — consolidating a small territory and holding it, rather than expanding. The student must be the aggressor. There is no external pressure forcing action; the student must generate their own momentum.</div>
+      <div class="bot-deploy">
+        <strong>Deploy when:</strong> student is reactive (low proactive_vs_reactive ratio) or when prior sessions show high variance that might mask underlying skill.<br>
+        <span class="bot-signal">Signal: proactive_expansion_rate, initiative_score. Effective expansion against a turtler shows self-generated strategic momentum.</span>
+      </div>
+    </div>
+    <div class="bot-card">
+      <div class="bot-name">THEORETICIAN</div>
+      <div class="bot-target">Target: skill ceiling measurement</div>
+      <div class="bot-body">The bot plays the theoretical optimal strategy for this map and mode, derived from the strategy pattern library. It is not adaptive — it executes the best known fixed strategy. The gap between the student's performance and the theoretician's IS the map-specific skill gap.</div>
+      <div class="bot-deploy">
+        <strong>Deploy when:</strong> student has high session count on this map (≥ 6 sessions) and the compiler needs a clean skill ceiling measurement.<br>
+        <span class="bot-signal">Signal: rank_pct vs. theoretician is the map-mode skill gap. Used in Phase 2 BT transfer calculations.</span>
+      </div>
+    </div>
+    <div class="bot-card">
+      <div class="bot-name">ADAPTOR</div>
+      <div class="bot-target">Target: meta-cognitive flexibility</div>
+      <div class="bot-body">The bot changes strategy mid-session based on what the student is doing. If the student is expanding north, the bot shifts to contest north. The student is not playing against a fixed strategy — they are playing against an opponent who is reading them in real time.</div>
+      <div class="bot-deploy">
+        <strong>Deploy when:</strong> student has high experience on this map and simple strategies no longer produce information.<br>
+        <span class="bot-signal">Signal: counter_detection_speed, strategy_oscillation. A student who deploys deception in response is showing meta-game reasoning.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="composition">
+  <div class="section-label">Part I · Section 5</div>
+  <div class="section-title">The Perfect Session — Composing Student × Map × Bot</div>
+  <div class="section-body">
+    <p>The compiler's current job is: select mode → build config vector. The future compiler's job is: select mode → select map that best exposes that mode → select bot strategy that maximally develops the student on that map in that mode. Three decisions, not one.</p>
+    <p>The composition principle: <strong>the best session is the one that maximizes expected KL divergence between the student's prior model and their posterior model after the session.</strong></p>
+  </div>
+
+  <table>
+    <thead><tr><th>Student Profile</th><th>Target Mode</th><th>Map Selection Logic</th><th>Bot Profile</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Zero-session student</strong></td>
+        <td>QTY (calibration)</td>
+        <td>High-resource-density, symmetric, low chokepoints</td>
+        <td>TURTLER at aggression=30</td>
+        <td>Let the student explore freely. Symmetric map removes positional confusion. Clean baseline capture.</td>
+      </tr>
+      <tr>
+        <td><strong>Map-blind student</strong> (same opening always)</td>
+        <td>Any deficit mode</td>
+        <td>Asymmetric map that makes their default opening suboptimal</td>
+        <td>CONTESTER</td>
+        <td>The map provides structural pressure against their default strategy. The contester adds behavioral pressure. Student must adapt twice.</td>
+      </tr>
+      <tr>
+        <td><strong>High QTY, low SPT</strong></td>
+        <td>SPT</td>
+        <td>High-chokepoint, sparse-resource map</td>
+        <td>THEORETICIAN (SPT optimal)</td>
+        <td>Student's quantity instinct is useless on this map. The theoretician shows what optimal SPT play looks like. The gap is the SPT deficit signal.</td>
+      </tr>
+      <tr>
+        <td><strong>High-variance student</strong></td>
+        <td>Student's strongest mode</td>
+        <td>Their highest-frequency map (most familiar)</td>
+        <td>TURTLER</td>
+        <td>Remove all external forcing. Familiar map, passive opponent. Variance in this condition = psychological inconsistency, not skill inconsistency. Clean diagnosis.</td>
+      </tr>
+      <tr>
+        <td><strong>Expert student</strong> (high Elo, low velocity)</td>
+        <td>Any mode</td>
+        <td>Novel map (low map_idx history)</td>
+        <td>ADAPTOR</td>
+        <td>Expert has mastered all familiar maps. New map breaks cached strategies. Adaptor forces meta-cognitive reasoning. Maximum KL gain available.</td>
+      </tr>
+      <tr>
+        <td><strong>RADICAL zone student</strong></td>
+        <td>Deficit mode</td>
+        <td>Map with HIGH affinity for the deficit mode</td>
+        <td>MIRROR (their dominant mode strategy, now wrong context)</td>
+        <td>Student enters their strongest strategy into a mode that doesn't reward it, AND plays against a bot that does exactly what they do. Double displacement.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="ledger-additions">
+  <div class="section-label">Part I · Section 6</div>
+  <div class="section-title">What the Ledger Needs — New Signals for Map Intelligence</div>
+  <div class="section-body">
+    <p>The current Ledger records outcome and config vector. Map intelligence requires behavioral signals that go into the session record. These are observed quantities — they go in the Ledger as part of the session observation, not as derived views.</p>
+  </div>
+
+  <div class="signal-block">
+<span class="sc">// New fields in session observation (appended to existing record)</span>
+<span class="sk">"map_signals"</span>: {
+  <span class="sk">"bot_profile"</span>: <span class="sv">"CONTESTER"</span>,          <span class="sc">// which bot strategy was used</span>
+  <span class="sk">"opening_position"</span>: <span class="sv">[x, y]</span>,          <span class="sc">// first move target position</span>
+  <span class="sk">"archetype_tag"</span>: <span class="sv">"rusher"</span>,             <span class="sc">// inferred from behavioral signals</span>
+  <span class="sk">"strategy_shift_count"</span>: <span class="sv">2</span>,             <span class="sc">// how many times student changed approach</span>
+  <span class="sk">"chokepoint_claim_rate"</span>: <span class="sv">0.67</span>,         <span class="sc">// fraction of available chokepoints claimed</span>
+  <span class="sk">"early_rank_pct"</span>: <span class="sv">0.42</span>,               <span class="sc">// rank at round floor(rounds/3)</span>
+  <span class="sk">"tempo_delta"</span>: <span class="sv">-0.15</span>,                 <span class="sc">// student tempo vs map average (neg=slower)</span>
+  <span class="sk">"map_affinity_match"</span>: <span class="sv">0.78</span>            <span class="sc">// how well this map matched the target mode</span>
+}
+  </div>
+
+  <table>
+    <thead><tr><th>Signal</th><th>Definition</th><th>Layer</th><th>Phase</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>bot_profile</code></td>
+        <td>Which of the 6 bot strategies was used in this session</td>
+        <td>Ledger (raw)</td>
+        <td><span class="phase-chip" style="border-color:#2563eb;color:#2563eb">Phase 1</span></td>
+      </tr>
+      <tr>
+        <td><code>archetype_tag</code></td>
+        <td>Student's dominant archetype (rusher, turtler, sniper, opportunist) inferred from behavioral signals</td>
+        <td>Ledger (raw signal)</td>
+        <td><span class="phase-chip" style="border-color:#2563eb;color:#2563eb">Phase 1</span></td>
+      </tr>
+      <tr>
+        <td><code>strategy_shift_count</code></td>
+        <td>How many times the student changed their primary strategic focus during the session</td>
+        <td>Ledger (raw)</td>
+        <td><span class="phase-chip" style="border-color:#2563eb;color:#2563eb">Phase 1</span></td>
+      </tr>
+      <tr>
+        <td><code>tempo_delta</code></td>
+        <td>Student's expansion tempo relative to map baseline (derived from pattern library)</td>
+        <td>Layer 1 (derived) — needs pattern library</td>
+        <td><span class="phase-chip" style="border-color:#059669;color:#059669">Phase 2</span></td>
+      </tr>
+      <tr>
+        <td><code>map_elo[map_idx]</code></td>
+        <td>Per-map Elo separate from mode Elo — tracks map-specific skill accumulation</td>
+        <td>Layer 1 (derived) — 6-mode × N-map matrix per student</td>
+        <td><span class="phase-chip" style="border-color:#059669;color:#059669">Phase 2</span></td>
+      </tr>
+      <tr>
+        <td><code>bot_vs_student_gap</code></td>
+        <td>THEORETICIAN bot's final score minus student's final score, normalized</td>
+        <td>Ledger (raw) — only meaningful when THEORETICIAN used</td>
+        <td><span class="phase-chip" style="border-color:#059669;color:#059669">Phase 2</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="pipeline">
+  <div class="section-label">Part I · Section 7</div>
+  <div class="section-title">Build Pipeline — What Gets Built When</div>
+
+  <div class="pipeline">
+    <div class="pipe-step">
+      <div class="pipe-num">1</div>
+      <div class="pipe-body">
+        <div class="pipe-title">Map Topology Registry (manual + algorithmic)</div>
+        <div class="pipe-desc">Create <code>maps/topology.json</code> with structural properties for each existing map. Mode affinity vectors require playtesting annotation for now; algorithmic derivation from map geometry is a Phase 2 task. <strong>Status: built — <code>maps/generate-topology.js</code> and <code>maps/topology.json</code> exist with all 14 maps.</strong></div>
+      </div>
+      <div class="pipe-status"><span class="phase-chip" style="border-color:#059669;color:#059669">Built</span></div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">2</div>
+      <div class="pipe-body">
+        <div class="pipe-title">Bot profile parameter set in compiler output</div>
+        <div class="pipe-desc">The compiler selects a bot profile name (one of 6) and passes it to server.js with the session config. Profiles stored in <code>compiler.js</code> as constants. <strong>Status: built — compiler.js exports BOT_PROFILES and selectBotProfile().</strong></div>
+      </div>
+      <div class="pipe-status"><span class="phase-chip" style="border-color:#059669;color:#059669">Built</span></div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">3</div>
+      <div class="pipe-body">
+        <div class="pipe-title">Map selection added to compiler</div>
+        <div class="pipe-desc">Compiler reads topology.json and selects the map with highest <code>mode_affinity[target_mode]</code> subject to recency penalty (don't repeat the last 3 maps). <strong>Status: built — compiler.js selectMap() implemented.</strong></div>
+      </div>
+      <div class="pipe-status"><span class="phase-chip" style="border-color:#059669;color:#059669">Built</span></div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">4</div>
+      <div class="pipe-body">
+        <div class="pipe-title">Behavioral signal extraction from session records</div>
+        <div class="pipe-desc">Extract <code>archetype_tag</code> and <code>strategy_shift_count</code> from round_snapshots and add to Ledger observation. Requires defining the signal extraction formulas and wiring them into <code>_writeSessionObservations</code>.</div>
+      </div>
+      <div class="pipe-status"><span class="phase-chip" style="border-color:#2563eb;color:#2563eb">Phase 1</span></div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">5</div>
+      <div class="pipe-body">
+        <div class="pipe-title">Strategy pattern library (aggregate from Ledger)</div>
+        <div class="pipe-desc">After ≥ 20 sessions per map, aggregate behavioral signals into per-map pattern records. Powers tempo_delta, opening_distribution, and chokepoint behavior comparisons. A nightly compute job, not real-time.</div>
+      </div>
+      <div class="pipe-status"><span class="phase-chip" style="border-color:#059669;color:#059669">Phase 2</span></div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">6</div>
+      <div class="pipe-body">
+        <div class="pipe-title">Per-student map Elo matrix</div>
+        <div class="pipe-desc">Extend the compiler's Elo computation to produce a [modes × maps] matrix per student rather than a [modes] vector. Gated behind Phase 2 data accumulation.</div>
+      </div>
+      <div class="pipe-status"><span class="phase-chip" style="border-color:#059669;color:#059669">Phase 2</span></div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">7</div>
+      <div class="pipe-body">
+        <div class="pipe-title">THEORETICIAN bot from theoretical optimal</div>
+        <div class="pipe-desc">Once theoretical optimal strategies are documented per map per mode, the THEORETICIAN bot executes them. Requires bot AI to accept a move-sequence directive rather than a scalar aggression parameter — a game engine change.</div>
+      </div>
+      <div class="pipe-status"><span class="phase-chip" style="border-color:#059669;color:#059669">Phase 2</span></div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">8</div>
+      <div class="pipe-body">
+        <div class="pipe-title">Adaptive bot (ADAPTOR profile)</div>
+        <div class="pipe-desc">The ADAPTOR bot requires real-time read of the student's current session state and strategy inference mid-game. Needs in-game signal processing, not just session-level configuration.</div>
+      </div>
+      <div class="pipe-status"><span class="phase-chip" style="border-color:#7c3aed;color:#7c3aed">Phase 3</span></div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">9</div>
+      <div class="pipe-body">
+        <div class="pipe-title">Full composition optimization (argmax E[KL] over map × bot)</div>
+        <div class="pipe-desc">The compiler optimizes all three dimensions simultaneously — mode, map, bot profile — using fitted parameters from Phase 3. Until then, heuristic rules from the composition table in Section 5 approximate the optimization.</div>
+      </div>
+      <div class="pipe-status"><span class="phase-chip" style="border-color:#e11d48;color:#e11d48">Phase ∞</span></div>
+    </div>
+  </div>
+
+  <div class="formula">
+compiler_session_v2(student) =
+  mode   ← argmax(deficit×0.50 + staleness×0.30 + gap×0.20)       // existing
+  map    ← argmax(topology[m].mode_affinity[mode] − recency_penalty[m])  // Phase 1 — built
+  bot    ← select_profile(student.archetype, student.map_history[map], zone)  // Phase 1 — built
+  config ← MODE_DEFAULTS[mode] adjusted for map.difficulty[mode]    // Phase 1
+  return { mode, map_idx: map, bot_profile: bot, config_vector, zone }
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!--  PART II — AI MAPMAKER                                                    -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+
+<div class="part-divider">
+  <span class="part-divider-label">PART II — AI MAPMAKER: SPECIFICATION & PHILOSOPHY</span>
+</div>
+<p class="body" style="margin-bottom:36px;margin-top:-24px">A complete specification for an AI system that creates Constellation maps from images, spatial formulas, strategic intent, and mechanical constraints — with full understanding of how the game works and what cognitive experiences each map should create.</p>
+
+<div class="section" id="mechanics">
+  <div class="section-label">Part II · Section 1 — Full mechanical model</div>
+  <div class="section-title">What the AI Must Understand — Complete Game Mechanics</div>
+  <div class="body">
+    <p>The mapmaker AI cannot produce strategically meaningful maps without a complete understanding of how the game works at the mechanical level. Every design decision — star placement, connection topology, HQ position — cascades into strategic affordances.</p>
+  </div>
+
+  <div class="mech-grid">
+    <div class="mech-card">
+      <div class="mech-name">Stars (nodes)</div>
+      <div class="mech-body">Stars are capturable positions. A team claims a star by moving a piece onto it. Stars have a type: <strong>type 1</strong> (capturable, no special function) and <strong>type 2</strong> (HQ — headquarters, high strategic value). Stars do not move.</div>
+      <div class="mech-map">Map design lever: star density, cluster shape, spatial distribution</div>
+    </div>
+    <div class="mech-card">
+      <div class="mech-name">Lines (edges)</div>
+      <div class="mech-body">Lines define which stars are adjacent — i.e., which moves are legal. A piece can move from star A to star B only if there is a line between them. The edge structure determines pathways, chokepoints, and the reachability of each star. <strong>Degree</strong> = number of edges at a node.</div>
+      <div class="mech-map">Map design lever: connectivity, degree distribution, bridge structures</div>
+    </div>
+    <div class="mech-card">
+      <div class="mech-name">Scoring multipliers</div>
+      <div class="mech-body"><strong>count_mult</strong>: points per captured star. <strong>dist_mult</strong>: points per unit of total distance between your stars. <strong>hq_mult</strong>: points for capturing or proximity to HQ stars. <strong>dest_mult</strong>: points for destroying opponent's stars. The config vector sets these — the map determines which multipliers are naturally rewarding.</div>
+      <div class="mech-map">Map design lever: HQ placement determines hq_mult viability; spread determines dist_mult viability</div>
+    </div>
+    <div class="mech-card">
+      <div class="mech-name">Moves & steals</div>
+      <div class="mech-body">Each team gets a fixed move pool per round (config: <code>moves</code>). A <strong>steal</strong> recaptures a star held by the opponent (costs extra from move pool, limited by <code>steals</code>). High steal limits favor contested maps; low steal limits favor spreading and holding.</div>
+      <div class="mech-map">Map design lever: chokepoint density affects how often steals are contested</div>
+    </div>
+    <div class="mech-card">
+      <div class="mech-name">Rounds & round length</div>
+      <div class="mech-body">Sessions have a fixed number of rounds (<code>rounds</code>, default 10). Each round has a time limit (<code>round_length_s</code>). Longer rounds favor deliberate planning; shorter rounds favor fast heuristics. Maps with complex topology penalize short-round play more.</div>
+      <div class="mech-map">Map design lever: high avg_degree maps are harder to read under time pressure</div>
+    </div>
+    <div class="mech-card">
+      <div class="mech-name">HQ placement</div>
+      <div class="mech-body">HQ stars (type 2) can be <strong>fixed</strong> (embedded in map JSON) or <strong>dynamic</strong> (teams place their own HQ at the start). Maps with 0 type-2 stars use dynamic HQ placement. Fixed HQ maps create deterministic fortress dynamics.</div>
+      <div class="mech-map">Map design lever: fixed HQs favor FRT mode; dynamic HQs add positional decision layer</div>
+    </div>
+    <div class="mech-card">
+      <div class="mech-name">Bot AI (current)</div>
+      <div class="mech-body">Bot AI is client-side, driven by <code>aggression</code> (0–10). High aggression = expand fast, contest early. Low aggression = consolidate. The bot has no deep strategy awareness — it responds to local state, not global map topology. Phase 1 reality; Phase 2 bot AI is strategy-profile-driven.</div>
+      <div class="mech-map">Map design implication: maps where early expansion dominates reward high-aggression bots more than maps where position matters</div>
+    </div>
+    <div class="mech-card">
+      <div class="mech-name">Wormholes</div>
+      <div class="mech-body">Wormhole pairs are long-range connections between non-adjacent stars. A piece that activates a wormhole teleports to its pair. Wormholes create non-local strategic options. <strong>6 Syn Wormholes.json</strong> is the only current map with wormhole edges.</div>
+      <div class="mech-map">Map design lever: wormhole pair distance and position define the teleportation advantage</div>
+    </div>
+  </div>
+
+  <div class="body" style="margin-top:8px">
+    <p><strong>The key insight for map design:</strong> the map determines which scoring strategies are viable, but the config vector determines which strategies are rewarded. A map with no HQ stars makes high hq_mult configurations irrelevant. A map with all stars clustered makes high dist_mult configurations low-reward. <strong>The mapmaker must design maps where the target mode's scoring strategy is genuinely viable.</strong></p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="map-language">
+  <div class="section-label">Part II · Section 2 — Map format</div>
+  <div class="section-title">Map Language — The JSON Format the AI Produces</div>
+  <div class="body">
+    <p>The current map format is already the right format — no extension needed. The mapmaker AI must produce valid JSON in this schema. Every field has a mechanical meaning the AI must understand and control deliberately.</p>
+  </div>
+
+  <div class="spec">
+<span class="k">{</span>
+  <span class="k">"author"</span>: <span class="v">"AI Mapmaker v1 · [directive summary]"</span>,       <span class="c">// tracks provenance</span>
+  <span class="k">"title"</span>:  <span class="v">"[Strategic role + map name]"</span>,                 <span class="c">// human-readable</span>
+  <span class="k">"dimensions"</span>: <span class="v">[320, 180]</span>,                               <span class="c">// fixed — all maps use this canvas</span>
+  <span class="k">"stars"</span>: [                                                  <span class="c">// array of [x, y, type]</span>
+    <span class="v">[x, y, 1]</span>,  <span class="c">// type 1: capturable star</span>
+    <span class="v">[x, y, 2]</span>,  <span class="c">// type 2: HQ star (fixed headquarters)</span>
+  ],
+  <span class="k">"lines"</span>: [                                                  <span class="c">// array of [star_idx_a, star_idx_b]</span>
+    <span class="v">[0, 1]</span>,     <span class="c">// edge between star 0 and star 1</span>
+    <span class="c">// ... all edges. Indices reference stars array (0-based)</span>
+  ]
+<span class="k">}</span>
+  </div>
+
+  <table>
+    <thead><tr><th>Constraint</th><th>Value</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Canvas dimensions</td><td>320 × 180 (always)</td><td>Game client renders to this aspect ratio. Coordinates outside [0,319] × [0,179] are clipped.</td></tr>
+      <tr><td>Minimum stars</td><td>≥ 20 <span class="asserted">ASSERTED</span></td><td>Below 20 stars, QTY mode has no meaningful territory to contest.</td></tr>
+      <tr><td>Graph connectivity</td><td>All stars must be reachable from any star</td><td>Disconnected subgraphs create isolated territory that can never be contested — dead map regions.</td></tr>
+      <tr><td>Minimum avg_degree</td><td>≥ 2.0 <span class="asserted">ASSERTED</span></td><td>Avg degree &lt; 2 means many dead-end stars with one connection — creates forced paths, not strategy.</td></tr>
+      <tr><td>HQ stars (type 2)</td><td>0 (dynamic) or even number (symmetric)</td><td>Odd fixed HQs create asymmetric fortress advantage.</td></tr>
+      <tr><td>Star overlap</td><td>No two stars at same [x,y]</td><td>Duplicate positions corrupt the edge list and create rendering artifacts.</td></tr>
+      <tr><td>Self-loops</td><td>No [i, i] edges</td><td>A star connected to itself is invalid — creates infinite loops in pathfinding.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="strategic-catalogue">
+  <div class="section-label">Part II · Section 3 — Strategic patterns</div>
+  <div class="section-title">Strategic Catalogue — What Each Map Should Do</div>
+  <div class="body">
+    <p>Every map in the catalogue is a strategic intent, not just an aesthetic choice. When you ask the mapmaker for a map, you are asking it to create an environment where a specific cognitive challenge is the dominant experience. The map design follows from the strategic intent.</p>
+  </div>
+
+  <table>
+    <thead><tr><th>Strategic Type</th><th>Topology Requirements</th><th>Primary Mode</th><th>Cognitive Target</th><th>Avoid</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>EXPANSION MAP</strong></td>
+        <td>High star count (80+), medium density, no large clusters, distributed stars with few chokepoints</td>
+        <td>QTY</td>
+        <td>Rapid territory coverage, move sequencing, opportunity cost under limited moves</td>
+        <td>Large dead zones, disconnected regions, star clusters that reward camping</td>
+      </tr>
+      <tr>
+        <td><strong>DISTANCE MAP</strong></td>
+        <td>Wide spread across canvas, stars placed near edges, long corridors, HQs at opposite corners</td>
+        <td>SPT</td>
+        <td>Spatial awareness, maximizing distance between held stars, resisting opponent's distance plays</td>
+        <td>Central clustering, symmetric placement (makes spatial reasoning too simple)</td>
+      </tr>
+      <tr>
+        <td><strong>FORTRESS MAP</strong></td>
+        <td>Fixed HQ stars (type 2), multiple HQ pairs, HQs proximate to each other, defensive corridors near HQs</td>
+        <td>FRT</td>
+        <td>Defensive positioning, HQ protection, contesting opponent HQ proximity</td>
+        <td>HQs at edges with no natural defense routes</td>
+      </tr>
+      <tr>
+        <td><strong>DESTRUCTION MAP</strong></td>
+        <td>High connectivity (avg_degree ≥ 5), many intersecting paths, high contention zones at center</td>
+        <td>DST</td>
+        <td>Aggressive recapture, denying opponent positions, scoring through opponent star removal</td>
+        <td>Star deserts with no contested zones, low connectivity</td>
+      </tr>
+      <tr>
+        <td><strong>CORRIDOR MAP</strong></td>
+        <td>Long chains of stars with few branch points, defined bottleneck chokepoints, clear terrain lanes</td>
+        <td>SPT / FRT</td>
+        <td>Chokepoint identification, lane control, commitment decisions at forks</td>
+        <td>Too many parallel corridors, open areas where corridors connect</td>
+      </tr>
+      <tr>
+        <td><strong>CLUSTER MAP</strong></td>
+        <td>Dense sub-graphs connected by sparse bridges, distinct regional territories</td>
+        <td>QTY / DST</td>
+        <td>Regional control, deciding which cluster to contest, steal efficiency between clusters</td>
+        <td>Single mega-cluster (no regional structure), fully uniform distribution</td>
+      </tr>
+      <tr>
+        <td><strong>WORMHOLE MAP</strong></td>
+        <td>Standard topology + 2–4 wormhole pairs (long-range edges), wormholes placed at unexpected locations</td>
+        <td>WRM</td>
+        <td>Activating non-local strategy, recognizing wormhole value, deception through wormhole threat</td>
+        <td>Wormholes that are obviously optimal, wormholes that duplicate normal paths</td>
+      </tr>
+      <tr>
+        <td><strong>INVERSION MAP</strong></td>
+        <td>Complex topology, asymmetric, multiple strategy-viable regions so inversion changes optimal behavior non-trivially</td>
+        <td>INV</td>
+        <td>Recognizing which strategies survive rule inversion, adaptive replanning</td>
+        <td>Simple maps where inversion has only one correct response</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="ai-pipeline">
+  <div class="section-label">Part II · Section 4 — Generation pipeline</div>
+  <div class="section-title">AI Pipeline — How a Map is Made</div>
+  <div class="body">
+    <p>The mapmaker receives a <strong>directive</strong> — a structured specification of what the map should accomplish — and produces a valid map JSON through a multi-stage pipeline. Each stage is a distinct operation that can be validated before moving to the next.</p>
+  </div>
+
+  <div class="mk-pipe">
+    <div class="mk-pipe-step">
+      <div class="mk-pipe-n">1</div>
+      <div>
+        <div class="pipe-title">Directive parsing</div>
+        <div class="pipe-desc">Parse the human directive into structured parameters: strategic_type, target_mode, star_count_range, hq_count, connectivity_target, image_reference (if any), special_features (wormholes, corridors, etc.), legibility level, and any explicit aesthetic constraints.</div>
+      </div>
+      <div><span class="phase-chip" style="border-color:#2563eb;color:#2563eb">Step 1</span></div>
+    </div>
+    <div class="mk-pipe-step">
+      <div class="mk-pipe-n">2</div>
+      <div>
+        <div class="pipe-title">Spatial layout generation</div>
+        <div class="pipe-desc">If an image is provided: extract spatial skeleton using the image → topology formula. If no image: generate positions procedurally from strategic_type parameters — cluster layout for CLUSTER maps, corridor chains for CORRIDOR maps, etc. All coordinates must be in [0,319] × [0,179].</div>
+      </div>
+      <div><span class="phase-chip" style="border-color:#2563eb;color:#2563eb">Step 2</span></div>
+    </div>
+    <div class="mk-pipe-step">
+      <div class="mk-pipe-n">3</div>
+      <div>
+        <div class="pipe-title">HQ placement</div>
+        <div class="pipe-desc">If fixed HQs are required (FRT mode): place type-2 stars at positions that create intended fortress dynamics. For symmetric maps: mirror HQ positions around the canvas center. Then upgrade those stars from type 1 → type 2 in the stars array.</div>
+      </div>
+      <div><span class="phase-chip" style="border-color:#2563eb;color:#2563eb">Step 3</span></div>
+    </div>
+    <div class="mk-pipe-step">
+      <div class="mk-pipe-n">4</div>
+      <div>
+        <div class="pipe-title">Edge construction</div>
+        <div class="pipe-desc">Connect stars using a proximity graph (Delaunay triangulation or k-nearest neighbors), then prune/add edges to hit the target avg_degree and chokepoint structure. Ensure full connectivity: run BFS from any star — all stars must be reachable.</div>
+      </div>
+      <div><span class="phase-chip" style="border-color:#2563eb;color:#2563eb">Step 4</span></div>
+    </div>
+    <div class="mk-pipe-step">
+      <div class="mk-pipe-n">5</div>
+      <div>
+        <div class="pipe-title">Topology validation</div>
+        <div class="pipe-desc">Run the topology analyzer (same algorithm as maps/generate-topology.js) on the generated map. Check all constraints. Compute mode_affinity and verify target mode affinity ≥ 0.65. Reject and regenerate if any check fails.</div>
+      </div>
+      <div><span class="phase-chip" style="border-color:#2563eb;color:#2563eb">Step 5</span></div>
+    </div>
+    <div class="mk-pipe-step">
+      <div class="mk-pipe-n">6</div>
+      <div>
+        <div class="pipe-title">Strategic simulation</div>
+        <div class="pipe-desc">Run a simple simulation: place a greedy-expansion agent on each team. Measure: which mode's scoring strategy scores highest? Are the intended chokepoints actually contested? If one strategy wins by &gt;70%, revise the layout.</div>
+      </div>
+      <div><span class="phase-chip" style="border-color:#059669;color:#059669">Phase 2</span></div>
+    </div>
+    <div class="mk-pipe-step">
+      <div class="mk-pipe-n">7</div>
+      <div>
+        <div class="pipe-title">Topology annotation</div>
+        <div class="pipe-desc">Compute and append the map's topology record to topology.json. This makes the new map immediately available for compiler map selection without requiring a full topology regeneration pass.</div>
+      </div>
+      <div><span class="phase-chip" style="border-color:#059669;color:#059669">Phase 2</span></div>
+    </div>
+    <div class="mk-pipe-step">
+      <div class="mk-pipe-n">8</div>
+      <div>
+        <div class="pipe-title">Aesthetic refinement</div>
+        <div class="pipe-desc">Apply aesthetic constraints: organic vs. geometric layouts, named regions, visual identity. This does NOT change the strategic structure — it only adjusts star positions within their valid placement zones. The title and author are written to the JSON.</div>
+      </div>
+      <div><span class="phase-chip" style="border-color:#059669;color:#059669">Phase 2</span></div>
+    </div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="image-formula">
+  <div class="section-label">Part II · Section 5 — Image input</div>
+  <div class="section-title">Image → Map — Converting Visual Input to Strategic Space</div>
+  <div class="body">
+    <p>The most powerful mapmaker input is an image: a photograph, a hand-drawn sketch, a real-world map, a geometric shape. The AI converts visual structure into game topology. This allows non-technical users to define spatial intent through drawing rather than coordinate specification.</p>
+    <p><strong>What the image defines:</strong> the spatial distribution of territory, not the game mechanics. An image of a river delta defines: areas of density (where clusters will go), corridors (where connections will run), and open space (where stars will be sparse). The AI interprets the image as a <em>spatial probability field</em>, not a literal point-placement instruction.</p>
+  </div>
+
+  <table>
+    <thead><tr><th>Image Element</th><th>Game Element</th><th>Transformation rule</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Dense region</strong> (dark area, complex detail)</td><td>High star count</td><td>Place more stars in proportion to pixel density in that region. Density threshold: ASSERTED at 0.6 relative to image max. <span class="asserted">ASSERTED</span></td></tr>
+      <tr><td><strong>Edge / boundary</strong> (detected via Canny or similar)</td><td>Star placement along boundary</td><td>Stars are placed along detected edges to preserve the shape's outline as strategic territory.</td></tr>
+      <tr><td><strong>Line / corridor</strong> (thin connected region)</td><td>Chain of stars with linear connectivity</td><td>Stars placed along corridor centerline, connected sequentially. Corridor width determines avg_degree at each star.</td></tr>
+      <tr><td><strong>Intersection point</strong> (where corridors cross)</td><td>High-degree node (potential chokepoint)</td><td>Intersection receives connections from all corridors meeting there — creates natural strategic junction.</td></tr>
+      <tr><td><strong>Isolated region</strong> (separate from main body)</td><td>Cluster connected by bridge edges</td><td>Isolated regions become clusters. Minimum 1 bridge edge per isolated cluster to main graph.</td></tr>
+      <tr><td><strong>Symmetry axis</strong></td><td>Mirrored map topology</td><td>If image is symmetric, star/edge placement mirrors across the axis. HQs placed symmetrically on opposite sides.</td></tr>
+      <tr><td><strong>Focal point</strong> (high contrast center, labeled landmark)</td><td>High-value contested zone</td><td>HQ stars (type 2) or dense star cluster placed at focal points. Creates natural strategic center of gravity.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="body" style="margin-top:16px">
+    <p><strong>Image input directive format:</strong> the human provides an image alongside a strategic directive. The AI extracts spatial structure from the image, then applies the strategic directive to determine which extracted elements become which game structures. Example: "use this image of the London Tube map as the topology, make it a CORRIDOR map for FRT mode with fixed HQs at Paddington and Canary Wharf."</p>
+    <p>The AI must <strong>not</strong> attempt pixel-perfect recreation of the image. It must interpret spatial intent and convert it to a playable game graph. The result should be <em>inspired by</em> the image, not a literal trace of it.</p>
+  </div>
+
+  <div style="margin-top:20px">
+    <div class="section-label" style="margin-bottom:8px">Interactive concept — click to place stars, connect in EDGE mode</div>
+    <div class="canvas-controls">
+      <button class="ctrl-btn active" id="btn-star" onclick="setMode('star',this)">STAR</button>
+      <button class="ctrl-btn" id="btn-hq" onclick="setMode('hq',this)">HQ STAR</button>
+      <button class="ctrl-btn" id="btn-edge" onclick="setMode('edge',this)">EDGE</button>
+      <button class="ctrl-btn" id="btn-clear" onclick="clearCanvas()">CLEAR</button>
+      <span class="ctrl-label" id="canvas-label">Click to place stars · Switch to EDGE mode to connect them</span>
+    </div>
+    <canvas id="map-canvas-demo" width="640" height="360" style="background:#fafafa"></canvas>
+    <div style="margin-top:6px;font-family:'Courier New',monospace;font-size:9px;color:#888" id="canvas-json">stars: 0 · edges: 0 · avg_degree: 0.00</div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="information">
+  <div class="section-label">Part II · Section 6 — Information balance</div>
+  <div class="section-title">Information Balance in Map Design</div>
+  <div class="body">
+    <p>A map communicates information to players. How much information a map reveals — and at what cost — is itself a design dimension. Maps exist on a spectrum from <strong>fully legible</strong> (every strategic decision is obvious) to <strong>discovery-based</strong> (optimal strategy requires exploration and inference).</p>
+    <p>The system's goal (argmax E[KL]) benefits from <strong>discovery-based</strong> maps: when the student must figure out the map's strategic structure, their process of discovery is itself informative. A map where the optimal move is always obvious produces low information gain — the student's behavior reveals nothing about their cognitive model.</p>
+  </div>
+
+  <table>
+    <thead><tr><th>Map Legibility Level</th><th>What students immediately see</th><th>What requires discovery</th><th>Information gain</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>TRANSPARENT</strong><br><span style="font-size:9px;color:#888">e.g. small symmetric 20-star grid</span></td>
+        <td>All strategic structure visible from board state. Optimal moves are obvious on inspection.</td>
+        <td>Nothing — execution is the only challenge.</td>
+        <td>Low — behavior mostly reveals execution speed, not strategy formation.</td>
+      </tr>
+      <tr>
+        <td><strong>LEGIBLE</strong><br><span style="font-size:9px;color:#888">e.g. Castle Conundrum</span></td>
+        <td>General structure apparent. Major clusters and connections visible.</td>
+        <td>Optimal chokepoint sequence, resource priority ordering.</td>
+        <td>Medium — reveals whether student recognizes structure.</td>
+      </tr>
+      <tr>
+        <td><strong>COMPLEX</strong><br><span style="font-size:9px;color:#888">e.g. CITYSCAPE</span></td>
+        <td>Local neighborhood structure. Global structure not immediately apparent.</td>
+        <td>Global map understanding, regional strategy, efficient path planning.</td>
+        <td>High — reveals spatial reasoning, global-local integration.</td>
+      </tr>
+      <tr>
+        <td><strong>DISCOVERY-BASED</strong><br><span style="font-size:9px;color:#888">e.g. LOTR ROSE</span></td>
+        <td>Immediate neighbors only. Strategic structure must be built from experience.</td>
+        <td>Map structure itself — the student must discover the topology as they play.</td>
+        <td>Highest — every move is an information-gathering action about the map AND an attempt to score. The student's exploration strategy IS the signal.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="body" style="margin-top:16px">
+    <p><strong>Directive parameter for legibility:</strong> when requesting a map, the designer specifies <code>legibility: "transparent" | "legible" | "complex" | "discovery"</code>. This controls star density, cluster size, degree distribution variance, and canvas utilization.</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="section" id="validation">
+  <div class="section-label">Part II · Section 7 — Validation</div>
+  <div class="section-title">Map Validation — What Makes a Map Acceptable</div>
+  <div class="body">
+    <p>Every AI-generated map must pass three layers of validation before being added to the map catalogue and used in sessions.</p>
+  </div>
+  <table>
+    <thead><tr><th>Layer</th><th>Checks</th><th>Tool</th><th>When</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Structural</strong></td>
+        <td>Valid JSON, all indices in range, no duplicate positions, no self-loops, graph is connected, avg_degree ≥ 2.0, all coordinates in canvas bounds</td>
+        <td><code>maps/generate-topology.js</code> — already built</td>
+        <td>Immediately on generation</td>
+      </tr>
+      <tr>
+        <td><strong>Strategic</strong></td>
+        <td>Target mode affinity ≥ 0.65, no dominant-strategy pathology (simulation), chokepoints are contested (not trivially bypassable), HQs positioned with defensive meaning</td>
+        <td>Topology analysis + lightweight simulation — Phase 2</td>
+        <td>After structural validation</td>
+      </tr>
+      <tr>
+        <td><strong>Empirical</strong></td>
+        <td>After ≥ 10 sessions on this map: rank_pct variance is reasonable, strategy_shift_count &gt; 0 (students adapt), the map is not trivially broken by the bot</td>
+        <td>Ledger aggregation — Phase 2</td>
+        <td>After 10 real sessions</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="body" style="margin-top:16px">
+    <p><strong>Note on map format:</strong> the current JSON format contains all necessary information for the game engine, topology analysis, and AI mapmaker. No changes to the format are required. The one extension worth noting for the future: a <code>"strategic_intent"</code> field recording the directive used to generate the map. Not needed now — derivable from <code>"author"</code> field naming convention.</p>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<script>
+// Nav active state (unified for both parts)
+const sections = document.querySelectorAll('.section[id]');
+const navLinks  = document.querySelectorAll('.nav a');
+sections.forEach(s => new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id));
+  });
+}, { threshold: 0.25 }).observe(s));
+
+// ── Mini map canvas demo ──────────────────────────────────────────────────────
+const canvas = document.getElementById('map-canvas-demo');
+const ctx    = canvas.getContext('2d');
+let demoMode = 'star';
+const stars  = [];
+const edges  = [];
+let edgeStart = null;
+const R = 6;
+
+function setMode(m, btn) {
+  demoMode = m;
+  document.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  edgeStart = null;
+  const labels = {star:'Click to place stars',hq:'Click to place HQ star (type 2)',edge:'Click first star, then second star to connect'};
+  document.getElementById('canvas-label').textContent = labels[m] || '';
+  drawDemo();
+}
+function clearCanvas(){stars.length=0;edges.length=0;edgeStart=null;drawDemo();}
+function drawDemo(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(const[a,b] of edges){
+    ctx.beginPath();ctx.moveTo(stars[a][0],stars[a][1]);ctx.lineTo(stars[b][0],stars[b][1]);
+    ctx.strokeStyle='#aaa';ctx.lineWidth=1;ctx.stroke();
+  }
+  for(let i=0;i<stars.length;i++){
+    const [x,y,t] = stars[i];
+    ctx.beginPath();ctx.arc(x,y,R,0,Math.PI*2);
+    ctx.fillStyle = t===2?'#dc2626':'#111';
+    if(edgeStart===i){ctx.fillStyle='#2563eb';}
+    ctx.fill();
+    if(t===2){ctx.strokeStyle='#dc2626';ctx.lineWidth=2;ctx.stroke();}
+  }
+  const deg = stars.length>0 ? (2*edges.length/stars.length).toFixed(2) : '0.00';
+  document.getElementById('canvas-json').textContent=`stars: ${stars.length} · edges: ${edges.length} · avg_degree: ${deg}`;
+}
+function hitStar(x,y){
+  for(let i=0;i<stars.length;i++){const dx=stars[i][0]-x,dy=stars[i][1]-y;if(dx*dx+dy*dy<R*R*4)return i;}
+  return -1;
+}
+canvas.addEventListener('click',e=>{
+  const rect=canvas.getBoundingClientRect();
+  const scaleX=canvas.width/rect.width, scaleY=canvas.height/rect.height;
+  const x=(e.clientX-rect.left)*scaleX, y=(e.clientY-rect.top)*scaleY;
+  if(demoMode==='star'){stars.push([Math.round(x),Math.round(y),1]);drawDemo();}
+  else if(demoMode==='hq'){stars.push([Math.round(x),Math.round(y),2]);drawDemo();}
+  else if(demoMode==='edge'){
+    const hit=hitStar(x,y);
+    if(hit<0)return;
+    if(edgeStart===null){edgeStart=hit;}
+    else{
+      if(edgeStart!==hit&&!edges.some(([a,b])=>(a===edgeStart&&b===hit)||(a===hit&&b===edgeStart))){
+        edges.push([edgeStart,hit]);
+      }
+      edgeStart=null;
+    }
+    drawDemo();
+  }
+});
+drawDemo();
+</script>
+</body>
+</html>

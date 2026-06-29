@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Terminal Voice — Meta-Generation Philosophy</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.6}
+header{border-bottom:2px solid #000;padding:20px 28px 14px;position:sticky;top:0;background:#fff;z-index:10}
+.hd-label{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:4px}
+.hd-main{font-size:20px;font-weight:700;line-height:1.2;margin-bottom:6px}
+.hd-sub{font-size:11px;color:#555;max-width:720px;line-height:1.8}
+nav{display:flex;gap:20px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px solid #eee}
+nav a{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;text-decoration:none;padding:2px 0;border-bottom:2px solid transparent}
+nav a:hover{color:#000;border-bottom-color:#000}
+.content{max-width:760px;margin:0 auto;padding:36px 28px 100px}
+hr.rule{border:none;border-top:1px solid #eee;margin:44px 0}
+
+.sec-label{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:6px}
+.sec-title{font-size:17px;font-weight:700;margin-bottom:14px;line-height:1.3}
+.body{font-size:12px;color:#333;line-height:1.9;max-width:680px}
+.body p{margin-bottom:14px}
+.body p:last-child{margin-bottom:0}
+.body strong{color:#000}
+.body em{font-style:italic}
+ul.body-list{font-size:12px;color:#333;line-height:2;padding-left:20px;margin:10px 0 14px}
+ul.body-list li{margin-bottom:2px}
+
+.callout{border-left:3px solid #000;padding:10px 16px;margin:20px 0;font-size:11px;line-height:1.8;color:#444;background:#fafafa}
+.callout.amber{border-color:#d97706;background:#fffbeb;color:#92400e}
+.callout.green{border-color:#059669;background:#f0fdf4;color:#065f46}
+.callout.violet{border-color:#7c3aed;background:#faf5ff;color:#4c1d95}
+.callout.red{border-color:#dc2626;background:#fef2f2;color:#991b1b}
+
+.principle{border:1px solid #e5e7eb;padding:14px 18px;margin:12px 0}
+.p-num{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#bbb;margin-bottom:3px}
+.p-title{font-size:12px;font-weight:700;margin-bottom:6px}
+.p-body{font-size:11px;color:#555;line-height:1.8}
+.p-eg{margin-top:8px;font-size:10px;color:#aaa;font-style:italic}
+.bad{color:#dc2626}.good{color:#059669}
+
+/* zone tags */
+.zt{display:inline-block;font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:2px 6px;border:1px solid;margin:0 2px}
+.zt.cal{color:#6b7280;border-color:#d1d5db}
+.zt.ech{color:#2563eb;border-color:#bfdbfe}
+.zt.rad{color:#d97706;border-color:#fcd34d}
+.zt.alp{color:#7c3aed;border-color:#c4b5fd}
+.zt.sin{color:#b45309;border-color:#fbbf24}
+
+/* compare boxes */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#eee;margin:16px 0}
+.compare-col{background:#fff;padding:14px 16px}
+.compare-lbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.compare-lbl.bad{color:#dc2626}.compare-lbl.good{color:#059669}
+.compare-msg{font-family:Arial,sans-serif;font-size:11px;line-height:1.9;color:#111}
+
+/* generator */
+.gen-box{border:1px solid #000;margin:16px 0}
+.gen-hdr{background:#000;color:#fff;padding:8px 14px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.gen-body{padding:14px 16px}
+.gen-step{display:flex;gap:12px;margin-bottom:12px;align-items:flex-start}
+.gen-step:last-child{margin-bottom:0}
+.gen-n{font-size:9px;font-weight:700;letter-spacing:1px;min-width:20px;color:#aaa;padding-top:1px}
+.gen-text{font-size:11px;color:#333;line-height:1.7}
+.gen-q{font-style:italic;color:#111;font-weight:700}
+
+/* terminal preview */
+.term-preview{background:#0a0a0a;padding:14px 18px;font-family:Arial,sans-serif;font-size:11px;line-height:1.9;margin:14px 0}
+.tp-dim{color:#222}.tp-w{color:#fff;font-weight:700}.tp-a{color:#d97706}.tp-g{color:#059669}
+.tp-line{display:block}
+.tp-blank{display:block;height:1em}
+
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:11px}
+th{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 10px;border-bottom:2px solid #000;text-align:left}
+td{padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top;line-height:1.6}
+tr:last-child td{border-bottom:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd-label">Philosophy Development · Era 11 — Meta-Generation</div>
+  <div class="hd-main">Terminal Voice — How to Write the System</div>
+  <div class="hd-sub">The philosophy behind every message and the process for generating new ones. Not a style guide — a generative framework. Two people following this should independently arrive at messages that feel like they belong to the same voice.</div>
+  <nav>
+    <a href="#what">What the Terminal Is</a>
+    <a href="#voice">The Voice Register</a>
+    <a href="#anti">Anti-Patterns</a>
+    <a href="#zones">Zone Philosophy</a>
+    <a href="#generator">Message Generator</a>
+    <a href="#cycling">Cycling Philosophy</a>
+    <a href="#onboard">First Session</a>
+    <a href="#future">Future Messages</a>
+  </nav>
+</header>
+
+<div class="content">
+
+<!-- ── WHAT THE TERMINAL IS ── -->
+<div id="what">
+  <div class="sec-label">Foundation</div>
+  <div class="sec-title">What the terminal actually is — and what it is not</div>
+  <div class="body">
+    <p>The terminal is not a notification. It is not a welcome message. It is not a summary of the student's data. It is the <strong>voice of the system speaking about the space the student is about to enter.</strong></p>
+    <p>The distinction matters. A notification says "you have X." A summary says "based on Y, you are Z." The terminal says "here is what this space is like." It speaks about the session, not the student. The student is not the subject of the sentence — the session is.</p>
+    <p>This single principle — <strong>speak about the space, not about the student as a data point</strong> — is the origin of the voice. Everything else follows from it.</p>
+    <p>The second thing the terminal is: <strong>the relationship between the student and the system made audible.</strong> That relationship changes over time. Session 1 is "you just arrived, here's the door." Session 40 in RADICAL is something more specific and strange. The terminal is where that relationship lives. It is the only place in the UI where the system speaks in first person — or close to it — and means something by it.</p>
+  </div>
+  <div class="callout green">
+    The terminal speaks like a friend who knows more than they're saying. Not a friend who explains. A friend who trusts you to meet the experience without a manual. The warmth is in the economy — what isn't said matters as much as what is.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── THE VOICE REGISTER ── -->
+<div id="voice">
+  <div class="sec-label">The Voice</div>
+  <div class="sec-title">What "addictive mysterious friend" actually means as a writing constraint</div>
+  <div class="body">
+    <p>That phrase is precise enough to be a design constraint if you unpack it:</p>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Addictive</div>
+    <div class="p-title">Each message makes you want to see what comes next.</div>
+    <div class="p-body">Not because it teases or withholds. Because it says something true that opens a question without answering it. "The chaos is designed" is addictive because it reframes everything that just happened and implies there's more to understand. "Keep going" is not addictive. It ends the sentence.</div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Mysterious</div>
+    <div class="p-title">Not cryptic. Precise about something that matters but doesn't explain why it matters.</div>
+    <div class="p-body">Mystery in the bad sense is obscurity for its own sake — words that sound meaningful but aren't. Mystery in the right sense is precision about something real, delivered without the interpretive apparatus. "One dimension of your thinking has outpaced another." This is specific. It implies a diagnosis. But it doesn't tell you which dimension or what to do about it. The mystery isn't the withholding — it's the precision that makes you want to know more.</div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Friend</div>
+    <div class="p-title">Genuinely warm without being performed.</div>
+    <div class="p-body">The friend quality comes from noticing something true without making a ceremony of it. "You came back. That's usually how it starts." This feels like a friend because it observes something real (you returned) and says something about what that usually means (it tends to lead somewhere) without inflating it into a reward or a congratulation. Performed warmth announces itself. "We're so glad you're here!" Genuine warmth is incidental — it shows up in the precision of the noticing, not in the effusiveness of the delivery.</div>
+    <div class="p-eg">The test: does it sound like something a person might actually say, leaning over mid-game? Or does it sound like a platform?</div>
+  </div>
+
+  <div class="callout violet">
+    <strong>The "stalky" failure mode:</strong> A message becomes stalky when it references your behavior in a way that makes you feel observed rather than seen. "Based on what we just watched" — surveillance. "You came back" — noticing. The line is: surveillance names a mechanism, genuine noticing names a fact. The fact is allowed. The mechanism is not.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── ANTI-PATTERNS ── -->
+<div id="anti">
+  <div class="sec-label">What Fails</div>
+  <div class="sec-title">Anti-patterns — what breaks the voice and why</div>
+
+  <div class="compare">
+    <div class="compare-col">
+      <div class="compare-lbl bad">✗ Fails</div>
+      <div class="compare-msg">Welcome back! Ready for another great session?</div>
+    </div>
+    <div class="compare-col">
+      <div class="compare-lbl good">✓ Works</div>
+      <div class="compare-msg">You came back.<br><br>That's usually how it starts.</div>
+    </div>
+  </div>
+  <div class="body" style="margin-bottom:20px"><p><strong>Why it fails:</strong> Performed warmth. No content. The "great session" is a promise the system can't make and doesn't mean. It sounds like a platform.</p></div>
+
+  <div class="compare">
+    <div class="compare-col">
+      <div class="compare-lbl bad">✗ Fails</div>
+      <div class="compare-msg">Based on your last 12 sessions, you tend to underperform in spatial reasoning tasks under time pressure.</div>
+    </div>
+    <div class="compare-col">
+      <div class="compare-lbl good">✓ Works</div>
+      <div class="compare-msg">RADICAL.<br><br>One dimension of your thinking has outpaced another.<br>This session goes after the gap.</div>
+    </div>
+  </div>
+  <div class="body" style="margin-bottom:20px"><p><strong>Why it fails:</strong> Surveillance dressed as insight. Names the mechanism ("based on your sessions"), names the deficit ("spatial reasoning"), makes the student feel catalogued not seen. The working version says the same true thing — there is a gap — without naming the internal variables or referencing the data.</p></div>
+
+  <div class="compare">
+    <div class="compare-col">
+      <div class="compare-lbl bad">✗ Fails</div>
+      <div class="compare-msg">You are in the ECHO zone, which means you are in a consolidation phase of your learning cycle.</div>
+    </div>
+    <div class="compare-col">
+      <div class="compare-lbl good">✓ Works</div>
+      <div class="compare-msg">You're in familiar territory.<br>ECHO means the system recognises what you're doing.<br>This session deepens something you already have.</div>
+    </div>
+  </div>
+  <div class="body" style="margin-bottom:20px"><p><strong>Why it fails:</strong> Explains the zone system. The zone code word exists so it can earn meaning through experience, not so it can be glossed immediately. "Consolidation phase of your learning cycle" is jargon that flattens the experience into a category. The working version uses ECHO without defining it — the student will build the definition over sessions.</p></div>
+
+  <div class="compare">
+    <div class="compare-col">
+      <div class="compare-lbl bad">✗ Fails</div>
+      <div class="compare-msg">Keep going! You're doing great! The system is proud of your progress!</div>
+    </div>
+    <div class="compare-col">
+      <div class="compare-lbl good">✓ Works</div>
+      <div class="compare-msg">CALIBRATION.<br><br>Not enough yet to say anything worth saying.<br>Keep going.</div>
+    </div>
+  </div>
+  <div class="body"><p><strong>Why it fails:</strong> Evaluative. The system is not a coach assigning value to effort. "Proud of your progress" makes the system the judge and the student the performer. The working version is honest — there's nothing meaningful to say yet — and the "Keep going" lands because it follows the honesty, not because it inflates it.</p></div>
+
+  <div class="callout red">
+    <strong>The underlying anti-pattern:</strong> Any message that could have been written without knowing anything specific about this system, this student, or this moment. Generic warmth, generic encouragement, generic explanations — all fail for the same reason. They could have come from anywhere. The terminal must come from here.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── ZONE PHILOSOPHY ── -->
+<div id="zones">
+  <div class="sec-label">Zone Philosophy</div>
+  <div class="sec-title">What each zone actually means — the cognitive reality behind the code word</div>
+  <div class="body"><p>To write a message for a zone, you need to understand what is actually true about a student who is in that zone. The code word is a label. The cognitive reality is what generates the message.</p></div>
+
+  <table>
+    <thead><tr><th>Zone</th><th>What is actually true</th><th>What the message should do</th><th>What it should never do</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="zt cal">CALIBRATION</span></td>
+        <td>The system has insufficient signal to characterise this student's model. The student exists in the data but the picture isn't formed yet.</td>
+        <td>Acknowledge the state honestly. Invite continued engagement without pressure. Keep the voice quieter here — the system is listening, not speaking.</td>
+        <td>Pretend the system knows something it doesn't. Encourage in a way that sounds like a promise.</td>
+      </tr>
+      <tr>
+        <td><span class="zt ech">ECHO</span></td>
+        <td>The student is operating in territory the system recognises. Prior sessions have produced a stable signal here. This is consolidation — deepening something real, not stagnation.</td>
+        <td>Name the territory as familiar without making it sound like failure. The energy is quiet confidence — you've been here before, and that's worth something.</td>
+        <td>Sound deflating or like a consolation prize. Frame ECHO as "you didn't make it to RADICAL." ECHO is its own thing.</td>
+      </tr>
+      <tr>
+        <td><span class="zt rad">RADICAL</span></td>
+        <td>The compiler has identified a gap — a dimension where the student's model has a detectable deficit relative to their overall profile. This session is designed to target it directly. It will feel harder than expected.</td>
+        <td>Signal that something specific is happening. Prepare the student without explaining what it is. The directness is part of the experience — "this will feel different" is not a warning, it's an orientation.</td>
+        <td>Over-explain. Reveal which dimension. Make it sound punitive ("you need to work on…"). RADICAL is targeted, not corrective.</td>
+      </tr>
+      <tr>
+        <td><span class="zt alp">ALPHA</span></td>
+        <td>The student is near the boundary of the current model. The compiler is operating with low confidence because there's little prior signal at this level. The session is genuinely exploratory for the system as much as the student.</td>
+        <td>Communicate that the system is at its own edge here. This is collaborative uncertainty — the system and student are both reaching. The voice should feel precise and careful, not triumphant.</td>
+        <td>Sound congratulatory or like a reward. ALPHA isn't an achievement — it's a territory where the system has less to say, not more.</td>
+      </tr>
+      <tr>
+        <td><span class="zt sin">SINGULARITY</span></td>
+        <td>The student's profile is outside the range of sufficient prior data. The model is being revised around them. This is rare. The system defers.</td>
+        <td>Communicate that the system's usual certainty doesn't apply here. The voice is quieter than any other zone — almost deferential. "Build what feels right" is a genuine instruction, not humility theater.</td>
+        <td>Make it sound like a prize or a rank. SINGULARITY is not the top of a leaderboard — it's the edge of the model's knowledge. It should feel strange, not triumphant.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout amber">
+    <strong>Why ECHO is not deflating (and how to keep it that way):</strong> ECHO is the zone where most students spend most of their time. If it sounds like a consolation prize, the whole system feels like a grind toward RADICAL. The fix is in what you emphasise: not "you didn't progress" but "you have ground here — go deeper into it." The zone name helps: ECHO implies resonance, reflection, depth — not stagnation. The messages should use that energy, not fight it.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── GENERATOR ── -->
+<div id="generator">
+  <div class="sec-label">The Generator</div>
+  <div class="sec-title">How to write a new terminal message — the process</div>
+  <div class="body"><p>This is the process that any person following these principles should be able to run independently and arrive at a message that belongs to the same voice. It is not a template — a template produces recognisable copies. This is a derivation path.</p></div>
+
+  <div class="gen-box">
+    <div class="gen-hdr">Message Generation Process</div>
+    <div class="gen-body">
+      <div class="gen-step">
+        <span class="gen-n">1</span>
+        <span class="gen-text"><span class="gen-q">What is actually true about a student in this zone/stage?</span><br>Write one sentence describing the cognitive reality. Not the system's label for it — the actual situation. "The student is operating in familiar territory with a stable signal." This sentence is the source. The message comes from here.</span>
+      </div>
+      <div class="gen-step">
+        <span class="gen-n">2</span>
+        <span class="gen-text"><span class="gen-q">What does the student need to hear — not be told, but hear?</span><br>There's a difference. Told = information transferred. Heard = something lands and changes how you enter the session. Write what needs to land. "You're not stuck. You're deepening something real." Is this what needs to land in ECHO? Maybe. Write it out without worrying about form yet.</span>
+      </div>
+      <div class="gen-step">
+        <span class="gen-n">3</span>
+        <span class="gen-text"><span class="gen-q">Remove the mechanism. Keep the fact.</span><br>Every draft will have mechanism in it. "The system has detected that you are consolidating prior learning." That's mechanism. The fact inside it: "You're in familiar territory." Strip everything that names the system's internal process. Keep what is simply true about the experience the student is about to have.</span>
+      </div>
+      <div class="gen-step">
+        <span class="gen-n">4</span>
+        <span class="gen-text"><span class="gen-q">Apply the economy test: could any word be cut without losing meaning?</span><br>Terminal messages should have no filler. "You are currently in familiar territory" → "You're in familiar territory." Every word should be load-bearing. If a sentence can be cut and the message is stronger without it, cut it. Blank lines count — they give the reader space.</span>
+      </div>
+      <div class="gen-step">
+        <span class="gen-n">5</span>
+        <span class="gen-text"><span class="gen-q">Apply the friend test: would a person who knew you actually say this?</span><br>Read the message as if a friend who understood your situation just said it, leaning over. Does it sound like something a real person would say? Or does it sound like a system? If "real person" feels wrong, the issue is usually the vocabulary (too technical) or the structure (too formal). Fix those specifically.</span>
+      </div>
+      <div class="gen-step">
+        <span class="gen-n">6</span>
+        <span class="gen-text"><span class="gen-q">Apply the surveillance test: does the message reference how it knows what it knows?</span><br>Any phrase like "based on your sessions," "we've noticed," "your data shows" — remove it. The message speaks about the session. It does not speak about the mechanism that produced the recommendation. The student doesn't need to know how the system arrived here. They need to know where they are.</span>
+      </div>
+      <div class="gen-step">
+        <span class="gen-n">7</span>
+        <span class="gen-text"><span class="gen-q">Does it open something or close something?</span><br>A good terminal message opens a question without answering it. "The chaos is designed" opens: designed by whom, why, what does that mean for how I play? "Have a great session!" closes: it answers a question no one asked and leaves nothing to think about. Every message should end with the student slightly more curious than when they started reading.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="body"><p>Run this process and you will arrive at a message that belongs to the voice. The test is: would someone reading all the messages together notice that this one was written by a different process? If yes, revise. If no, it belongs.</p></div>
+</div>
+
+<hr class="rule">
+
+<!-- ── CYCLING PHILOSOPHY ── -->
+<div id="cycling">
+  <div class="sec-label">Cycling</div>
+  <div class="sec-title">Why cycle, not randomise — and what the cycle is for</div>
+  <div class="body">
+    <p>Messages cycle in order, not randomly. <strong>The rule: <code>index = sessionCount % pool.length</code>.</strong></p>
+    <p>Random selection produces variety but no pattern. The student might see the same message twice in a row, or might never see one of the messages in the pool. Order-based cycling guarantees that every message in the pool gets seen, and that the sequence has an internal logic even if the student doesn't consciously notice it.</p>
+    <p>More importantly: <strong>the messages within a zone pool are not interchangeable.</strong> They have a sequence. The first message in a pool is the "opening" — the clearest, most direct statement of what this zone is. Later messages in the pool go deeper or approach from a different angle. This is why order matters.</p>
+    <p>When a student's zone changes, the cycle index resets to zero. They get the opening message for the new zone — the clearest statement of what they've just entered. The prior cycling position doesn't carry over. Each zone starts fresh.</p>
+  </div>
+
+  <div class="callout green">
+    <strong>Pool size philosophy:</strong> ECHO and CALIBRATION have small pools (1–2 messages) because the cognitive state is stable — there isn't much more to say from different angles. RADICAL and SINGULARITY have larger pools because the state is active and strange — more to approach from more directions. Pool size should reflect the richness of the zone, not the desire for variety.
+  </div>
+
+  <div class="body">
+    <p>The Stage 2 messages (sessions 2–4) are position-fixed, not cycling. Session 2 always gets message 0, session 3 always gets message 1. This is intentional: the early sessions form a sequence, not a pool. The student's second session is different from their third in ways that the messages should reflect. "You came back" belongs to session 2 specifically — it would be wrong for session 4.</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── FIRST SESSION ── -->
+<div id="onboard">
+  <div class="sec-label">The First Session</div>
+  <div class="sec-title">Why the onboarding message is different from everything else</div>
+  <div class="body">
+    <p>The session 1 message breaks almost every rule in the generation process above — and it should.</p>
+    <p>The generation process assumes the system has something true to say about the student's zone. In session 1, it has nothing. The student doesn't exist in the Ledger yet. There is no zone, no signal, no recommendation. The terminal has to speak into a complete absence of data.</p>
+    <p>This is why the message is not about the session the student is about to have (because the system doesn't know what that session will reveal) and not about where they are developmentally (because there's no data). <strong>It is about the moment of arrival itself.</strong></p>
+    <p>The register is specific: most students arrive because someone they know invited them. They didn't choose Constellation. They got pulled in. The message acknowledges this without referencing it directly. It speaks about what they're about to experience — the chaos — and gives them one instruction: embrace it.</p>
+  </div>
+
+  <div class="term-preview">
+    <span class="tp-line tp-dim">────────────────────────────</span>
+    <span class="tp-line" style="margin-top:8px"><span class="tp-w">CONSTELLATION</span>  <span class="tp-dim" style="font-size:9px">cognitive development system</span></span>
+    <span class="tp-blank"></span>
+    <span class="tp-line">Looks like this is your first game.</span>
+    <span class="tp-line">If you can adapt fast enough, you may win.</span>
+    <span class="tp-blank"></span>
+    <span class="tp-line">Embrace the chaos.</span>
+    <span class="tp-blank"></span>
+    <span class="tp-line tp-dim">────────────────────────────</span>
+    <span class="tp-line tp-dim" style="margin-top:4px">the system is listening</span>
+  </div>
+
+  <div class="body">
+    <p>Why this message specifically:</p>
+    <ul class="body-list">
+      <li><strong>"Looks like this is your first game."</strong> — Casual. Conspiratorial. Friend energy, not institution energy. Doesn't say "Welcome to Constellation" or "We're glad you're here."</li>
+      <li><strong>"If you can adapt fast enough, you may win."</strong> — Honest and slightly provocative. "May" not "will." The challenge is real. The outcome is genuinely uncertain. This is a real statement about the game.</li>
+      <li><strong>"Embrace the chaos."</strong> — A directive, not a description. It tells you how to approach what's coming rather than what's coming. And it names the thing — chaos — without explaining it. The student will learn what chaos means by experiencing it.</li>
+    </ul>
+    <p>The footer — "the system is listening" — completes it. Not "good luck" or "have fun." A statement about what the system is doing right now: listening. Which is true. The Ledger starts writing from this session.</p>
+  </div>
+
+  <div class="callout amber">
+    <strong>What the popup is for vs what the terminal is for:</strong> There is a separate first-encounter popup — "You were just introduced to a small piece of something much larger. We won't explain it yet. But if the chaos felt like something you could live inside rather than something that happened to you — you might want to stay a while." That message fires over the game lobby after the first game ends. It's for the moment of deciding to come back.<br><br>
+    The terminal session 1 message fires before the first training session on the student panel. It's for the moment of beginning. Different moment, different register. Don't conflate them.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ── FUTURE MESSAGES ── -->
+<div id="future">
+  <div class="sec-label">Future Messages</div>
+  <div class="sec-title">What the system doesn't say yet — and when it should</div>
+  <div class="body">
+    <p>The current message pools are first-generation. They establish the voice. What comes next should go deeper, not wider — not more zones, but more precision within zones as the system accumulates more data about more students.</p>
+    <p>Some messages that don't exist yet and should:</p>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Long-run ECHO</div>
+    <div class="p-title">A message for students who have been in ECHO for a very long time.</div>
+    <div class="p-body">If a student has been in ECHO for more than 15 sessions, the message should shift. Not to alarm — but to acknowledge the length of time in familiar territory in a way that opens a question. Something like: "ECHO. You've been here a while. The question isn't whether you're good at this. It's what the next edge looks like." This requires tracking consecutive sessions in zone — not currently implemented.</div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Return after long break</div>
+    <div class="p-title">A message for students who haven't played in weeks.</div>
+    <div class="p-body">The current system has no message for returning after absence. This is a gap. The voice should acknowledge the return without making it awkward — not "it's been a while" (surveillance) but something about what usually happens when people come back. Requires tracking last session date against current date.</div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Post-deviation message</div>
+    <div class="p-title">A message for students who consistently override the compiler's recommendation.</div>
+    <div class="p-body">Per Q1 in the student panel philosophy: a student who always chooses ECHO sessions when the compiler recommends RADICAL is showing something real. The system doesn't currently say anything about this. A future message could acknowledge the pattern without naming it as a problem: "The recommendation was different this time. You changed it. The system noted that." — subtle, honest, not punitive. This is a SELF channel signal becoming audible in the terminal.</div>
+  </div>
+
+  <div class="principle">
+    <div class="p-num">Multiplayer-specific voice</div>
+    <div class="p-title">A terminal message that changes based on who's in the room.</div>
+    <div class="p-body">The HOST mode terminal currently doesn't know who's joined the room yet — it speaks before the room is populated. Once the two-phase flow is complete and players are in the room, the terminal should update. "Three players joined. One of them has fewer than 5 sessions. The system has shifted the configuration." This is live terminal reaction — architecturally possible, not yet implemented.</div>
+  </div>
+
+  <div class="callout violet">
+    <strong>The meta-generation principle for all future messages:</strong> Every message the system will ever generate should pass this test — is it something a person who genuinely knew this student, had read their entire Ledger, and cared about their development would actually say before this specific session? If yes, the message belongs. If the same message could be said to anyone, it doesn't belong yet.
+  </div>
+</div>
+
+</div>
+</body>
+</html>

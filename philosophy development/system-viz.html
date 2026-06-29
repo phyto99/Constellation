@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cognitive Entropy Framework</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.4}
+a{color:#111}
+nav{position:sticky;top:0;z-index:100;background:#fff;border-bottom:2px solid #000;display:flex;align-items:stretch;padding:0 12px;gap:0;overflow-x:auto}
+nav .logo{font-size:10px;letter-spacing:2px;font-weight:700;padding:10px 14px 10px 0;border-right:1px solid #ccc;margin-right:4px;white-space:nowrap;align-self:center;text-transform:uppercase}
+.tab{padding:10px 11px;cursor:pointer;font-size:10px;letter-spacing:1px;color:#666;border-bottom:3px solid transparent;transition:all .1s;white-space:nowrap;font-weight:400;text-transform:uppercase}
+.tab:hover{color:#000}.tab.active{color:#000;border-bottom-color:#000;font-weight:700}
+.panel{display:none;padding:16px 20px}.panel.active{display:block}
+h2{font-size:10px;letter-spacing:2px;font-weight:700;text-transform:uppercase;border-bottom:1px solid #000;padding-bottom:5px;margin-bottom:12px}
+h3{font-size:11px;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px}
+h4{font-size:10px;font-weight:700;color:#333;margin-bottom:4px;letter-spacing:1px;text-transform:uppercase}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+.card{border:1px solid #ccc;padding:12px;background:#fafafa}
+.card-dk{border:1px solid #000;padding:12px;background:#000;color:#fff}
+.card-dk h4{color:#fff}
+.sep{border:none;border-top:1px solid #ddd;margin:10px 0}
+.sep-bold{border:none;border-top:1px solid #000;margin:10px 0}
+table.t{width:100%;border-collapse:collapse;font-size:11px}
+table.t th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 7px;border-bottom:2px solid #000;text-align:left;background:#f0f0f0}
+table.t td{padding:4px 7px;border-bottom:1px solid #e0e0e0;vertical-align:top}
+table.t tr:hover td{background:#f8f8f8}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.bar-lbl{width:80px;font-size:10px;color:#555;flex-shrink:0}
+.bar-track{flex:1;height:14px;background:#eee;border:1px solid #ccc;position:relative;overflow:hidden}
+.bar-fill{height:100%;position:absolute;background:#000;transition:width .3s}
+.bar-fill-lg{background:#888}
+.bar-zero{position:absolute;left:50%;width:1px;height:100%;background:#999}
+.bar-val{width:44px;text-align:right;font-size:10px;color:#333}
+.srow{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.srow label{width:100px;font-size:10px;color:#555;flex-shrink:0}
+.srow input[type=range]{flex:1;accent-color:#000}
+.sval{width:44px;text-align:right;font-size:10px}
+input[type=checkbox]{accent-color:#000}
+.badge{display:inline-block;padding:1px 6px;font-size:9px;letter-spacing:1px;text-transform:uppercase;border:1px solid #000;font-weight:700}
+.badge-inv{background:#000;color:#fff}
+.badge-dim{border-color:#999;color:#999}
+.badge-warn{border:1px dashed #000}
+.pipe-detail{display:none;border:1px solid #000;padding:14px;margin-top:12px;background:#f8f8f8}
+.pipe-detail.show{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.flag-row{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #eee;font-size:11px}
+.flag-ok{display:inline-block;width:10px;height:10px;background:#000;flex-shrink:0}
+.flag-no{display:inline-block;width:10px;height:10px;background:#fff;border:1px solid #000;flex-shrink:0}
+.flag-warn{display:inline-block;width:10px;height:10px;background:#888;flex-shrink:0}
+.score-display{font-size:32px;text-align:center;padding:12px;border:2px solid #000;background:#f8f8f8;margin-bottom:10px;letter-spacing:3px;font-weight:700;font-family:'Courier New',monospace;transition:border-style .3s}
+.score-display.negative{border-style:dashed}
+.mode-row{border:1px solid #ccc;padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:background .1s}
+.mode-row:hover{background:#f4f4f4}
+.mode-row.open{border-color:#000;background:#f8f8f8}
+.mode-detail{display:none;padding:10px 0 4px;border-top:1px solid #ddd;margin-top:8px}
+.mode-detail.show{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.validity-cell{padding:4px 6px;font-size:10px;text-align:center;border:1px solid #ccc}
+.validity-cell.valid{background:#000;color:#fff}
+.validity-cell.invalid{background:#fff;color:#ccc;border-color:#e0e0e0}
+.validity-cell.partial{background:#888;color:#fff}
+.flow-zone{height:24px;background:linear-gradient(90deg,#eee 0%,#eee 20%,#ddd 20%,#888 40%,#000 50%,#888 60%,#ddd 80%,#eee 80%,#eee 100%);border:1px solid #000;position:relative;margin:8px 0}
+.flow-marker{position:absolute;top:-6px;width:2px;height:36px;background:#ff0000;transform:translateX(-1px)}
+button.btn{background:#fff;border:1px solid #000;color:#000;padding:4px 10px;cursor:pointer;font-size:10px;font-family:Arial,sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;transition:all .1s}
+button.btn:hover{background:#000;color:#fff}
+button.btn.act{background:#000;color:#fff}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:#fff}::-webkit-scrollbar-thumb{background:#ccc}
+canvas{display:block}
+.info-row{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid #f0f0f0}
+.info-row span:first-child{color:#555}.info-row span:last-child{font-weight:700}
+.asterisk{font-size:9px;color:#888;line-height:1.6;margin-top:6px}
+.pipe-node-label{font-size:8px;letter-spacing:2px;font-weight:700;color:#666;text-transform:uppercase}
+.inset{background:#f0f0f0;border-left:3px solid #000;padding:8px 10px;font-size:11px;line-height:1.7;margin:8px 0}
+.warn-box{background:#f8f8f8;border:1px dashed #000;padding:8px 10px;font-size:10px;line-height:1.7;margin:8px 0}
+@media(max-width:780px){.grid2,.grid3,.grid4{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav>
+  <span class="logo">Entropy Framework v2</span>
+  <div class="tab active" onclick="showTab('system',this)">System</div>
+  <div class="tab" onclick="showTab('modes',this)">Modes</div>
+  <div class="tab" onclick="showTab('profile',this)">Profile</div>
+  <div class="tab" onclick="showTab('entropy',this)">Entropy</div>
+  <div class="tab" onclick="showTab('scoring',this)">Scoring</div>
+  <div class="tab" onclick="showTab('centauri',this)">Centauri</div>
+  <div class="tab" onclick="showTab('validity',this)">Validity</div>
+  <div class="tab" onclick="showTab('composer',this)">Composer</div>
+</nav>
+
+<!-- SYSTEM -->
+<div id="panel-system" class="panel active">
+  <h2>System Architecture</h2>
+  <div style="overflow-x:auto;margin-bottom:14px">
+    <svg id="pipelineSvg" width="1000" height="160" style="display:block;margin:0 auto"></svg>
+  </div>
+  <div id="pipe-detail" class="pipe-detail"></div>
+
+  <div class="grid2" style="margin-top:16px">
+    <div>
+      <h3>Philosophical Axioms</h3>
+      <div class="inset">
+        The only objective ground truth in any competitive session is <strong>score rank among peers under identical configuration.</strong>
+        All other signals — playstyle, behavior patterns, time-on-task — are <em>mode-conditioned</em> and only valid
+        when the session mode was declared in advance and the player was attempting the declared challenge.
+        "Better strategy" is undefined: any approach that achieves a higher rank is valid.
+        Winning by 1 point is as valid as winning by 1000.
+      </div>
+      <table class="t" style="margin-top:10px">
+        <tr><th>#</th><th>Axiom</th><th>Implication</th></tr>
+        <tr><td>①</td><td>Zero-data valid start</td><td>Uniform priors. System works day one.</td></tr>
+        <tr><td>②</td><td>Rank is the ground truth</td><td>Score percentile vs peers, same session, same config.</td></tr>
+        <tr><td>③</td><td>Signals are mode-conditioned</td><td>steal_rate in DESTRUCTION ≠ steal_rate in QUANTITY.</td></tr>
+        <tr><td>④</td><td>Collaborative ≠ competitive</td><td>Staircase sessions use target-delta, not rank.</td></tr>
+        <tr><td>⑤</td><td>Flow zone is optimal</td><td>Barely winning (~top 30%) = maximum learning signal.</td></tr>
+        <tr><td>⑥</td><td>Coverage before depth</td><td>All 6 modes explored before any mode repeats.</td></tr>
+        <tr><td>⑦</td><td>Graceful degradation</td><td>Fewer sessions → fewer active features, not wrong ones.</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3>Data Richness → Entropy Budget</h3>
+      <div style="font-size:10px;color:#555;margin-bottom:8px">Drag to simulate sessions played</div>
+      <input type="range" min="0" max="60" value="0" oninput="updateRichness(+this.value)" style="width:100%;accent-color:#000;margin-bottom:10px">
+      <div style="font-size:10px;margin-bottom:8px">Sessions: <strong id="sess-n">0</strong> &nbsp;|&nbsp; Budget: <strong id="budget-n">1</strong>/5</div>
+      <div id="richness-bars"></div>
+      <div class="asterisk">* Budget gates which inference layers are active. Budget 1 uses only mode-coverage rotation. Each additional budget level adds one inference layer. This prevents overfitting on small samples — a system that infers cognitive traits from 2 sessions is epistemically worse than one that doesn't try.</div>
+    </div>
+  </div>
+
+  <div style="margin-top:14px">
+    <h3>Session Type × Analytics Validity</h3>
+    <table class="t">
+      <tr>
+        <th>Session Type</th><th>Mode Declared?</th><th>Rank Valid?</th><th>Behavioral Signals Valid?</th><th>Elo Update?</th><th>Notes</th>
+      </tr>
+      <tr><td>Competitive, mode declared</td><td><span class="badge badge-inv">YES</span></td><td><span class="badge badge-inv">YES</span></td><td><span class="badge badge-inv">YES — mode-conditioned</span></td><td><span class="badge badge-inv">YES</span></td><td>Full analytics. Gold standard.</td></tr>
+      <tr><td>Competitive, no mode</td><td><span class="badge badge-dim">NO</span></td><td><span class="badge badge-inv">YES</span></td><td><span class="badge badge-warn">PARTIAL — rank only</span></td><td><span class="badge badge-inv">YES</span></td><td>Rank updates global Elo, not mode-Elo.</td></tr>
+      <tr><td>Collaborative staircase</td><td><span class="badge badge-inv">YES</span></td><td><span class="badge badge-dim">NO</span></td><td><span class="badge badge-warn">TARGET-DELTA only</span></td><td><span class="badge badge-dim">NO</span></td><td>Elo not updated. Target-hit recorded.</td></tr>
+      <tr><td>Free play / exploration</td><td><span class="badge badge-dim">NO</span></td><td><span class="badge badge-dim">NO</span></td><td><span class="badge badge-dim">NO</span></td><td><span class="badge badge-dim">NO</span></td><td>No analytics. Record only participation.</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- MODES -->
+<div id="panel-modes" class="panel">
+  <h2>Six Cognitive Modes</h2>
+  <div class="warn-box">
+    <strong>Epistemics note:</strong> These modes are <em>session configurations</em>, not player trait labels.
+    A player who scores well in SPATIAL mode sessions is not "a spatial thinker" — they scored well under those constraints.
+    Cognitive inferences beyond score rank require external validation (e.g., standardized brain training data).
+    The mode system maximizes the <em>variety</em> of challenges seen, not the <em>measurement</em> of traits.
+  </div>
+  <div id="modes-list" style="margin-top:12px"></div>
+</div>
+
+<!-- PROFILE -->
+<div id="panel-profile" class="panel">
+  <h2>Player Profile</h2>
+  <div class="grid2">
+    <div>
+      <div class="card" style="margin-bottom:12px">
+        <h4>Mode Elo <span style="font-weight:400;font-size:9px;color:#666">(000 = best · 999 = worst · lower = stronger · outer ring = lower elo)</span></h4>
+        <div id="elo-sliders"></div>
+        <div class="asterisk">* Mode Elo updates ONLY from competitive sessions where that mode was declared. A player with no SPATIAL sessions has no SPATIAL Elo — default 500, not inferred from playstyle.</div>
+      </div>
+      <div class="card">
+        <h4>Brain Metrics <span style="font-weight:400;font-size:9px;color:#666">(optional — from external assessment)</span></h4>
+        <div id="brain-sliders"></div>
+        <div class="asterisk">* Brain metrics are supplementary only. They gate nothing on their own — they bias mode weighting when present and validated. Absent brain metrics → system functions identically, just without the bias.</div>
+      </div>
+    </div>
+    <div class="card">
+      <h4>Cognitive Radar</h4>
+      <canvas id="radarCanvas" width="340" height="300" style="margin:0 auto"></canvas>
+      <div style="font-size:9px;color:#666;margin-top:6px;text-align:center">Outer ring = Elo 000 (best). Center = Elo 999 (worst). Each axis = one mode. Shape = relative strength profile.</div>
+      <hr class="sep">
+      <h4>Profile Schema</h4>
+      <table class="t">
+        <tr><td>id</td><td>string</td></tr>
+        <tr><td>sessions_competitive</td><td>int (per mode)</td></tr>
+        <tr><td>mode_elo[6]</td><td>int[0–999] default 500</td></tr>
+        <tr><td>global_elo</td><td>int[0–999] all-mode rank</td></tr>
+        <tr><td>score_percentile[mode]</td><td>float[0,1] — session-relative</td></tr>
+        <tr><td>bot_affinity[6]</td><td>float — win rate vs bot archetype</td></tr>
+        <tr><td>target_hit_rate[mode]</td><td>float — collaborative only</td></tr>
+        <tr><td>brain_metrics</td><td>Dict (optional, external)</td></tr>
+        <tr><td>session_history[]</td><td>{mode, type, rank, percentile, signals[]}</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <h4>Bot Archetype → Cognitive Proxy Table</h4>
+    <div class="warn-box">
+      Win rate vs a bot archetype is a <em>proxy</em> for performance under that bot's strategy pressure.
+      It is NOT a measurement of the player's cognitive traits. It measures how well they perform when that archetype's pattern dominates the session.
+    </div>
+    <table class="t" id="bot-table">
+      <tr><th>Bot</th><th>Strategy</th><th>Pressure Type</th><th>Mode Affinity</th><th>In-Game Signal</th><th>Validity Condition</th></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ENTROPY -->
+<div id="panel-entropy" class="panel">
+  <h2>Entropy Engine</h2>
+  <div class="grid2">
+    <div>
+      <div class="card" style="margin-bottom:12px">
+        <h4>Mode Coverage Simulation (Latin Hypercube)</h4>
+        <div style="font-size:10px;color:#555;margin-bottom:8px">
+          Guarantee: every 6-session window contains each mode exactly once before any mode repeats.
+          Within that constraint, underexplored modes and high-Elo modes are weighted higher.
+        </div>
+        <div id="coverage-grid" style="margin-bottom:10px"></div>
+        <div style="display:flex;gap:6px">
+          <button class="btn" onclick="addSession()">+ Session</button>
+          <button class="btn" onclick="resetCoverage()">Reset</button>
+        </div>
+      </div>
+      <div class="card">
+        <h4>Selection Weights</h4>
+        <div id="weight-bars"></div>
+        <hr class="sep">
+        <h4>Weight Formula</h4>
+        <div class="inset" style="font-family:'Courier New',monospace;font-size:11px">
+          w(mode) = coverage_weight × elo_weight<br>
+          coverage_weight = 1 / (freq + 1)<br>
+          elo_weight = (mode_elo / 999) ^ 0.7<br>
+          <br>
+          Higher elo (worse) → higher weight<br>
+          Less-seen mode → higher weight<br>
+          Latin hypercube guarantee overrides weights
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:12px">
+        <h4>Overlay System</h4>
+        <table class="t" style="margin-bottom:8px">
+          <tr><th>Overlay</th><th>Probability</th><th>Effect</th><th>Analytically Valid?</th></tr>
+          <tr><td>INVERSION</td><td>P = 0.10</td><td>One or more multipliers go negative. Rewarded behavior flips.</td><td>YES — if mode declared</td></tr>
+          <tr><td>ITHKUIL</td><td>P = 0.10</td><td>Score display uses alien numeral script. Players must deduce performance.</td><td>YES — score rank still clean</td></tr>
+          <tr><td>SHUFFLE</td><td>Admin trigger</td><td>Fisher-Yates: shuffles which value maps to which dimension.</td><td>YES — rank unaffected</td></tr>
+        </table>
+        <div class="asterisk">* Overlays are independent rolls. Both can activate simultaneously. Score rank remains the clean ground truth in all overlay combinations — it's always computed server-side from the actual (un-shuffled) formula.</div>
+        <hr class="sep">
+        <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
+          <input type="checkbox" id="ith-chk" onchange="toggleIthkuil(this.checked)">
+          Preview Ithkuil numeral rendering
+        </label>
+        <div id="ith-demo" style="display:none;border:1px dashed #000;padding:8px;margin-top:8px;font-family:'Courier New',monospace">
+          <div style="font-size:9px;color:#666;margin-bottom:4px">SCORE DISPLAY (ITHKUIL MODE):</div>
+          <div id="ith-nums" style="font-size:20px;letter-spacing:4px"></div>
+          <div class="asterisk">Scores rendered as logographic glyphs. Players must track relative position, not absolute value. Rank is unaffected — server truth unchanged.</div>
+        </div>
+      </div>
+      <div class="card">
+        <h4>Entropy Budget Ladder</h4>
+        <table class="t">
+          <tr><th>Budget</th><th>Sessions</th><th>Active Features</th></tr>
+          <tr><td>1</td><td>0</td><td>Mode-coverage rotation (Latin hypercube)</td></tr>
+          <tr><td>2</td><td>≥ 1</td><td>+ Global Elo weighting</td></tr>
+          <tr><td>3</td><td>≥ 6</td><td>+ Mode-specific Elo personalizes config</td></tr>
+          <tr><td>4</td><td>≥ 20</td><td>+ Bot affinity bias + behavioral signal tracking</td></tr>
+          <tr><td>5</td><td>≥ 50</td><td>+ Full adaptive curriculum + brain metric integration</td></tr>
+        </table>
+        <div class="asterisk">* Budget 1 is philosophically complete. Higher budgets add precision, not correctness. A 0-session player gets a well-designed first session; a 50-session player gets a better-calibrated one.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCORING -->
+<div id="panel-scoring" class="panel">
+  <h2>Constellation Scoring Formula</h2>
+  <div class="card-dk" style="margin-bottom:12px;font-family:'Courier New',monospace;text-align:center;font-size:14px;padding:16px;line-height:2.4">
+    finalScore = (count × M<sub>count</sub>) + (distance × M<sub>dist</sub>) + (hqDistance × M<sub>hq</sub>) + (destruction × M<sub>dest</sub>)
+  </div>
+  <div class="score-display" id="score-display">0</div>
+  <div class="grid2">
+    <div class="card">
+      <h4>Multipliers <span style="font-weight:400;font-size:9px;color:#666">(negatives allowed — drag)</span></h4>
+      <div id="mul-sliders"></div>
+      <hr class="sep">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn" onclick="setMul([500,1,10,1])">Default</button>
+        <button class="btn" onclick="setMul([-500,-1,-10,-1])">Full Inversion</button>
+        <button class="btn" onclick="setMul([1,500,10,1])">Spatial Focus</button>
+        <button class="btn" onclick="setMul([100,1,500,1])">HQ Fortress</button>
+        <button class="btn" onclick="setMul([1,1,1,500])">Destruction</button>
+        <button class="btn" onclick="shuffleMul()">Shuffle (F-Y)</button>
+      </div>
+      <hr class="sep">
+      <h4>Multiplier Shuffle — Bandit Problem</h4>
+      <div style="font-size:11px;line-height:1.8;color:#333">
+        Admin Fisher-Yates shuffles which <em>value</em> maps to which <em>dimension label</em>.
+        Players see "Stars Claimed / Distance / HQ / Destruction" but the reward
+        structure is reshuffled. Players must deduce the new mapping from score feedback alone.
+        This is the core epistemic challenge of INVERSION mode —
+        <strong>heuristics from prior sessions become liabilities.</strong>
+        Multipliers can be negative: the dimension that previously earned points now costs them.
+      </div>
+      <div id="shuffle-display" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px"></div>
+    </div>
+    <div class="card">
+      <h4>Component Breakdown</h4>
+      <div id="comp-bars"></div>
+      <hr class="sep">
+      <h4>Stat Values</h4>
+      <div id="stat-sliders"></div>
+      <hr class="sep">
+      <h4>Server Authority Note</h4>
+      <div class="inset" style="font-size:10px">
+        Server (ConstellationRoom) independently validates all claims via validateClaim(), validateSteal(), validateHQ().
+        Score rank is computed server-side. Client-side MULTIPLIER_ORDER display can be shuffled for the epistemic challenge
+        without affecting the server's authoritative score. broadcastAuthoritativeScores() uses raw star count for win condition —
+        <strong>not the weighted formula.</strong> The formula is the displayed score; star count is the server win condition.
+        These can diverge. Players must be aware of both.
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:14px">
+    <h3>Star Type Reference</h3>
+    <div class="grid4" id="star-grid"></div>
+  </div>
+</div>
+
+<!-- CENTAURI -->
+<div id="panel-centauri" class="panel">
+  <h2>Centauri — Game Mechanics Deep Reference</h2>
+  <div class="warn-box">
+    Centauri is a real-time N-body gravity simulation with hex-grid territory control. Win condition = highest resource score at session end (sessionDuration).
+    All physics is deterministic: clients sync from server startAt timestamp. Host-only: collision detection + planet position broadcast (every ~1s).
+  </div>
+  <div class="grid2" style="margin-top:12px">
+    <div>
+      <div class="card" style="margin-bottom:12px">
+        <h4>Physics Constants</h4>
+        <table class="t">
+          <tr><td>G (gravity constant)</td><td><strong>80 × 2 × 100 = 16,000</strong></td></tr>
+          <tr><td>SUBSTEPS</td><td>4 (per tick)</td></tr>
+          <tr><td>SIM_STEP</td><td>0.016 s (wall-clock synced)</td></tr>
+          <tr><td>Wall-clock sync</td><td>_sim_start_wall from server startAt. Deterministic across clients.</td></tr>
+          <tr><td>Spawn radius</td><td>sun.surface_radius + back_dist. Equidistant, round-robin teams.</td></tr>
+          <tr><td>Trajectory bake</td><td>_bake_traj() precomputes planet paths for timebar hover preview.</td></tr>
+        </table>
+      </div>
+      <div class="card" style="margin-bottom:12px">
+        <h4>Ship Parameters</h4>
+        <table class="t">
+          <tr><th>Parameter</th><th>Default</th><th>Effect</th></tr>
+          <tr><td>thrustPower</td><td>1000.0</td><td>Force magnitude per thrust input</td></tr>
+          <tr><td>thrustDepletion</td><td>10.0</td><td>Fuel cost per thrust tick</td></tr>
+          <tr><td>fuelEfficiency</td><td>0.5</td><td>Multiplier on fuel cost reduction</td></tr>
+          <tr><td>fuelRecovery</td><td>2.0</td><td>Fuel regen rate when not thrusting</td></tr>
+          <tr><td>tickSpeed</td><td>1.0</td><td>Engine.time_scale — global sim speed</td></tr>
+          <tr><td>teamMoves</td><td>300</td><td>Global pool per team. Never resets. Shared across players.</td></tr>
+          <tr><td>sessionDuration</td><td>120.0 s</td><td>Min 10s. Game ends when elapsed.</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h4>Move Pool Mechanics</h4>
+        <div class="inset" style="font-size:11px">
+          team_move_pools[team_id] is global and never resets between rounds.
+          use_team_move() decrements by 1, clamped at 0.
+          distributeMoves() splits across players with random shuffle for remainder.
+          A team that exhausts its pool cannot place cells — permanent constraint.
+          This makes move allocation a strategic resource with compounding consequences.
+        </div>
+        <table class="t" style="margin-top:8px">
+          <tr><td>get_team_moves(id)</td><td>Returns pool or teamMoves default if not yet initialized</td></tr>
+          <tr><td>team_move_pools.clear()</td><td>Fires when teamMoves setting changes AND game not running</td></tr>
+        </table>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:12px">
+        <h4>Hex Grid — Cell States</h4>
+        <table class="t">
+          <tr><th>State</th><th>Value</th><th>Meaning</th></tr>
+          <tr><td>UNCLAIMED</td><td>0</td><td>Available. No team owns it.</td></tr>
+          <tr><td>CLAIMED</td><td>1</td><td>Team has placed cell. Counts toward dominant_team_id.</td></tr>
+          <tr><td>CULTIVATED</td><td>2</td><td>Upgraded from CLAIMED. Contributes to triangle yield.</td></tr>
+        </table>
+        <div class="asterisk">* Triangles: 3 CLAIMED/CULTIVATED hexes of same team forming a triangle yield crops. team_yield_counts tracks accumulation per team.</div>
+      </div>
+      <div class="card" style="margin-bottom:12px">
+        <h4>Planet Mechanics</h4>
+        <table class="t">
+          <tr><th>Property</th><th>Notes</th></tr>
+          <tr><td>dominant_team_id</td><td>Team with most claims on this planet surface</td></tr>
+          <tr><td>tax_rate</td><td>Default 5. Admin-adjustable. Higher = more crops per tick but slower expansion</td></tr>
+          <tr><td>PLANET_COLORS</td><td>7 distinct shader variants (planet_color, contrast, brightness params)</td></tr>
+          <tr><td>Collision</td><td>Host-only detection. Fires planet_collision event to all clients.</td></tr>
+          <tr><td>Position broadcast</td><td>Host broadcasts planet_positions every ~1s for client sync.</td></tr>
+          <tr><td>Trajectory preview</td><td>_bake_traj() precomputes paths for timebar scrubbing.</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h4>Centauri Behavioral Signals <span style="font-weight:400;font-size:9px;color:#666">(all mode-conditioned)</span></h4>
+        <table class="t">
+          <tr><th>Signal</th><th>Meaning</th><th>Valid Mode Context</th></tr>
+          <tr><td>claimed_vs_cultivated_ratio</td><td>Expansion speed vs depth investment</td><td>All modes</td></tr>
+          <tr><td>triangle_completion_rate</td><td>Spatial planning efficiency (triangles/cells)</td><td>SPATIAL, QUANTITY</td></tr>
+          <tr><td>tax_rate_choices</td><td>Risk tolerance / optimization preference</td><td>FORTRESS, QUANTITY</td></tr>
+          <tr><td>dominant_capture_rate</td><td>Competitive aggression (planets taken from opponents)</td><td>DESTRUCTION</td></tr>
+          <tr><td>planet_visit_order</td><td>Routing efficiency under gravity constraints</td><td>SPATIAL</td></tr>
+          <tr><td>fuel_at_game_end</td><td>Resource conservation vs full expenditure</td><td>All modes</td></tr>
+          <tr><td>move_pool_rate</td><td>Pace of move expenditure (bursty vs steady)</td><td>All modes</td></tr>
+          <tr><td>crop_yield_per_move</td><td>Efficiency of move investment</td><td>QUANTITY, FORTRESS</td></tr>
+        </table>
+        <div class="asterisk">* These signals are computed from remote game events: cell_placed, crops_collected, tax_rate_set, planet_collision. They are only logged when session mode is declared. Raw event counts without mode context are not analyzed.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VALIDITY -->
+<div id="panel-validity" class="panel">
+  <h2>Session Validity &amp; Analytics Flags</h2>
+  <div class="grid2">
+    <div>
+      <div class="card" style="margin-bottom:12px">
+        <h4>Signal Validity Matrix</h4>
+        <div style="font-size:10px;color:#555;margin-bottom:8px">Which behavioral signals are analytically valid in each mode.</div>
+        <div id="validity-matrix"></div>
+        <div class="asterisk">* A signal marked VALID means it is interpretable in that mode context. PARTIAL means it provides some information but with caveats. INVALID means it is too confounded by mode mechanics to draw conclusions.</div>
+      </div>
+
+      <div class="card">
+        <h4>Flow Zone — Target Calibration</h4>
+        <div style="font-size:11px;line-height:1.8;margin-bottom:8px">
+          Optimal learning = player wins by a small margin. From educational research (Vygotsky ZPD, Csikszentmihalyi flow):
+          target zone = top 25–40% of session rank, not necessarily 1st.
+          Crushing opponents = too easy → reduce challenge next session.
+          Never winning = too hard → reduce challenge next session.
+        </div>
+        <div style="font-size:10px;color:#555;margin-bottom:4px">Simulated session rank percentile: <strong id="flow-pct">50</strong>%</div>
+        <input type="range" min="0" max="100" value="50" oninput="updateFlow(+this.value)" style="width:100%;accent-color:#000;margin-bottom:6px">
+        <div style="position:relative;margin-bottom:4px">
+          <div class="flow-zone"></div>
+          <div class="flow-marker" id="flow-marker" style="left:50%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:#666">
+          <span>0% (last)</span>
+          <span style="color:#000;font-weight:700">FLOW ZONE (25–75%)</span>
+          <span>100% (1st)</span>
+        </div>
+        <div id="flow-feedback" style="font-size:11px;margin-top:8px;padding:6px;border:1px solid #ccc"></div>
+        <div class="asterisk">* "Barely winning" is the single most informative outcome. It confirms the challenge was appropriately calibrated AND that the player was genuinely engaged. Landslide wins and losses both reduce signal quality.</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" style="margin-bottom:12px">
+        <h4>Collaborative Staircase Mode</h4>
+        <div class="inset" style="margin-bottom:8px">
+          In class sessions, all players are assigned different targets (e.g., P1 → 100 stars, P2 → 200 stars, P3 → 300 stars).
+          Goal = hit your target, not beat others. Analytics = distance from target, not rank.
+          No competitive Elo update. Records: target_hit_rate, overshoot_rate, target_approach_strategy.
+        </div>
+        <div style="font-size:10px;color:#555;margin-bottom:6px">Simulate staircase (4 players)</div>
+        <div id="staircase-sim"></div>
+        <button class="btn" onclick="runStaircase()" style="margin-top:8px">Randomize Results</button>
+        <div class="asterisk">* Analytics in staircase mode: target_delta = (achieved − target). Positive = overshoot (easy). Negative = undershoot (too hard). target_hit_rate accumulates across staircase sessions. This feeds ONLY difficulty calibration, not mode-Elo or cognitive inference.</div>
+      </div>
+
+      <div class="card">
+        <h4>Win Ambiguity — When Rank is Ambiguous</h4>
+        <div style="font-size:11px;line-height:1.8;margin-bottom:8px">
+          Rank is clean when: same mode, same config, same number of players, no bot fill imbalance.
+          Rank is ambiguous when:
+        </div>
+        <table class="t">
+          <tr><th>Ambiguity Source</th><th>Effect on Validity</th><th>Mitigation</th></tr>
+          <tr><td>Unequal bot fill across teams</td><td>Team strength differs</td><td>Record bot composition with session</td></tr>
+          <tr><td>Player leaves mid-game</td><td>Team weakened asymmetrically</td><td>Mark session PARTIAL. Use target-delta only.</td></tr>
+          <tr><td>Different player counts between sessions</td><td>Rank scales differ (1/3 vs 1/6)</td><td>Always use percentile, not ordinal rank</td></tr>
+          <tr><td>Ithkuil overlay active</td><td>Score feedback delayed/obscured</td><td>Rank still valid. Behavioral signals still valid. Note overlay in record.</td></tr>
+          <tr><td>Multiplier shuffle (player unaware)</td><td>Prior strategy may be suboptimal</td><td>Session is INVERSION-mode tagged. Adaptation speed is the signal.</td></tr>
+          <tr><td>Collaborative + competitive mixed</td><td>Undefined ground truth</td><td>Force session type declaration before start.</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:14px">
+    <h3>In-Game Behavioral Signals — Mode Validity Tags</h3>
+    <table class="t" id="signals-table">
+      <tr><th>Signal</th><th>Source</th><th>QTY</th><th>SPT</th><th>FRT</th><th>DST</th><th>WRM</th><th>INV</th><th>Notes</th></tr>
+    </table>
+    <div class="asterisk" style="margin-top:6px">* VALID (■) = interpretable in this mode. PARTIAL (▪) = confounded but directional. INVALID (□) = too confounded to draw conclusions. All signals require the session mode to be declared. Undeclared sessions record only score rank.</div>
+  </div>
+</div>
+
+<!-- COMPOSER -->
+<div id="panel-composer" class="panel">
+  <h2>Team Composer</h2>
+  <div class="grid2">
+    <div>
+      <div class="card" style="margin-bottom:12px">
+        <h4>Composition Algorithm</h4>
+        <div class="inset">
+          Teams are not composed to maximize "winning" — they are composed to maximize
+          the <strong>information gained from the session outcome.</strong>
+          A session where one team crushes another gives minimal signal.
+          A session where teams finish within 10% of each other gives maximal signal.
+        </div>
+        <table class="t" style="margin-top:8px">
+          <tr><th>Priority</th><th>Objective</th><th>Method</th></tr>
+          <tr><td>1</td><td>Elo balance</td><td>Team mean Elo within ±10% of global mean</td></tr>
+          <tr><td>2</td><td>Mode coverage</td><td>Collective team set covers all 6 modes</td></tr>
+          <tr><td>3</td><td>Cognitive diversity</td><td>Minimize within-team cosine similarity of mode-Elo vectors</td></tr>
+          <tr><td>4</td><td>Weakness exposure</td><td>Each player faces their weakest mode context at least 1/6 sessions</td></tr>
+          <tr><td>5</td><td>Bot fill</td><td>Bot archetype = argmax(missing mode affinity in team)</td></tr>
+        </table>
+        <div class="asterisk">* Priority 1 is a hard constraint. Priorities 2–5 are soft objectives, optimized within the Elo balance constraint. If Elo balance and mode coverage conflict, Elo balance wins.</div>
+      </div>
+      <div class="card">
+        <h4>2-Player Special Case</h4>
+        <div style="font-size:11px;line-height:1.9">
+          Two humans → 2+2 human+bot hybrid teams.<br>
+          Bot archetypes chosen to fill missing cognitive modes in each team.<br>
+          Default pairing: Team A = <strong>HAL</strong> + <strong>EINSTEIN</strong> (defense + wormhole pursuit)<br>
+          Team B = <strong>CAESAR</strong> + <strong>ATHENA</strong> (tactical + steal aggression)<br>
+          Human's mode-Elo determines which team they are assigned to (weaker player gets HAL's stability).<br>
+          All bots: aggression = 0.5 baseline. Adjustable per session.
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h4>Live Team Builder</h4>
+      <div id="team-builder"></div>
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn" onclick="addPlayer()">+ Player</button>
+        <button class="btn" onclick="addBot()">+ Bot</button>
+        <button class="btn" onclick="autoBalance()">Auto Balance</button>
+        <button class="btn" onclick="clearTeam()">Clear</button>
+      </div>
+      <div id="balance-report" style="margin-top:10px;font-size:11px"></div>
+      <hr class="sep">
+      <h4>Second Game Reactor</h4>
+      <table class="t">
+        <tr><th>Trigger</th><th>Response</th></tr>
+        <tr><td>Player joins mid-session</td><td>Queue for next game. Mode-match if possible.</td></tr>
+        <tr><td>Player leaves mid-game</td><td>Bot replacement (same archetype as their mode profile)</td></tr>
+        <tr><td>&lt; 2 players remain</td><td>Session ends. Record partial data (target-delta only).</td></tr>
+        <tr><td>Elo gap &gt; 200 pts</td><td>Force rebalance before next session. Override composer.</td></tr>
+        <tr><td>Same mode 3× in a row</td><td>Force mode change. Ignore weights for one session.</td></tr>
+        <tr><td>Landslide win (&gt;40% margin)</td><td>Increase difficulty: harder bots, more challenging mode config.</td></tr>
+        <tr><td>Consistent losses (3× below 25th pct)</td><td>Decrease difficulty: easier bots, more familiar mode.</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────
+const MODES=[
+  {id:'qty',name:'QUANTITY',icon:'⬡',
+   desc:'Maximize raw star count. Territorial expansion. Volume over precision. The simplest objective — claim as many stars as possible before time runs out.',
+   constellation:{'countMultiplier':'500 (dominant)','distanceMultiplier':'1','hqMultiplier':'1','destructionMultiplier':'1','moves':'20+','steals':'10'},
+   centauri:'High teamMoves budget. Prioritize CLAIMED cells over CULTIVATED. Fast expansion over deep cultivation.',
+   cognitive:'Rapid decision-making under time pressure. Spatial breadth. Working memory for tracking claimed vs unclaimed.',
+   signals:['star_count_rate','move_efficiency','territory_spread','claimed_vs_cultivated_ratio'],
+   winCondition:'Most stars claimed at end. Server win = star count. Formula score may diverge from win condition.'},
+  {id:'spt',name:'SPATIAL',icon:'◎',
+   desc:'Maximize cumulative Euclidean distance of claims from HQ. Geometry and path-planning. Reach over volume — one far star beats ten nearby ones.',
+   constellation:{'distanceMultiplier':'500 (dominant)','countMultiplier':'1','hqMultiplier':'10','destructionMultiplier':'1','moves':'15','steals':'5'},
+   centauri:'Prioritize distant planets. Triangle formation less important than reach. Fuel management critical for long transits.',
+   cognitive:'Spatial reasoning. Euclidean estimation. Path optimization under gravity constraints (Centauri).',
+   signals:['avg_claim_distance','furthest_star','path_efficiency','planet_visit_order'],
+   winCondition:'Highest cumulative distance score. Note: server win condition is still star count. Formula win and server win may differ — declare which counts before session.'},
+  {id:'frt',name:'FORTRESS',icon:'⬢',
+   desc:'Maximize HQ network distance via Dijkstra shortest path. Connect headquarters. Infrastructure over aggression. Long-term graph construction.',
+   constellation:{'hqMultiplier':'500 (dominant)','countMultiplier':'50','distanceMultiplier':'1','destructionMultiplier':'-50 (penalty)','headquarters':'3','moves':'15'},
+   centauri:'Tax rate optimization. Triangle formation for steady crop yield. Dominant planet capture for passive resource generation.',
+   cognitive:'Graph connectivity thinking. Multi-step planning. Network topology reasoning.',
+   signals:['hq_connection_speed','network_distance','hq_count','triangle_completion_rate'],
+   winCondition:'Highest HQ network distance (Dijkstra sum). Uses MinHeap implementation in client. Server validates HQ placement.'},
+  {id:'dst',name:'DESTRUCTION',icon:'✕',
+   desc:'Maximize lines destroyed via blackhole chains. Offensive disruption. Deny opponent connections rather than building your own. Reactive strategy.',
+   constellation:{'destructionMultiplier':'500 (dominant)','countMultiplier':'-100 (penalty)','distanceMultiplier':'1','hqMultiplier':'1','steals':'30','blackholeStars':'high density'},
+   centauri:'Planet collisions for dominant_team_id capture. High dominant_capture_rate. Aggressive cell displacement.',
+   cognitive:'Inhibitory control (when NOT to destroy). Opponent modeling. Strategic denial over construction.',
+   signals:['blackhole_activations','steal_rate','opponent_disruption','dominant_capture_rate'],
+   winCondition:'Highest destruction score. Blackhole activation: server checkBlackHoleActivation() fires when team connects 2 blackholes — destroys all path lines in between.'},
+  {id:'wrm',name:'WORMHOLE',icon:'⊕',
+   desc:'Achieve instant win via wormhole activation. Two wormholes connected after surrounding req stars claimed. Scoring is irrelevant — only one outcome matters.',
+   constellation:{'wormholeStars':'2+ pairs','reqSurrounding':'3–6','allMultipliers':'1 (irrelevant)','countdownLength':'15','moves':'10'},
+   centauri:'N/A — wormhole mechanic is Constellation-only.',
+   cognitive:'Pattern recognition. Goal-directed search ignoring irrelevant information. Constraint satisfaction under competitive pressure.',
+   signals:['wormhole_proximity','activation_speed','req_stars_secured'],
+   winCondition:'INSTANT WIN when team connects 2 activated wormholes. checkWormHoleActivation() returns true → overrides all scores. All other play is irrelevant once this triggers.'},
+  {id:'inv',name:'INVERSION',icon:'⊘',
+   desc:'Multipliers are shuffled and/or negative. Rewarded behavior is unknown. Players must deduce the new objective from score feedback. Prior heuristics are liabilities.',
+   constellation:{'allMultipliers':'any (shuffled/negative via Fisher-Yates)','ithkuilNumerals':'possible (10%)','MULTIPLIER_ORDER':'shuffled client-side'},
+   centauri:'Tax rate signals inverted. Optimal cultivation depth may flip. Move pool conservation may become penalty.',
+   cognitive:'Cognitive flexibility. Reversal learning. Epistemic humility — willingness to abandon working strategies.',
+   signals:['strategy_shift_speed','negative_avoidance','heuristic_abandonment'],
+   winCondition:'Same server win condition as underlying mode. Epistemic challenge is deducing which behaviors are rewarded, not a different win condition.'},
+];
+
+const MODE_IDS=MODES.map(m=>m.id);
+const MODE_LABELS=['QTY','SPT','FRT','DST','WRM','INV'];
+
+const BOTS=[
+  {name:'HAL',icon:'●',strategy:'Steady defensive play. Builds contiguous clusters. Consistent, predictable.',proxy:'Sustained attention / procedural consistency',mode:'qty',signal:'cluster_efficiency',validity:'Valid when player beats or loses to HAL consistently across sessions'},
+  {name:'CAESAR',icon:'◆',strategy:'Tactical priority targeting. Evaluates best expected-value move each tick.',proxy:'Executive function / lookahead planning',mode:'frt',signal:'hq_timing',validity:'Valid after 3+ FORTRESS mode sessions with HAL/CAESAR mix'},
+  {name:'ATHENA',icon:'▲',strategy:'Aggressive stealer. Targets highest-value opponent stars each turn.',proxy:'Inhibitory control — can player resist reacting to Athena\'s steals?',mode:'dst',signal:'steal_rate',validity:'Valid in DESTRUCTION mode only'},
+  {name:'ROBIN_HOOD',icon:'○',strategy:'Opportunistic. Claims unclaimed stars near contested zones. Flexible.',proxy:'Situational awareness / behavioral flexibility',mode:'inv',signal:'territory_spread',validity:'Valid in INVERSION mode — measures adaptation to shifting reward landscape'},
+  {name:'EINSTEIN',icon:'◇',strategy:'Wormhole-obsessed. Ignores score, pursues activation path exclusively.',proxy:'Goal-directed search / pattern completion under distraction',mode:'wrm',signal:'wormhole_proximity',validity:'Valid in WORMHOLE mode only. Measures whether player mirrors or counters Einstein\'s focus.'},
+  {name:'LORENZ',icon:'✦',strategy:'Chaotic random-weighted moves. High variance. Noise floor.',proxy:'Adaptability baseline — can player beat effectively random play?',mode:'spt',signal:'path_deviation',validity:'Baseline measurement. Low bot-affinity vs LORENZ indicates fundamental difficulty with any mode.'},
+];
+
+const SIGNALS_DATA=[
+  {name:'steal_rate',src:'server validateSteal()',qty:'□',spt:'□',frt:'□',dst:'■',wrm:'□',inv:'▪',note:'Only meaningful in DST. In other modes, high steal_rate may just indicate move waste.'},
+  {name:'hq_connection_speed',src:'server validateHQ()',qty:'□',spt:'□',frt:'■',dst:'□',wrm:'▪',inv:'▪',note:'Rounds until first HQ pair connected via Dijkstra. Confounded in INV if HQ multiplier is negative.'},
+  {name:'star_count_rate',src:'server star count broadcast',qty:'■',spt:'▪',frt:'▪',dst:'□',wrm:'□',inv:'▪',note:'Direct signal in QTY. In SPT/FRT it measures efficiency but not strategy.'},
+  {name:'blackhole_activations',src:'server checkBlackHoleActivation()',qty:'□',spt:'□',frt:'□',dst:'■',wrm:'□',inv:'▪',note:'Only valid in DST. In other modes, blackhole activation may be accidental.'},
+  {name:'wormhole_proximity',src:'client star distance calc',qty:'□',spt:'□',frt:'□',dst:'□',wrm:'■',inv:'□',note:'Distance to nearest wormhole pair. Only valid in WRM. In other modes, players ignore wormholes.'},
+  {name:'avg_claim_distance',src:'client scoring calcScores()',qty:'▪',spt:'■',frt:'▪',dst:'□',wrm:'□',inv:'▪',note:'Mean Euclidean distance from HQ per claim. Core signal in SPT.'},
+  {name:'strategy_shift_speed',src:'Δ signal vector post-round-3',qty:'□',spt:'□',frt:'□',dst:'□',wrm:'□',inv:'■',note:'Change in behavioral signals after round 3 vs rounds 1–2. Only valid in INV — measures reversal learning.'},
+  {name:'triangle_completion_rate',src:'Centauri team_yield_counts',qty:'▪',spt:'▪',frt:'■',dst:'□',wrm:'□',inv:'▪',note:'Centauri only. Triangles formed per cell placed. High = deep cultivation. Valid in FRT and QTY.'},
+  {name:'move_pool_rate',src:'GameConfig.use_team_move()',qty:'■',spt:'■',frt:'■',dst:'■',wrm:'■',inv:'■',note:'Universal signal. Rate of move expenditure (bursty vs steady). Valid in all modes as efficiency indicator.'},
+  {name:'dominant_capture_rate',src:'Centauri planet_collision event',qty:'□',spt:'□',frt:'□',dst:'■',wrm:'□',inv:'▪',note:'Centauri only. How often team becomes dominant_team_id by displacing others. Valid in DST.'},
+];
+
+const STARS=[
+  {name:'NORMAL',code:'T.N=0',icon:'★',rules:['Claimable by any team','Stealable by any team (server: validateSteal())','No special effect','Base territory unit']},
+  {name:'CLUSTER',code:'T.C=1',icon:'✦',rules:['Claimable once','NOT stealable post-claim (server-enforced)','Creates stable anchor zone','hq=true or pr=true → unstealable']},
+  {name:'BLACKHOLE',code:'T.B=2',icon:'◉',rules:['NOT stealable (server-enforced)','Claim 2 same-team blackholes →','checkBlackHoleActivation() fires','→ destroys all path lines between them']},
+  {name:'WORMHOLE',code:'T.W=3',icon:'⊕',rules:['Must claim req surrounding stars first','req field = min surrounding claims needed','Connect 2 activated wormholes (same team) →','checkWormHoleActivation() → INSTANT WIN']},
+];
+
+// ── TABS ─────────────────────────────────────────────────────────
+function showTab(name,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  el.classList.add('active');
+}
+
+// ── PIPELINE SVG ─────────────────────────────────────────────────
+const PNODES=[
+  {id:'profile',  sub:'PLAYER',   title:'PROFILE',   x:20},
+  {id:'richness', sub:'DATA',     title:'RICHNESS',  x:215},
+  {id:'entropy',  sub:'ENTROPY',  title:'ENGINE',    x:410},
+  {id:'composer', sub:'TEAM',     title:'COMPOSER',  x:605},
+  {id:'reactor',  sub:'2ND GAME', title:'REACTOR',   x:800},
+];
+const NW=155,NH=60,NY=20;
+
+const PD={
+  profile:{l:`<h3>Player Profile</h3>
+    <div style="font-size:11px;line-height:1.8">
+    Input: all available data about the player.<br>
+    Zero sessions → uniform priors (mode_elo=500, no affinity data).<br>
+    Each competitive session refines the posterior.<br>
+    Profile does NOT store behavioral labels like "spatial thinker" —
+    only raw scores, rank percentiles, and mode-conditioned signal vectors.
+    </div>`,
+   r:`<table class="t"><tr><th>Field</th><th>Updated When</th></tr>
+   <tr><td>mode_elo[6]</td><td>Competitive session, mode declared</td></tr>
+   <tr><td>global_elo</td><td>Any competitive session</td></tr>
+   <tr><td>score_percentile</td><td>Any competitive session (session-relative)</td></tr>
+   <tr><td>bot_affinity[6]</td><td>Session included that bot archetype</td></tr>
+   <tr><td>target_hit_rate</td><td>Collaborative staircase sessions only</td></tr>
+   <tr><td>brain_metrics</td><td>External assessment only. Never inferred.</td></tr>
+   </table>`},
+  richness:{l:`<h3>Data Richness Assessor</h3>
+    <div style="font-size:11px;line-height:1.8">
+    Counts valid competitive sessions per mode.<br>
+    Computes entropy budget (1–5).<br>
+    Prevents system from activating inference layers it doesn't have enough data to support.<br>
+    A budget-1 system is epistemically <em>correct</em>, not deficient.
+    </div>`,
+   r:`<table class="t"><tr><th>Budget</th><th>Requirement</th></tr>
+   <tr><td>1</td><td>0 sessions — mode rotation only</td></tr>
+   <tr><td>2</td><td>≥1 session — global Elo active</td></tr>
+   <tr><td>3</td><td>≥6 sessions — mode-Elo personalizes config</td></tr>
+   <tr><td>4</td><td>≥20 sessions — bot affinity + signals</td></tr>
+   <tr><td>5</td><td>≥50 sessions — full adaptive curriculum</td></tr>
+   </table>`},
+  entropy:{l:`<h3>Entropy Engine</h3>
+    <div style="font-size:11px;line-height:1.8">
+    Selects which cognitive mode this session targets.<br>
+    Latin hypercube guarantee: all 6 modes before any repeats.<br>
+    Within constraint: weights = coverage_weight × elo_weight.<br>
+    Rolls overlay flags (INVERSION 10%, ITHKUIL 10%) independently.<br>
+    Output: {mode, params, overlay_flags} → admin settings broadcast.
+    </div>`,
+   r:`<table class="t"><tr><th>Step</th><th>Logic</th></tr>
+   <tr><td>1</td><td>Check Latin hypercube window (last 5 sessions)</td></tr>
+   <tr><td>2</td><td>Force uncovered modes if window incomplete</td></tr>
+   <tr><td>3</td><td>Compute weights for remaining modes</td></tr>
+   <tr><td>4</td><td>Sample weighted random</td></tr>
+   <tr><td>5</td><td>Roll overlays independently</td></tr>
+   <tr><td>6</td><td>Emit config → admin panel → server broadcast</td></tr>
+   </table>`},
+  composer:{l:`<h3>Team Composer</h3>
+    <div style="font-size:11px;line-height:1.8">
+    Assigns players to teams to maximize session information yield.<br>
+    Hard constraint: Elo balance (±10% of global mean).<br>
+    Soft objectives: cognitive diversity, mode coverage, weakness exposure.<br>
+    Bot fill: archetype chosen to cover missing mode in team.
+    </div>`,
+   r:`<table class="t"><tr><th>Case</th><th>Strategy</th></tr>
+   <tr><td>≥4 players</td><td>Snake draft by Elo + diversity optimization</td></tr>
+   <tr><td>2–3 players</td><td>2+2 or 2+1 human+bot hybrid</td></tr>
+   <tr><td>1 player</td><td>1v3 bots — calibration session only</td></tr>
+   <tr><td>0 players</td><td>Session cancelled. No data recorded.</td></tr>
+   </table>`},
+  reactor:{l:`<h3>Second Game Reactor</h3>
+    <div style="font-size:11px;line-height:1.8">
+    Event-driven: responds to player churn between and during sessions.<br>
+    State machine: WAITING → RUNNING → REPLACING/ENDING → QUEUING → REBALANCING.<br>
+    Guards: same-mode 3× → force change. Elo gap &gt;200 → force rebalance.<br>
+    Flow zone miss: adjust difficulty for next session.
+    </div>`,
+   r:`<table class="t"><tr><th>State</th><th>Meaning</th></tr>
+   <tr><td>WAITING</td><td>Accepting joins, building lobby</td></tr>
+   <tr><td>RUNNING</td><td>Session active, monitoring events</td></tr>
+   <tr><td>REPLACING</td><td>Bot fill for departed player</td></tr>
+   <tr><td>ENDING</td><td>Below minimum threshold</td></tr>
+   <tr><td>QUEUING</td><td>Building next session roster</td></tr>
+   <tr><td>REBALANCING</td><td>Elo gap triggered reshuffle</td></tr>
+   </table>`},
+};
+
+function drawPipeline(){
+  const svg=document.getElementById('pipelineSvg');
+  let h='';
+  for(let i=0;i<PNODES.length-1;i++){
+    const n=PNODES[i],n2=PNODES[i+1];
+    const x1=n.x+NW,x2=n2.x,my=NY+NH/2;
+    h+=`<line x1="${x1}" y1="${my}" x2="${x2-5}" y2="${my}" stroke="#000" stroke-width="1"/>`;
+    h+=`<polygon points="${x2-5},${my-4} ${x2},${my} ${x2-5},${my+4}" fill="#000"/>`;
+  }
+  // sub-nodes
+  const en=PNODES[2];const subY=NY+NH+26;
+  h+=`<line x1="${en.x+NW/2}" y1="${NY+NH}" x2="${en.x+NW/2}" y2="${subY}" stroke="#999" stroke-width="1" stroke-dasharray="3,2"/>`;
+  const subs=[{l:'CONSTELLATION',x:295},{l:'CENTAURI',x:470}];
+  for(const s of subs){
+    h+=`<line x1="${en.x+NW/2}" y1="${subY}" x2="${s.x+60}" y2="${subY}" stroke="#999" stroke-width="1" stroke-dasharray="3,2"/>`;
+    h+=`<rect x="${s.x}" y="${subY}" width="118" height="28" fill="#f0f0f0" stroke="#000" stroke-width="0.8"/>`;
+    h+=`<text x="${s.x+59}" y="${subY+18}" text-anchor="middle" fill="#000" font-size="8" font-family="Arial" letter-spacing="1" font-weight="700">${s.l}</text>`;
+  }
+  for(const n of PNODES){
+    h+=`<g style="cursor:pointer" onclick="showPD('${n.id}')">
+      <rect id="pr-${n.id}" x="${n.x}" y="${NY}" width="${NW}" height="${NH}" fill="#fff" stroke="#000" stroke-width="1.5"/>
+      <text x="${n.x+NW/2}" y="${NY+18}" text-anchor="middle" fill="#666" font-size="8" font-family="Arial" letter-spacing="2" font-weight="700">${n.sub}</text>
+      <text x="${n.x+NW/2}" y="${NY+40}" text-anchor="middle" fill="#000" font-size="13" font-family="Arial" font-weight="700">${n.title}</text>
+    </g>`;
+  }
+  svg.innerHTML=h;
+}
+
+function showPD(id){
+  const d=PD[id];if(!d)return;
+  document.querySelectorAll('[id^="pr-"]').forEach(r=>r.setAttribute('stroke-width','1.5'));
+  const r=document.getElementById('pr-'+id);if(r)r.setAttribute('stroke-width','3');
+  const det=document.getElementById('pipe-detail');
+  det.classList.add('show');
+  det.innerHTML=`<div>${d.l}</div><div>${d.r}</div>`;
+}
+
+// ── RICHNESS ─────────────────────────────────────────────────────
+function updateRichness(v){
+  document.getElementById('sess-n').textContent=v;
+  const budget=v>=50?5:v>=20?4:v>=6?3:v>=1?2:1;
+  document.getElementById('budget-n').textContent=budget;
+  const tiers=[
+    {l:'Mode rotation',t:0},{l:'Global Elo',t:1},{l:'Mode-Elo config',t:6},{l:'Bot affinity',t:20},{l:'Brain metrics',t:20},{l:'Full curriculum',t:50},
+  ];
+  let h='';
+  for(const b of tiers){
+    const on=v>=b.t;const pct=on?Math.max(8,Math.min(100,(v-b.t+1)/(60-b.t+2)*100)):0;
+    h+=`<div class="bar-row">
+      <div class="bar-lbl" style="color:${on?'#000':'#aaa'}">${b.l}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;${!on?'background:#ccc':''}"></div></div>
+      <div class="bar-val" style="font-weight:${on?700:400};color:${on?'#000':'#aaa'}">${on?'ON':'–'}</div>
+    </div>`;
+  }
+  document.getElementById('richness-bars').innerHTML=h;
+}
+
+// ── MODES ────────────────────────────────────────────────────────
+function initModes(){
+  document.getElementById('modes-list').innerHTML=MODES.map(m=>`
+    <div class="mode-row" onclick="toggleMode('${m.id}')">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:18px;width:24px;text-align:center">${m.icon}</span>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:11px;letter-spacing:1px">${m.name}</div>
+          <div style="font-size:10px;color:#555;margin-top:1px">${m.desc}</div>
+        </div>
+        <span style="font-size:10px;color:#999">▼</span>
+      </div>
+      <div class="mode-detail" id="md-${m.id}">
+        <div>
+          <h4>Constellation Config</h4>
+          <table class="t">${Object.entries(m.constellation).map(([k,v])=>`<tr><td>${k}</td><td><strong>${v}</strong></td></tr>`).join('')}</table>
+          <h4 style="margin-top:8px">Centauri Context</h4>
+          <div style="font-size:11px;color:#333;line-height:1.7">${m.centauri}</div>
+        </div>
+        <div>
+          <h4>Cognitive Target</h4>
+          <div style="font-size:11px;color:#333;line-height:1.7;margin-bottom:8px">${m.cognitive}</div>
+          <h4>Win Condition</h4>
+          <div class="inset">${m.winCondition}</div>
+          <h4 style="margin-top:8px">Valid Signals</h4>
+          <div>${m.signals.map(s=>`<span class="badge" style="margin:2px">${s}</span>`).join(' ')}</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+function toggleMode(id){
+  const d=document.getElementById('md-'+id);d.classList.toggle('show');
+  const r=d.closest('.mode-row');r.classList.toggle('open');
+}
+
+// ── PROFILE / RADAR ───────────────────────────────────────────────
+const eloVals={qty:500,spt:500,frt:500,dst:500,wrm:500,inv:500};
+
+function initProfile(){
+  const sliders=document.getElementById('elo-sliders');
+  sliders.innerHTML=MODES.map(m=>`
+    <div class="srow">
+      <label>${m.name}</label>
+      <input type="range" min="0" max="999" value="500" step="1" oninput="updateElo('${m.id}',+this.value)">
+      <div class="sval" id="ev-${m.id}">500</div>
+    </div>`).join('');
+
+  const brainNames=['Working Memory','Processing Speed','Spatial Rotation','Inhibitory Control','Cognitive Flexibility','Pattern Recognition'];
+  document.getElementById('brain-sliders').innerHTML=brainNames.map(b=>`
+    <div class="srow">
+      <label style="width:120px">${b}</label>
+      <input type="range" min="0" max="100" value="${Math.floor(Math.random()*50+40)}" oninput="drawRadar()">
+      <div class="sval">—</div>
+    </div>`).join('');
+
+  document.getElementById('bot-table').innerHTML=`<tr><th>Bot</th><th>Strategy</th><th>Pressure Type</th><th>Mode Affinity</th><th>In-Game Signal</th><th>Validity Condition</th></tr>`+
+  BOTS.map(b=>`<tr>
+    <td><strong>${b.icon} ${b.name}</strong></td>
+    <td style="color:#444">${b.strategy}</td>
+    <td>${b.proxy}</td>
+    <td><span class="badge">${b.mode.toUpperCase()}</span></td>
+    <td style="font-size:10px;color:#666">${b.signal}</td>
+    <td style="font-size:10px;color:#666">${b.validity}</td>
+  </tr>`).join('');
+
+  drawRadar();
+}
+
+function updateElo(id,v){
+  eloVals[id]=v;
+  const e=document.getElementById('ev-'+id);
+  if(e)e.textContent=String(v).padStart(3,'0');
+  drawRadar();
+}
+
+function drawRadar(){
+  const c=document.getElementById('radarCanvas');
+  const ctx=c.getContext('2d');
+  const W=c.width,H=c.height,cx=W/2,cy=H/2,R=Math.min(W,H)/2-40;
+  ctx.clearRect(0,0,W,H);
+  const N=6,ang=i=>(i/N)*Math.PI*2-Math.PI/2;
+  const pt=(i,r)=>({x:cx+r*Math.cos(ang(i)),y:cy+r*Math.sin(ang(i))});
+  for(let ring=1;ring<=4;ring++){
+    ctx.beginPath();
+    for(let i=0;i<=N;i++){const p=pt(i%N,R*ring/4);i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)}
+    ctx.closePath();ctx.strokeStyle='#e0e0e0';ctx.lineWidth=1;ctx.stroke();
+  }
+  for(let i=0;i<N;i++){const p=pt(i,R);ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(p.x,p.y);ctx.strokeStyle='#e0e0e0';ctx.lineWidth=1;ctx.stroke()}
+  const vals=[eloVals.qty,eloVals.spt,eloVals.frt,eloVals.dst,eloVals.wrm,eloVals.inv];
+  ctx.beginPath();
+  for(let i=0;i<N;i++){const norm=1-vals[i]/999;const p=pt(i,R*norm);i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)}
+  ctx.closePath();ctx.fillStyle='rgba(0,0,0,0.06)';ctx.fill();ctx.strokeStyle='#000';ctx.lineWidth=2;ctx.stroke();
+  for(let i=0;i<N;i++){const norm=1-vals[i]/999;const p=pt(i,R*norm);ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fillStyle='#000';ctx.fill()}
+  for(let i=0;i<N;i++){
+    const p=pt(i,R+22);ctx.fillStyle='#000';ctx.font='bold 9px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(MODE_LABELS[i],p.x,p.y);
+    const pv=pt(i,R+34);ctx.fillStyle='#666';ctx.font='8px Arial';ctx.fillText(String(vals[i]).padStart(3,'0'),pv.x,pv.y);
+  }
+}
+
+// ── ENTROPY ───────────────────────────────────────────────────────
+let coverage=[];
+function addSession(){
+  const recent=coverage.slice(-5).map(s=>s.mode);
+  const uncovered=MODE_IDS.filter(m=>!recent.includes(m));
+  const pool=uncovered.length>0?uncovered:MODE_IDS;
+  const chosen=pool[Math.floor(Math.random()*pool.length)];
+  coverage.push({mode:chosen,n:coverage.length+1});
+  renderCoverage();renderWeights();
+}
+function resetCoverage(){coverage=[];renderCoverage();renderWeights()}
+
+function renderCoverage(){
+  const el=document.getElementById('coverage-grid');
+  if(!coverage.length){el.innerHTML='<div style="font-size:10px;color:#888">No sessions yet.</div>';return}
+  let h=`<div style="display:grid;grid-template-columns:36px repeat(6,1fr);gap:1px;margin-bottom:2px">
+    <div style="font-size:8px;color:#666">S#</div>`;
+  MODE_LABELS.forEach(l=>h+=`<div style="font-size:8px;font-weight:700;text-align:center">${l}</div>`);
+  h+='</div>';
+  for(const s of coverage){
+    h+=`<div style="display:grid;grid-template-columns:36px repeat(6,1fr);gap:1px;margin-bottom:1px">`;
+    h+=`<div style="font-size:9px;color:#666;line-height:16px">S${s.n}</div>`;
+    MODE_IDS.forEach(mk=>{
+      const on=s.mode===mk;
+      h+=`<div style="height:16px;background:${on?'#000':'#eee'};border:1px solid ${on?'#000':'#ddd'}"></div>`;
+    });
+    h+='</div>';
+  }
+  el.innerHTML=h;
+}
+function renderWeights(){
+  const freq={};MODE_IDS.forEach(m=>freq[m]=0);
+  coverage.forEach(s=>freq[s.mode]++);
+  const total=coverage.length||1;
+  let h='';
+  MODE_IDS.forEach((mk,i)=>{
+    const f=freq[mk];const w=Math.max(0.05,1-f/total);const pct=w*100;
+    h+=`<div class="bar-row">
+      <div class="bar-lbl">${MODE_LABELS[i]}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+      <div class="bar-val">${pct.toFixed(0)}%</div>
+    </div>`;
+  });
+  document.getElementById('weight-bars').innerHTML=h;
+}
+
+function toggleIthkuil(on){
+  document.getElementById('ith-demo').style.display=on?'block':'none';
+  if(on){
+    const g=['𝟘','𝟙','𝟚','𝟛','𝟜','𝟝','𝟞','𝟟','𝟠','𝟡'];
+    const nums=[1337,42,9001,256];
+    document.getElementById('ith-nums').innerHTML=nums.map(n=>n.toString().split('').map(d=>g[+d]).join('')+'ₙ').join('  ');
+  }
+}
+
+// ── SCORING ──────────────────────────────────────────────────────
+let muls={count:500,distance:1,hq:10,destruction:1};
+let sts={count:10,distance:50,hq:30,destruction:5};
+const MK=['count','distance','hq','destruction'];
+const ML=['M_count','M_distance','M_hq','M_dest'];
+const SL=['Stars claimed','Total distance','HQ network dist','Lines destroyed'];
+
+function initScoring(){
+  document.getElementById('mul-sliders').innerHTML=MK.map((k,i)=>`
+    <div class="srow">
+      <label>${ML[i]}</label>
+      <input type="range" min="-1000" max="1000" value="${muls[k]}" step="1" id="ms-${k}" oninput="updMul('${k}',+this.value)">
+      <div class="sval" id="mv-${k}">${muls[k]}</div>
+    </div>`).join('');
+  document.getElementById('stat-sliders').innerHTML=MK.map((k,i)=>`
+    <div class="srow">
+      <label style="width:110px;font-size:10px">${SL[i]}</label>
+      <input type="range" min="0" max="100" value="${sts[k]}" step="1" oninput="updStat('${k}',+this.value)">
+      <div class="sval" id="sv-${k}">${sts[k]}</div>
+    </div>`).join('');
+  initStars();
+  refreshScore();renderShuffle();
+}
+function updMul(k,v){muls[k]=v;const e=document.getElementById('mv-'+k);if(e)e.textContent=v;refreshScore();renderShuffle()}
+function updStat(k,v){sts[k]=v;const e=document.getElementById('sv-'+k);if(e)e.textContent=v;refreshScore()}
+function refreshScore(){
+  const score=Math.round(sts.count*muls.count+sts.distance*muls.distance+sts.hq*muls.hq+sts.destruction*muls.destruction);
+  const el=document.getElementById('score-display');
+  if(el){el.textContent=score.toLocaleString();el.classList.toggle('negative',score<0)}
+  const comps=[
+    {k:'count',v:sts.count*muls.count,l:'count×M'},
+    {k:'distance',v:sts.distance*muls.distance,l:'dist×M'},
+    {k:'hq',v:sts.hq*muls.hq,l:'hq×M'},
+    {k:'destruction',v:sts.destruction*muls.destruction,l:'dest×M'},
+  ];
+  const maxA=Math.max(...comps.map(c=>Math.abs(c.v)),1);
+  let h='';
+  for(const c of comps){
+    const pct=(Math.abs(c.v)/maxA)*44;const neg=c.v<0;
+    h+=`<div class="bar-row">
+      <div class="bar-lbl">${c.l}</div>
+      <div class="bar-track">
+        <div class="bar-zero"></div>
+        <div style="position:absolute;top:0;height:100%;width:${pct}%;${neg?'right:50%':'left:50%'};background:${neg?'#888':'#000'}"></div>
+      </div>
+      <div class="bar-val" style="color:${neg?'#888':'#000'};font-weight:${neg?400:700}">${c.v.toLocaleString()}</div>
+    </div>`;
+  }
+  const cb=document.getElementById('comp-bars');if(cb)cb.innerHTML=h;
+}
+function setMul(vals){MK.forEach((k,i)=>{muls[k]=vals[i];const s=document.getElementById('ms-'+k);if(s)s.value=vals[i];const e=document.getElementById('mv-'+k);if(e)e.textContent=vals[i]});refreshScore();renderShuffle()}
+function shuffleMul(){const v=[500,1,10,1];for(let i=v.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[v[i],v[j]]=[v[j],v[i]]}setMul(v)}
+function renderShuffle(){
+  const labels=['Stars Claimed','Distance','HQ Network','Destruction'];
+  const el=document.getElementById('shuffle-display');if(!el)return;
+  el.innerHTML=MK.map((k,i)=>`
+    <div style="border:1px solid ${muls[k]<0?'#000':'#ccc'};padding:8px;text-align:center;background:${muls[k]<0?'#000':'#fff'};color:${muls[k]<0?'#fff':'#000'}">
+      <div style="font-size:8px;letter-spacing:1px;opacity:.6;margin-bottom:2px">DIMENSION</div>
+      <div style="font-size:10px;font-weight:700;margin-bottom:6px">${labels[i]}</div>
+      <div style="font-size:8px;opacity:.6;margin-bottom:2px">MULTIPLIER</div>
+      <div style="font-size:20px;font-weight:700;font-family:'Courier New',monospace">${muls[k]}</div>
+      ${muls[k]<0?'<div style="font-size:8px;margin-top:2px;letter-spacing:1px">⊘ INVERTED</div>':''}
+    </div>`).join('');
+}
+
+function initStars(){
+  const el=document.getElementById('star-grid');if(!el)return;
+  el.innerHTML=STARS.map(s=>`
+    <div class="card">
+      <div style="font-size:24px;margin-bottom:4px">${s.icon}</div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:2px">${s.name}</div>
+      <div style="font-size:9px;color:#888;margin-bottom:8px;font-family:'Courier New',monospace">${s.code}</div>
+      <div style="font-size:10px;line-height:1.7">${s.rules.map(r=>`<div>• ${r}</div>`).join('')}</div>
+    </div>`).join('');
+}
+
+// ── VALIDITY ─────────────────────────────────────────────────────
+function initValidity(){
+  // Validity matrix
+  const signals_short=SIGNALS_DATA.map(s=>s.name);
+  let h=`<div style="overflow-x:auto"><div style="display:grid;grid-template-columns:160px repeat(6,54px);gap:1px;min-width:480px">`;
+  h+=`<div style="font-size:8px;font-weight:700;padding:3px">SIGNAL</div>`;
+  MODE_LABELS.forEach(l=>h+=`<div style="font-size:8px;font-weight:700;text-align:center;padding:3px">${l}</div>`);
+  for(const s of SIGNALS_DATA){
+    h+=`<div style="font-size:9px;padding:3px 4px;border-top:1px solid #eee;color:#333">${s.name}</div>`;
+    ['qty','spt','frt','dst','wrm','inv'].forEach(m=>{
+      const v=s[m];
+      const bg=v==='■'?'#000':v==='▪'?'#888':'#f0f0f0';
+      const fc=v==='■'||v==='▪'?'#fff':'#ccc';
+      h+=`<div class="validity-cell" style="background:${bg};color:${fc};border-color:${v==='□'?'#e0e0e0':'#000'}">${v}</div>`;
+    });
+  }
+  h+='</div></div>';
+  document.getElementById('validity-matrix').innerHTML=h;
+
+  // Signals table
+  const tbl=document.getElementById('signals-table');
+  if(tbl){
+    tbl.innerHTML=`<tr><th>Signal</th><th>Source</th><th>QTY</th><th>SPT</th><th>FRT</th><th>DST</th><th>WRM</th><th>INV</th><th>Notes</th></tr>`;
+    SIGNALS_DATA.forEach(s=>{
+      const cell=v=>`<td style="text-align:center;font-weight:700;color:${v==='■'?'#000':v==='▪'?'#888':'#ccc'}">${v}</td>`;
+      tbl.innerHTML+=`<tr><td><strong>${s.name}</strong></td><td style="font-size:10px;color:#666">${s.src}</td>${cell(s.qty)}${cell(s.spt)}${cell(s.frt)}${cell(s.dst)}${cell(s.wrm)}${cell(s.inv)}<td style="font-size:10px;color:#555">${s.note}</td></tr>`;
+    });
+  }
+
+  // Staircase
+  runStaircase();
+}
+
+function updateFlow(v){
+  document.getElementById('flow-pct').textContent=v;
+  document.getElementById('flow-marker').style.left=v+'%';
+  const fb=document.getElementById('flow-feedback');
+  let msg,style='';
+  if(v>75){msg='<strong>Above flow zone.</strong> Player winning too easily. Next session: increase difficulty — harder bot archetypes, higher aggression, or unfamiliar mode config.';style='background:#f0f0f0'}
+  else if(v>=25){msg='<strong>In flow zone.</strong> Optimal challenge. Maximum information yield from this session. Current configuration is appropriate.';style='background:#000;color:#fff'}
+  else{msg='<strong>Below flow zone.</strong> Player struggling. Next session: decrease difficulty — easier bots, more familiar mode, or collaborative staircase format.';style='background:#f0f0f0'}
+  fb.innerHTML=`<div style="${style};padding:6px;font-size:11px">${msg}</div>`;
+}
+
+function runStaircase(){
+  const players=['P1','P2','P3','P4'];
+  const targets=[100,200,300,400];
+  const results=targets.map(t=>t+Math.floor((Math.random()-.4)*t*0.6));
+  let h='<table class="t"><tr><th>Player</th><th>Target</th><th>Achieved</th><th>Delta</th><th>Status</th></tr>';
+  players.forEach((p,i)=>{
+    const delta=results[i]-targets[i];const pct=(delta/targets[i]*100).toFixed(0);
+    const status=Math.abs(delta)<targets[i]*.1?'HIT':delta>0?'OVERSHOOT':'UNDERSHOOT';
+    h+=`<tr><td>${p}</td><td>${targets[i]}</td><td>${results[i]}</td>
+      <td style="font-weight:700">${delta>0?'+':''}${delta} (${pct>0?'+':''}${pct}%)</td>
+      <td><span class="badge ${status==='HIT'?'badge-inv':''}">${status}</span></td></tr>`;
+  });
+  h+='</table><div class="asterisk" style="margin-top:6px">No competitive rank. No Elo update. Only target_hit_rate and delta recorded per player.</div>';
+  document.getElementById('staircase-sim').innerHTML=h;
+}
+
+// ── COMPOSER ─────────────────────────────────────────────────────
+let teamMembers=[];let playerN=0;
+function addPlayer(){
+  if(teamMembers.length>=8)return;
+  playerN++;
+  const elo=Math.floor(Math.random()*1000);
+  const mode=MODE_IDS[Math.floor(Math.random()*6)];
+  teamMembers.push({type:'human',name:`P${playerN}`,elo,mode,team:null});
+  renderTeam();
+}
+function addBot(){
+  if(teamMembers.length>=8)return;
+  const b=BOTS[Math.floor(Math.random()*BOTS.length)];
+  teamMembers.push({type:'bot',name:b.name,icon:b.icon,elo:500,mode:b.mode,team:null});
+  renderTeam();
+}
+function clearTeam(){teamMembers=[];playerN=0;renderTeam();document.getElementById('balance-report').innerHTML=''}
+function removeTM(i){teamMembers.splice(i,1);renderTeam()}
+function autoBalance(){
+  if(teamMembers.length<2)return;
+  const sorted=[...teamMembers].sort((a,b)=>a.elo-b.elo); // 000=best → ascending
+  const nt=Math.max(2,Math.floor(teamMembers.length/2));
+  let dir=1,t=0;
+  for(const p of sorted){teamMembers.find(m=>m.name===p.name&&m.type===p.type).team=t;t+=dir;if(t>=nt||t<0){dir=-dir;t+=dir}}
+  renderTeam();
+  const teams={};teamMembers.forEach(p=>{if(!teams[p.team])teams[p.team]=[];teams[p.team].push(p)});
+  const gm=teamMembers.reduce((s,p)=>s+p.elo,0)/teamMembers.length;
+  let rpt='<table class="t"><tr><th>Team</th><th>Members</th><th>Mean Elo</th><th>vs Global</th><th>Status</th></tr>';
+  for(const[t,ms]of Object.entries(teams)){
+    const mean=ms.reduce((s,p)=>s+p.elo,0)/ms.length;
+    const d=((mean-gm)/gm*100);
+    const ok=Math.abs(d)<10;
+    rpt+=`<tr><td>Team ${+t+1}</td><td>${ms.map(m=>m.name).join(', ')}</td><td>${mean.toFixed(0)}</td>
+      <td style="font-weight:700">${d>0?'+':''}${d.toFixed(1)}%</td>
+      <td><span class="badge ${ok?'badge-inv':''}">${ok?'BALANCED':'IMBALANCED'}</span></td></tr>`;
+  }
+  rpt+=`<tr><td colspan="5" style="color:#666">Global mean Elo: ${gm.toFixed(0)}</td></tr></table>`;
+  document.getElementById('balance-report').innerHTML=rpt;
+}
+function renderTeam(){
+  const el=document.getElementById('team-builder');
+  if(!teamMembers.length){el.innerHTML='<div style="font-size:11px;color:#888">No members. Add players or bots.</div>';return}
+  el.innerHTML=teamMembers.map((p,i)=>{
+    const teamLabel=p.team!==null?`Team ${p.team+1}`:'—';
+    return`<div class="flag-row">
+      <div style="width:12px;height:12px;background:${p.type==='bot'?'#fff':'#000'};border:1px solid #000;flex-shrink:0"></div>
+      <div style="flex:1"><strong>${p.icon||''} ${p.name}</strong> <span style="font-size:9px;color:#666">${p.type} · Elo ${String(p.elo).padStart(3,'0')} · ${p.mode.toUpperCase()}</span></div>
+      <span style="font-size:10px;font-weight:700">${teamLabel}</span>
+      <span onclick="removeTM(${i})" style="cursor:pointer;color:#888;font-size:10px;padding:0 4px">✕</span>
+    </div>`;
+  }).join('');
+}
+
+// ── INIT ─────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',()=>{
+  drawPipeline();
+  updateRichness(0);
+  initModes();
+  initProfile();
+  renderCoverage();renderWeights();
+  initScoring();
+  initValidity();
+  updateFlow(50);
+  renderTeam();
+});
+</script>
+</body>
+</html>

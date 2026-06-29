@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Multi-Game Architecture — Universal Cognitive Assessment</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.6}
+header{border-bottom:2px solid #000;padding:20px 28px 14px;position:sticky;top:0;background:#fff;z-index:10}
+.hd-title{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:4px}
+.hd-main{font-size:20px;font-weight:700;line-height:1.2;margin-bottom:6px}
+.hd-sub{font-size:11px;color:#555;max-width:740px;line-height:1.6}
+.nav-parts{display:flex;gap:0;margin-top:12px;border-top:1px solid #eee}
+.nav-part{padding:8px 0 0}
+.nav-part+.nav-part{margin-left:28px;padding-left:28px;border-left:1px solid #eee}
+.nav-part-label{font-size:7px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#bbb;margin-bottom:5px}
+.nav{display:flex;gap:16px;flex-wrap:wrap}
+.nav a{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;text-decoration:none;padding:3px 0;border-bottom:2px solid transparent}
+.nav a:hover,.nav a.active{color:#000;border-bottom-color:#000}
+.content{max-width:980px;margin:0 auto;padding:32px 28px 80px}
+.section{margin-bottom:52px}
+.section-label{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:8px}
+.section-title{font-size:18px;font-weight:700;margin-bottom:14px;line-height:1.3}
+.body{font-size:12px;color:#333;line-height:1.8;max-width:700px}
+.body p{margin-bottom:12px}
+.body strong{color:#000}
+.rule{border:none;border-top:1px solid #eee;margin:36px 0}
+.part-divider{border:none;border-top:3px solid #000;margin:56px 0 48px}
+.part-divider-label{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;background:#fff;padding-right:12px;white-space:nowrap}
+
+.asserted{display:inline-block;font-size:8px;font-weight:700;color:#d97706;border:1px solid #d97706;padding:0 4px;letter-spacing:.5px;vertical-align:middle}
+.pending{display:inline-block;font-size:8px;font-weight:700;color:#7c3aed;border:1px solid #7c3aed;padding:0 4px;letter-spacing:.5px;vertical-align:middle}
+.built{display:inline-block;font-size:8px;font-weight:700;color:#059669;border:1px solid #059669;padding:0 4px;letter-spacing:.5px;vertical-align:middle}
+.arch{display:inline-block;font-size:8px;font-weight:700;color:#2563eb;border:1px solid #2563eb;padding:0 4px;letter-spacing:.5px;vertical-align:middle}
+
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:11px}
+th{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 8px;border-bottom:2px solid #000;text-align:left;background:#f8f8f8}
+td{padding:6px 8px;border-bottom:1px solid #f0f0f0;vertical-align:top}
+tr:hover td{background:#fafafa}
+td.dim{font-family:'Courier New',monospace;font-size:10px;font-weight:700;color:#000}
+td.hi{color:#000;font-weight:700}
+td.mid{color:#555}
+td.lo{color:#bbb}
+td.nil{color:#ddd}
+.mono{font-family:'Courier New',monospace;font-size:11px}
+
+/* game cards */
+.game-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin:16px 0}
+.game-card{border:2px solid #000;padding:14px 16px}
+.gc-name{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px}
+.gc-sub{font-size:10px;color:#555;margin-bottom:10px;line-height:1.5}
+.gc-dims{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+.dim-tag{font-size:8px;font-weight:700;letter-spacing:1px;border:1px solid #000;padding:1px 5px;text-transform:uppercase}
+.dim-tag.dim-hi{background:#000;color:#fff}
+.dim-tag.dim-mid{background:#f0f0f0;color:#555}
+.dim-tag.dim-lo{border-color:#ddd;color:#ccc}
+.gc-cv{font-family:'Courier New',monospace;font-size:9px;color:#888;line-height:1.8;border-top:1px solid #eee;padding-top:8px;margin-top:8px}
+
+/* dimension cards */
+.dim-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;margin:16px 0}
+.dim-card{border:1px solid #ddd;padding:14px 16px;background:#fafafa}
+.dc-id{font-size:9px;font-weight:700;letter-spacing:2px;font-family:'Courier New',monospace;color:#000;margin-bottom:3px}
+.dc-name{font-size:12px;font-weight:700;margin-bottom:5px}
+.dc-body{font-size:11px;color:#555;line-height:1.5;margin-bottom:8px}
+.dc-probe{font-size:10px;color:#888;font-style:italic;line-height:1.5}
+.dc-games{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.dc-game{font-size:8px;font-weight:700;letter-spacing:.5px;border:1px solid #bbb;padding:1px 5px;color:#555}
+.dc-game.strong{border-color:#000;color:#000}
+
+/* composition matrix */
+.matrix-wrap{overflow-x:auto;margin:16px 0}
+.matrix{border-collapse:collapse;font-size:10px}
+.matrix th,.matrix td{border:1px solid #ddd;padding:5px 8px;white-space:nowrap}
+.matrix th{background:#f8f8f8;font-size:8px;letter-spacing:1px;text-transform:uppercase;font-weight:700}
+.matrix td.game-label{font-weight:700;font-size:10px;background:#fafafa}
+.cell-vhi{background:#000;color:#fff;font-weight:700;text-align:center}
+.cell-hi{background:#444;color:#fff;font-weight:700;text-align:center}
+.cell-mid{background:#e0e0e0;color:#444;font-weight:700;text-align:center}
+.cell-lo{background:#f8f8f8;color:#bbb;text-align:center}
+.cell-nil{background:#fff;color:#eee;text-align:center}
+
+/* two-level compiler */
+.compiler-flow{border:2px solid #000;padding:20px;margin:16px 0}
+.cf-step{display:flex;gap:16px;align-items:flex-start;margin-bottom:14px}
+.cf-n{font-size:22px;font-weight:700;color:#eee;flex-shrink:0;width:28px}
+.cf-body{flex:1}
+.cf-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
+.cf-desc{font-size:11px;color:#555;line-height:1.5}
+.cf-arrow{text-align:center;color:#ccc;font-size:18px;margin-bottom:8px;padding-left:44px}
+
+/* ledger signals */
+.signal-table td:first-child{font-family:'Courier New',monospace;font-size:10px;white-space:nowrap;color:#000}
+.signal-table td:last-child{font-size:10px;color:#555;line-height:1.5}
+
+/* transfer matrix */
+.transfer-box{border:1px solid #ddd;padding:16px;margin:16px 0;background:#fafafa}
+.tb-title{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:10px}
+.tb-row{display:flex;gap:12px;align-items:baseline;margin-bottom:6px;font-size:11px}
+.tb-arrow{color:#bbb;font-size:14px;flex-shrink:0}
+.tb-label{font-family:'Courier New',monospace;font-size:10px;font-weight:700;color:#000;flex-shrink:0;width:100px}
+.tb-desc{color:#555;line-height:1.5}
+
+/* open questions */
+.oq-list{list-style:none;padding:0}
+.oq-list li{border-left:2px solid #eee;padding:8px 0 8px 16px;margin-bottom:8px;font-size:11px;color:#555;line-height:1.5}
+.oq-list li strong{color:#000;display:block;margin-bottom:2px;font-size:11px}
+
+/* principle box */
+.principle-box{background:#000;color:#fff;padding:20px 24px;margin:16px 0;border:none}
+.pb-label{font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:6px}
+.pb-formula{font-family:'Courier New',monospace;font-size:18px;font-weight:700;letter-spacing:1px}
+.pb-sub{font-size:11px;color:#888;margin-top:8px;line-height:1.6}
+
+/* refutation */
+.refutation{border:1px solid #d97706;padding:10px 14px;margin:12px 0;background:#fffbeb;font-size:11px;color:#92400e;line-height:1.6}
+.refutation strong{color:#d97706;font-size:9px;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:3px}
+
+@media(max-width:768px){
+  .game-grid,.dim-grid{grid-template-columns:1fr}
+  .matrix-wrap{overflow-x:scroll}
+  header{position:relative}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="hd-title">Constellation — Philosophy Development</div>
+  <div class="hd-main">Multi-Game Architecture<br>Universal Cognitive Assessment</div>
+  <div class="hd-sub">How the One Principle scales across mechanically distinct games. Config spaces, cognitive dimension mappings, two-level compiler, cross-game Ledger schema, and the empirical path to objective perfection.</div>
+  <div class="nav-parts">
+    <div class="nav-part">
+      <div class="nav-part-label">Part I — Theory</div>
+      <div class="nav">
+        <a href="#generalization">Generalization Problem</a>
+        <a href="#dimensions">8 Dimensions</a>
+        <a href="#games">Per-Game Config Spaces</a>
+        <a href="#matrix">Composition Matrix</a>
+      </div>
+    </div>
+    <div class="nav-part">
+      <div class="nav-part-label">Part II — Implementation</div>
+      <div class="nav">
+        <a href="#compiler">Two-Level Compiler</a>
+        <a href="#signals">Behavioral Signals</a>
+        <a href="#transfer">Cross-Game Transfer</a>
+        <a href="#perfection">Path to Perfection</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="content">
+
+<!-- ── PRINCIPLE ──────────────────────────────────────────────────────────── -->
+<div class="principle-box" style="margin-bottom:36px">
+  <div class="pb-label">The One Principle</div>
+  <div class="pb-formula">argmax E[KL(posterior ‖ prior)]</div>
+  <div class="pb-sub">Maximize expected information gain about the student's cognitive model per session.<br>This principle is game-agnostic. The posterior is over cognitive state, not game state. Any game that moves the posterior is valid. The question is always: which game, which configuration, tells us the most we do not yet know?</div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────────────────────
+     §1 THE GENERALIZATION PROBLEM
+     ───────────────────────────────────────────────────────────────────────── -->
+<div class="section" id="generalization">
+  <div class="section-label">§ 1</div>
+  <div class="section-title">The Generalization Problem</div>
+  <div class="body">
+    <p>The current system is optimized for Constellation. The compiler maps a student's six-mode Elo vector onto a twelve-parameter game config and produces a session with maximum expected information gain. This works because the game's mechanics — star counts, multipliers, HQ placement — are legible cognitive levers. Adjusting <span class="mono">count_mult</span> isolates the QTY dimension. Adjusting <span class="mono">hq_mult</span> isolates HQ reasoning. The config space and the cognitive space are roughly co-extensive.</p>
+    <p>When a second game enters the system, this alignment breaks. GOLAD has no star counts. Geobridge has no multipliers. C4D has no rounds in the Constellation sense. Each game is a different projection of cognitive space onto mechanical parameters. The compiler cannot naively apply Constellation's model to any other game.</p>
+    <p>The generalization problem is: <strong>given a student's cognitive posterior derived from any combination of games, select the game and configuration that maximizes expected information gain across the entire suite.</strong></p>
+    <p>This requires three things the current system does not have:</p>
+    <p><strong>1. A universal cognitive space</strong> — a set of dimensions that are meaningful across all games, such that each game can be expressed as a probe of some subset of those dimensions.</p>
+    <p><strong>2. A two-level compiler</strong> — a game selection step (which game maximizes E[KL] given the current posterior?) followed by the existing config selection step (which settings within that game maximize E[KL]?).</p>
+    <p><strong>3. A cross-game transfer model</strong> — evidence that performance in Geobridge on dimension X predicts performance in C4D on dimension X, i.e., that the dimensions are genuinely cross-game rather than game-specific skills.</p>
+    <p>This document specifies the architecture for all three. The cognitive dimension mappings are <span class="asserted">ASSERTED</span> — they are the most plausible prior given the game mechanics, but they cannot be verified until multi-game Ledger data accumulates and a factor model is fitted. The architecture is <span class="arch">CANONICAL</span> — it is the correct structure regardless of which specific dimensions are confirmed.</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ─────────────────────────────────────────────────────────────────────────
+     §2 THE 8 COGNITIVE DIMENSIONS
+     ───────────────────────────────────────────────────────────────────────── -->
+<div class="section" id="dimensions">
+  <div class="section-label">§ 2</div>
+  <div class="section-title">The 8 Cognitive Dimensions <span class="asserted">ASSERTED</span></div>
+  <div class="body">
+    <p>These dimensions are derived from the union of all cognitive demands observable across the four games. They are not arbitrary — each is isolable by specific config parameters in at least one game. The labels and boundaries will be revised by empirical factor analysis once sufficient multi-game data exists. Until then, treat these as the best-available prior over the latent space.</p>
+  </div>
+
+  <div class="dim-grid">
+    <div class="dim-card">
+      <div class="dc-id">SIM</div>
+      <div class="dc-name">Simulation / Forward Prediction</div>
+      <div class="dc-body">Can the student project future state from current state under a known rule system? This is not memory — it is dynamic rule application. The student must hold the rule system in working memory and apply it iteratively to a changing state space.</div>
+      <div class="dc-probe">Probe: GOLAD (CA evolution prediction); C4D (adjacency chain completion); Constellation (move sequence projection)</div>
+      <div class="dc-games">
+        <span class="dc-game strong">GOLAD</span>
+        <span class="dc-game strong">C4D</span>
+        <span class="dc-game">Constellation</span>
+        <span class="dc-game">Geobridge</span>
+      </div>
+    </div>
+    <div class="dim-card">
+      <div class="dc-id">COM</div>
+      <div class="dc-name">Strategic Commitment</div>
+      <div class="dc-body">Can the student commit to a plan and execute it consistently under pressure? Commitment requires forming a strategy, betting on it, and not abandoning it at the first setback. The gap between intended and executed strategy is directly measurable.</div>
+      <div class="dc-probe">Probe: Geobridge (bid → must execute contract); C4D (permanent ownership — every claim is irreversible); Constellation (HQ placement round, archetype_tag consistency)</div>
+      <div class="dc-games">
+        <span class="dc-game strong">Geobridge</span>
+        <span class="dc-game strong">C4D</span>
+        <span class="dc-game">Constellation</span>
+        <span class="dc-game">GOLAD</span>
+      </div>
+    </div>
+    <div class="dim-card">
+      <div class="dc-id">OPP</div>
+      <div class="dc-name">Opponent Modeling</div>
+      <div class="dc-body">Can the student form and update a model of what opponents will do? This is not the same as winning — a student can have excellent opponent models and still lose. The diagnostic is whether the student's actions reflect accurate prediction of opponent behavior.</div>
+      <div class="dc-probe">Probe: Geobridge (bidding inference, alliance decision); GOLAD (interference placement); Constellation (steal timing, bot aggression response)</div>
+      <div class="dc-games">
+        <span class="dc-game strong">Geobridge</span>
+        <span class="dc-game strong">GOLAD</span>
+        <span class="dc-game">Constellation</span>
+        <span class="dc-game">C4D</span>
+      </div>
+    </div>
+    <div class="dim-card">
+      <div class="dc-id">TOP</div>
+      <div class="dc-name">Abstract / Topological Reasoning</div>
+      <div class="dc-body">Can the student reason about structural relationships that have no intuitive visual form? In 2D games, adjacency is visible. In 4D polytopes, adjacency must be inferred from abstract rules. In cellular automata, non-local effects cascade through topological structure.</div>
+      <div class="dc-probe">Probe: C4D (4D polytope adjacency — genuinely non-visual); GOLAD (CA non-local pattern effects); Constellation (map topology, wormhole structure)</div>
+      <div class="dc-games">
+        <span class="dc-game strong">C4D</span>
+        <span class="dc-game strong">GOLAD</span>
+        <span class="dc-game">Constellation</span>
+        <span class="dc-game">Geobridge</span>
+      </div>
+    </div>
+    <div class="dim-card">
+      <div class="dc-id">ADP</div>
+      <div class="dc-name">Rule Induction / Adaptation</div>
+      <div class="dc-body">When the rules change, how quickly does the student update their mental model and modify behavior? This dimension requires the student to detect the change, identify which rules are now different, form a new hypothesis, and act on it. The speed and accuracy of this cycle is the signal.</div>
+      <div class="dc-probe">Probe: GOLAD (birth/survive rule variants — variable by design); Constellation (INV mode / negative multipliers); C4D (wMode oscillation); Geobridge (eclipse region activation)</div>
+      <div class="dc-games">
+        <span class="dc-game strong">GOLAD</span>
+        <span class="dc-game strong">Constellation</span>
+        <span class="dc-game">C4D</span>
+        <span class="dc-game">Geobridge</span>
+      </div>
+    </div>
+    <div class="dim-card">
+      <div class="dc-id">OPT</div>
+      <div class="dc-name">Resource / Quantity Optimization</div>
+      <div class="dc-body">Can the student maximize a scalar objective under constraints? This is the most "standard" cognitive task — closest to traditional IQ-style reasoning. But it matters: some students have high OPT and low everything else, which is a meaningful profile (not gifted; optimized for measurable tasks).</div>
+      <div class="dc-probe">Probe: Constellation (QTY/MOVE modes — direct scalar optimization); C4D (scoring [1,3,9,27] — exponential maximization); Geobridge (hand selection optimization)</div>
+      <div class="dc-games">
+        <span class="dc-game strong">Constellation</span>
+        <span class="dc-game strong">C4D</span>
+        <span class="dc-game">Geobridge</span>
+        <span class="dc-game">GOLAD</span>
+      </div>
+    </div>
+    <div class="dim-card">
+      <div class="dc-id">MOS</div>
+      <div class="dc-name">Multi-Objective Synthesis</div>
+      <div class="dc-body">Can the student simultaneously hold and balance multiple competing objectives without collapsing to a single strategy? This is the hardest of the scalar dimensions. Students with high MOS perform well in COMBO mode but do not simply average the sub-objectives — they actively trade off between them in real time.</div>
+      <div class="dc-probe">Probe: Constellation (COMBO mode — explicit multi-objective); C4D (plane completion vs. cell count vs. fog inference — implicit multi-objective); Geobridge (bid + execute + opponent model running in parallel)</div>
+      <div class="dc-games">
+        <span class="dc-game strong">Constellation</span>
+        <span class="dc-game strong">C4D</span>
+        <span class="dc-game">Geobridge</span>
+        <span class="dc-game">GOLAD</span>
+      </div>
+    </div>
+    <div class="dim-card">
+      <div class="dc-id">KNW</div>
+      <div class="dc-name">Declarative Knowledge Integration</div>
+      <div class="dc-body">The only content-dependent dimension. Some games require stored factual knowledge to perform well — not because knowledge IS the cognitive skill, but because integrating knowledge with strategy IS a cognitive act. The gap between what a student knows and what they deploy is itself a signal. This dimension does not exist in games where all needed information is on-screen.</div>
+      <div class="dc-probe">Probe: Geobridge (geography facts — GDP, area, population, trade — integrated into bidding strategy); GOLAD (pattern library recall — gliders, still lifes, oscillators)</div>
+      <div class="dc-games">
+        <span class="dc-game strong">Geobridge</span>
+        <span class="dc-game">GOLAD</span>
+        <span class="dc-game">Constellation</span>
+        <span class="dc-game">C4D</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="refutation">
+    <strong>Refutation Conditions</strong>
+    These 8 dimensions will be revised when: (1) factor analysis on multi-game Ledger data reveals a different latent structure; (2) two dimensions that are listed separately load onto a single factor at r > 0.85; (3) a dimension produces no cross-game predictive signal after 50 multi-game student profiles. The architecture survives revision of the dimensions — only the number and names change, not the principle.
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ─────────────────────────────────────────────────────────────────────────
+     §3 PER-GAME CONFIG SPACES
+     ───────────────────────────────────────────────────────────────────────── -->
+<div class="section" id="games">
+  <div class="section-label">§ 3</div>
+  <div class="section-title">Per-Game Config Spaces</div>
+  <div class="body"><p>Each game's config parameters are cognitive levers. Every lever moves the session along one or more cognitive dimension axes. The compiler's job is to set those levers so that the resulting session is maximally informative given the current posterior.</p></div>
+
+  <div class="game-grid">
+
+    <div class="game-card">
+      <div class="gc-name">Constellation</div>
+      <div class="gc-sub">Star territory capture. Real-time multiplayer on procedural maps. The primary cognitive measurement instrument — built for this purpose.</div>
+      <div class="gc-dims">
+        <span class="dim-tag dim-hi">OPT</span>
+        <span class="dim-tag dim-hi">MOS</span>
+        <span class="dim-tag dim-hi">ADP</span>
+        <span class="dim-tag dim-mid">OPP</span>
+        <span class="dim-tag dim-mid">SIM</span>
+        <span class="dim-tag dim-lo">COM</span>
+        <span class="dim-tag dim-lo">TOP</span>
+        <span class="dim-tag dim-lo">KNW</span>
+      </div>
+      <div class="gc-cv">
+        count_mult · dist_mult · hq_mult · dest_mult<br>
+        moves · round_length_s · rounds<br>
+        steals · hq_count · map_idx<br>
+        bot_type · bot_aggression<br><br>
+        <span style="color:#ccc">Modes: QTY DIST HQ DEST MOVE COMBO INV</span><br>
+        <span style="color:#ccc">Zone: REMATCH ECHO PARALLEL SHIFTING RADICAL</span>
+      </div>
+    </div>
+
+    <div class="game-card">
+      <div class="gc-name">GOLAD</div>
+      <div class="gc-sub">Game of Life as a Duel. Players place cells; Conway-variant rules evolve the board. The only game in the suite that directly measures cellular automaton prediction.</div>
+      <div class="gc-dims">
+        <span class="dim-tag dim-hi">SIM</span>
+        <span class="dim-tag dim-hi">ADP</span>
+        <span class="dim-tag dim-hi">OPP</span>
+        <span class="dim-tag dim-mid">TOP</span>
+        <span class="dim-tag dim-mid">OPT</span>
+        <span class="dim-tag dim-lo">MOS</span>
+        <span class="dim-tag dim-lo">COM</span>
+        <span class="dim-tag dim-lo">KNW</span>
+      </div>
+      <div class="gc-cv">
+        boardSize (n×n grid)<br>
+        birth[] · survive[] (Conway rules)<br>
+        p1Type · p2Type (human / AI)<br>
+        cellShape · hints<br>
+        animations · showCursor · showPreview<br><br>
+        <span style="color:#ccc">Key lever: birth/survive rules → ADP difficulty</span><br>
+        <span style="color:#ccc">Standard: B3/S23 · Highlife: B36/S23</span>
+      </div>
+    </div>
+
+    <div class="game-card">
+      <div class="gc-name">Geobridge</div>
+      <div class="gc-sub">Geography × contract bridge. 3 players select countries, bid on a statistical category, play trick-taking hands. Unique in the suite: integrates declarative knowledge with strategic commitment.</div>
+      <div class="gc-dims">
+        <span class="dim-tag dim-hi">COM</span>
+        <span class="dim-tag dim-hi">OPP</span>
+        <span class="dim-tag dim-hi">KNW</span>
+        <span class="dim-tag dim-mid">MOS</span>
+        <span class="dim-tag dim-mid">OPT</span>
+        <span class="dim-tag dim-mid">ADP</span>
+        <span class="dim-tag dim-lo">SIM</span>
+        <span class="dim-tag dim-lo">TOP</span>
+      </div>
+      <div class="gc-cv">
+        timerDuration · biddingTimerDuration · playTimerDuration<br>
+        cardsToPlay · extraCards · numRounds<br>
+        eclipseEnabled<br>
+        alliancePenaltyAmount · bidPenaltyAmount<br><br>
+        <span style="color:#ccc">Categories: GDP · area · population · trade</span><br>
+        <span style="color:#ccc">Alliance mechanic: COM × OPP interaction</span>
+      </div>
+    </div>
+
+    <div class="game-card">
+      <div class="gc-name">C4D <span class="asserted" style="vertical-align:middle;margin-left:4px">SETTINGS MAY EXPAND</span></div>
+      <div class="gc-sub">Claims in 4 Dimensions. Territory game played on 4D polytopes (tesseract, 5-cell, 16-cell…). The only game in the suite that directly isolates higher-dimensional spatial reasoning.</div>
+      <div class="gc-dims">
+        <span class="dim-tag dim-hi">TOP</span>
+        <span class="dim-tag dim-hi">OPT</span>
+        <span class="dim-tag dim-hi">COM</span>
+        <span class="dim-tag dim-mid">MOS</span>
+        <span class="dim-tag dim-mid">SIM</span>
+        <span class="dim-tag dim-mid">ADP</span>
+        <span class="dim-tag dim-lo">OPP</span>
+        <span class="dim-tag dim-lo">KNW</span>
+      </div>
+      <div class="gc-cv">
+        teamCount · fogOfWar<br>
+        wMode (oscillate / …) · ownerMode (permanent / …)<br>
+        scoring [1,3,9,27] · victory (last-plane / …)<br>
+        claimsPerTurn · rounds<br>
+        polytopePath (which 4D structure)<br><br>
+        <span style="color:#ccc">Key lever: polytopePath → TOP difficulty</span><br>
+        <span style="color:#ccc">scoring exponential → OPT × MOS interaction</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="body" style="margin-top:20px">
+    <p><strong>On GOLAD's p1Type / p2Type (AI opponent).</strong> When <span class="mono">p2Type = AI</span>, GOLAD becomes a single-player experience against a deterministic opponent. This changes the OPP dimension loading: opponent modeling against a known algorithm is different from modeling a human. The AI opponent should be used to isolate SIM and ADP; human opponent to isolate OPP. The compiler must know which mode is active when interpreting the session signal.</p>
+    <p><strong>On C4D's polytopePath.</strong> The polytope is the most powerful lever in the suite for TOP. A tesseract (4D hypercube) has 8 cells, 24 faces, 32 edges — adjacency is computationally but not visually derivable. Moving to a 16-cell or 120-cell polytope increases the demand non-linearly. polytopePath is effectively the TOP difficulty dial. No other game in the suite has a direct equivalent — this is C4D's unique contribution to the posterior.</p>
+    <p><strong>On Geobridge's knowledge vs. skill ambiguity.</strong> A student who knows geography can bid confidently and win without exercising COM or OPP deeply. The diagnostic is not the outcome — it is the gap between knowledge level (assessable externally or via performance on fact-pure rounds) and strategic execution quality. Geobridge sessions are most informative when the student's geography knowledge baseline is approximately known.</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ─────────────────────────────────────────────────────────────────────────
+     §4 COMPOSITION MATRIX
+     ───────────────────────────────────────────────────────────────────────── -->
+<div class="section" id="matrix">
+  <div class="section-label">§ 4</div>
+  <div class="section-title">Composition Matrix <span class="asserted">ASSERTED</span></div>
+  <div class="body"><p>Which game provides the strongest signal on which cognitive dimension. The matrix is the prior — each cell will be replaced by an empirical loading coefficient once multi-game data exists. The ordinal rankings within each column show which game to select when that dimension has the highest posterior uncertainty.</p></div>
+
+  <div class="matrix-wrap">
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th>Game</th>
+          <th title="Simulation / Forward Prediction">SIM</th>
+          <th title="Strategic Commitment">COM</th>
+          <th title="Opponent Modeling">OPP</th>
+          <th title="Abstract / Topological Reasoning">TOP</th>
+          <th title="Rule Induction / Adaptation">ADP</th>
+          <th title="Resource / Quantity Optimization">OPT</th>
+          <th title="Multi-Objective Synthesis">MOS</th>
+          <th title="Declarative Knowledge Integration">KNW</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="game-label">Constellation</td>
+          <td class="cell-mid">▪</td>
+          <td class="cell-lo">·</td>
+          <td class="cell-mid">▪</td>
+          <td class="cell-lo">·</td>
+          <td class="cell-hi">▪▪</td>
+          <td class="cell-vhi">▪▪▪</td>
+          <td class="cell-hi">▪▪</td>
+          <td class="cell-nil">—</td>
+        </tr>
+        <tr>
+          <td class="game-label">GOLAD</td>
+          <td class="cell-vhi">▪▪▪</td>
+          <td class="cell-lo">·</td>
+          <td class="cell-hi">▪▪</td>
+          <td class="cell-mid">▪</td>
+          <td class="cell-vhi">▪▪▪</td>
+          <td class="cell-mid">▪</td>
+          <td class="cell-lo">·</td>
+          <td class="cell-mid">▪</td>
+        </tr>
+        <tr>
+          <td class="game-label">Geobridge</td>
+          <td class="cell-lo">·</td>
+          <td class="cell-vhi">▪▪▪</td>
+          <td class="cell-vhi">▪▪▪</td>
+          <td class="cell-nil">—</td>
+          <td class="cell-mid">▪</td>
+          <td class="cell-mid">▪</td>
+          <td class="cell-mid">▪</td>
+          <td class="cell-vhi">▪▪▪</td>
+        </tr>
+        <tr>
+          <td class="game-label">C4D</td>
+          <td class="cell-mid">▪</td>
+          <td class="cell-hi">▪▪</td>
+          <td class="cell-lo">·</td>
+          <td class="cell-vhi">▪▪▪</td>
+          <td class="cell-mid">▪</td>
+          <td class="cell-hi">▪▪</td>
+          <td class="cell-hi">▪▪</td>
+          <td class="cell-nil">—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="font-size:10px;color:#888;margin-top:4px">▪▪▪ = primary signal source &nbsp;·&nbsp; ▪▪ = secondary &nbsp;·&nbsp; ▪ = present &nbsp;·&nbsp; · = weak &nbsp;·&nbsp; — = absent. All cells are ASSERTED pending factor analysis.</div>
+
+  <div class="body" style="margin-top:20px">
+    <p><strong>Reading the matrix.</strong> Each column is a cognitive dimension. The game with the most ▪'s in that column is the one to select when the posterior has highest uncertainty in that dimension. GOLAD is the primary SIM and ADP instrument. Geobridge is the primary COM, OPP, and KNW instrument. C4D is the primary TOP instrument. Constellation covers OPT and MOS most completely — its advantage is that those dimensions are individually isolable via multipliers, which the other games cannot match.</p>
+    <p><strong>Dimension monopolies.</strong> TOP (C4D) and KNW (Geobridge) are owned by a single game — no other game in the suite provides equivalent signal on those dimensions. This means the compiler cannot substitute. If the posterior has high uncertainty on TOP, C4D must be selected regardless of other considerations. These are structural game uniquenesses that cannot be overcome by configuration alone.</p>
+    <p><strong>Coverage gaps.</strong> KNW loads only on Geobridge at the primary level. This is a deliberate feature: factual knowledge integration is a real cognitive process worth measuring, but it requires a specific game design to surface. Future games may add KNW probes in other domains (historical, scientific, linguistic). Until then, Geobridge is the sole KNW instrument and its signal on other dimensions should be interpreted with the KNW confound in mind.</p>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────────────────────
+     PART II DIVIDER
+     ───────────────────────────────────────────────────────────────────────── -->
+<div class="part-divider"><span class="part-divider-label">Part II — Implementation Architecture</span></div>
+
+<!-- ─────────────────────────────────────────────────────────────────────────
+     §5 TWO-LEVEL COMPILER
+     ───────────────────────────────────────────────────────────────────────── -->
+<div class="section" id="compiler">
+  <div class="section-label">§ 5</div>
+  <div class="section-title">The Two-Level Compiler</div>
+  <div class="body">
+    <p>The current compiler operates within Constellation. It takes a student's cognitive state and produces a Constellation config vector. The multi-game compiler adds a preceding step: game selection. The result is a two-level decision process where the game is the outer variable and the config is the inner variable.</p>
+  </div>
+
+  <div class="compiler-flow">
+    <div class="cf-step">
+      <div class="cf-n">1</div>
+      <div class="cf-body">
+        <div class="cf-label">Posterior Readout</div>
+        <div class="cf-desc">Read the current student model: eight-dimensional cognitive posterior with uncertainty estimates per dimension. Identify the two or three dimensions with highest remaining uncertainty (lowest sample count or widest confidence interval). These are the target dimensions for this session.</div>
+      </div>
+    </div>
+    <div class="cf-arrow">↓</div>
+    <div class="cf-step">
+      <div class="cf-n">2</div>
+      <div class="cf-body">
+        <div class="cf-label">Game Selection — argmax E[KL] at the game level</div>
+        <div class="cf-desc">For each available game, estimate E[KL] if that game were selected. This is done by looking up the composition matrix (§4) and scoring each game against the target dimensions. The game whose primary dimensions overlap most with the target dimensions is selected. If the primary game has been played in the last <span class="asserted">3 sessions</span> (staleness guard), prefer the next-best alternative. Constraint: do not select a game the student finds terminally unengaging — engagement is a hard floor, not an optimization target.</div>
+      </div>
+    </div>
+    <div class="cf-arrow">↓</div>
+    <div class="cf-step">
+      <div class="cf-n">3</div>
+      <div class="cf-body">
+        <div class="cf-label">Config Selection — argmax E[KL] within the selected game</div>
+        <div class="cf-desc">Given the selected game, find the config that maximizes E[KL] over the target dimensions. Each game has a set of cognitive levers (§3). The compiler sets those levers based on the student's current posterior on each relevant dimension: high uncertainty → high-difficulty setting on that lever; low uncertainty but active → maintain for calibration; below ZPD → reduce difficulty. For Constellation, this is the existing compiler. For other games, this is the same logic applied to their config spaces.</div>
+      </div>
+    </div>
+    <div class="cf-arrow">↓</div>
+    <div class="cf-step">
+      <div class="cf-n">4</div>
+      <div class="cf-body">
+        <div class="cf-label">Zone Assignment</div>
+        <div class="cf-desc">Zone (REMATCH → RADICAL) still applies in the multi-game context, but the reference frame changes: zone describes the distance from the student's last session on the selected dimensions, not from the last session in the same game. A RADICAL assignment in the multi-game context means maximum distance in the target dimension space — potentially a different game entirely, not just a different config of the same game.</div>
+      </div>
+    </div>
+    <div class="cf-arrow">↓</div>
+    <div class="cf-step">
+      <div class="cf-n">5</div>
+      <div class="cf-body">
+        <div class="cf-label">Terminal Output</div>
+        <div class="cf-desc">The terminal message the student sees now includes the game identity (if it changed from last session), the zone, and — at appropriate disclosure tiers — which dimensions are being probed. The student's awareness of the dimension system is itself part of the Alpha track: at singularity, they understand that GOLAD probes SIM and can request it by name.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="body" style="margin-top:16px">
+    <p><strong>Session variety and engagement.</strong> The two-level compiler naturally produces variety across sessions — not by randomizing, but by following the posterior. High uncertainty in undersampled dimensions means different games will be selected in sequence. When the posterior converges uniformly across all dimensions, the compiler will cycle games to maintain calibration and detect drift. Variety is an emergent property of information-seeking, not a designed feature.</p>
+    <p><strong>What the compiler does not do.</strong> It does not select games to balance game time across titles. It does not avoid a game because the student is performing poorly in it (poor performance is high information). It does not optimize for student preference except via the engagement floor constraint. Games are instruments, not rewards.</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ─────────────────────────────────────────────────────────────────────────
+     §6 BEHAVIORAL SIGNALS PER GAME
+     ───────────────────────────────────────────────────────────────────────── -->
+<div class="section" id="signals">
+  <div class="section-label">§ 6</div>
+  <div class="section-title">Per-Game Behavioral Signals <span class="pending">PHASE 2</span></div>
+  <div class="body">
+    <p>The Ledger records (config_vector, outcome, signals) per session. The outcome (rank_pct) is game-agnostic. The signals are game-specific — they encode the behavioral fingerprint of how the student played, not just what they achieved. These signals are what make the posterior update more than a single rank_pct scalar. They feed the dimension-level evidence rather than the game-level Elo.</p>
+    <p>Constellation signals are already implemented (archetype_tag, strategy_shift_count, move_log, round_snapshots). The following are specified for future implementation.</p>
+  </div>
+
+  <h3 style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:20px 0 10px;color:#888">GOLAD Signals</h3>
+  <table class="signal-table">
+    <thead><tr><th>Signal</th><th>Dimension</th><th>Derivation</th></tr></thead>
+    <tbody>
+      <tr><td>pattern_stability_rate</td><td>SIM</td><td>What fraction of placed patterns reached a stable or oscillating state within 5 generations? High stability = knowledge of survivable configurations.</td></tr>
+      <tr><td>interference_fraction</td><td>OPP</td><td>Of all placements, what fraction were adjacent to or projected to intersect opponent cells within 3 generations? High = active interference strategy.</td></tr>
+      <tr><td>rule_adaptation_lag_rounds</td><td>ADP</td><td>If rules change mid-session (birth/survive modified), how many rounds until the player's placement strategy measurably shifts? Computed from strategy_shift_count analog applied to GOLAD move log.</td></tr>
+      <tr><td>board_coverage_quadrants</td><td>TOP</td><td>How many distinct board quadrants were actively contested? Low coverage with high cell count = local optimization. High coverage = spatial distribution reasoning.</td></tr>
+      <tr><td>generation_lookahead_estimate</td><td>SIM</td><td>Inferred from placement quality: if a cell placed at round r produces a stable pattern by round r+3, the student showed at least 3-generation lookahead. Upper bound of observed lookahead depth.</td></tr>
+    </tbody>
+  </table>
+
+  <h3 style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:20px 0 10px;color:#888">Geobridge Signals</h3>
+  <table class="signal-table">
+    <thead><tr><th>Signal</th><th>Dimension</th><th>Derivation</th></tr></thead>
+    <tbody>
+      <tr><td>bid_accuracy</td><td>COM</td><td>Tricks won vs. tricks contracted. bid_accuracy = 1 if contract exactly met; below 1 = under-execution; above 1 = over-estimated hand. Core COM signal: commitment calibration.</td></tr>
+      <tr><td>category_specialization</td><td>KNW</td><td>Did the player bid the same statistical category repeatedly (GDP, area, etc.)? Specialization score = max frequency of any single category across bids. High = exploiting known knowledge; low = broad but uncertain knowledge.</td></tr>
+      <tr><td>alliance_formation_rate</td><td>OPP</td><td>How often did the player send, accept, or break alliances relative to available opportunities? Paired with outcome to distinguish whether alliance use is exploitative or defensive.</td></tr>
+      <tr><td>bid_penalty_ratio</td><td>COM</td><td>Total bid penalties / total possible bid penalties. High ratio = systematic over-commitment; indicates COM confidence exceeding COM execution capability.</td></tr>
+      <tr><td>eclipse_performance_delta</td><td>ADP + KNW</td><td>Score differential when eclipse region was active vs. inactive. Negative delta = eclipse disrupted; zero = adapted; positive = exploited. Separates knowledge from adaptation.</td></tr>
+    </tbody>
+  </table>
+
+  <h3 style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:20px 0 10px;color:#888">C4D Signals</h3>
+  <table class="signal-table">
+    <thead><tr><th>Signal</th><th>Dimension</th><th>Derivation</th></tr></thead>
+    <tbody>
+      <tr><td>dimensional_spread</td><td>TOP</td><td>How evenly were claims distributed across the dimensional axes of the polytope? Even spread = understanding of higher-dimensional adjacency. Concentrated = treating the polytope as a 2D surface.</td></tr>
+      <tr><td>plane_completion_rate</td><td>TOP + COM</td><td>What fraction of initiated plane-completion attempts were actually completed? High = strategic commitment and topological planning. Low = reactive claiming without structural intent.</td></tr>
+      <tr><td>exponential_exploitation_index</td><td>OPT</td><td>Did the player disproportionately target high-scoring cells (the 27s and 9s in [1,3,9,27])? Score = correlation between cell scoring value and claim priority. High = understands the geometric payoff structure.</td></tr>
+      <tr><td>fog_inference_accuracy</td><td>OPP + SIM</td><td>With fogOfWar enabled: did the player's claims avoid contested cells that turned out to be already claimed? High accuracy = probabilistic inference about hidden state. Low = ignoring fog uncertainty.</td></tr>
+      <tr><td>irreversibility_adjustment</td><td>COM</td><td>With ownerMode=permanent: did the player's claim rate decrease over rounds (becoming more selective as irreversibility accumulated)? Decrease = recognized the permanent ownership constraint and adjusted. No change = treating it like a reversible game.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<hr class="rule">
+
+<!-- ─────────────────────────────────────────────────────────────────────────
+     §7 CROSS-GAME TRANSFER MODEL
+     ───────────────────────────────────────────────────────────────────────── -->
+<div class="section" id="transfer">
+  <div class="section-label">§ 7</div>
+  <div class="section-title">Cross-Game Transfer Model <span class="pending">REQUIRES DATA</span></div>
+  <div class="body">
+    <p>The transfer model answers the question: does dimension X measured in Game A predict dimension X in Game B? If yes, the dimensions are genuinely cross-game cognitive properties — not game skills. If no, what looks like "SIM" in GOLAD is GOLAD-specific pattern recognition, not a general simulation faculty.</p>
+    <p>The model cannot be specified in advance of data. What can be specified is the structure it will take and the evidence required to trust it.</p>
+  </div>
+
+  <div class="transfer-box">
+    <div class="tb-title">Transfer Model Architecture</div>
+    <div class="tb-row">
+      <div class="tb-label">Input</div>
+      <div class="tb-arrow">→</div>
+      <div class="tb-desc">Ledger records from M students × N games × T sessions each. outcome (rank_pct) and behavioral signals per session. Session config vectors used to label which dimensions were active at what difficulty.</div>
+    </div>
+    <div class="tb-row">
+      <div class="tb-label">Step 1</div>
+      <div class="tb-arrow">→</div>
+      <div class="tb-desc">Per-student, per-game, per-dimension performance score derived from rank_pct weighted by the composition matrix loading for that (game, dimension) pair. Result: a (student × game × dimension) tensor of performance estimates.</div>
+    </div>
+    <div class="tb-row">
+      <div class="tb-label">Step 2</div>
+      <div class="tb-arrow">→</div>
+      <div class="tb-desc">Factor analysis across games for each dimension. If SIM as measured by GOLAD correlates with SIM as measured by Constellation (r > 0.5) after controlling for general performance, the SIM dimension is confirmed as cross-game. If not, split into SIM_GOLAD and SIM_CONST as separate dimensions.</div>
+    </div>
+    <div class="tb-row">
+      <div class="tb-label">Step 3</div>
+      <div class="tb-arrow">→</div>
+      <div class="tb-desc">Update composition matrix with empirical loading coefficients replacing the ASSERTED ordinal rankings. Now the two-level compiler has quantified E[KL] estimates rather than ordinal rankings.</div>
+    </div>
+    <div class="tb-row">
+      <div class="tb-label">Step 4</div>
+      <div class="tb-arrow">→</div>
+      <div class="tb-desc">The game-level Elo is retired. The student model is now a (dimension × posterior_mean × posterior_variance) vector. The compiler operates in dimension space, not game space. Games are instruments; dimensions are the measurement targets.</div>
+    </div>
+    <div class="tb-row">
+      <div class="tb-label">Required</div>
+      <div class="tb-arrow">→</div>
+      <div class="tb-desc"><span class="asserted">ASSERTED minimum:</span> 30+ sessions per student across at least 3 games. 20+ students meeting this threshold. May require 6–12 months of operation before Step 2 becomes feasible. Until then, the ASSERTED composition matrix is the prior.</div>
+    </div>
+  </div>
+
+  <div class="body" style="margin-top:16px">
+    <p><strong>What if transfer fails?</strong> If no cross-game transfer is found — if every dimension is game-specific — then the universal cognitive space does not exist in the form asserted. This would mean each game measures a different thing entirely. The system would still work as a multi-game assessment battery (like separate subtests), but the two-level compiler's theoretical foundation changes: you select games to assess different domains, not to probe the same dimensions more efficiently. This is still valuable. It is not the architecture this document describes, but it is a valid fallback.</p>
+    <p><strong>Partial transfer.</strong> The most likely outcome is partial transfer: some dimensions generalize (OPT, MOS) and others don't (KNW by definition). The practical implication is that the composition matrix will have some entries marked as cross-game (strong transfer) and others as game-specific (weak transfer). The compiler treats the former as true dimension probes and the latter as game-achievement measures tracked separately.</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ─────────────────────────────────────────────────────────────────────────
+     §8 PATH TO OBJECTIVE PERFECTION
+     ───────────────────────────────────────────────────────────────────────── -->
+<div class="section" id="perfection">
+  <div class="section-label">§ 8</div>
+  <div class="section-title">Path to Objective Perfection</div>
+  <div class="body">
+    <p>The system as described in this document is architecturally perfect. The One Principle applied to a universal cognitive space across a mechanically diverse game suite, with a two-level compiler and cross-game transfer model, is the correct structure. There is no better structure in theory.</p>
+    <p>The implementation is not perfect because the posterior is not yet faithful. The following table records exactly what needs to happen — not aspirationally, but as a precise list of replacements that will convert the current asserted system into an empirically grounded one.</p>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:26%">Component</th>
+        <th style="width:22%">Current State</th>
+        <th style="width:16%">Becomes Perfect When</th>
+        <th style="width:36%">Evidence Required</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="hi">Composition matrix</td>
+        <td><span class="asserted">ASSERTED</span> ordinal rankings</td>
+        <td>Factor loadings fitted</td>
+        <td>30+ multi-game students, factor analysis on Ledger data</td>
+      </tr>
+      <tr>
+        <td class="hi">8 cognitive dimensions</td>
+        <td><span class="asserted">ASSERTED</span> from game mechanics</td>
+        <td>Factor structure confirmed or revised</td>
+        <td>Factor analysis; two dimensions collapse if r > 0.85 after controlling general performance</td>
+      </tr>
+      <tr>
+        <td class="hi">Cross-game transfer</td>
+        <td><span class="pending">NOT YET MEASURED</span></td>
+        <td>Transfer matrix fitted</td>
+        <td>Per-dimension cross-game correlation coefficients from multi-game Ledger data</td>
+      </tr>
+      <tr>
+        <td class="hi">Game selection (step 2)</td>
+        <td><span class="pending">NOT BUILT</span> — Constellation only</td>
+        <td>Two-level compiler built</td>
+        <td>Requires composition matrix and transfer model first; then implement game_selection() in compiler.js</td>
+      </tr>
+      <tr>
+        <td class="hi">GOLAD behavioral signals</td>
+        <td><span class="pending">SPECIFIED, NOT BUILT</span></td>
+        <td>Added to Ledger on session end</td>
+        <td>Implement in GOLAD room's session-end handler; requires move log and board state snapshots</td>
+      </tr>
+      <tr>
+        <td class="hi">Geobridge behavioral signals</td>
+        <td><span class="pending">SPECIFIED, NOT BUILT</span></td>
+        <td>Added to Ledger on session end</td>
+        <td>Requires Geobridge to write session observations; currently no Ledger integration</td>
+      </tr>
+      <tr>
+        <td class="hi">C4D behavioral signals</td>
+        <td><span class="pending">SPECIFIED, NOT BUILT</span></td>
+        <td>Added to Ledger on session end</td>
+        <td>Requires C4D to write session observations; polytope adjacency data needed for dimensional_spread</td>
+      </tr>
+      <tr>
+        <td class="hi">Geobridge knowledge baseline</td>
+        <td><span class="pending">NOT ASSESSED</span></td>
+        <td>Knowledge level estimated per student</td>
+        <td>Short fact-recall probe OR external geography assessment; used to separate KNW from COM/OPP signals</td>
+      </tr>
+      <tr>
+        <td class="hi">Constellation Elo</td>
+        <td><span class="asserted">ASSERTED</span> weights, game Elo ≠ cognitive skill</td>
+        <td>Replaced by dimension-level posterior</td>
+        <td>BT integration (transfer_elo) for game↔skill bridge; then cross-game model subsumes game Elo</td>
+      </tr>
+      <tr>
+        <td class="hi">Engagement floor</td>
+        <td><span class="asserted">ASSERTED</span> minimum not defined</td>
+        <td>Empirical engagement threshold per game</td>
+        <td>Session completion rates, teacher observations, student withdrawal patterns per game</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="body" style="margin-top:24px">
+    <p><strong>The honest summary.</strong> The current system can measure cognitive development through Constellation with increasing precision as data accumulates. It cannot yet measure cross-game cognitive structure because (a) GOLAD, Geobridge, and C4D do not yet write to the Ledger, and (b) no student has played enough sessions across games for factor analysis to be feasible.</p>
+    <p>The immediate next step is not the two-level compiler. It is <strong>Ledger integration for all games.</strong> Every session in every game must be recorded with the same structure: config_vector (game-specific), outcome (rank_pct or equivalent), signals (game-specific behavioral fingerprint). Until then, the multi-game Ledger is empty and the transfer model has nothing to fit.</p>
+    <p>This document is the specification. The Ledger is the instrument. Time and sessions are the data. Objective perfection is not a state to be designed — it is a state to be measured into.</p>
+  </div>
+
+  <div style="border-top:2px solid #000;margin-top:36px;padding-top:20px">
+    <div style="font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:10px">Immediate Build Order</div>
+    <table>
+      <thead><tr><th>#</th><th>Task</th><th>Unblocks</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">0</td><td>GOLAD, Geobridge, C4D write session observations to Ledger (config_vector + outcome + raw signals)</td><td>Everything</td><td><span class="pending">NOT BUILT</span></td></tr>
+        <tr><td class="mono">1</td><td>Implement behavioral signal extraction for each game at session end</td><td>Dimension-level evidence; transfer model</td><td><span class="pending">NOT BUILT</span></td></tr>
+        <tr><td class="mono">2</td><td>Extend Observatory to show multi-game session feed per student</td><td>Admin visibility of cross-game data</td><td><span class="pending">NOT BUILT</span></td></tr>
+        <tr><td class="mono">3</td><td>Accumulate 30+ multi-game students</td><td>Factor analysis; transfer model</td><td><span class="pending">DATA PHASE</span></td></tr>
+        <tr><td class="mono">4</td><td>Run factor analysis; fit composition matrix; confirm or revise 8 dimensions</td><td>Empirically grounded posterior</td><td><span class="pending">DATA PHASE</span></td></tr>
+        <tr><td class="mono">5</td><td>Implement two-level compiler: game_selection() → existing config_selection()</td><td>Multi-game session optimization</td><td><span class="pending">POST-DATA</span></td></tr>
+        <tr><td class="mono">6</td><td>Retire game-level Elo; replace with dimension-level posterior across all games</td><td>True universal student model</td><td><span class="pending">POST-DATA</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</div><!-- end .content -->
+</body>
+</html>

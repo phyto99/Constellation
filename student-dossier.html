@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Constellation — Relationships</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0a;--surface:#0f0f0f;--border:#1a1a1a;--border2:#222;
+  --text:#e0e0e0;--dim:#333;--dimmer:#1e1e1e;
+  --amber:#d97706;--green:#059669;--blue:#2563eb;--violet:#7c3aed;
+  --white:#fff;--offwhite:#f8f8f8;
+  --cal:#6b7280;--echo:#2563eb;--rad:#d97706;--alp:#7c3aed;--sin:#b45309;
+  --par:#06b6d4;--shi:#f59e0b;--rem:#dc2626;
+}
+body{font-family:Arial,sans-serif;font-size:12px;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── HEADER ── */
+.hdr{border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--bg)}
+.hdr-left{display:flex;align-items:baseline;gap:12px}
+.logo{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--white)}
+.hdr-sub{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim)}
+.hdr-right{display:flex;gap:14px;align-items:center}
+.hdr-link{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#333;text-decoration:none}
+.hdr-link:hover{color:var(--text)}
+.hdr-link.active{color:var(--amber)}
+
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:260px 1fr;flex:1;overflow:hidden}
+
+/* ── SIDEBAR ── */
+.sidebar{border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sb-hdr{padding:14px 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sb-hdr-lbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#2a2a2a;margin-bottom:8px}
+.sb-note{font-size:10px;color:#222;line-height:1.6}
+.sb-list{overflow-y:auto;flex:1}
+.rel-item{padding:14px 16px;border-bottom:1px solid var(--dimmer);cursor:pointer;transition:background .1s;position:relative}
+.rel-item:hover{background:var(--dimmer)}
+.rel-item.active{background:#111;border-left:2px solid var(--amber)}
+.rel-item.active .rel-name{color:var(--white)}
+.rel-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.rel-name{font-size:11px;font-weight:700;color:#aaa}
+.rel-zone{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:2px 6px;border:1px solid}
+.rel-zone.cal{color:var(--cal);border-color:#374151}
+.rel-zone.ech{color:var(--echo);border-color:#1e3a5f}
+.rel-zone.rad{color:var(--rad);border-color:#78350f}
+.rel-zone.alp{color:var(--alp);border-color:#3b1f6e}
+.rel-zone.sin{color:var(--sin);border-color:#451a03}
+.rel-zone.par{color:var(--par);border-color:#0e4f5c}
+.rel-zone.shi{color:var(--shi);border-color:#78450f}
+.rel-zone.rem{color:var(--rem);border-color:#7f1d1d}
+.rel-meta{font-size:9px;color:#2a2a2a;display:flex;gap:10px}
+.new-dot{width:6px;height:6px;border-radius:50%;background:var(--amber);position:absolute;top:14px;right:14px}
+.pending-dot{width:6px;height:6px;border-radius:50%;background:var(--blue);position:absolute;top:14px;right:14px}
+
+/* ── MAIN DOSSIER ── */
+.dossier{overflow-y:auto;padding:24px 28px;display:flex;flex-direction:column;gap:20px}
+
+/* dossier header */
+.dos-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+.dos-players{display:flex;align-items:center;gap:16px}
+.player-card{text-align:center}
+.pc-name{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text);margin-bottom:6px}
+.pc-zone{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:4px 10px;border:1px solid;display:inline-block}
+.pc-zone.ech{color:var(--echo);border-color:#1e3a5f;background:#0a1628}
+.pc-zone.rad{color:var(--rad);border-color:#78350f;background:#1a0d00}
+.pc-zone.cal{color:var(--cal);border-color:#374151;background:#0d0f12}
+.pc-zone.alp{color:var(--alp);border-color:#3b1f6e;background:#0f0a1a}
+.pc-zone.sin{color:var(--sin);border-color:#451a03;background:#1a0d00}
+.pc-zone.par{color:var(--par);border-color:#0e4f5c;background:#020e12}
+.pc-zone.shi{color:var(--shi);border-color:#78450f;background:#160c00}
+.pc-zone.rem{color:var(--rem);border-color:#7f1d1d;background:#150000}
+.vs{font-size:9px;font-weight:700;letter-spacing:3px;color:#2a2a2a;padding-top:18px}
+.dos-hdr-right{text-align:right}
+.dos-sessions{font-size:9px;color:#2a2a2a;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.dos-sessions b{color:#444;font-size:13px;font-family:'Courier New',monospace}
+
+/* compiler assessment — amber card */
+.compiler-card{border-top:2px solid var(--amber);background:#0f0d00;padding:16px 18px}
+.cc-label{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.cc-label::after{content:'';flex:1;height:1px;background:#2a2000}
+.cc-body{font-size:11px;color:#a07700;line-height:1.9}
+.cc-body p{margin-bottom:8px}
+.cc-body p:last-child{margin-bottom:0}
+.cc-body strong{color:var(--amber)}
+.cc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#1a1500;margin-top:14px;border:1px solid #1a1500}
+.cc-stat{background:#0f0d00;padding:10px 12px;text-align:center}
+.cc-stat-val{font-size:14px;font-weight:700;color:var(--amber);font-family:'Courier New',monospace;display:block;margin-bottom:2px}
+.cc-stat-lbl{font-size:8px;color:#5a4400;letter-spacing:1px;text-transform:uppercase}
+
+/* co-presence measured signal */
+.cp-section{border:1px solid #1a1a1a}
+.cp-hdr{padding:8px 14px;border-bottom:1px solid #111;display:flex;justify-content:space-between;align-items:center}
+.cp-hdr-lbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#2a2a2a}
+.cp-conf{font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:1px 5px;border:1px solid}
+.cp-conf.low{color:#374151;border-color:#374151}
+.cp-conf.med{color:#555;border-color:#555}
+.cp-conf.hi{color:#15803d;border-color:#15803d}
+.cp-table{width:100%;border-collapse:collapse;font-size:9px}
+.cp-table th{padding:5px 10px;text-align:left;font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#2a2a2a;border-bottom:1px solid #111}
+.cp-table td{padding:5px 10px;border-bottom:1px solid #0d0d0d;font-family:'Courier New',monospace}
+.cp-table tr:last-child td{border-bottom:none}
+.yp{color:#15803d}.yn{color:#7f1d1d}.y0{color:#333}
+.cat-p{color:#15803d;font-weight:700}.cat-n{color:#7f1d1d;font-weight:700}.cat-0{color:#333}
+
+/* session record */
+.record-block{border:1px solid var(--border)}
+.record-hdr{border-bottom:1px solid var(--border);padding:8px 14px;display:flex;justify-content:space-between;align-items:center}
+.record-hdr-lbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#2a2a2a}
+.record-list{}
+.record-row{display:grid;grid-template-columns:80px 1fr 80px 70px;gap:0;border-bottom:1px solid var(--dimmer);padding:9px 14px;align-items:center;font-size:10px}
+.record-row:last-child{border-bottom:none}
+.rr-date{color:#2a2a2a;font-family:'Courier New',monospace;font-size:9px}
+.rr-map{color:#555}
+.rr-outcome{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;text-align:center}
+.rr-outcome.w{color:var(--green)}.rr-outcome.l{color:#444}.rr-outcome.d{color:#555}
+.rr-zone{text-align:right}
+.rz{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:1px 5px;border:1px solid}
+.rz.ech{color:var(--echo);border-color:#1e3a5f}
+.rz.rad{color:var(--rad);border-color:#78350f}
+.rz.cal{color:var(--cal);border-color:#374151}
+.rz.par{color:var(--par);border-color:#0e4f5c}
+.rz.shi{color:var(--shi);border-color:#78450f}
+.rz.rem{color:var(--rem);border-color:#7f1d1d}
+
+/* pending challenge */
+.challenge-card{border:1px solid var(--blue);background:#020812}
+.ch-hdr{border-bottom:1px solid #0a1628;padding:8px 14px;display:flex;justify-content:space-between;align-items:center}
+.ch-hdr-lbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--blue)}
+.ch-hdr-from{font-size:9px;color:#1e3a5f}
+.ch-body{padding:16px 18px}
+.ch-params{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
+.ch-param{background:#040e1a;padding:10px 12px;border:1px solid #0a1628}
+.ch-param-lbl{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1e3a5f;margin-bottom:4px}
+.ch-param-val{font-size:11px;color:#93c5fd}
+.ch-compiler-note{font-size:10px;color:#1e3a5f;line-height:1.7;border-top:1px solid #0a1628;padding-top:10px}
+.ch-compiler-note span{color:#3b82f6}
+.ch-actions{display:flex;gap:8px;margin-top:14px}
+.btn-accept{flex:1;padding:9px;background:var(--blue);color:#fff;border:none;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-accept:hover{background:#1d4ed8}
+.btn-decline{padding:9px 14px;background:transparent;color:#1e3a5f;border:1px solid #0d1f36;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-decline:hover{color:#555;border-color:#222}
+
+/* propose section */
+.propose-block{}
+.propose-btn{width:100%;padding:11px;background:transparent;color:#2a2a2a;border:1px solid var(--border);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif;text-align:left;display:flex;justify-content:space-between;align-items:center}
+.propose-btn:hover{border-color:#333;color:#555}
+.propose-btn .arr{font-size:11px}
+.propose-form{display:none;border:1px solid var(--border);border-top:none;padding:18px}
+.propose-form.open{display:block}
+.pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.pf-field{display:flex;flex-direction:column;gap:5px}
+.pf-field label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#333}
+.pf-tg{display:flex;border:1px solid var(--border);overflow:hidden}
+.pf-opt{flex:1;padding:6px 0;text-align:center;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;background:transparent;color:#2a2a2a;border:none;font-family:Arial,sans-serif}
+.pf-opt.on{background:var(--white);color:#000}
+.pf-note{font-size:10px;color:#222;line-height:1.7;margin-bottom:14px;padding:10px 12px;border:1px solid var(--border)}
+.pf-note span{color:#555}
+.btn-send{padding:9px 20px;background:var(--white);color:#000;border:none;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-send:hover{background:#ddd}
+
+/* empty state */
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#222}
+.empty-lbl{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.empty-sub{font-size:11px;color:#1a1a1a;text-align:center;max-width:280px;line-height:1.8}
+
+/* scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:#1a1a1a}
+
+@media(max-width:640px){.layout{grid-template-columns:1fr}.sidebar{display:none}}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-left">
+    <span class="logo">Constellation</span>
+    <span class="hdr-sub">Relationships</span>
+  </div>
+  <div class="hdr-right">
+    <a href="/student-next" class="hdr-link">Panel</a>
+    <a href="/admin" class="hdr-link">Admin</a>
+    <a href="/student-dossier" class="hdr-link active">Relationships</a>
+    <button id="mock-btn" onclick="toggleMock()" style="font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:3px 10px;border:1px solid #1a1a1a;background:transparent;color:#333;cursor:pointer;font-family:Arial,sans-serif">MOCK</button>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- ── SIDEBAR ── -->
+  <div class="sidebar">
+    <div class="sb-hdr">
+      <div class="sb-hdr-lbl">Your Network</div>
+      <div class="sb-note">The system opens a file when it has something worth saying about how you play with someone.</div>
+    </div>
+    <div class="sb-list">
+    </div>
+  </div>
+
+    <!-- ── DOSSIER ── -->
+  <div class="dossier" id="dossier">
+  </div><!-- /dossier -->
+
+</div><!-- /layout -->
+
+<script>
+const API = '';
+const S = {
+    myId: null, myName: null,
+    partners: [],
+    challenges: [],
+    currentPartnerId: null,
+};
+
+const ZONE_CLS = {
+    CALIBRATION:'cal', ECHO:'ech', PARALLEL:'par',
+    SHIFTING:'shi', RADICAL:'rad', REMATCH:'rem',
+    ALPHA:'alp', SINGULARITY:'sin'
+};
+const ZONE_LABEL = {
+    CALIBRATION:'Calibrating', ECHO:'Echo', PARALLEL:'Parallel',
+    SHIFTING:'Shifting', RADICAL:'Radical', REMATCH:'Rematch',
+    ALPHA:'Alpha', SINGULARITY:'Singularity'
+};
+
+function mkId(name){ return name.trim().toLowerCase().replace(/\s+/g,'_'); }
+
+async function init(){
+    const raw = localStorage.getItem('constellation_name') || '';
+    S.myName = raw.trim() || null;
+    S.myId   = S.myName ? mkId(S.myName) : null;
+    if(!S.myId){ showEmpty('Enter your name in the student panel first.'); return; }
+    try {
+        const [pRes, cRes] = await Promise.all([
+            fetch(API + '/api/dossier/partners/' + encodeURIComponent(S.myId)),
+            fetch(API + '/api/dossier/challenges/' + encodeURIComponent(S.myId)),
+        ]);
+        S.partners   = await pRes.json();
+        S.challenges = await cRes.json();
+        renderSidebar();
+        if(S.partners.length > 0) openDossier(S.partners[0].student_id);
+        else showEmpty('No other students in the ledger yet.');
+    } catch(err){
+        showEmpty('Could not connect to server.');
+    }
+}
+
+function renderSidebar(){
+    const list = document.querySelector('.sb-list');
+    if(!list) return;
+    if(S.partners.length === 0){
+        list.innerHTML = '<div style="padding:16px;font-size:10px;color:#222">No other students yet.</div>';
+        return;
+    }
+    list.innerHTML = S.partners.map(p => {
+        const cls = ZONE_CLS[p.zone] || 'cal';
+        const lbl = ZONE_LABEL[p.zone] || p.zone;
+        const dot = p.has_pending ? '<div class="pending-dot"></div>' : '';
+        const pid = escHtml(p.student_id);
+        const pnm = escHtml(p.student_name || p.student_id);
+        return `<div class="rel-item" data-pid="${pid}" onclick="openDossier(this.dataset.pid)">
+            ${dot}
+            <div class="rel-top">
+                <span class="rel-name">${pnm}</span>
+                <span class="rel-zone ${cls}">${lbl}</span>
+            </div>
+            <div class="rel-meta"><span>${p.sessions} session${p.sessions===1?'':'s'}</span></div>
+        </div>`;
+    }).join('');
+}
+
+async function openDossier(partnerId){
+    S.currentPartnerId = partnerId;
+    document.querySelectorAll('.rel-item').forEach(el =>
+        el.classList.toggle('active', el.dataset.pid === partnerId)
+    );
+    if (useMock) {
+        const reaction = MOCK_REACTIONS[partnerId] || {
+            zone_a:'CALIBRATION', zone_b:'CALIBRATION',
+            assessment:['No mock reaction data for this student.'],
+            stats:[{val:'—',lbl:'Elo Gap'},{val:'—',lbl:'Exp. Rank'},{val:'—',lbl:'Proj. Zone'}],
+            proposal_note:'No data.',
+        };
+        const partner = MOCK_PARTNERS.find(p => p.student_id === partnerId)
+            || { student_id:partnerId, student_name:partnerId, sessions:0, zone:'CALIBRATION' };
+        renderDossier(partner, reaction);
+        return;
+    }
+    const dos = document.getElementById('dossier');
+    dos.innerHTML = '<div style="padding:40px;color:#222;font-size:10px;font-style:italic">Loading…</div>';
+    try {
+        const [rRes, cRes] = await Promise.all([
+            fetch(API + '/api/dossier/reaction/' + encodeURIComponent(S.myId) + '/' + encodeURIComponent(partnerId)),
+            fetch(API + '/api/dossier/challenges/' + encodeURIComponent(S.myId)),
+        ]);
+        const reaction = await rRes.json();
+        S.challenges   = await cRes.json();
+        const partner  = S.partners.find(p => p.student_id === partnerId)
+            || { student_id: partnerId, student_name: partnerId, sessions: 0, zone: reaction.zone_b };
+        renderDossier(partner, reaction);
+    } catch(err){
+        dos.innerHTML = `<div style="padding:40px;color:#555;font-size:10px">Error: ${escHtml(err.message)}</div>`;
+    }
+}
+
+function coPresenceHtml(cp) {
+    if (!cp || cp.n_shared === 0) {
+        return '<div class="cp-section">' +
+            '<div class="cp-hdr"><span class="cp-hdr-lbl">Joint Session Record</span>' +
+            '<span style="font-size:9px;color:#1a1a1a">No shared sessions yet</span></div>' +
+            '<div style="padding:12px 14px;font-size:9px;color:#1a1a1a">No joint sessions recorded. Play together for a measured reaction.</div>' +
+            '</div>';
+    }
+    var conf    = cp.n_shared >= 10 ? 'hi' : cp.n_shared >= 3 ? 'med' : 'low';
+    var confLbl = cp.n_shared >= 10 ? 'HIGH' : cp.n_shared >= 3 ? 'MEDIUM' : 'LOW';
+    function yCell(v) {
+        if (v == null) return '<td class="y0">—</td>';
+        var pct = Math.round(v * 100);
+        var cls = v > 0.02 ? 'yp' : v < -0.02 ? 'yn' : 'y0';
+        return '<td class="' + cls + '">' + (v > 0 ? '+' : '') + pct + '%</td>';
+    }
+    function cCell(v) {
+        if (v == null) return '<td class="cat-0">—</td>';
+        var pct = Math.round(v * 100);
+        var cls = v > 0.03 ? 'cat-p' : v < -0.03 ? 'cat-n' : 'cat-0';
+        return '<td class="' + cls + '">' + (v > 0 ? '+' : '') + pct + '%</td>';
+    }
+    var rows = Object.entries(cp.mode_yields).map(function(e) {
+        var m = e[0], d = e[1];
+        return '<tr><td style="color:#555;font-size:8px;font-weight:700;letter-spacing:1px">' + m + '</td>' +
+            '<td style="color:#2a2a2a">' + d.n + '</td>' +
+            yCell(d.yield_A) + yCell(d.yield_B) +
+            cCell(d.catalyst_A) + cCell(d.catalyst_B) + '</tr>';
+    }).join('');
+    var avgA = cp.mean_yield_A != null ? (cp.mean_yield_A > 0 ? '+' : '') + Math.round(cp.mean_yield_A*100) + '%' : '—';
+    var avgB = cp.mean_yield_B != null ? (cp.mean_yield_B > 0 ? '+' : '') + Math.round(cp.mean_yield_B*100) + '%' : '—';
+    return '<div class="cp-section">' +
+        '<div class="cp-hdr"><span class="cp-hdr-lbl">Joint Record — ' + cp.n_shared + ' sessions</span>' +
+        '<span class="cp-conf ' + conf + '">' + confLbl + '</span></div>' +
+        '<div style="padding:6px 14px 2px;font-size:8px;color:#2a2a2a;line-height:1.6">' +
+        'Yield = rank vs compiler prediction. Catalyst = yield change vs solo sessions in same mode.</div>' +
+        '<table class="cp-table"><thead><tr>' +
+        '<th>Mode</th><th>N</th><th>Yield (you)</th><th>Yield (them)</th><th>Cat. (you)</th><th>Cat. (them)</th>' +
+        '</tr></thead><tbody>' + rows + '</tbody></table>' +
+        '<div style="padding:7px 14px;border-top:1px solid #111;font-size:9px;color:#2a2a2a;display:flex;gap:20px">' +
+        '<span>Overall — You: <strong style="color:#888">' + avgA + '</strong></span>' +
+        '<span>Them: <strong style="color:#888">' + avgB + '</strong></span>' +
+        '</div></div>';
+}
+
+let _proposalNote = '';
+
+function renderDossier(partner, reaction){
+    const dos          = document.getElementById('dossier');
+    const myZoneCls    = ZONE_CLS[reaction.zone_a] || 'cal';
+    const myZoneLbl    = ZONE_LABEL[reaction.zone_a] || reaction.zone_a;
+    const theirZoneCls = ZONE_CLS[reaction.zone_b] || 'cal';
+    const theirZoneLbl = ZONE_LABEL[reaction.zone_b] || reaction.zone_b;
+    const pname        = escHtml(partner.student_name || partner.student_id);
+    _proposalNote      = reaction.proposal_note;
+
+    const incoming = S.challenges.find(c =>
+        c.status === 'pending' && c.from_id === partner.student_id && c.to_id === S.myId
+    );
+    const outgoing = S.challenges.find(c =>
+        c.status === 'pending' && c.from_id === S.myId && c.to_id === partner.student_id
+    );
+
+    const challengeHtml = incoming ? `
+    <div class="challenge-card">
+        <div class="ch-hdr">
+            <span class="ch-hdr-lbl">Pending Challenge</span>
+            <span class="ch-hdr-from">from ${pname}</span>
+        </div>
+        <div class="ch-body">
+            <div class="ch-params">
+                <div class="ch-param"><div class="ch-param-lbl">Type</div><div class="ch-param-val">${escHtml(incoming.session_type)}</div></div>
+                <div class="ch-param"><div class="ch-param-lbl">Challenge</div><div class="ch-param-val">${escHtml(incoming.challenge_level)}</div></div>
+                <div class="ch-param"><div class="ch-param-lbl">Map</div><div class="ch-param-val">${escHtml(incoming.map || 'System Selects')}</div></div>
+            </div>
+            <div class="ch-compiler-note"><span>Compiler:</span> ${escHtml(incoming.proposal_note)}</div>
+            <div class="ch-actions">
+                <button class="btn-accept" onclick="respondChallenge('${incoming.id}','accepted')">Accept →</button>
+                <button class="btn-decline" onclick="respondChallenge('${incoming.id}','declined')">Decline</button>
+            </div>
+        </div>
+    </div>` : '';
+
+    const proposeHtml = outgoing ? `
+    <div style="border:1px solid var(--border);padding:12px 14px;font-size:10px;color:#2a2a2a;display:flex;justify-content:space-between;align-items:center;">
+        <span>Challenge sent · ${escHtml(outgoing.challenge_level)} · ${escHtml(outgoing.session_type)}</span>
+        <button onclick="respondChallenge('${outgoing.id}','cancelled')" style="background:none;border:1px solid var(--border);color:#333;padding:4px 10px;font-size:9px;cursor:pointer;font-family:Arial,sans-serif;letter-spacing:1px;text-transform:uppercase">Cancel</button>
+    </div>` : `
+    <div class="propose-block">
+        <button class="propose-btn" onclick="togglePropose()">
+            <span>Propose a Session</span>
+            <span class="arr" id="proposeArr">›</span>
+        </button>
+        <div class="propose-form" id="proposeForm">
+            <div class="pf-grid">
+                <div class="pf-field">
+                    <label>Session Type</label>
+                    <div class="pf-tg" id="typeTg">
+                        <button class="pf-opt on" onclick="setPfOpt(this,'#typeTg')">Train Together</button>
+                        <button class="pf-opt" onclick="setPfOpt(this,'#typeTg')">Competitive</button>
+                    </div>
+                </div>
+                <div class="pf-field">
+                    <label>Challenge</label>
+                    <div class="pf-tg" id="chTg">
+                        <button class="pf-opt" onclick="setPfOpt(this,'#chTg')">Easy</button>
+                        <button class="pf-opt on" onclick="setPfOpt(this,'#chTg')">Standard</button>
+                        <button class="pf-opt" onclick="setPfOpt(this,'#chTg')">Hard</button>
+                    </div>
+                </div>
+            </div>
+            <div class="pf-note"><span>Compiler note:</span> ${escHtml(reaction.proposal_note)}</div>
+            <button class="btn-send" onclick="sendProposal()">Send Proposal →</button>
+        </div>
+    </div>`;
+
+    dos.innerHTML = `
+    <div class="dos-hdr">
+        <div class="dos-players">
+            <div class="player-card">
+                <div class="pc-name">${escHtml(S.myName || 'You')}</div>
+                <div class="pc-zone ${myZoneCls}">${myZoneLbl}</div>
+            </div>
+            <div class="vs">VS</div>
+            <div class="player-card">
+                <div class="pc-name">${pname}</div>
+                <div class="pc-zone ${theirZoneCls}">${theirZoneLbl}</div>
+            </div>
+        </div>
+        <div class="dos-hdr-right">
+            <div class="dos-sessions"><span style="font-size:9px;color:#2a2a2a;letter-spacing:1px;text-transform:uppercase">${reaction.co_presence && reaction.co_presence.n_shared > 0 ? 'Measured (' + reaction.co_presence.n_shared + ' sessions)' : 'Projected reaction'}</span></div>
+        </div>
+    </div>
+
+    <div class="compiler-card">
+        <div class="cc-label">Compiler Assessment</div>
+        <div class="cc-body">${reaction.assessment.map(p => '<p>' + escHtml(p) + '</p>').join('')}</div>
+        <div class="cc-stats">
+            ${reaction.stats.map(s => '<div class="cc-stat"><span class="cc-stat-val">' + escHtml(s.val) + '</span><span class="cc-stat-lbl">' + escHtml(s.lbl) + '</span></div>').join('')}
+        </div>
+    </div>
+
+    ${coPresenceHtml(reaction.co_presence)}
+
+    ${challengeHtml}
+    ${proposeHtml}
+    `;
+}
+
+function togglePropose(){
+    const f = document.getElementById('proposeForm');
+    const a = document.getElementById('proposeArr');
+    if(!f) return;
+    const open = f.classList.toggle('open');
+    if(a) a.textContent = open ? '↓' : '›';
+}
+
+function setPfOpt(btn, selector){
+    const parent = btn.closest('.pf-tg');
+    if(!parent) return;
+    parent.querySelectorAll('.pf-opt').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+}
+
+async function sendProposal(){
+    const sessionType    = document.querySelector('#typeTg .pf-opt.on')?.textContent || 'Train Together';
+    const challengeLevel = document.querySelector('#chTg .pf-opt.on')?.textContent   || 'Standard';
+    const btn = document.querySelector('.btn-send');
+    if(btn){ btn.textContent = 'Sending…'; btn.disabled = true; }
+    try {
+        const partner = S.partners.find(p => p.student_id === S.currentPartnerId);
+        const r = await fetch(API + '/api/dossier/challenges', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                from_id:         S.myId,
+                from_name:       S.myName,
+                to_id:           S.currentPartnerId,
+                to_name:         partner ? partner.student_name : S.currentPartnerId,
+                session_type:    sessionType,
+                challenge_level: challengeLevel,
+                map:             null,
+                proposal_note:   _proposalNote,
+            }),
+        });
+        if(!r.ok) throw new Error((await r.json()).error);
+        await refreshAndOpen();
+    } catch(err){
+        if(btn){ btn.textContent = 'Send Proposal →'; btn.disabled = false; }
+        alert(err.message);
+    }
+}
+
+async function respondChallenge(id, verdict){
+    try {
+        const r = await fetch(API + '/api/dossier/challenges/' + id + '/respond', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ verdict }),
+        });
+        if(!r.ok) throw new Error((await r.json()).error);
+        await refreshAndOpen();
+    } catch(err){ alert(err.message); }
+}
+
+async function refreshAndOpen(){
+    const [pRes, cRes] = await Promise.all([
+        fetch(API + '/api/dossier/partners/' + encodeURIComponent(S.myId)),
+        fetch(API + '/api/dossier/challenges/' + encodeURIComponent(S.myId)),
+    ]);
+    S.partners   = await pRes.json();
+    S.challenges = await cRes.json();
+    renderSidebar();
+    if(S.currentPartnerId) await openDossier(S.currentPartnerId);
+}
+
+function showEmpty(msg){
+    document.getElementById('dossier').innerHTML = `
+    <div class="empty">
+        <div class="empty-lbl">No Data</div>
+        <div class="empty-sub">${escHtml(msg)}</div>
+    </div>`;
+}
+
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── MOCK DATA ──────────────────────────────────────────────────────────────
+let useMock = false;
+
+const MOCK_ME = { id: 'mock_you', name: 'You (Demo)' };
+
+const MOCK_PARTNERS = [
+  { student_id:'mock_maya',  student_name:'Maya R.',  sessions:8,  zone:'RADICAL',     has_pending:true  },
+  { student_id:'mock_james', student_name:'James K.', sessions:3,  zone:'ECHO',        has_pending:true  },
+  { student_id:'mock_priya', student_name:'Priya M.', sessions:14, zone:'ALPHA',       has_pending:false },
+  { student_id:'mock_tom',   student_name:'Tom W.',   sessions:1,  zone:'CALIBRATION', has_pending:false },
+];
+
+const MOCK_CHALLENGES = [
+  {
+    id:'mock_ch_1', status:'pending',
+    from_id:'mock_james', to_id:'mock_you',
+    session_type:'Competitive', challenge_level:'Hard', map:'Northfield',
+    proposal_note:'James proposed Hard difficulty. The system notes this is appropriate — two ECHO players need higher challenge to generate stretch signal. Accepting this proposal is aligned with the compiler\'s recommendation.',
+  },
+];
+
+const MOCK_REACTIONS = {
+  mock_maya: {
+    zone_a:'ECHO', zone_b:'RADICAL',
+    assessment:[
+      'Playing against Maya consistently pushes you out of ECHO. Your last three joint sessions produced RADICAL signal — the gap between your zones is creating productive pressure in both directions.',
+      'Maya\'s RADICAL sessions are more stable when you\'re in the room. Your ECHO sessions are more information-dense. The system recommends a joint session this week while the differential holds.',
+    ],
+    stats:[{val:'+2.3×',lbl:'Signal vs solo'},{val:'6/8',lbl:'Sessions Radical'},{val:'↑',lbl:'Trajectory'}],
+    proposal_note:'Based on your last three sessions together, Standard challenge in a joint session is likely to produce RADICAL signal for both of you. The system will tune the configuration once both players are in the room.',
+  },
+  mock_james: {
+    zone_a:'ECHO', zone_b:'ECHO',
+    assessment:[
+      'Both of you are in ECHO. Joint sessions between two ECHO-zone students produce consolidation signal rather than stretch signal — useful for deepening, not for expanding.',
+      'The compiler\'s recommendation: if you play together, increase challenge level. Two familiar players in familiar territory need external pressure to generate useful signal.',
+    ],
+    stats:[{val:'1.1×',lbl:'Signal vs solo'},{val:'3/3',lbl:'Sessions Echo'},{val:'→',lbl:'Trajectory'}],
+    proposal_note:'James proposed Hard difficulty — the system agrees. Two ECHO players in Standard will just consolidate. Hard difficulty is where the signal comes from.',
+  },
+  mock_priya: {
+    zone_a:'ECHO', zone_b:'ALPHA',
+    assessment:[
+      'Priya is significantly ahead of you in zone progression. Playing against her produces consistent RADICAL signal for you — she is currently your highest-value known opponent.',
+      'The loss rate (9/14) is expected and correct. The sessions where you\'ve won have been ALPHA-signal sessions for Priya. The asymmetry is generating information for both of you.',
+    ],
+    stats:[{val:'+3.1×',lbl:'Signal vs solo'},{val:'9/14',lbl:'RADICAL sessions'},{val:'↑↑',lbl:'Your trajectory'}],
+    proposal_note:'Priya is your most valuable training partner by signal density. The system recommends regular sessions — the zone differential is still wide enough to be productive.',
+  },
+  mock_tom: {
+    zone_a:'ECHO', zone_b:'CALIBRATION',
+    assessment:[
+      'Tom has only one session recorded. The system doesn\'t have enough data to say anything specific about how you two play together.',
+      'If Tom continues playing, the file will update. For now the system recommends waiting — one session isn\'t enough to generate a joint assessment.',
+    ],
+    stats:[{val:'—',lbl:'Signal vs solo'},{val:'1',lbl:'Sessions total'},{val:'?',lbl:'Trajectory'}],
+    proposal_note:'Not enough sessions together for a meaningful recommendation. Play again and the system will update.',
+  },
+};
+
+function toggleMock(){
+  useMock = !useMock;
+  const btn = document.getElementById('mock-btn');
+  btn.textContent = useMock ? 'LIVE' : 'MOCK';
+  btn.style.borderColor  = useMock ? '#d97706' : '#1a1a1a';
+  btn.style.color        = useMock ? '#d97706' : '#333';
+  if (useMock) loadMock();
+  else init();
+}
+
+function loadMock(){
+  S.myId      = MOCK_ME.id;
+  S.myName    = MOCK_ME.name;
+  S.partners  = MOCK_PARTNERS;
+  S.challenges = MOCK_CHALLENGES;
+  renderSidebar();
+  openDossier(MOCK_PARTNERS[0].student_id);
+}
+
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Constellation Map Maker</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#000;color:#eee;font-family:Arial,sans-serif;font-size:12px;line-height:1.4;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* nav */
+nav{flex-shrink:0;background:#000;border-bottom:2px solid #fff;display:flex;align-items:stretch;padding:0 14px;gap:0;z-index:10}
+.logo{font-size:10px;letter-spacing:3px;font-weight:700;padding:10px 14px 10px 0;border-right:1px solid #1e1e1e;margin-right:4px;white-space:nowrap;align-self:center;text-transform:uppercase;color:#fff}
+.tab{padding:10px 11px;cursor:pointer;font-size:10px;letter-spacing:1px;color:#444;border-bottom:3px solid transparent;transition:all .1s;text-transform:uppercase;user-select:none;white-space:nowrap}
+.tab:hover{color:#bbb}
+.tab.active{color:#fff;border-bottom-color:#fff;font-weight:700}
+
+/* pane layout */
+.pane{display:none;flex:1;overflow:hidden;min-height:0}
+.pane.active{display:flex}
+.pane-full{display:none;flex:1;overflow-y:auto;min-height:0;padding:16px 20px}
+.pane-full.active{display:block}
+
+/* sidebar */
+.sidebar{width:290px;flex-shrink:0;border-right:1px solid #111;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.sidebar::-webkit-scrollbar{width:3px}
+.sidebar::-webkit-scrollbar-thumb{background:#1a1a1a}
+
+/* canvas area */
+.canvas-wrap{flex:1;position:relative;overflow:hidden;background:#000}
+#mapCanvas{display:block;width:100%;height:100%}
+.map-overlay{position:absolute;bottom:12px;right:14px;font-size:9px;color:rgba(255,255,255,.18);letter-spacing:.1em;pointer-events:none;font-family:'Courier New',monospace;text-align:right}
+.spinner{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.8);font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:#555}
+.spinner.on{display:flex}
+
+/* typography */
+h2{font-size:10px;letter-spacing:2px;font-weight:700;text-transform:uppercase;border-bottom:1px solid #fff;padding-bottom:5px;margin-bottom:10px}
+h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+h4{font-size:10px;font-weight:700;color:#666;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+
+/* cards */
+.card{border:1px solid #1a1a1a;padding:10px;background:#060606}
+.card-inv{border:1px solid #fff;padding:10px;background:#fff;color:#000}
+.card-inv h4{color:#333}
+
+/* form controls */
+.lbl{display:block;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#444;margin-bottom:3px}
+input[type=text],input[type=password],input[type=number],textarea,select{
+  width:100%;background:#000;border:1px solid #1a1a1a;color:#eee;
+  padding:6px 8px;font-family:Arial,sans-serif;font-size:11px;
+  outline:none;transition:border-color .12s;appearance:none;-webkit-appearance:none}
+input:focus,textarea:focus,select:focus{border-color:#fff}
+textarea{resize:vertical;min-height:70px;line-height:1.5}
+select option{background:#111}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row4{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+
+/* file button */
+.file-btn{display:block;width:100%;padding:6px 8px;border:1px solid #1a1a1a;color:#444;cursor:pointer;transition:all .12s;text-align:center;font-size:9px;letter-spacing:.12em;text-transform:uppercase}
+.file-btn:hover{border-color:#555;color:#eee}
+.file-btn.has{border-color:#fff;color:#eee}
+input[type=file]{display:none}
+
+/* buttons */
+.btn{background:#000;border:1px solid #fff;color:#fff;padding:7px 10px;cursor:pointer;font-size:10px;font-family:Arial,sans-serif;font-weight:700;letter-spacing:.12em;text-transform:uppercase;transition:all .1s;width:100%}
+.btn:hover:not(:disabled){background:#fff;color:#000}
+.btn:disabled{opacity:.3;cursor:not-allowed}
+.btn-dim{border-color:#222;color:#333}
+.btn-dim:hover:not(:disabled){background:#fff;color:#000;border-color:#fff}
+.btn-sm{font-size:9px;padding:4px 8px;letter-spacing:.08em}
+
+/* badges */
+.badge{display:inline-block;padding:1px 5px;font-size:9px;letter-spacing:1px;text-transform:uppercase;border:1px solid #eee;font-weight:700;color:#eee}
+.badge-wh{background:#fff;color:#000;border-color:#fff}
+.badge-dim{border-color:#333;color:#333}
+.badge-dash{border:1px dashed #fff}
+
+/* tables */
+table.t{width:100%;border-collapse:collapse;font-size:10px}
+table.t th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 7px;border-bottom:2px solid #fff;text-align:left;background:#080808;color:#eee}
+table.t td{padding:4px 7px;border-bottom:1px solid #0e0e0e;vertical-align:top;color:#bbb}
+table.t tr:hover td{background:#070707}
+
+/* separators */
+.sep{border:none;border-top:1px solid #0e0e0e;margin:2px 0}
+.sep-w{border:none;border-top:1px solid #fff;margin:8px 0}
+
+/* inset / warn */
+.inset{background:#060606;border-left:3px solid #fff;padding:7px 9px;font-size:10px;line-height:1.7;margin:5px 0;color:#bbb}
+.warn{background:#060606;border:1px dashed #fff;padding:7px 9px;font-size:10px;line-height:1.7;margin:5px 0;color:#bbb}
+
+/* info rows */
+.ir{display:flex;justify-content:space-between;font-size:10px;padding:3px 0;border-bottom:1px solid #0a0a0a;gap:8px}
+.ir span:first-child{color:#444;flex-shrink:0}
+.ir span:last-child{font-weight:700;color:#eee;font-family:'Courier New',monospace;text-align:right}
+
+/* bars */
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.bar-lbl{font-size:9px;color:#444;flex-shrink:0;text-transform:uppercase;letter-spacing:.08em;width:55px}
+.bar-track{flex:1;height:10px;background:#080808;border:1px solid #1a1a1a;position:relative;overflow:hidden}
+.bar-fill{height:100%;position:absolute;left:0;background:#fff;transition:width .3s}
+.bar-fill-neg{background:#555}
+.bar-val{font-size:9px;color:#666;font-family:'Courier New',monospace;width:42px;text-align:right;flex-shrink:0}
+
+/* status */
+.status{font-size:10px;padding:6px 9px;border-left:2px solid #222;color:#444;display:none;line-height:1.5}
+.status.err{border-color:#f04;color:#f04}
+.status.ok{border-color:#3e8;color:#3e8}
+.status.info{border-color:#fff;color:#bbb}
+
+/* note */
+.note{font-size:9px;color:#333;line-height:1.6;margin-top:3px}
+
+/* image preview panel */
+.img-panels{display:none;gap:6px;margin-top:6px}
+.img-panels.visible{display:grid;grid-template-columns:1fr 1fr}
+.img-panel{border:1px solid #1a1a1a;background:#060606;overflow:hidden;position:relative}
+.img-panel canvas{display:block;width:100%;height:auto}
+.img-panel-lbl{font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:#333;padding:3px 5px;border-bottom:1px solid #111}
+.img-stats{font-size:9px;color:#444;padding:3px 5px;font-family:'Courier New',monospace}
+
+/* ═══ PHILOSOPHY DIAGRAM ═══ */
+.pipe-outer{overflow-x:auto;padding-bottom:4px;margin-bottom:12px;-webkit-overflow-scrolling:touch}
+.pipe{display:flex;align-items:stretch;gap:0;min-width:680px}
+.pipe-node{flex:1;min-width:82px;border:1px solid #1e1e1e;background:#060606;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:10px 4px;transition:all .12s;user-select:none;position:relative;gap:4px}
+.pipe-node:hover{border-color:#555;background:#0a0a0a}
+.pipe-node.sel{border-color:#fff;border-width:2px;background:#0a0a0a}
+.pipe-node .pn{font-size:22px;font-weight:700;color:#fff;font-family:'Courier New',monospace;line-height:1}
+.pipe-node .pn-name{font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:#444;text-align:center;line-height:1.3}
+.pipe-node.sel .pn-name{color:#999}
+.pipe-arrow{display:flex;align-items:center;padding:0 3px;color:#222;font-size:14px;flex-shrink:0;align-self:center}
+
+.layer-detail{display:none;border:2px solid #fff;padding:14px;background:#050505;margin-bottom:12px}
+.layer-detail.active{display:block}
+
+/* scoring regime */
+.regime-label{font-size:10px;color:#bbb;padding:8px 9px;border-left:3px solid #fff;background:#060606;margin-top:8px;line-height:1.6}
+.regime-label.neg{border-color:#555;color:#888}
+
+/* strategy / interaction matrix */
+.matrix{display:grid;gap:1px;background:#111;border:1px solid #111;font-size:9px;margin-top:4px}
+.mc{background:#000;padding:5px 6px;text-align:center}
+.mc.hdr{color:#444;text-transform:uppercase;font-size:8px;font-weight:700;letter-spacing:.1em;background:#080808}
+.mc.rhdr{text-align:left;color:#666;padding-left:8px;background:#060606;font-size:9px}
+.mc.full{background:#fff;color:#000;font-weight:700;font-size:8px}
+.mc.part{background:#222;color:#888;font-size:8px}
+.mc.none{background:#050505;color:#1a1a1a;font-size:8px}
+
+/* grids for rules / philosophy panes */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr}.sidebar{width:250px}}
+</style>
+</head>
+<body>
+
+<!-- ═══ NAV ═══ -->
+<nav>
+  <span class="logo">Map Maker</span>
+  <div class="tab active" id="t-gen"   onclick="sw('gen')">Generate</div>
+  <div class="tab"        id="t-phil"  onclick="sw('phil')">Philosophy</div>
+  <div class="tab"        id="t-rules" onclick="sw('rules')">Rules</div>
+</nav>
+
+<!-- ═══ GENERATE PANE ═══ -->
+<div class="pane active" id="p-gen">
+
+  <aside class="sidebar">
+
+    <!-- API + Model -->
+    <div>
+      <label class="lbl">Gemini API Key</label>
+      <input type="password" id="apiKey" placeholder="AIza…" autocomplete="off" spellcheck="false">
+    </div>
+    <div>
+      <label class="lbl">Model</label>
+      <select id="modelSel"><option value="models/gemini-1.5-flash">gemini-1.5-flash ★</option></select>
+    </div>
+
+    <hr class="sep">
+
+    <!-- Title + Prompt -->
+    <div>
+      <label class="lbl">Map Title</label>
+      <input type="text" id="mapTitle" value="Untitled Map">
+    </div>
+    <div>
+      <label class="lbl">Prompt</label>
+      <textarea id="prompt" rows="5">2-team symmetric map. Contested center with one wormhole (req 2–3). Two cluster anchors per team. Black holes near center. Dense center, sparse edges.</textarea>
+    </div>
+
+    <!-- Dimensions -->
+    <div class="row2">
+      <div><label class="lbl">Width</label><input type="number" id="dimX" value="320" min="50" max="2000"></div>
+      <div><label class="lbl">Height</label><input type="number" id="dimY" value="180" min="50" max="2000"></div>
+    </div>
+
+    <!-- Multipliers -->
+    <div>
+      <label class="lbl">Scoring Multipliers</label>
+      <div class="row4">
+        <div><label class="lbl" style="color:#333">Count</label><input type="number" id="mC" value="500" step="1"></div>
+        <div><label class="lbl" style="color:#333">Dist</label><input type="number" id="mD" value="1"   step="0.1"></div>
+        <div><label class="lbl" style="color:#333">HQ</label>  <input type="number" id="mH" value="10"  step="1"></div>
+        <div><label class="lbl" style="color:#333">Dest</label><input type="number" id="mX" value="1"   step="1"></div>
+      </div>
+      <p class="note">Any value including negative. See Philosophy → Scoring Regime for strategic implications.</p>
+    </div>
+
+    <hr class="sep">
+
+    <!-- Image section -->
+    <div>
+      <label class="lbl">Reference Image</label>
+      <label class="file-btn" id="fileLbl" for="imgFile">Choose image…</label>
+      <input type="file" id="imgFile" accept="image/*">
+    </div>
+    <div>
+      <label class="lbl">Processing Algorithm</label>
+      <select id="algSel">
+        <option value="poisson">Poisson Disk Sampling</option>
+        <option value="sobel">Sobel Edge Detection</option>
+        <option value="canny">Canny Edge Detection</option>
+        <option value="harris">Harris Corner Detection</option>
+        <option value="sift">SIFT-like Feature Points</option>
+        <option value="delaunay">Delaunay Triangulation</option>
+        <option value="voronoi">Voronoi Diagram</option>
+        <option value="watershed">Watershed Segmentation</option>
+        <option value="contour">Contour Tracing</option>
+        <option value="skeleton">Morphological Skeleton</option>
+        <option value="stippling">Weighted Stippling</option>
+        <option value="halftone">Halftone Dots</option>
+      </select>
+    </div>
+
+    <!-- Image previews -->
+    <div class="img-panels" id="imgPanels">
+      <div class="img-panel">
+        <div class="img-panel-lbl">Original</div>
+        <canvas id="origCanvas"></canvas>
+      </div>
+      <div class="img-panel">
+        <div class="img-panel-lbl">Processed</div>
+        <canvas id="procCanvas"></canvas>
+      </div>
+    </div>
+    <div class="img-stats" id="imgStats" style="display:none"></div>
+
+    <hr class="sep">
+
+    <button class="btn" id="genBtn">Generate Map</button>
+    <div class="status" id="status"></div>
+
+    <!-- Stats -->
+    <div>
+      <div class="ir"><span>Stars</span><span id="iStars">—</span></div>
+      <div class="ir"><span>Lines</span><span id="iLines">—</span></div>
+      <div class="ir"><span><span style="color:#ccc">●</span> Normal</span><span id="iN">—</span></div>
+      <div class="ir"><span><span style="color:#e8c44a">●</span> Cluster</span><span id="iC">—</span></div>
+      <div class="ir"><span><span style="color:#4ab8e8">●</span> Wormhole</span><span id="iW">—</span></div>
+      <div class="ir"><span><span style="color:#e84a4a">●</span> Black Hole</span><span id="iB">—</span></div>
+    </div>
+
+    <hr class="sep">
+    <button class="btn btn-dim" id="dlBtn" disabled>Download JSON</button>
+    <button class="btn btn-dim" id="cpBtn" disabled style="margin-top:5px">Copy JSON</button>
+
+  </aside>
+
+  <!-- Canvas -->
+  <main class="canvas-wrap">
+    <canvas id="mapCanvas"></canvas>
+    <div class="map-overlay" id="mapOverlay"></div>
+    <div class="spinner" id="spinner">Generating…</div>
+  </main>
+</div>
+
+<!-- ═══ PHILOSOPHY PANE ═══ -->
+<div class="pane-full" id="p-phil">
+
+  <h2>Design Reasoning System — 7 Layers</h2>
+  <p style="font-size:10px;color:#555;margin-bottom:12px">
+    Every map passes through these layers in order. Each layer constrains the next. Click a layer to inspect its decision framework.
+  </p>
+
+  <!-- Pipeline -->
+  <div class="pipe-outer">
+    <div class="pipe" id="pipe">
+      <div class="pipe-node sel" id="pn1" onclick="selLayer(1)"><div class="pn">1</div><div class="pn-name">Scoring<br>Regime</div></div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-node" id="pn2" onclick="selLayer(2)"><div class="pn">2</div><div class="pn-name">Team<br>Symmetry</div></div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-node" id="pn3" onclick="selLayer(3)"><div class="pn">3</div><div class="pn-name">Win<br>Conditions</div></div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-node" id="pn4" onclick="selLayer(4)"><div class="pn">4</div><div class="pn-name">Cluster<br>Anchors</div></div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-node" id="pn5" onclick="selLayer(5)"><div class="pn">5</div><div class="pn-name">Black<br>Holes</div></div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-node" id="pn6" onclick="selLayer(6)"><div class="pn">6</div><div class="pn-name">Network<br>Topology</div></div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-node" id="pn7" onclick="selLayer(7)"><div class="pn">7</div><div class="pn-name">Strategy<br>Validation</div></div>
+    </div>
+  </div>
+
+  <!-- Layer detail panels -->
+  <div id="ld1" class="layer-detail active">
+    <div class="grid2">
+      <div>
+        <h4>Core Question</h4>
+        <div class="inset">What does this multiplier configuration reward? Design topology to make that regime viable.</div>
+        <h4 style="margin-top:10px">Design Guidelines</h4>
+        <div class="inset"><strong>High M.count</strong> → dense clusters of short lines. Territory dominates. Star count matters most.</div>
+        <div class="inset"><strong>High M.dist</strong> → long corridors, sparse networks. Path length is the scoring engine.</div>
+        <div class="inset"><strong>High M.hq</strong> → HQ placement becomes the first strategic decision. Position near long-range lines.</div>
+        <div class="inset"><strong>High M.dest</strong> → Black holes are primary weapons. Map must make them reachable but dangerous.</div>
+        <div class="inset"><strong>Negative multipliers</strong> → that component becomes a penalty. Negative M.dist punishes long lines.</div>
+      </div>
+      <div>
+        <h4>Failure Modes</h4>
+        <div class="warn">Designing topology for M.count=500 then asking the AI to generate long-distance play. The map and the regime must match.</div>
+        <div class="warn">Setting all multipliers equal. Results in no dominant strategy, which usually means no interesting strategy.</div>
+        <h4 style="margin-top:10px">Live Regime Analysis</h4>
+        <div id="regimeBars">
+          <div class="bar-row"><span class="bar-lbl">Count</span><div class="bar-track"><div class="bar-fill" id="bC"></div></div><span class="bar-val" id="bCv">500</span></div>
+          <div class="bar-row"><span class="bar-lbl">Dist</span><div class="bar-track"><div class="bar-fill" id="bD"></div></div><span class="bar-val" id="bDv">1</span></div>
+          <div class="bar-row"><span class="bar-lbl">HQ</span><div class="bar-track"><div class="bar-fill" id="bH"></div></div><span class="bar-val" id="bHv">10</span></div>
+          <div class="bar-row"><span class="bar-lbl">Dest</span><div class="bar-track"><div class="bar-fill" id="bX"></div></div><span class="bar-val" id="bXv">1</span></div>
+        </div>
+        <div class="regime-label" id="regimeLabel">Territory-dominant regime. Owning the most connected lines wins. Design for dense clusters with many short connections.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ld2" class="layer-detail">
+    <div class="grid2">
+      <div>
+        <h4>Core Question</h4>
+        <div class="inset">Does every team start with equivalent access — not mirrored layout, but equivalent strategic options?</div>
+        <h4 style="margin-top:10px">Symmetry Types</h4>
+        <div class="inset"><strong>Bilateral</strong> (2 teams) — reflected across a center axis. Simple, reliable, fair by construction.</div>
+        <div class="inset"><strong>Rotational 180°</strong> (2 teams) — same start zone rotated. More varied than bilateral, still provably fair.</div>
+        <div class="inset"><strong>Triangular 120°</strong> (3 teams) — no team has shorter path to wormhole or larger starting zone.</div>
+        <div class="inset"><strong>Asymmetric</strong> — valid only if equivalence is proven by equivalent star counts, line counts, and wormhole distance in each starting zone.</div>
+      </div>
+      <div>
+        <h4>What Must Be Equivalent</h4>
+        <div class="card" style="margin-bottom:8px">
+          <div class="ir"><span>Star count in expansion range</span><span>±5%</span></div>
+          <div class="ir"><span>Lines in starting zone</span><span>±10%</span></div>
+          <div class="ir"><span>Distance to nearest wormhole</span><span>±15%</span></div>
+          <div class="ir"><span>Cluster coverage</span><span>same count</span></div>
+          <div class="ir"><span>Black hole reachability</span><span>same count reachable</span></div>
+        </div>
+        <h4>Failure Modes</h4>
+        <div class="warn">One team starts adjacent to a wormhole. Even if the map looks symmetric, if one path to the wormhole is shorter, one team has a structural advantage.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ld3" class="layer-detail">
+    <div class="grid2">
+      <div>
+        <h4>Core Question</h4>
+        <div class="inset">Is the wormhole placed where both teams must fight to reach it? Are there at least 3 distinct path routes from each team's territory?</div>
+        <h4 style="margin-top:10px">Placement Rules</h4>
+        <div class="inset"><strong>Neutral contested space</strong> — not inside any team's natural expansion zone. If a team can reach it in round 1 unopposed, it's too close.</div>
+        <div class="inset"><strong>Three distinct paths</strong> minimum from each team. If all paths go through the same star, that star becomes a mandatory choke and removes strategic choice.</div>
+        <div class="inset"><strong>minReq timing</strong> — with default play speed (10 moves/round, 15 steals), minReq=2 is reachable in ~3 rounds. minReq=4 requires ~6 rounds. Design accordingly.</div>
+        <div class="inset"><strong>Multiple wormholes</strong> create a 3-way tension: race your wormhole, block theirs, or ignore both and win on score.</div>
+      </div>
+      <div>
+        <h4>Format</h4>
+        <div class="card-inv"><code style="font-size:10px">[x, y, 3, minReq, maxReq]</code><br><span style="font-size:10px">e.g. [160, 90, 3, 2, 4] — wormhole at center, req randomized 2–4</span></div>
+        <h4 style="margin-top:10px">Failure Modes</h4>
+        <div class="warn">Wormhole placed at map edge. Only one team can approach without crossing the other's territory. This is not a win condition — it's a free win.</div>
+        <div class="warn">Single path to wormhole. The map collapses into one decisive choke point. Every game plays identically.</div>
+        <div class="warn">minReq too high. Game never ends via wormhole — always score-based. Wormhole becomes meaningless.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ld4" class="layer-detail">
+    <div class="grid2">
+      <div>
+        <h4>Core Question</h4>
+        <div class="inset">Are clusters placed where holding them creates meaningful control — not scattered, not concentrated?</div>
+        <h4 style="margin-top:10px">Placement Archetypes</h4>
+        <div class="inset"><strong>Near wormholes</strong> → protected launch pads. Hard to steal, so teams must path around them. High-value, highly contested.</div>
+        <div class="inset"><strong>Map center</strong> → contested anchor. Whoever holds it gains stability across the middle. Creates a clear strategic objective.</div>
+        <div class="inset"><strong>Starting zones</strong> → protected home bases. Reduces early-game chaos. Teams have a stable foundation to build from.</div>
+        <div class="inset"><strong>Corridor chokepoints</strong> → whoever holds the cluster controls the corridor. Powerful but potentially game-warping if there's only one corridor.</div>
+      </div>
+      <div>
+        <h4>Format</h4>
+        <div class="card-inv"><code style="font-size:10px">[x, y, 2]</code><br><span style="font-size:10px">No minReq/maxReq. Protection activates automatically when connected stars are owned by the cluster's team.</span></div>
+        <h4 style="margin-top:10px">Calibration</h4>
+        <div class="card" style="margin-bottom:8px">
+          <div class="ir"><span>0 clusters</span><span>Constant steal chaos. High variance.</span></div>
+          <div class="ir"><span>1–2 clusters</span><span>Minimal stability. Mostly volatile.</span></div>
+          <div class="ir"><span>2–4 clusters</span><span>Optimal. Clear anchors without stalemate.</span></div>
+          <div class="ir"><span>5+ clusters</span><span>Stalemate risk. Territory locks early.</span></div>
+        </div>
+        <div class="warn">Clustering all clusters in one region. One team gets a fortress, the other gets nothing. The map is decided by who wins the cluster area.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ld5" class="layer-detail">
+    <div class="grid2">
+      <div>
+        <h4>Core Question</h4>
+        <div class="inset">Is each black hole reachable by multiple teams, placed in contested territory, with a req range appropriate to how often you want it triggered?</div>
+        <h4 style="margin-top:10px">Requirement Calibration</h4>
+        <div class="inset"><strong>req 2–3</strong> → active trap. Triggered frequently. Changes board state every few rounds. High chaos.</div>
+        <div class="inset"><strong>req 3–4</strong> → balanced. Meaningful threat. Triggered by a committed team. Creates a clear tactical decision.</div>
+        <div class="inset"><strong>req 4–5</strong> → background threat. Rarely triggered. Mostly shapes movement patterns by making certain star chains dangerous.</div>
+      </div>
+      <div>
+        <h4>Format</h4>
+        <div class="card-inv"><code style="font-size:10px">[x, y, 4, minReq, maxReq]</code><br><span style="font-size:10px">e.g. [80, 45, 4, 2, 4] — black hole at (80,45), req randomized 2–4</span></div>
+        <h4 style="margin-top:10px">Failure Modes</h4>
+        <div class="warn">Black hole only reachable by one team. It's not a mutual threat — it's a free weapon for that team. Remove or relocate.</div>
+        <div class="warn">Black hole placed in isolated region with no valuable connected stars. Triggering it destroys worthless territory. No strategic depth.</div>
+        <div class="warn">Too many black holes. The map becomes a minefield. Players spend most moves avoiding explosions rather than building networks.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ld6" class="layer-detail">
+    <div class="grid2">
+      <div>
+        <h4>Core Question</h4>
+        <div class="inset">Is every star reachable from every other star? Does line density vary purposefully — dense in contested zones, sparse at edges?</div>
+        <h4 style="margin-top:10px">Connectivity Patterns</h4>
+        <div class="inset"><strong>Hub star</strong> (6–12 lines) — high-value choke point. Contested. Losing it cuts multiple paths simultaneously.</div>
+        <div class="inset"><strong>Corridor</strong> (2 lines each in chain) — contested pathway between regions. Each star on the chain is worth controlling.</div>
+        <div class="inset"><strong>Dense web</strong> (4–6 lines each) — many routing options. Hard to blockade. Rewards global thinking over local tactics.</div>
+        <div class="inset"><strong>Leaf star</strong> (1 line) — high-risk exposed position. Easy to steal. High reward if maintained.</div>
+      </div>
+      <div>
+        <h4>Metrics</h4>
+        <div class="card" style="margin-bottom:8px">
+          <div class="ir"><span>Avg degree (lines/star)</span><span>3–5 optimal</span></div>
+          <div class="ir"><span>Max degree (hub stars)</span><span>≤12</span></div>
+          <div class="ir"><span>Isolated stars (degree 0)</span><span>0. None.</span></div>
+          <div class="ir"><span>Graph connectivity</span><span>All stars reachable</span></div>
+          <div class="ir"><span>Center density / edge density</span><span>&gt; 2× ratio</span></div>
+        </div>
+        <h4>Failure Modes</h4>
+        <div class="warn">Uniform density across the entire map. No gradient from center to edge. All positions feel equivalent. No flow toward or away from contested zones.</div>
+        <div class="warn">Average degree &lt; 2. Stars become isolated quickly after any steals. Network collapses too easily.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ld7" class="layer-detail">
+    <div class="grid2">
+      <div>
+        <h4>Core Question</h4>
+        <div class="inset">Are all applicable strategies viable simultaneously? Is the optimal choice non-obvious until well into the game?</div>
+        <h4 style="margin-top:10px">Strategy Checklist</h4>
+        <div class="inset"><strong>A. Rush</strong> — is there a path to the wormhole that a committed team can reach before the opponent blocks it? If yes, viable.</div>
+        <div class="inset"><strong>B. Territory</strong> — can a team win on count score alone by expanding aggressively? If yes, viable.</div>
+        <div class="inset"><strong>C. Network</strong> — do long-distance lines exist that make distance scoring competitive with territory scoring? If yes, viable.</div>
+        <div class="inset"><strong>D. Disruption</strong> — can black holes be triggered to meaningfully damage the opponent's score at a reasonable cost? If yes, viable.</div>
+        <div class="inset"><strong>E. Defense</strong> — can a team hold 2–3 clusters, build stable territory, and win without ever racing the wormhole? If yes, viable.</div>
+      </div>
+      <div>
+        <h4>The Optimal Choice Test</h4>
+        <div class="warn">A great map passes this test: after round 2, no player should be certain which strategy will win. If the answer is obvious from turn 1, the map has a dominant strategy and is less interesting.</div>
+        <h4 style="margin-top:10px">Strategy Tension Matrix</h4>
+        <div class="matrix" style="grid-template-columns:110px repeat(5,1fr);margin-top:6px">
+          <div class="mc hdr"></div>
+          <div class="mc hdr">Rush</div><div class="mc hdr">Terr</div><div class="mc hdr">Net</div><div class="mc hdr">Disrupt</div><div class="mc hdr">Def</div>
+          <div class="mc rhdr">Rush</div><div class="mc none">—</div><div class="mc part">Opp</div><div class="mc none">Indep</div><div class="mc full">Risk</div><div class="mc part">Opp</div>
+          <div class="mc rhdr">Territory</div><div class="mc part">Opp</div><div class="mc none">—</div><div class="mc part">Opp</div><div class="mc full">Risk</div><div class="mc part">Sim</div>
+          <div class="mc rhdr">Network</div><div class="mc none">Indep</div><div class="mc part">Opp</div><div class="mc none">—</div><div class="mc part">Risk</div><div class="mc none">Indep</div>
+          <div class="mc rhdr">Disruption</div><div class="mc full">Counters</div><div class="mc full">Counters</div><div class="mc part">Counters</div><div class="mc none">—</div><div class="mc part">Neutral</div>
+          <div class="mc rhdr">Defense</div><div class="mc part">Opp</div><div class="mc part">Sim</div><div class="mc none">Indep</div><div class="mc part">Neutral</div><div class="mc none">—</div>
+        </div>
+        <p class="note" style="margin-top:6px"><span class="mc full" style="display:inline;padding:1px 4px">■</span> Strong opposition &nbsp; <span class="mc part" style="display:inline;padding:1px 4px">■</span> Partial opposition &nbsp; <span class="mc none" style="display:inline;padding:1px 4px">■</span> Independent</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scoring × Star Type interaction matrix -->
+  <div class="sep-w"></div>
+  <h2>Score Component × Star Type Interaction</h2>
+  <div class="matrix" style="grid-template-columns:90px repeat(4,1fr)">
+    <div class="mc hdr"></div>
+    <div class="mc hdr" style="color:#ccc">Normal</div>
+    <div class="mc hdr" style="color:#e8c44a">Cluster</div>
+    <div class="mc hdr" style="color:#4ab8e8">Wormhole</div>
+    <div class="mc hdr" style="color:#e84a4a">Black Hole</div>
+    <div class="mc rhdr">Count ×M</div>
+    <div class="mc full">Direct</div><div class="mc full">Direct</div>
+    <div class="mc full">Direct</div><div class="mc none">Cannot own</div>
+    <div class="mc rhdr">Dist ×M</div>
+    <div class="mc full">Direct</div><div class="mc full">Direct</div>
+    <div class="mc full">Direct</div><div class="mc none">Cannot own</div>
+    <div class="mc rhdr">HQ ×M</div>
+    <div class="mc part">If HQ</div><div class="mc part">If HQ</div>
+    <div class="mc part">If HQ</div><div class="mc none">Cannot own</div>
+    <div class="mc rhdr">Dest ×M</div>
+    <div class="mc none">—</div><div class="mc none">—</div>
+    <div class="mc none">—</div><div class="mc full">Triggers it</div>
+  </div>
+  <p class="note" style="margin-top:8px">Black holes cannot be claimed or owned. They exist only as triggers. All scoring from them flows through M.destruction × destroyed_star_score.</p>
+
+</div><!-- /p-phil -->
+
+<!-- ═══ RULES PANE ═══ -->
+<div class="pane-full" id="p-rules">
+
+  <div class="grid2" style="margin-bottom:14px">
+    <div>
+      <h2>Star Types</h2>
+      <table class="t">
+        <tr><th>JSON</th><th>Name</th><th>Mechanic</th></tr>
+        <tr>
+          <td><span class="badge-wh badge">1</span></td>
+          <td style="color:#ccc">Normal</td>
+          <td>Standard node. Claimable and stealable.</td>
+        </tr>
+        <tr>
+          <td><span class="badge" style="border-color:#e8c44a;color:#e8c44a">2</span></td>
+          <td style="color:#e8c44a">Cluster</td>
+          <td>Cannot be stolen. All directly connected stars become unsteallable while connected.</td>
+        </tr>
+        <tr>
+          <td><span class="badge" style="border-color:#4ab8e8;color:#4ab8e8">3</span></td>
+          <td style="color:#4ab8e8">Wormhole</td>
+          <td><strong style="color:#eee">Win condition.</strong> First team to form [minReq–maxReq] non-overlapping paths through it wins immediately. Paths may not share any star.</td>
+        </tr>
+        <tr>
+          <td><span class="badge" style="border-color:#e84a4a;color:#e84a4a">4</span></td>
+          <td style="color:#e84a4a">Black Hole</td>
+          <td><strong style="color:#eee">Explosive.</strong> When a team forms [minReq–maxReq] paths to it, all of that team's stars connected to it are permanently destroyed. Cannot be claimed.</td>
+        </tr>
+      </table>
+      <p class="note" style="margin-top:8px">minReq / maxReq are optional positions 3 and 4 in the star array. Game randomises actual requirement within that range at start. Default: 3. Maps do not need to include all types.</p>
+    </div>
+
+    <div>
+      <h2>Scoring Formula</h2>
+      <div class="card" style="margin-bottom:10px">
+        <pre style="font-size:11px;color:#aaa;line-height:2;font-family:'Courier New',monospace">finalScore =
+  lineCount    × <strong style="color:#fff">M.count</strong>
++ lineDistance × <strong style="color:#fff">M.dist</strong>
++ hqDistance   × <strong style="color:#fff">M.hq</strong>
++ destroyed    × <strong style="color:#fff">M.dest</strong></pre>
+      </div>
+      <table class="t">
+        <tr><th>Component</th><th>Measures</th><th>Default ×</th></tr>
+        <tr><td>lineCount</td><td>Lines with both endpoints owned by team</td><td>500</td></tr>
+        <tr><td>lineDistance</td><td>Euclidean length sum of owned lines</td><td>1</td></tr>
+        <tr><td>hqDistance</td><td>Length sum of lines connected to HQ stars</td><td>10</td></tr>
+        <tr><td>destroyed</td><td>Score from black hole explosions</td><td>1</td></tr>
+      </table>
+      <div class="warn" style="margin-top:8px">All multipliers can be any real number including negative. Negative values turn that component into a penalty.</div>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div>
+      <h2>JSON Format</h2>
+      <div class="card">
+        <pre style="font-size:9px;color:#999;line-height:1.8;white-space:pre-wrap;font-family:'Courier New',monospace">{
+  "title":      "string",
+  "author":     "string",
+  "dimensions": [width, height],
+  "stars": [
+    [x, y, type],
+    [x, y, type, minReq, maxReq]
+  ],
+  "lines": [
+    [starIndexA, starIndexB]
+  ]
+}</pre>
+      </div>
+      <p class="note" style="margin-top:6px">Indices 0-based. No index ≥ stars.length. No [i,i]. Coordinates within [0,w]×[0,h]. minReq/maxReq only on types 3 and 4.</p>
+    </div>
+
+    <div>
+      <h2>Map Scale</h2>
+      <table class="t" style="margin-bottom:10px">
+        <tr><th>Axis (max)</th><th>Stars</th><th>Lines</th></tr>
+        <tr><td>≤ 100</td><td>15–40</td><td>25–70</td></tr>
+        <tr><td>100–200</td><td>40–100</td><td>70–180</td></tr>
+        <tr><td>200–320</td><td>80–200</td><td>140–380</td></tr>
+        <tr><td>320+</td><td>150–400</td><td>280–700</td></tr>
+      </table>
+      <h2>Type Distribution</h2>
+      <div class="bar-row"><span class="bar-lbl">Normal</span><div class="bar-track"><div class="bar-fill" style="width:80%"></div></div><span class="bar-val">70–90%</span></div>
+      <div class="bar-row"><span class="bar-lbl">Cluster</span><div class="bar-track"><div class="bar-fill" style="width:13%"></div></div><span class="bar-val">0–15%</span></div>
+      <div class="bar-row"><span class="bar-lbl">Wormhole</span><div class="bar-track"><div class="bar-fill" style="width:3%"></div></div><span class="bar-val">0–3 total</span></div>
+      <div class="bar-row"><span class="bar-lbl">Black Hole</span><div class="bar-track"><div class="bar-fill" style="width:8%"></div></div><span class="bar-val">0–8%</span></div>
+    </div>
+
+    <div>
+      <h2>Image Algorithms</h2>
+      <table class="t">
+        <tr><th>Algorithm</th><th>Extracts</th></tr>
+        <tr><td>Poisson Disk</td><td>Even distribution weighted by brightness</td></tr>
+        <tr><td>Sobel Edge</td><td>Stars along brightness boundaries</td></tr>
+        <tr><td>Canny Edge</td><td>Clean edges with hysteresis thresholding</td></tr>
+        <tr><td>Harris Corner</td><td>Structural intersection points</td></tr>
+        <tr><td>SIFT-like</td><td>Scale-space blob features</td></tr>
+        <tr><td>Delaunay</td><td>Triangulation mesh from sampled points</td></tr>
+        <tr><td>Voronoi</td><td>Region centers from Delaunay seeds</td></tr>
+        <tr><td>Watershed</td><td>Segmented region centers</td></tr>
+        <tr><td>Contour</td><td>Boundary-following paths</td></tr>
+        <tr><td>Skeleton</td><td>Morphological medial axis</td></tr>
+        <tr><td>Stippling</td><td>Darkness-weighted random distribution</td></tr>
+        <tr><td>Halftone</td><td>Regular grid filtered by brightness</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <h2 style="margin-top:14px">Strategic Archetypes</h2>
+  <table class="t">
+    <tr><th>Strategy</th><th>Wins when</th><th>Map enables via</th><th>Threatened by</th></tr>
+    <tr><td style="color:#eee">Rush</td><td>Wormhole connected before opponent blocks</td><td>Short path to wormhole, multiple routes</td><td>Blocking clusters, black holes on path</td></tr>
+    <tr><td style="color:#eee">Territory</td><td>Most owned lines at end</td><td>High star density, accessible expansion</td><td>Steals, opponent speed</td></tr>
+    <tr><td style="color:#eee">Network</td><td>Longest connected chains</td><td>Long-range lines, sparse corridors</td><td>Stealing intermediate stars, cutting paths</td></tr>
+    <tr><td style="color:#eee">Disruption</td><td>Black hole destroys opponent's network</td><td>Black holes reachable by both sides</td><td>Opponent avoiding black hole reach</td></tr>
+    <tr><td style="color:#eee">Defense</td><td>Protected territory outlasts opponent</td><td>Clusters in high-value positions</td><td>Wormhole races that bypass held territory</td></tr>
+  </table>
+
+</div><!-- /p-rules -->
+
+<script type="importmap">{"imports":{"@google/generative-ai":"https://esm.run/@google/generative-ai"}}</script>
+<script type="module">
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+// ─────────────────────────────────────────────
+// TAB SWITCHING
+// ─────────────────────────────────────────────
+window.sw = function(id) {
+  ['gen','phil','rules'].forEach(k => {
+    const p = document.getElementById('p-'+k);
+    const t = document.getElementById('t-'+k);
+    if (!p||!t) return;
+    const isGen = k==='gen';
+    p.className = (isGen?'pane':'pane-full') + (k===id?' active':'');
+    t.classList.toggle('active', k===id);
+  });
+  if (id==='gen') fitCanvas();
+  if (id==='phil') updateRegime();
+};
+
+// ─────────────────────────────────────────────
+// CANVAS
+// ─────────────────────────────────────────────
+const canvas = document.getElementById('mapCanvas');
+const ctx = canvas.getContext('2d');
+let currentMap = null;
+
+function fitCanvas() {
+  const a = canvas.parentElement;
+  canvas.width = a.offsetWidth;
+  canvas.height = a.offsetHeight;
+  if (currentMap) drawMap(currentMap); else { ctx.fillStyle='#000'; ctx.fillRect(0,0,canvas.width,canvas.height); }
+}
+window.addEventListener('resize', fitCanvas);
+fitCanvas();
+
+// ─────────────────────────────────────────────
+// MODEL LOADING
+// ─────────────────────────────────────────────
+let genAI = null;
+
+async function loadModels(key) {
+  const sel = document.getElementById('modelSel');
+  sel.innerHTML = '<option>Loading…</option>';
+  try {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+    const d = await r.json();
+    const models = (d.models||[]).filter(m=>m.supportedGenerationMethods?.includes('generateContent'));
+    const pri = ['gemini-1.5-flash','gemini-2.0-flash','gemini-1.5-flash-8b','gemini-1.5-pro','gemini-pro'];
+    models.sort((a,b)=>{
+      const an=a.name.split('/').pop(), bn=b.name.split('/').pop();
+      const ai=pri.findIndex(p=>an.startsWith(p)), bi=pri.findIndex(p=>bn.startsWith(p));
+      if(ai>=0&&bi>=0)return ai-bi; if(ai>=0)return -1; if(bi>=0)return 1; return 0;
+    });
+    sel.innerHTML='';
+    models.forEach(m=>{
+      const n=m.name.split('/').pop(), free=pri.some(p=>n.startsWith(p));
+      const o=document.createElement('option');
+      o.value=m.name; o.textContent=n+(free?' ★':'');
+      sel.appendChild(o);
+    });
+    if(!sel.value && models.length) sel.value=models[0].name;
+  } catch(e) {
+    sel.innerHTML='';
+    ['models/gemini-1.5-flash','models/gemini-1.5-pro','models/gemini-pro'].forEach(n=>{
+      const o=document.createElement('option'); o.value=n; o.textContent=n.split('/').pop()+' ★'; sel.appendChild(o);
+    });
+  }
+}
+
+// ─────────────────────────────────────────────
+// IMAGE PROCESSING
+// ─────────────────────────────────────────────
+let procResult = null;
+
+function grayArray(imgData, W, H) {
+  const g=new Float32Array(W*H), d=imgData.data;
+  for(let i=0;i<W*H;i++) g[i]=0.299*d[i*4]+0.587*d[i*4+1]+0.114*d[i*4+2];
+  return g;
+}
+function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+
+// Gaussian blur
+function gaussBlur(g,W,H,sigma=1.4){
+  const r=Math.ceil(sigma*3), k=[], out=new Float32Array(W*H);
+  let s=0; for(let i=-r;i<=r;i++){const v=Math.exp(-i*i/(2*sigma*sigma));k.push(v);s+=v;}
+  for(let i=0;i<k.length;i++)k[i]/=s;
+  const tmp=new Float32Array(W*H);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){let acc=0;for(let i=-r;i<=r;i++){const xx=clamp(x+i,0,W-1);acc+=g[y*W+xx]*k[i+r];}tmp[y*W+x]=acc;}
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){let acc=0;for(let i=-r;i<=r;i++){const yy=clamp(y+i,0,H-1);acc+=tmp[yy*W+x]*k[i+r];}out[y*W+x]=acc;}
+  return out;
+}
+
+// Sobel gradients
+function sobel(g,W,H){
+  const mag=new Float32Array(W*H), ang=new Float32Array(W*H);
+  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
+    const gx=(-g[(y-1)*W+x-1]-2*g[y*W+x-1]-g[(y+1)*W+x-1]+g[(y-1)*W+x+1]+2*g[y*W+x+1]+g[(y+1)*W+x+1]);
+    const gy=(-g[(y-1)*W+x-1]-2*g[(y-1)*W+x]-g[(y-1)*W+x+1]+g[(y+1)*W+x-1]+2*g[(y+1)*W+x]+g[(y+1)*W+x+1]);
+    mag[y*W+x]=Math.sqrt(gx*gx+gy*gy); ang[y*W+x]=Math.atan2(gy,gx);
+  }
+  return {mag,ang};
+}
+
+// Generate connections: k nearest neighbours
+function knn(pts, K=4){
+  const lines=new Set();
+  for(let i=0;i<pts.length;i++){
+    const dists=pts.map((_,j)=>j===i?Infinity:((pts[j].x-pts[i].x)**2+(pts[j].y-pts[i].y)**2)).map((d,j)=>({d,j})).sort((a,b)=>a.d-b.d).slice(0,K);
+    for(const {j} of dists){const key=Math.min(i,j)+','+Math.max(i,j);lines.add(key);}
+  }
+  return [...lines].map(s=>s.split(',').map(Number));
+}
+
+function processImage(g, W, H, alg) {
+  switch(alg) {
+    case 'sobel':   return algSobel(g,W,H);
+    case 'canny':   return algCanny(g,W,H);
+    case 'harris':  return algHarris(g,W,H);
+    case 'sift':    return algSIFT(g,W,H);
+    case 'delaunay':return algDelaunay(g,W,H);
+    case 'voronoi': return algVoronoi(g,W,H);
+    case 'watershed':return algWatershed(g,W,H);
+    case 'contour': return algContour(g,W,H);
+    case 'skeleton':return algSkeleton(g,W,H);
+    case 'stippling':return algStipple(g,W,H);
+    case 'halftone':return algHalftone(g,W,H);
+    case 'poisson': default: return algPoisson(g,W,H);
+  }
+}
+
+function algPoisson(g,W,H){
+  const minD=Math.min(W,H)/20, maxN=400, pts=[];
+  const active=[], cellW=Math.ceil(W/minD), cellH=Math.ceil(H/minD);
+  const grid=new Int32Array(cellW*cellH).fill(-1);
+  function addPt(x,y){const i=pts.length;pts.push({x,y});active.push(i);grid[Math.floor(y/minD)*cellW+Math.floor(x/minD)]=i;}
+  addPt(W*Math.random(),H*Math.random());
+  while(active.length&&pts.length<maxN){
+    const ai=Math.floor(Math.random()*active.length), src=pts[active[ai]]; let found=false;
+    for(let t=0;t<30;t++){
+      const a=Math.random()*Math.PI*2, r=minD*(1+Math.random());
+      const nx=src.x+r*Math.cos(a), ny=src.y+r*Math.sin(a);
+      if(nx<0||nx>=W||ny<0||ny>=H)continue;
+      const bright=1-(g[Math.floor(ny)*W+Math.floor(nx)]/255);
+      if(Math.random()>bright+0.25)continue;
+      const gx=Math.floor(nx/minD), gy=Math.floor(ny/minD); let ok=true;
+      for(let dy=-2;dy<=2&&ok;dy++)for(let dx=-2;dx<=2&&ok;dx++){
+        const cx=gx+dx,cy=gy+dy;
+        if(cx<0||cx>=cellW||cy<0||cy>=cellH)continue;
+        const pi=grid[cy*cellW+cx]; if(pi<0)continue;
+        if((pts[pi].x-nx)**2+(pts[pi].y-ny)**2<minD*minD)ok=false;
+      }
+      if(ok){addPt(nx,ny);found=true;break;}
+    }
+    if(!found)active.splice(ai,1);
+  }
+  return {pts, lines:knn(pts,4), desc:`Poisson disk: ${pts.length} points with brightness weighting`};
+}
+
+function algSobel(g,W,H){
+  const {mag}=sobel(g,W,H); const thr=50, sp=5; const pts=[];
+  for(let y=sp;y<H-sp;y+=sp)for(let x=sp;x<W-sp;x+=sp){
+    let mx=0,bx=x,by=y;
+    for(let dy=-sp;dy<=sp;dy++)for(let dx=-sp;dx<=sp;dx++){const v=mag[(y+dy)*W+(x+dx)];if(v>mx){mx=v;bx=x+dx;by=y+dy;}}
+    if(mx>thr)pts.push({x:bx,y:by,w:mx});
+  }
+  pts.sort((a,b)=>b.w-a.w); const top=pts.slice(0,350);
+  return {pts:top, lines:knn(top,3), desc:`Sobel edge: ${top.length} edge points`};
+}
+
+function algCanny(g,W,H){
+  const b=gaussBlur(g,W,H,1.4), {mag,ang}=sobel(b,W,H);
+  // Non-max suppression
+  const sup=new Float32Array(W*H);
+  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
+    const a=ang[y*W+x], m=mag[y*W+x];
+    const cos=Math.cos(a), sin=Math.sin(a);
+    const m1=mag[clamp(y+Math.round(sin),0,H-1)*W+clamp(x+Math.round(cos),0,W-1)];
+    const m2=mag[clamp(y-Math.round(sin),0,H-1)*W+clamp(x-Math.round(cos),0,W-1)];
+    if(m>=m1&&m>=m2)sup[y*W+x]=m;
+  }
+  // Double threshold
+  const lo=30,hi=90; const pts=[];
+  const sp=5;
+  for(let y=sp;y<H-sp;y+=sp)for(let x=sp;x<W-sp;x+=sp){
+    let mx=0,bx=x,by=y;
+    for(let dy=-sp;dy<=sp;dy++)for(let dx=-sp;dx<=sp;dx++){const v=sup[(y+dy)*W+(x+dx)];if(v>mx){mx=v;bx=x+dx;by=y+dy;}}
+    if(mx>hi)pts.push({x:bx,y:by,w:mx});
+    else if(mx>lo&&Math.random()<0.3)pts.push({x:bx,y:by,w:mx});
+  }
+  pts.sort((a,b)=>b.w-a.w); const top=pts.slice(0,350);
+  return {pts:top, lines:knn(top,3), desc:`Canny edge: ${top.length} edge points`};
+}
+
+function algHarris(g,W,H){
+  const b=gaussBlur(g,W,H,1), k=0.04, ws=3, thr=1e5;
+  const Ix=new Float32Array(W*H), Iy=new Float32Array(W*H);
+  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
+    Ix[y*W+x]=(b[y*W+x+1]-b[y*W+x-1])/2;
+    Iy[y*W+x]=(b[(y+1)*W+x]-b[(y-1)*W+x])/2;
+  }
+  const R=new Float32Array(W*H);
+  for(let y=ws;y<H-ws;y++)for(let x=ws;x<W-ws;x++){
+    let Ixx=0,Iyy=0,Ixy=0;
+    for(let dy=-ws;dy<=ws;dy++)for(let dx=-ws;dx<=ws;dx++){
+      const i=(y+dy)*W+(x+dx); Ixx+=Ix[i]*Ix[i]; Iyy+=Iy[i]*Iy[i]; Ixy+=Ix[i]*Iy[i];
+    }
+    const det=Ixx*Iyy-Ixy*Ixy, tr=Ixx+Iyy; R[y*W+x]=det-k*tr*tr;
+  }
+  const maxR=R.reduce((m,v)=>Math.max(m,v),0); const pts=[];
+  const supR=8;
+  for(let y=supR;y<H-supR;y+=3)for(let x=supR;x<W-supR;x+=3){
+    const r=R[y*W+x]; if(r<thr&&r<0.001*maxR)continue;
+    let isMax=true;
+    for(let dy=-supR;dy<=supR&&isMax;dy+=2)for(let dx=-supR;dx<=supR&&isMax;dx+=2)if(!(dx===0&&dy===0)&&R[(y+dy)*W+(x+dx)]>r)isMax=false;
+    if(isMax)pts.push({x,y,w:r});
+  }
+  pts.sort((a,b)=>b.w-a.w); const top=pts.slice(0,300);
+  return {pts:top, lines:knn(top,4), desc:`Harris corners: ${top.length} structural corners`};
+}
+
+function algSIFT(g,W,H){
+  const scales=[1,1.6,2.5,4]; const pts=[];
+  for(const s of scales){
+    const b=gaussBlur(g,W,H,s), {mag}=sobel(b,W,H);
+    const sp=Math.max(4,Math.floor(s*3));
+    for(let y=sp;y<H-sp;y+=sp)for(let x=sp;x<W-sp;x+=sp){
+      let mx=0;
+      for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)mx=Math.max(mx,mag[(y+dy)*W+(x+dx)]);
+      if(mx>25)pts.push({x,y,w:mx*s});
+    }
+  }
+  pts.sort((a,b)=>b.w-a.w);
+  // Deduplicate
+  const final=[], minSep=8;
+  for(const p of pts){
+    if(!final.some(q=>(q.x-p.x)**2+(q.y-p.y)**2<minSep*minSep))final.push(p);
+    if(final.length>=280)break;
+  }
+  return {pts:final, lines:knn(final,4), desc:`SIFT-like: ${final.length} scale-space features`};
+}
+
+function algDelaunay(g,W,H){
+  // Sample points + simple triangulation via knn
+  const pts=[]; const sp=8;
+  for(let y=sp;y<H-sp;y+=sp)for(let x=sp;x<W-sp;x+=sp){
+    const bright=1-(g[y*W+x]/255);
+    if(Math.random()<bright*0.6+0.15)pts.push({x,y,w:bright});
+  }
+  // Add boundary
+  const bsp=20;
+  for(let x=0;x<W;x+=bsp){pts.push({x,y:0,w:0.5});pts.push({x,y:H-1,w:0.5});}
+  for(let y=bsp;y<H-bsp;y+=bsp){pts.push({x:0,y,w:0.5});pts.push({x:W-1,y,w:0.5});}
+  const top=pts.sort((a,b)=>b.w-a.w).slice(0,320);
+  return {pts:top, lines:knn(top,5), desc:`Delaunay-like triangulation: ${top.length} points`};
+}
+
+function algVoronoi(g,W,H){
+  // Sample seed points, use them as Voronoi centers
+  const seeds=[]; const N=Math.min(120,Math.floor(W*H/400));
+  for(let i=0;i<N*10&&seeds.length<N;i++){
+    const x=Math.floor(Math.random()*W), y=Math.floor(Math.random()*H);
+    const bright=1-(g[y*W+x]/255);
+    if(Math.random()<bright+0.3)seeds.push({x,y,w:bright});
+  }
+  // Build Voronoi cell centers by k-means style relaxation
+  for(let iter=0;iter<3;iter++){
+    const sums=seeds.map(()=>({sx:0,sy:0,n:0}));
+    const step=3;
+    for(let y=0;y<H;y+=step)for(let x=0;x<W;x+=step){
+      let best=-1,bd=Infinity;
+      for(let i=0;i<seeds.length;i++){const d=(seeds[i].x-x)**2+(seeds[i].y-y)**2;if(d<bd){bd=d;best=i;}}
+      sums[best].sx+=x;sums[best].sy+=y;sums[best].n++;
+    }
+    sums.forEach((s,i)=>{if(s.n>0){seeds[i].x=Math.round(s.sx/s.n);seeds[i].y=Math.round(s.sy/s.n);}});
+  }
+  return {pts:seeds, lines:knn(seeds,4), desc:`Voronoi: ${seeds.length} region centers`};
+}
+
+function algWatershed(g,W,H){
+  // Find local minima (dark spots) as region seeds
+  const pts=[]; const r=8;
+  for(let y=r;y<H-r;y+=r)for(let x=r;x<W-r;x+=r){
+    const v=g[y*W+x]; let isMin=true;
+    for(let dy=-r;dy<=r&&isMin;dy+=2)for(let dx=-r;dx<=r&&isMin;dx+=2)if(!(dx===0&&dy===0)&&g[(y+dy)*W+(x+dx)]<v)isMin=false;
+    if(isMin&&v<200)pts.push({x,y,w:(255-v)/255});
+  }
+  // Add region centroids by sampling
+  const sp=12;
+  for(let y=sp;y<H-sp;y+=sp)for(let x=sp;x<W-sp;x+=sp){
+    if(Math.random()<0.3&&g[y*W+x]<180)pts.push({x,y,w:(255-g[y*W+x])/255});
+  }
+  pts.sort((a,b)=>b.w-a.w); const top=pts.slice(0,280);
+  return {pts:top, lines:knn(top,4), desc:`Watershed: ${top.length} region seeds`};
+}
+
+function algContour(g,W,H){
+  // Follow contour lines at multiple thresholds
+  const pts=[]; const thrs=[64,128,192];
+  for(const thr of thrs){
+    const sp=5;
+    for(let y=1;y<H-1;y+=sp)for(let x=1;x<W-1;x+=sp){
+      const v=g[y*W+x];
+      const neighbors=[g[(y-1)*W+x],g[(y+1)*W+x],g[y*W+x-1],g[y*W+x+1]];
+      const crosses=neighbors.some(n=>(n<thr)!==(v<thr));
+      if(crosses)pts.push({x,y,w:Math.abs(v-thr)/128});
+    }
+  }
+  pts.sort((a,b)=>b.w-a.w); const top=pts.slice(0,320);
+  return {pts:top, lines:knn(top,3), desc:`Contour: ${top.length} boundary crossings`};
+}
+
+function algSkeleton(g,W,H){
+  // Approximate skeleton via distance transform + ridge detection
+  const thr=100; const bin=new Uint8Array(W*H);
+  for(let i=0;i<W*H;i++)bin[i]=g[i]<thr?1:0;
+  // Distance transform (simple)
+  const dist=new Float32Array(W*H);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    if(!bin[y*W+x])continue;
+    let d=Infinity;
+    const sr=5;
+    for(let dy=-sr;dy<=sr;dy++)for(let dx=-sr;dx<=sr;dx++){
+      const cx=x+dx,cy=y+dy;
+      if(cx<0||cx>=W||cy<0||cy>=H)continue;
+      if(!bin[cy*W+cx])d=Math.min(d,(dx*dx+dy*dy));
+    }
+    dist[y*W+x]=Math.sqrt(d);
+  }
+  // Local maxima of distance = skeleton
+  const pts=[]; const sr2=4;
+  for(let y=sr2;y<H-sr2;y+=3)for(let x=sr2;x<W-sr2;x+=3){
+    const d=dist[y*W+x]; if(d<1)continue;
+    let isMax=true;
+    for(let dy=-sr2;dy<=sr2&&isMax;dy++)for(let dx=-sr2;dx<=sr2&&isMax;dx++)if(!(dx===0&&dy===0)&&dist[(y+dy)*W+(x+dx)]>d)isMax=false;
+    if(isMax)pts.push({x,y,w:d});
+  }
+  pts.sort((a,b)=>b.w-a.w); const top=pts.slice(0,280);
+  return {pts:top, lines:knn(top,3), desc:`Skeleton: ${top.length} medial axis points`};
+}
+
+function algStipple(g,W,H){
+  const pts=[]; const N=320;
+  for(let i=0;i<N*50&&pts.length<N;i++){
+    const x=Math.floor(Math.random()*W), y=Math.floor(Math.random()*H);
+    const p=(255-g[y*W+x])/255;
+    if(Math.random()<p)pts.push({x,y,w:p});
+  }
+  return {pts, lines:knn(pts,4), desc:`Stippling: ${pts.length} weighted random points`};
+}
+
+function algHalftone(g,W,H){
+  const pts=[]; const sp=9;
+  for(let y=sp/2;y<H;y+=sp)for(let x=sp/2;x<W;x+=sp){
+    const v=g[Math.floor(y)*W+Math.floor(x)];
+    const r=(255-v)/255; if(r<0.12)continue;
+    // Offset for halftone pattern
+    const ox=(Math.floor(y/sp)%2)*sp/2;
+    const px=Math.floor(x+ox)%W;
+    pts.push({x:px,y:Math.floor(y),w:r});
+  }
+  return {pts, lines:knn(pts,3), desc:`Halftone: ${pts.length} grid points`};
+}
+
+// ─────────────────────────────────────────────
+// IMAGE UI
+// ─────────────────────────────────────────────
+let currentImgGray=null, currentImgW=0, currentImgH=0;
+
+function renderProcPreview(pts, lines) {
+  const oc=document.getElementById('origCanvas');
+  const pc=document.getElementById('procCanvas');
+  if(!currentImgGray)return;
+  // Render original as grayscale
+  const ow=oc.width, oh=oc.height;
+  const id=oc.getContext('2d').createImageData(ow,oh);
+  for(let y=0;y<oh;y++)for(let x=0;x<ow;x++){
+    const sx=Math.floor(x/ow*currentImgW), sy=Math.floor(y/oh*currentImgH);
+    const v=currentImgGray[sy*currentImgW+sx]; const i=(y*ow+x)*4;
+    id.data[i]=id.data[i+1]=id.data[i+2]=v; id.data[i+3]=255;
+  }
+  oc.getContext('2d').putImageData(id,0,0);
+  // Render processed
+  const pctx=pc.getContext('2d');
+  const pid=pctx.createImageData(ow,oh);
+  for(let i=0;i<pid.data.length;i+=4){pid.data[i]=pid.data[i+1]=pid.data[i+2]=0;pid.data[i+3]=255;}
+  // Draw lines
+  for(const [a,b] of lines){
+    const ax=pts[a].x/currentImgW*ow, ay=pts[a].y/currentImgH*oh;
+    const bx=pts[b].x/currentImgW*ow, by=pts[b].y/currentImgH*oh;
+    // Bresenham
+    let x0=Math.round(ax),y0=Math.round(ay),x1=Math.round(bx),y1=Math.round(by);
+    const dx=Math.abs(x1-x0),dy=Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1;
+    let err=dx-dy;
+    while(true){
+      if(x0>=0&&x0<ow&&y0>=0&&y0<oh){const i=(y0*ow+x0)*4;pid.data[i]=pid.data[i+1]=pid.data[i+2]=40;pid.data[i+3]=255;}
+      if(x0===x1&&y0===y1)break;
+      const e2=2*err;if(e2>-dy){err-=dy;x0+=sx;}if(e2<dx){err+=dx;y0+=sy;}
+    }
+  }
+  // Draw points
+  for(const p of pts){
+    const px=Math.round(p.x/currentImgW*ow), py=Math.round(p.y/currentImgH*oh);
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+      const cx=clamp(px+dx,0,ow-1), cy=clamp(py+dy,0,oh-1);
+      const i=(cy*ow+cx)*4; pid.data[i]=pid.data[i+1]=pid.data[i+2]=255; pid.data[i+3]=255;
+    }
+  }
+  pctx.putImageData(pid,0,0);
+}
+
+function runImageProcess() {
+  if(!currentImgGray)return;
+  const alg=document.getElementById('algSel').value;
+  const r=processImage(currentImgGray,currentImgW,currentImgH,alg);
+  procResult={pts:r.pts, lines:r.lines, desc:r.desc, W:currentImgW, H:currentImgH};
+  renderProcPreview(r.pts,r.lines);
+  document.getElementById('imgStats').textContent=r.desc;
+  document.getElementById('imgStats').style.display='block';
+}
+
+// ─────────────────────────────────────────────
+// SYSTEM PROMPT
+// ─────────────────────────────────────────────
+const SYSTEM=`You design strategic maps for Constellation — a competitive territory-and-network game.
+
+══ EXACT JSON FORMAT ══════════════════════════════════════════════════
+
+{"title":"…","author":"AI","dimensions":[w,h],"stars":[[x,y,type],[x,y,type,minReq,maxReq],…],"lines":[[i,j],…]}
+
+STAR TYPES (JSON values):
+  1 = Normal     — standard node. Claimable and stealable.
+  2 = Cluster    — cannot be stolen; all directly connected stars become unsteallable.
+  3 = Wormhole   — WIN CONDITION: first team to form [minReq–maxReq] NON-OVERLAPPING paths wins instantly. Paths share no star.
+  4 = Black Hole — EXPLOSIVE: when a team forms [minReq–maxReq] paths to it, all of that team's connected stars are permanently destroyed.
+
+minReq/maxReq: optional positions 3–4 in star array, only on types 3 and 4. Default if omitted: min=max=3.
+Not all maps need all types. A pure type-1 map is valid and excellent.
+
+══ SCORING ════════════════════════════════════════════════════════════
+
+finalScore = lineCount×M.count + lineDistance×M.dist + hqDistance×M.hq + destroyed×M.dest
+
+• lineCount = lines where BOTH endpoints are owned by the team
+• lineDistance = sum of Euclidean lengths of those lines
+• hqDistance = length sum of lines connected to team's HQ stars
+• destroyed = destruction score from black hole events
+• ALL multipliers can be ANY real number including negative (negative = penalty for that component)
+
+══ DESIGN REASONING ═══════════════════════════════════════════════════
+
+Work through these layers in order:
+
+1. SCORING REGIME — Design topology to match multipliers. High count→dense clusters. High dist→long corridors. Negative multiplier→that component penalized.
+
+2. TEAM SYMMETRY — Every team gets equivalent star count, line count, distance to wormholes, cluster coverage. 2 teams: bilateral/180° symmetry. 3 teams: triangular.
+
+3. WIN CONDITIONS FIRST — Place wormholes in neutral contested space. Each must have ≥3 distinct path options from each team's territory. req achievable in ~40–70% of game duration. Multiple wormholes create three-way tension: race yours, block theirs, ignore both and win on score.
+
+4. CLUSTER ANCHORS — 2–4 per map. Place where holding them creates meaningful control: near wormholes (protected launch pads), at center (contested anchor), at starting zones (stable home base). Too many→stalemate. Too few→constant steal chaos.
+
+5. BLACK HOLES — Near contested territory, reachable by multiple teams. req 2–3=active trap (frequently triggered). req 4–5=background threat. After explosion, open territory should have nearby stars to reclaim.
+
+6. CONNECTIVITY — Avg 3–5 lines/star. All stars reachable from all others. Hub stars (6–12 lines): choke points. Corridors (2 lines): contested pathways. No isolated stars (0 lines).
+
+7. STRATEGY DIVERSITY — Verify: Rush viable? Territory viable? Distance viable? Disruption viable? Defense viable? Great map: optimal choice non-obvious until well into the game.
+
+══ IMAGE ANALYSIS INSTRUCTIONS (when image provided) ══════════════════
+
+The image has been processed using a computer vision algorithm to extract structural candidate points.
+
+INTERPRETATION:
+- Dense point clusters → contested territory regions or strategic objectives
+- Sparse point regions → open space, safe zones, or difficult terrain
+- Point corridors → natural movement routes and tactical pathways
+- Isolated high-weight points → key strategic locations for special star types
+- Connection patterns from the algorithm → natural line structure for the map
+
+MAPPING VISUAL STRUCTURE TO GAME MECHANICS:
+- Prominent structural features (corners, junctions, centers) → Hub stars with high connectivity
+- Boundary/edge regions → Corridor stars forming contested pathways
+- Dense regions → Cluster star placement (protected anchors in busy areas)
+- Topologically central regions → Wormhole placement (contested and reachable)
+- Complex intersection areas near contested zones → Black hole placement
+
+Preserve the image's spatial relationships and density patterns. Translate visual structure into strategic structure.
+
+══ SCALE ════════════════════════════════════════════════════════════════
+
+  ≤100 per axis → 15–40 stars, 25–70 lines
+  100–200       → 40–100 stars, 70–180 lines
+  200–320       → 80–200 stars, 140–380 lines
+  320+          → 150–400 stars, 280–700 lines
+
+Min star separation: 6 units. Type mix: Normal 70–90%, Cluster 0–15%, Wormhole 0–3 total, Black Hole 0–8%.
+
+══ OUTPUT ═══════════════════════════════════════════════════════════════
+
+Output ONLY valid JSON. No markdown. No explanation. No code fences.
+All line indices 0-based. No index ≥ stars.length. No [i,i]. All coords within [0,w]×[0,h].`;
+
+// ─────────────────────────────────────────────
+// GENERATION
+// ─────────────────────────────────────────────
+function setStatus(msg,type='info'){
+  const el=document.getElementById('status');
+  el.textContent=msg; el.className='status '+type; el.style.display='block';
+}
+
+function parseMap(text,w,h){
+  const m=text.match(/\{[\s\S]*\}/);
+  if(!m)throw new Error('No JSON in response');
+  const map=JSON.parse(m[0]);
+  map.dimensions=[w,h];
+  if(!Array.isArray(map.stars)||map.stars.length<3)throw new Error('Need at least 3 stars');
+  map.stars=map.stars.filter(s=>Array.isArray(s)&&s.length>=3&&s[0]>=0&&s[0]<=w&&s[1]>=0&&s[1]<=h&&[1,2,3,4].includes(s[2]));
+  const n=map.stars.length;
+  map.lines=(map.lines||[]).filter(l=>Array.isArray(l)&&l.length>=2&&l[0]>=0&&l[0]<n&&l[1]>=0&&l[1]<n&&l[0]!==l[1]);
+  return map;
+}
+
+function updateStats(map){
+  const ct={1:0,2:0,3:0,4:0};
+  map.stars.forEach(s=>ct[s[2]||1]++);
+  document.getElementById('iStars').textContent=map.stars.length;
+  document.getElementById('iLines').textContent=map.lines.length;
+  document.getElementById('iN').textContent=ct[1]||'—';
+  document.getElementById('iC').textContent=ct[2]||'—';
+  document.getElementById('iW').textContent=ct[3]||'—';
+  document.getElementById('iB').textContent=ct[4]||'—';
+}
+
+async function generate(){
+  const key=document.getElementById('apiKey').value.trim();
+  if(!key){setStatus('API key required','err');return;}
+  if(!genAI)genAI=new GoogleGenerativeAI(key);
+  sessionStorage.setItem('geminiKey',key);
+
+  const title=document.getElementById('mapTitle').value.trim()||'Untitled Map';
+  const prompt=document.getElementById('prompt').value.trim()||'A balanced competitive map.';
+  const w=parseInt(document.getElementById('dimX').value)||320;
+  const h=parseInt(document.getElementById('dimY').value)||180;
+  const mC=parseFloat(document.getElementById('mC').value);
+  const mD=parseFloat(document.getElementById('mD').value);
+  const mH=parseFloat(document.getElementById('mH').value);
+  const mX=parseFloat(document.getElementById('mX').value);
+  const imgFile=document.getElementById('imgFile').files[0];
+  const model=genAI.getGenerativeModel({model:document.getElementById('modelSel').value||'models/gemini-1.5-flash'});
+
+  const btn=document.getElementById('genBtn');
+  btn.disabled=true;
+  document.getElementById('spinner').classList.add('on');
+  document.getElementById('status').style.display='none';
+
+  try{
+    let userMsg=`Title: "${title}"\nMap dimensions: ${w}×${h}\nScoring multipliers: count=${mC}, distance=${mD}, hq=${mH}, destruction=${mX}\n\nRequest: ${prompt}`;
+
+    if(procResult){
+      const topPts=procResult.pts.slice(0,60).map(p=>`(${Math.round(p.x/procResult.W*w)},${Math.round(p.y/procResult.H*h)})`).join(' ');
+      userMsg+=`\n\nIMAGE ANALYSIS (${procResult.desc}):\nCandidate star positions in map coordinates (top 60 by weight): ${topPts}\nTotal extracted: ${procResult.pts.length} points, ${procResult.lines.length} candidate connections`;
+    }
+
+    if(imgFile) userMsg+='\n\nA reference image is attached. Use its structure to inform the spatial layout.';
+
+    const parts=[SYSTEM+'\n\n'+userMsg];
+    if(imgFile){
+      const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsDataURL(imgFile);});
+      parts.push({inlineData:{mimeType:imgFile.type,data:b64.split(',')[1]}});
+    }
+
+    setStatus('Generating…','info');
+    const result=await model.generateContent(parts);
+    const map=parseMap(result.response.text(),w,h);
+    map.title=title;
+    currentMap=map;
+
+    drawMap(map);
+    updateStats(map);
+    document.getElementById('dlBtn').disabled=false;
+    document.getElementById('cpBtn').disabled=false;
+    setStatus(`${map.stars.length} stars · ${map.lines.length} lines`,'ok');
+
+  }catch(err){
+    setStatus(err.message,'err');
+    console.error(err);
+  }finally{
+    btn.disabled=false;
+    document.getElementById('spinner').classList.remove('on');
+  }
+}
+
+// ─────────────────────────────────────────────
+// MAP DRAWING
+// ─────────────────────────────────────────────
+const COL={1:'#cccccc',2:'#e8c44a',3:'#4ab8e8',4:'#e84a4a'};
+const RAD={1:2,2:3,3:3.5,4:3};
+
+function drawMap(map){
+  const W=canvas.width,H=canvas.height;
+  const[mw,mh]=map.dimensions;
+  const scale=Math.min(W/mw,H/mh)*0.94;
+  const ox=(W-mw*scale)/2, oy=(H-mh*scale)/2;
+
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
+
+  // Lines
+  ctx.lineWidth=0.7;
+  for(const[a,b]of map.lines){
+    const s1=map.stars[a],s2=map.stars[b];
+    const special=(s1[2]||1)>1||(s2[2]||1)>1;
+    ctx.strokeStyle=special?'rgba(255,255,255,.09)':'rgba(255,255,255,.055)';
+    ctx.beginPath();
+    ctx.moveTo(ox+s1[0]*scale,oy+s1[1]*scale);
+    ctx.lineTo(ox+s2[0]*scale,oy+s2[1]*scale);
+    ctx.stroke();
+  }
+
+  // Stars
+  ctx.shadowBlur=0;
+  for(const s of map.stars){
+    const x=ox+s[0]*scale, y=oy+s[1]*scale, t=s[2]||1;
+    const c=COL[t]||COL[1], r=RAD[t]||RAD[1];
+    if(t>1){ctx.shadowBlur=10;ctx.shadowColor=c;}
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=c;ctx.fill();
+    if(t>1)ctx.shadowBlur=0;
+  }
+
+  document.getElementById('mapOverlay').textContent=
+    `${map.title||'untitled'}  ·  ${mw}×${mh}  ·  ${map.stars.length} stars  ·  ${map.lines.length} lines`;
+}
+
+// ─────────────────────────────────────────────
+// PHILOSOPHY DIAGRAM
+// ─────────────────────────────────────────────
+window.selLayer=function(n){
+  for(let i=1;i<=7;i++){
+    document.getElementById('pn'+i).classList.toggle('sel',i===n);
+    const ld=document.getElementById('ld'+i);
+    if(ld)ld.classList.toggle('active',i===n);
+  }
+  if(n===1)updateRegime();
+};
+
+function updateRegime(){
+  const mC=parseFloat(document.getElementById('mC').value)||500;
+  const mD=parseFloat(document.getElementById('mD').value)||1;
+  const mH=parseFloat(document.getElementById('mH').value)||10;
+  const mX=parseFloat(document.getElementById('mX').value)||1;
+  const vals=[mC,mD,mH,mX], abs=vals.map(Math.abs), maxA=Math.max(...abs,1);
+  const ids=[['bC','bCv'],['bD','bDv'],['bH','bHv'],['bX','bXv']];
+  ids.forEach(([bar,val],i)=>{
+    const el=document.getElementById(bar), vl=document.getElementById(val);
+    if(!el||!vl)return;
+    el.style.width=(abs[i]/maxA*100)+'%';
+    el.className='bar-fill'+(vals[i]<0?' bar-fill-neg':'');
+    vl.textContent=vals[i];
+  });
+  // Regime label
+  const dom=abs.indexOf(Math.max(...abs));
+  const names=['count','distance','hq','destruction'];
+  const descs=[
+    'Territory-dominant regime. Owning the most connected lines wins. Design for dense clusters with many short connections.',
+    'Distance-dominant regime. Longest chains score highest. Design for long sparse corridors and far-reaching paths.',
+    'HQ-dominant regime. Placement of headquarters is the primary strategic decision. Position near valuable long-range lines.',
+    'Destruction-dominant regime. Black holes are the primary scoring weapon. Design for accessible, threatening explosive positions.'
+  ];
+  const neg=vals[dom]<0;
+  const lbl=document.getElementById('regimeLabel');
+  if(lbl){
+    lbl.textContent=neg?`Inverted ${names[dom]} regime — this component is a PENALTY. Design to minimize ${names[dom]} exposure while maximizing others.`:descs[dom];
+    lbl.className='regime-label'+(neg?' neg':'');
+  }
+}
+
+// ─────────────────────────────────────────────
+// EVENTS
+// ─────────────────────────────────────────────
+document.getElementById('genBtn').addEventListener('click',generate);
+
+document.getElementById('apiKey').addEventListener('change',e=>{
+  const key=e.target.value.trim();
+  if(!key)return;
+  genAI=new GoogleGenerativeAI(key);
+  sessionStorage.setItem('geminiKey',key);
+  loadModels(key);
+});
+
+document.getElementById('imgFile').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const lbl=document.getElementById('fileLbl');
+  lbl.textContent=f.name; lbl.classList.add('has');
+  const img=new Image(); img.src=URL.createObjectURL(f);
+  img.onload=()=>{
+    const maxSide=240, ar=img.width/img.height;
+    let tw,th;
+    if(img.width>img.height){tw=Math.round(maxSide*ar);th=maxSide;}
+    else{th=Math.round(maxSide/ar);tw=maxSide;}
+    const oc=document.getElementById('origCanvas');
+    const pc=document.getElementById('procCanvas');
+    oc.width=pc.width=tw; oc.height=pc.height=th;
+    oc.getContext('2d').drawImage(img,0,0,tw,th);
+    const id=oc.getContext('2d').getImageData(0,0,tw,th);
+    currentImgGray=grayArray(id,tw,th);
+    currentImgW=tw; currentImgH=th;
+    document.getElementById('dimX').value=Math.round(tw*320/Math.max(tw,th,1));
+    document.getElementById('dimY').value=Math.round(th*320/Math.max(tw,th,1));
+    document.getElementById('imgPanels').classList.add('visible');
+    runImageProcess();
+    URL.revokeObjectURL(img.src);
+  };
+});
+
+document.getElementById('algSel').addEventListener('change',()=>{ if(currentImgGray)runImageProcess(); });
+
+['mC','mD','mH','mX'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',()=>{
+    // Update philosophy live if on that tab
+    const ld1=document.getElementById('ld1');
+    if(ld1&&ld1.classList.contains('active'))updateRegime();
+  });
+});
+
+document.getElementById('dlBtn').addEventListener('click',()=>{
+  const json=JSON.stringify(currentMap,null,2);
+  const a=Object.assign(document.createElement('a'),{
+    href:URL.createObjectURL(new Blob([json],{type:'application/json'})),
+    download:`${(currentMap.title||'map').replace(/\s+/g,'_')}.json`
+  });
+  a.click(); URL.revokeObjectURL(a.href);
+});
+
+document.getElementById('cpBtn').addEventListener('click',()=>{
+  navigator.clipboard.writeText(JSON.stringify(currentMap,null,2));
+  setStatus('Copied to clipboard','ok');
+});
+
+// Init
+const saved=sessionStorage.getItem('geminiKey');
+if(saved){
+  document.getElementById('apiKey').value=saved;
+  genAI=new GoogleGenerativeAI(saved);
+  loadModels(saved);
+}
+
+ctx.fillStyle='#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
+</script>
+</body>
+</html>

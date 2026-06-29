@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Facilitator Observatory</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:11px;line-height:1.5;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{border-bottom:2px solid #000;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap}
+.hd-title{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#000}
+.hd-sub{font-size:9px;color:#bbb;letter-spacing:1px}
+.hd-live{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #15803d;color:#15803d;padding:2px 8px;background:#f0fdf4}
+.hd-warn{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #d97706;color:#d97706;padding:2px 8px;background:#fef3c7}
+.hd-btn{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #000;color:#000;padding:3px 10px;cursor:pointer;background:#fff}
+.hd-btn:hover{background:#000;color:#fff}
+/* Three-column layout */
+.main{flex:1;display:grid;grid-template-columns:210px 1fr 290px;min-height:0;overflow:hidden}
+/* Student list */
+.student-list{border-right:1px solid #ddd;display:flex;flex-direction:column;overflow:hidden}
+.panel-hd{padding:7px 10px;border-bottom:1px solid #ddd;font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#555;background:#fafafa;flex-shrink:0;display:flex;align-items:center;gap:6px}
+.list-scroll{flex:1;overflow-y:auto}
+.stu-row{padding:8px 10px;cursor:pointer;border-bottom:1px solid #f5f5f5}
+.stu-row:hover{background:#f8f8f8}
+.stu-row.active{background:#000;color:#fff}
+.stu-row.active .stu-meta{color:#888}
+.stu-row.active .stu-badge{border-color:#444;color:#888}
+.stu-name{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.stu-meta{font-size:8px;color:#888;margin-top:1px}
+.stu-badge{display:inline-block;font-size:7px;font-weight:700;letter-spacing:1px;padding:1px 5px;border:1px solid #ddd;text-transform:uppercase;margin-top:2px}
+/* Center panel */
+.center-panel{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid #ddd}
+.tab-bar{display:flex;border-bottom:1px solid #ddd;flex-shrink:0;background:#fff}
+.t-btn{padding:6px 10px;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;color:#888;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.t-btn:hover{color:#000}.t-btn.active{color:#000;border-bottom-color:#000}
+.pane{display:none;flex:1;overflow-y:auto;padding:12px 14px;flex-direction:column}
+.pane.active{display:flex}
+/* Identity strip */
+#id-strip{border:2px solid #000;display:flex;flex-wrap:wrap;align-items:stretch;margin-bottom:12px;background:#fff;flex-shrink:0}
+.id-cell{padding:9px 12px;border-right:1px solid #eee;min-width:80px}
+.id-cell .k{font-size:7px;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:2px;font-weight:700}
+.id-cell .v{font-size:12px;font-weight:700}
+.id-cell .v small{font-size:9px;color:#888;font-weight:400}
+/* Stage track */
+.stg{display:inline-block;width:15px;height:15px;border:1px solid #ddd;font-size:7px;text-align:center;line-height:14px;color:#ccc;font-weight:700;margin-right:1px}
+.stg.done{background:#000;color:#fff;border-color:#000}
+.stg.cur{background:#fff;color:#000;border-color:#000;border-width:2px;line-height:12px}
+/* Two-col grid */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.card{border:1px solid #ddd;padding:10px;background:#fafafa}
+h3{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;color:#000}
+/* Mode table */
+table.t{width:100%;border-collapse:collapse;font-size:9px}
+table.t th{font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 5px;border-bottom:2px solid #000;text-align:right;background:#f0f0f0}
+table.t th:first-child{text-align:left}
+table.t td{padding:4px 5px;border-bottom:1px solid #f0f0f0;text-align:right;vertical-align:middle}
+table.t td:first-child{text-align:left;font-weight:700;font-size:9px}
+.asserted{display:inline-block;font-size:7px;font-weight:700;color:#d97706;border:1px solid #d97706;padding:0 3px;letter-spacing:0}
+.vel-pos{color:#15803d;font-weight:700}.vel-neg{color:#dc2626;font-weight:700}.vel-zero{color:#888}
+/* Flags */
+.flag{display:flex;gap:8px;padding:6px 8px;border:1px solid #eee;background:#fff;margin-bottom:5px;font-size:9px;line-height:1.6;align-items:flex-start}
+.flag .fc{flex-shrink:0;font-size:7px;font-weight:700;letter-spacing:1px;padding:1px 5px;border:1px solid;margin-top:1px;text-transform:uppercase;white-space:nowrap}
+.f-red .fc{border-color:#dc2626;color:#dc2626}.f-red{border-left:3px solid #dc2626}
+.f-amber .fc{border-color:#d97706;color:#d97706}.f-amber{border-left:3px solid #d97706}
+.f-blue .fc{border-color:#1d4ed8;color:#1d4ed8}.f-blue{border-left:3px solid #1d4ed8}
+.f-purple .fc{border-color:#7c3aed;color:#7c3aed}.f-purple{border-left:3px solid #7c3aed}
+.f-green .fc{border-color:#15803d;color:#15803d}.f-green{border-left:3px solid #15803d}
+/* Evidence feed */
+.obs{border:1px solid #eee;background:#fff;padding:6px 8px;margin-bottom:5px;font-size:9px}
+.obs .meta{font-size:8px;color:#888;margin-top:2px;font-family:'Courier New',monospace}
+.chan{display:inline-block;font-size:7px;font-weight:700;letter-spacing:1px;padding:1px 5px;border:1px solid;margin-right:5px;vertical-align:1px;text-transform:uppercase}
+.chan-GAME{background:#000;color:#fff;border-color:#000}
+.chan-BT{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+.purity{display:inline-block;font-size:7px;font-weight:700;color:#dc2626;border:1px dashed #dc2626;padding:0 4px;margin-left:4px}
+/* Corroboration matrix */
+.mx-tbl{border-collapse:collapse;font-size:8px;margin-bottom:10px}
+.mx-tbl td,.mx-tbl th{border:1px solid #eee}
+.mx-tbl .mh{font-size:7px;font-weight:700;color:#888;padding:3px 5px;text-align:center;background:#fafafa;text-transform:uppercase}
+.mx-tbl .ml{font-size:8px;font-weight:700;padding:3px 6px;text-align:right}
+.mx-cell{width:22px;height:20px;text-align:center;vertical-align:middle;font-size:7px;font-weight:700;cursor:default}
+.mc-m{background:#000;color:#fff}
+.mc-c{background:#fff8f8;border:2px solid #dc2626 !important;color:#dc2626}
+.mc-i{background:#f0fdf4;color:#15803d}
+.mc-p{background:#fafafa;color:#ddd}
+.mc-a{background:#fff;color:#f0f0f0}
+/* Terminal */
+#term-wrap{display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1}
+#term{background:#000;color:#0f0;font-family:'Courier New',monospace;font-size:11px;padding:14px;min-height:260px;border:2px solid #000;overflow-y:auto}
+#term .line{margin-bottom:2px;opacity:0;transition:opacity .1s}
+#term .line.show{opacity:1}
+#ann{border:1px solid #ddd;background:#fafafa;padding:10px;min-height:260px;overflow-y:auto}
+.ann-line{border-bottom:1px solid #eee;padding:5px 0;font-size:9px}
+.ann-line .at{font-family:'Courier New',monospace;color:#000;font-size:9px}
+.ann-line .aa{font-size:8px;color:#555;margin-top:2px;line-height:1.5}
+.ann-line .aa b{color:#000}
+/* Right panel */
+.right-panel{display:flex;flex-direction:column;overflow:hidden}
+.r-tab-bar{display:flex;border-bottom:1px solid #ddd;flex-shrink:0;background:#fafafa;overflow-x:auto}
+.r-scroll{display:none;flex:1;overflow-y:auto;padding:10px 12px;flex-direction:column}
+.r-scroll.active{display:flex}
+/* Compiler card */
+.comp-card{border:2px solid #000;padding:10px;background:#000;color:#fff;margin-bottom:8px;flex-shrink:0}
+.comp-lbl{font-size:7px;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:4px}
+.comp-mode{font-size:18px;font-weight:700;letter-spacing:2px;margin-bottom:6px}
+.comp-field{margin-bottom:4px}
+.comp-field-lbl{font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888}
+.comp-field-val{font-family:'Courier New',monospace;font-size:9px;color:#fff}
+/* Sessions */
+.sess-row{padding:5px 4px;border-bottom:1px solid #f0f0f0;display:grid;grid-template-columns:22px 30px 44px 1fr;gap:3px;align-items:center;font-size:9px;cursor:default}
+.sess-row:hover{background:#f8f8f8}
+.sess-row.hd{font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;border-bottom:2px solid #000;background:#f0f0f0;padding:4px}
+.sess-inv{border-left:3px solid #0891b2}
+/* Status */
+.loading{padding:16px;font-size:9px;color:#888;font-style:italic}
+.err-box{background:#fff0f0;border:1px solid #dc2626;padding:8px;font-size:9px;color:#dc2626;margin:6px 0}
+.no-data{padding:14px 10px;font-size:9px;color:#888;line-height:1.8;border:1px dashed #ddd}
+/* Trajectory canvas */
+#traj-canvas{display:block;width:100%;flex-shrink:0}
+/* Student overlay */
+#sv-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#000;z-index:300;flex-direction:column}
+#sv-overlay.open{display:flex}
+#sv-nav{background:#000;border-bottom:1px solid #222;display:flex;align-items:center;padding:0 16px;min-height:36px;gap:10px;flex-shrink:0}
+#sv-nav .sv-logo{font-size:8px;letter-spacing:2px;font-weight:700;text-transform:uppercase;color:#333;padding-right:10px;border-right:1px solid #222}
+#sv-nav button{background:transparent;border:1px solid #333;color:#555;padding:3px 9px;cursor:pointer;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;font-family:Arial}
+#sv-nav button:hover{border-color:#666;color:#aaa}
+#sv-nav .sv-exit{margin-left:auto;border-color:#333;color:#444}
+#sv-body{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#sv-term-wrap{width:100%;max-width:680px;padding:24px}
+#sv-term{background:#000;color:#0f0;font-family:'Courier New',monospace;font-size:12px;padding:16px;min-height:260px;overflow-y:auto}
+#sv-term .line{margin-bottom:2px;opacity:0;transition:opacity .08s}
+#sv-term .line.show{opacity:1}
+::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-track{background:#fff}::-webkit-scrollbar-thumb{background:#ddd}
+@media(max-width:900px){
+  body{height:auto;overflow:auto}
+  .main{display:block;overflow:visible}
+  .student-list,.center-panel,.right-panel{height:auto;overflow:visible;border:none;border-bottom:2px solid #ddd}
+  .list-scroll,.r-scroll,.pane{overflow:visible;max-height:none}
+  .pane{display:flex !important}
+  .r-scroll{display:flex !important}
+  .grid2,#term-wrap{grid-template-columns:1fr}
+  .tab-bar,.r-tab-bar{overflow-x:auto}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="hd-title">Facilitator Observatory</span>
+  <span class="hd-sub">— per-student instrument · Layer 1 views over Layer 0 Ledger</span>
+  <span class="hd-live" id="live-badge">LIVE</span>
+  <span class="hd-warn">APPROXIMATION — every value has a refutation condition</span>
+  <button id="health-btn" onclick="checkHealth()" class="hd-btn" style="margin-left:auto">HEALTH ↻</button>
+  <button onclick="openStudentView()" class="hd-btn">Student View ↗</button>
+</header>
+
+<div class="main">
+
+  <!-- ── STUDENT LIST ── -->
+  <div class="student-list">
+    <div class="panel-hd">
+      Students
+      <span id="stu-count" style="margin-left:auto;font-size:8px;color:#bbb"></span>
+      <button onclick="refresh()" style="font-size:7px;padding:1px 5px;cursor:pointer;border:1px solid #ddd;background:#fff;margin-left:4px">↺</button>
+    </div>
+    <div class="list-scroll" id="student-list"><div class="loading">Loading…</div></div>
+  </div>
+
+  <!-- ── CENTER: TABBED MAIN ── -->
+  <div class="center-panel">
+    <div class="tab-bar">
+      <div class="t-btn active" onclick="setTab('overview',this)">Overview</div>
+      <div class="t-btn" onclick="setTab('trajectory',this)">Trajectory</div>
+      <div class="t-btn" onclick="setTab('evidence',this)">Evidence</div>
+      <div class="t-btn" onclick="setTab('terminal',this)">Terminal</div>
+    </div>
+
+    <!-- Overview -->
+    <div class="pane active" id="pane-overview">
+      <div class="no-data" id="overview-empty">Select a student from the list to open their dossier.</div>
+      <div id="overview-content" style="display:none">
+        <div id="id-strip"></div>
+        <div class="grid2">
+          <div class="card">
+            <h3>Cognitive Position <span class="asserted">Elo ASSERTED K</span></h3>
+            <canvas id="radar-canvas" width="200" height="200" style="display:block;margin:0 auto"></canvas>
+            <div style="font-size:8px;color:#888;margin-top:6px">Polygon = mode Elo. Hollow node = stale (τ&gt;14d). Node border color: <span style="color:#15803d">green</span> improving · <span style="color:#dc2626">red</span> declining.</div>
+          </div>
+          <div class="card">
+            <h3>Mode Signal Table <span class="asserted">ZPD λ=14d ASSERTED</span></h3>
+            <table class="t">
+              <thead><tr><th>MODE</th><th>Elo</th><th>vel</th><th>ZPD%</th><th>n</th><th>τ(d)</th></tr></thead>
+              <tbody id="mode-tbody"><tr><td colspan="6" class="loading">—</td></tr></tbody>
+            </table>
+            <div style="font-size:8px;color:#888;margin-top:6px">Every value ASSERTED. K∈{40,20,10} by session count. ZPD = Elo × 0.85 × exp(−τ/14). Stale τ highlighted <span style="color:#d97706">amber</span>.</div>
+          </div>
+        </div>
+        <div>
+          <h3 style="margin-bottom:8px">Active Flags — open questions for this student</h3>
+          <div id="flags"></div>
+          <div id="flags-empty" style="display:none;font-size:9px;color:#888;border:1px dashed #ddd;padding:10px;line-height:1.7">No active flags. This is expected only at very low session counts (insufficient data to flag) or very high session counts (all open questions resolved). Flag absence is not a clean signal — it is an absence of information.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trajectory -->
+    <div class="pane" id="pane-trajectory">
+      <div class="no-data" id="traj-empty">Select a student.</div>
+      <div id="traj-content" style="display:none">
+        <h3 style="margin-bottom:8px">Session Trajectory — zone · mode · rank percentile (last 12 sessions)</h3>
+        <canvas id="traj-canvas" height="180"></canvas>
+        <div id="traj-legend" style="font-size:8px;color:#888;margin-top:6px"></div>
+        <div style="margin-top:14px;font-size:8px;color:#555;border-top:1px solid #eee;padding-top:10px;line-height:1.8">
+          <strong>Zone vocabulary</strong> (Layer 2 output — emerges from posterior comparison, not assigned by rule):<br>
+          CALIBRATION = measurement phase, &lt;5 sessions · ECHO = comfortable, system holds mode ·
+          PARALLEL = momentum continued · SHIFTING = mode change after comfortable block ·
+          RADICAL = domain departure · REMATCH = repeated underperformance, re-exposure before rotation<br><br>
+          Zone names are shared with students as community vocabulary. They decode them through play — that is the mechanism, not a flaw.
+        </div>
+      </div>
+    </div>
+
+    <!-- Evidence -->
+    <div class="pane" id="pane-evidence">
+      <div class="no-data" id="evidence-empty">Select a student.</div>
+      <div id="evidence-content" style="display:none">
+        <h3 style="margin-bottom:6px">Corroboration Matrix — independent witnesses per dimension <span class="asserted">GAME only active</span></h3>
+        <div id="matrix-wrap"></div>
+        <div style="font-size:8px;color:#888;margin-bottom:14px;line-height:1.7">
+          <span style="background:#000;color:#fff;padding:1px 4px;font-size:7px;font-weight:700">M</span> measured &nbsp;·&nbsp;
+          <span style="border:2px solid #dc2626;color:#dc2626;padding:1px 4px;font-size:7px;font-weight:700">C</span> contaminated &nbsp;·&nbsp;
+          <span style="background:#f0fdf4;color:#15803d;padding:1px 4px;font-size:7px;font-weight:700">I</span> instrumented &nbsp;·&nbsp;
+          <span style="background:#fafafa;color:#bbb;padding:1px 4px;font-size:7px;font-weight:700;border:1px solid #eee">P</span> pending &nbsp;·&nbsp;
+          <span style="background:#fff;color:#ddd;padding:1px 4px;font-size:7px;font-weight:700;border:1px solid #f0f0f0">—</span> absent<br>
+          Corroboration strength = independent channel count. Single-witness (GAME only) claims are capped at MEASURED, never CONFIRMED. BT, TEACH, PEER channels activate in Phase 2.
+        </div>
+        <h3 style="margin-bottom:8px">Evidence Feed — GAME channel observations (latest 10 sessions)</h3>
+        <div id="feed"></div>
+        <div style="margin-top:12px;font-size:8px;color:#888;border-top:1px solid #eee;padding-top:8px;line-height:1.7">
+          Evidence Axiom: record observations, not interpretations. Each entry is a Layer 0 ledger record rendered as a GAME-channel observation — the raw config, outcome, and signals. Interpretation belongs in Layer 1 views (mode table, compiler) and is always labeled ASSERTED.
+        </div>
+      </div>
+    </div>
+
+    <!-- Terminal -->
+    <div class="pane" id="pane-terminal">
+      <div class="no-data" id="terminal-empty">Select a student.</div>
+      <div id="terminal-content" style="display:none;flex:1;flex-direction:column">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;flex-shrink:0">
+          <h3 style="margin:0">Terminal Preview — what the student sees · what the system knows</h3>
+          <button id="btn-replay" onclick="replayTerminal()" style="border:1px solid #000;background:#000;color:#fff;padding:3px 10px;font-size:8px;font-weight:700;letter-spacing:1px;cursor:pointer;text-transform:uppercase">▶ Replay</button>
+        </div>
+        <div id="silent-inv-notice" style="display:none;flex-shrink:0;margin-bottom:10px;background:#e0f2fe;border:1px solid #0891b2;padding:8px 10px;font-size:9px;color:#0891b2;line-height:1.6">
+          <strong>SILENT INV scheduled.</strong> Terminal will not disclose mode. Student terminal shows difficulty and template only, not mode name. This is architecturally protected — announcing INVERSION creates Hawthorne effect and contaminates the signal. The student view (Student View ↗) reflects this suppression.
+        </div>
+        <div id="term-wrap">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div id="term"></div>
+            <div style="font-size:8px;color:#888">Left: student-facing render. Predicted from current compiler state — actual pre-session output generated at session start.</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div id="ann"></div>
+            <div style="font-size:8px;color:#888">Right: per-line provenance. Every sentence traced to the Layer 0 observation and threshold that produced it. <strong>Never shown to students.</strong> The 'a' (provenance) field is stripped at the API boundary.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RIGHT: COMPILER + SESSIONS ── -->
+  <div class="right-panel">
+    <div class="r-tab-bar">
+      <div class="t-btn active" onclick="setRTab('compiler',this)">Compiler</div>
+      <div class="t-btn" onclick="setRTab('sessions',this)">Sessions</div>
+      <div class="t-btn" onclick="setRTab('admin',this)">Admin</div>
+    </div>
+
+    <div class="r-scroll active" id="rpane-compiler">
+      <div id="compiler-content"><div class="loading">Select a student</div></div>
+    </div>
+
+    <div class="r-scroll" id="rpane-sessions">
+      <div class="sess-row hd"><span>#</span><span>Mode</span><span>Rank%</span><span>Date · flags</span></div>
+      <div id="sessions-content"><div class="loading">Select a student</div></div>
+    </div>
+
+    <div class="r-scroll" id="rpane-admin">
+      <div style="font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:8px">Ledger Integrity</div>
+      <button onclick="checkHealth()" style="font-size:8px;border:1px solid #000;padding:3px 10px;cursor:pointer;background:#000;color:#fff;width:100%;margin-bottom:8px">Run Integrity Check</button>
+      <div id="health-result" style="font-size:9px;color:#888;margin-bottom:14px">Not checked.</div>
+      <div style="font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:5px">Merge Students</div>
+      <div style="font-size:8px;color:#888;margin-bottom:8px;line-height:1.6">Append-only: records a merge event in Ledger and updates the alias map. Original records remain. Cannot be undone.</div>
+      <div style="font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:2px">Primary ID (keep)</div>
+      <input id="merge-primary" type="text" placeholder="student_id to keep" style="width:100%;font-size:9px;border:1px solid #ddd;padding:3px 6px;font-family:monospace;margin-bottom:6px">
+      <div style="font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:2px">Secondary ID (absorb)</div>
+      <input id="merge-secondary" type="text" placeholder="student_id to merge into primary" style="width:100%;font-size:9px;border:1px solid #ddd;padding:3px 6px;font-family:monospace;margin-bottom:6px">
+      <button onclick="mergeStudents()" style="font-size:8px;border:1px solid #dc2626;color:#dc2626;padding:4px 10px;cursor:pointer;background:#fff;width:100%;font-weight:700;letter-spacing:1px;text-transform:uppercase">Merge (irreversible)</button>
+      <div id="merge-result" style="font-size:9px;color:#888;margin-top:4px"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── STUDENT VIEW OVERLAY ── -->
+<div id="sv-overlay">
+  <div id="sv-nav">
+    <span class="sv-logo">Constellation</span>
+    <span id="sv-session-label" style="font-family:'Courier New',monospace;font-size:8px;color:#444;letter-spacing:1px"></span>
+    <button id="sv-btn-replay" onclick="svReplay()">▶ Replay</button>
+    <button class="sv-exit" onclick="closeStudentView()">← Facilitator View</button>
+  </div>
+  <div id="sv-body">
+    <div id="sv-term-wrap">
+      <div id="sv-term"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const MODES = ['QTY','SPT','FRT','DST','WRM','INV'];
+const MODE_COLORS = {QTY:'#d97706',SPT:'#2563eb',FRT:'#059669',DST:'#dc2626',WRM:'#7c3aed',INV:'#0891b2'};
+const ZONE_COLORS = {CALIBRATION:'#bbb',ECHO:'#888',PARALLEL:'#2563eb',SHIFTING:'#d97706',RADICAL:'#dc2626',REMATCH:'#dc2626'};
+const BOT_COLORS  = {TURTLER:'#888',STANDARD:'#555',CONTESTER:'#d97706',ACCELERANT:'#dc2626',MIRROR:'#7c3aed',THEORETICIAN:'#059669'};
+const STAGES = ['Consumer','Observer','Theorist','Predictor','Designer','Teacher'];
+const CHANNELS = ['GAME','BT','NOV','ACD','TCH','PER','SLF'];
+const ZONE_RATIONALE = {
+  CALIBRATION:'Insufficient history. System in measurement phase — selections are exploratory, not targeted. Do not treat compiler output as a precision instrument yet.',
+  ECHO:'Consistent performance in mode. Compiler holds mode to deepen mastery density before forcing a change.',
+  PARALLEL:'Familiar mode with positive velocity. System matching current momentum — no change needed.',
+  SHIFTING:'Mode change after comfortable block. New cognitive constraint introduced — designed disruption.',
+  RADICAL:'Domain departure. Maximum exploratory pressure. Applied when mastery plateau detected across the comfort cluster.',
+  REMATCH:'Repeated underperformance in same mode. Re-exposure mandated before rotation — the system does not abandon a mode until the student has met it once at minimum.',
+};
+const MODE_HINTS = {
+  QTY:'> Count before you claim.',
+  SPT:'> The map is the argument.',
+  FRT:'> One position, defended completely.',
+  DST:'> The mechanism is the move.',
+  WRM:'> Score nothing. Do one thing.',
+  INV:'> The rules have shifted. Find the new ones.',
+};
+const MODE_CODENAMES = {
+  QTY:['SUPPLY CHAIN','CENSUS','FLOOD GATE','STACK PROTOCOL','PIPELINE'],
+  SPT:['WAYPOINT','PERIMETER','GRID LOCK','DEAD RECKONING','SURVEY'],
+  FRT:['SIEGE PROTOCOL','THE WALL','LAST LINE','CITADEL','HOLD'],
+  DST:['CATALYST','ZERO HOUR','CHAIN REACTION','BLACKHOLE','IMPACT RADIUS'],
+  WRM:['EVENT HORIZON','THE GATEWAY','FOLD SPACE','JUMP PROTOCOL','SINGULARITY POINT'],
+  INV:['MIRROR PROTOCOL','PHASE SHIFT','DARK MIRROR','HIDDEN OBJECTIVE','NEGATIVE SPACE'],
+};
+
+let currentStudent = null;
+let currentSessions = [];
+let currentState = null;
+let currentCompiler = null;
+let termLines = [];
+let termTimer = null;
+let svTimer = null;
+
+// ── API
+async function apiFetch(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+  return r.json();
+}
+
+// ── Bootstrap
+async function refresh() {
+  document.getElementById('live-badge').textContent = '…';
+  try {
+    const students = await apiFetch('/api/ledger/students');
+    renderStudentList(students);
+    document.getElementById('stu-count').textContent = students.length + ' student' + (students.length === 1 ? '' : 's');
+    document.getElementById('live-badge').textContent = 'LIVE';
+    document.getElementById('live-badge').style.borderColor = '#15803d';
+    document.getElementById('live-badge').style.color = '#15803d';
+    if (currentStudent) loadStudent(currentStudent);
+  } catch(err) {
+    document.getElementById('student-list').innerHTML =
+      '<div class="err-box">Cannot reach server API.<br>' + err.message + '<br><br>Start: <code>node server.js</code></div>';
+    document.getElementById('live-badge').textContent = 'OFFLINE';
+    document.getElementById('live-badge').style.borderColor = '#dc2626';
+    document.getElementById('live-badge').style.color = '#dc2626';
+  }
+}
+
+// ── Student list
+function renderStudentList(students) {
+  const el = document.getElementById('student-list');
+  if (!students.length) {
+    el.innerHTML = '<div class="no-data">No sessions in Ledger yet.<br><br>Run a game session — server writes to /ledger/YYYY-MM-DD.jsonl automatically. Until then, use <a href="philosophy development/student-observatory.html">the mock prototype</a> for development.</div>';
+    return;
+  }
+  el.innerHTML = students.map(s => {
+    const dt = s.last_t ? new Date(s.last_t*1000).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '—';
+    const name = s.student_name || s.student_id.replace('name:','').slice(0,16);
+    const sid = s.student_id.replace(/'/g, "\\'");
+    return '<div class="stu-row' + (s.student_id === currentStudent ? ' active' : '') + '" data-sid="' + s.student_id + '" onclick="loadStudent(\'' + sid + '\')">' +
+      '<div class="stu-name">' + name + '</div>' +
+      '<div class="stu-meta">' + s.sessions + ' sessions · last ' + dt + '</div>' +
+      '<span class="stu-badge">' + (s.student_id_confirmed ? 'CONFIRMED' : 'NAME HASH') + '</span>' +
+      '</div>';
+  }).join('');
+}
+
+// ── Load student
+async function loadStudent(sid) {
+  currentStudent = sid;
+  document.querySelectorAll('.stu-row').forEach(r => r.classList.toggle('active', r.dataset.sid === sid));
+  try {
+    const [stateData, sessions, comp] = await Promise.all([
+      apiFetch('/api/ledger/state/' + encodeURIComponent(sid)),
+      apiFetch('/api/ledger/sessions/' + encodeURIComponent(sid)),
+      apiFetch('/api/compiler/' + encodeURIComponent(sid)),
+    ]);
+    currentState = stateData.state;
+    currentSessions = sessions;
+    currentCompiler = comp;
+
+    // Show all content sections
+    document.getElementById('overview-empty').style.display = 'none';
+    document.getElementById('overview-content').style.display = 'block';
+    document.getElementById('traj-empty').style.display = 'none';
+    document.getElementById('traj-content').style.display = 'block';
+    document.getElementById('evidence-empty').style.display = 'none';
+    document.getElementById('evidence-content').style.display = 'block';
+    document.getElementById('terminal-empty').style.display = 'none';
+    document.getElementById('terminal-content').style.display = 'flex';
+
+    renderIdentityStrip(sid, stateData, sessions, comp);
+    drawRadar(currentState);
+    renderModeTable(currentState);
+    renderFlags(currentState, sessions, comp);
+    renderTrajectory(sessions);
+    renderCorroboration(currentState, sessions);
+    renderFeed(sessions);
+    renderCompiler(comp);
+    renderSessions(sessions);
+    buildTerminalPreview(comp, currentState, sessions);
+  } catch(err) {
+    document.getElementById('overview-empty').style.display = 'block';
+    document.getElementById('overview-empty').textContent = 'Error loading student: ' + err.message;
+    document.getElementById('overview-content').style.display = 'none';
+  }
+}
+
+// ── Identity strip
+function renderIdentityStrip(sid, stateData, sessions, comp) {
+  const n = sessions.length;
+  const name = stateData.student_name || sid.replace('name:','').slice(0,22);
+  const stage = Math.min(5, Math.floor(n / 8));
+  const zone = comp.zone || 'CALIBRATION';
+  const zoneColor = ZONE_COLORS[zone] || '#888';
+  const lastDt = n ? new Date(sessions[n-1].t*1000).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
+
+  let stageHtml = '';
+  for (let i = 0; i < 6; i++) {
+    const cls = i < stage ? 'stg done' : i === stage ? 'stg cur' : 'stg';
+    stageHtml += '<span class="' + cls + '" title="' + STAGES[i] + '">' + (i+1) + '</span>';
+  }
+
+  document.getElementById('id-strip').innerHTML =
+    '<div class="id-cell"><div class="k">Student</div><div class="v">' + name + '</div></div>' +
+    '<div class="id-cell"><div class="k">Sessions</div><div class="v">' + n + '</div></div>' +
+    '<div class="id-cell"><div class="k">Zone</div><div class="v" style="color:' + zoneColor + '">' + zone + '</div></div>' +
+    '<div class="id-cell"><div class="k">Singularity Stage</div><div class="v">' + stageHtml + '<br><small>' + STAGES[stage] + '</small></div></div>' +
+    '<div class="id-cell"><div class="k">Last Session</div><div class="v">' + lastDt + '</div></div>' +
+    '<div class="id-cell"><div class="k">ID Status</div><div class="v"><small>' + (sessions.length && sessions[0].student_id_confirmed ? 'CONFIRMED' : 'NAME HASH') + '</small></div></div>';
+}
+
+// ── Radar
+function drawRadar(state) {
+  const cv = document.getElementById('radar-canvas');
+  const ctx = cv.getContext('2d');
+  const W=200, H=200, cx=100, cy=100, R=72;
+  ctx.clearRect(0,0,W,H);
+  const angles = MODES.map((_,i) => -Math.PI/2 + i*2*Math.PI/6);
+
+  // Grid rings
+  [0.25,0.5,0.75,1].forEach(r => {
+    ctx.strokeStyle = r===1?'#bbb':'#eee'; ctx.lineWidth = r===1?1.5:1;
+    ctx.beginPath();
+    angles.forEach((a,i) => { const x=cx+Math.cos(a)*R*r, y=cy+Math.sin(a)*R*r; i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+    ctx.closePath(); ctx.stroke();
+    if(r<1){ctx.fillStyle='#ccc';ctx.font='7px Arial';ctx.textAlign='center';ctx.fillText((r*1000|0), cx, cy-R*r-2);}
+  });
+  angles.forEach(a=>{ctx.strokeStyle='#eee';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(a)*R,cy+Math.sin(a)*R);ctx.stroke();});
+
+  // Polygon
+  ctx.beginPath(); let first=true;
+  MODES.forEach((m,i)=>{
+    const d=state[m]; if(!d||!d.elo)return;
+    const r=(d.elo/1000)*R, x=cx+Math.cos(angles[i])*r, y=cy+Math.sin(angles[i])*r;
+    first?ctx.moveTo(x,y):ctx.lineTo(x,y); first=false;
+  });
+  ctx.closePath(); ctx.strokeStyle='#000'; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle='rgba(0,0,0,0.06)'; ctx.fill();
+
+  // Nodes
+  MODES.forEach((m,i)=>{
+    const d=state[m]; if(!d||!d.elo)return;
+    const r=(d.elo/1000)*R, x=cx+Math.cos(angles[i])*r, y=cy+Math.sin(angles[i])*r;
+    const stale = d.since_days > 14;
+    const vel = d.velocity;
+    const velColor = vel>0?'#15803d':vel<0?'#dc2626':MODE_COLORS[m];
+    ctx.fillStyle = stale?'#fff':MODE_COLORS[m];
+    ctx.strokeStyle = stale?MODE_COLORS[m]:velColor; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    const lx=cx+Math.cos(angles[i])*(R+14), ly=cy+Math.sin(angles[i])*(R+14)+3;
+    ctx.fillStyle=MODE_COLORS[m]; ctx.font='bold 7px Arial'; ctx.textAlign='center';
+    ctx.fillText(m,lx,ly);
+  });
+}
+
+// ── Mode table
+function renderModeTable(state) {
+  const tbody = document.getElementById('mode-tbody');
+  tbody.innerHTML = MODES.map(m=>{
+    const d=state[m];
+    if(!d||d.n===0) return '<tr><td style="color:' + MODE_COLORS[m] + '">' + m + '</td><td colspan="5" style="color:#ddd;font-style:italic;font-size:8px">no sessions yet</td></tr>';
+    const velStr = d.velocity==null?'—':d.velocity>0?'<span class="vel-pos">+'+d.velocity+'</span>':d.velocity<0?'<span class="vel-neg">'+d.velocity+'</span>':'<span class="vel-zero">0</span>';
+    const tauStr = d.since_days!=null?(d.since_days>14?'<span style="color:#d97706;font-weight:700">'+d.since_days+'</span>':d.since_days):'—';
+    const zpd = d.zpd_target!=null?(d.zpd_target*100).toFixed(0)+'%':'—';
+    return '<tr><td style="color:' + MODE_COLORS[m] + '">' + m + '</td>' +
+      '<td><strong>' + d.elo + '</strong></td>' +
+      '<td>' + velStr + '</td>' +
+      '<td>' + zpd + '</td>' +
+      '<td>' + d.n + '</td>' +
+      '<td>' + tauStr + '</td></tr>';
+  }).join('');
+}
+
+// ── Mode assignment (mirrors compiler.js)
+function assignMode(cv) {
+  if (!cv) return null;
+  if (cv[0]<0||cv[1]<0||cv[2]<0||cv[3]<0) return 'INV';
+  const mults=[cv[0],cv[1],cv[2],cv[3]];
+  if(mults.reduce((a,b)=>a+b,0)<20) return 'WRM';
+  return ['QTY','SPT','FRT','DST'][mults.indexOf(Math.max(...mults))];
+}
+
+// ── Flags (derived from real data)
+function renderFlags(state, sessions, comp) {
+  const flags = [];
+
+  MODES.forEach(m=>{
+    const d=state[m];
+    if(d&&d.n>0&&d.since_days>14) flags.push({s:'amber',c:'Q4 STALE',t:m+' untouched '+d.since_days+'d. Forgetting factor active (λ=14d ASSERTED). ZPD target is decayed — may be artificially low. Return outcome will be logged as a half-life calibration point regardless.'});
+  });
+
+  MODES.forEach(m=>{
+    const d=state[m];
+    if(d&&d.n>=3&&d.velocity!=null&&d.velocity<-5&&d.elo>550) flags.push({s:'amber',c:'PLATEAU',t:m+' velocity '+d.velocity+' over 3 sessions from Elo base '+d.elo+'. Per velocity rule: rotate, do not repeat. Compiler has down-weighted '+m+' in next selection.'});
+  });
+
+  const invSessions = sessions.filter(s=>assignMode(s.config_vector)==='INV');
+  const announcedInv = invSessions.filter(s=>!s.silent_inv);
+  if(announcedInv.length>0) {
+    const invElo = (state['INV']&&state['INV'].elo)||'?';
+    flags.push({s:'red',c:'Q2 CONTAMINATED',t:announcedInv.length+' of '+invSessions.length+' INV session'+( invSessions.length!==1?'s':'')+' announced. INV Elo ('+invElo+') measures adaptation to announced change — the easier skill. Next INV must be SILENT to recover a clean signal. Current INV Elo should be treated as a floor estimate.'});
+  }
+
+  const recent = sessions.slice(-10);
+  const failures = recent.filter(s=>s.outcome&&s.outcome.rank_pct<0.40);
+  if(recent.length>=5&&failures.length===0) flags.push({s:'red',c:'NO FAILURE',t:'Zero sessions below 40th percentile in last '+recent.length+' sessions. Calibrated difficulty is absent. Difficulty ceiling prevents necessary failure experiences. Engineer near-failure next session: elevate ZPD target or increase constraint depth.'});
+
+  if(sessions.length>=10) flags.push({s:'purple',c:'Q1 SINGLE-WITNESS',t:sessions.length+' sessions, all from GAME channel only. No BT, TEACHER, or PEER channel data active. All mode-level claims are single-witness — corroboration strength = 1. Claims capped at MEASURED until a second independent channel confirms.'});
+
+  if(sessions.length<5) flags.push({s:'blue',c:'CALIBRATION',t:sessions.length+' sessions. Elo estimates high-variance (K=40 phase). System in measurement phase — selections are exploratory. Compiler output is informative but not a precise instrument. Expect large ΔElo swings.'});
+
+  const stage = Math.min(5, Math.floor(sessions.length/8));
+  if(stage>=2&&sessions.length>=12) flags.push({s:'blue',c:'STAGE PROBE',t:'Stage '+stage+' ('+STAGES[stage]+'), '+sessions.length+' sessions. If student predicts terminal output before reading it, this marks Stage 4 (Predictor). Probe via observation — ask them to describe what they expect to see next session. Do not disclose the probe.'});
+
+  if(sessions.length>=15) {
+    const modesPlayed = MODES.filter(m=>state[m]&&state[m].n>0);
+    const hasInv = invSessions.length>0;
+    const inRematch = comp.zone==='REMATCH';
+    if(modesPlayed.length>=6&&hasInv&&!inRematch) flags.push({s:'green',c:'ALPHA ELIGIBLE',t:'All 6 modes played · '+sessions.length+' sessions · at least 1 INV session · not in REMATCH loop. Eligible for Alpha track. Alpha is not for winning — it is for understanding. Application: 5-phase detective framework. Unlocks annotated replays, template proposals, ◈ badge.'});
+  }
+
+  const flagEl = document.getElementById('flags');
+  const emptyEl = document.getElementById('flags-empty');
+  if(!flags.length){flagEl.innerHTML='';emptyEl.style.display='block';return;}
+  emptyEl.style.display='none';
+  flagEl.innerHTML = flags.map(f=>'<div class="flag f-'+f.s+'"><span class="fc">'+f.c+'</span><span>'+f.t+'</span></div>').join('');
+}
+
+// ── Trajectory
+function renderTrajectory(sessions) {
+  if(!sessions||!sessions.length){return;}
+  const cv = document.getElementById('traj-canvas');
+  const paneW = document.getElementById('pane-trajectory').offsetWidth;
+  cv.width = paneW > 28 ? paneW - 28 : 500;
+  const W=cv.width, H=180, ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  const last12 = sessions.slice(-12);
+  if(!last12.length)return;
+  const n=last12.length, cellW=W/n;
+  const zoneY=14, modeY=52, rankTop=88, rankH=50;
+
+  // Rank baseline at 50%
+  ctx.strokeStyle='#eee'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(0,rankTop+rankH*0.5); ctx.lineTo(W,rankTop+rankH*0.5); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#ccc'; ctx.font='7px Arial'; ctx.textAlign='right';
+  ctx.fillText('50%', W-2, rankTop+rankH*0.5-2);
+
+  last12.forEach((s,i)=>{
+    const x=i*cellW+cellW/2;
+    const mode=assignMode(s.config_vector);
+    const zone=s.zone||'CALIBRATION';
+    const rank=s.outcome&&s.outcome.rank_pct!=null?s.outcome.rank_pct:null;
+
+    // Zone label
+    ctx.fillStyle=ZONE_COLORS[zone]||'#bbb';
+    ctx.font='bold 7px Arial'; ctx.textAlign='center';
+    ctx.fillText(zone.slice(0,4).toUpperCase(), x, zoneY);
+
+    // Mode dot
+    ctx.fillStyle=MODE_COLORS[mode]||'#888';
+    ctx.beginPath(); ctx.arc(x,modeY,5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=MODE_COLORS[mode]||'#888';
+    ctx.font='7px Arial'; ctx.textAlign='center';
+    ctx.fillText(mode||'?', x, modeY+14);
+
+    // Rank bar
+    if(rank!=null) {
+      const barH=rank*rankH;
+      ctx.fillStyle='#f5f5f5';
+      ctx.fillRect(x-8,rankTop,16,rankH);
+      ctx.fillStyle=rank>=0.65?'#15803d':rank>=0.4?'#bbb':'#dc2626';
+      ctx.fillRect(x-8,rankTop+rankH-barH,16,barH);
+    }
+
+    // Session number
+    ctx.fillStyle='#ccc'; ctx.font='7px Arial'; ctx.textAlign='center';
+    ctx.fillText('S'+(sessions.length-last12.length+i+1), x, H-4);
+  });
+
+  // Row labels
+  ctx.fillStyle='#bbb'; ctx.font='7px Arial'; ctx.textAlign='left';
+  ctx.fillText('ZONE',2,zoneY); ctx.fillText('MODE',2,modeY); ctx.fillText('RANK%',2,rankTop-2);
+
+  document.getElementById('traj-legend').textContent =
+    'Last '+last12.length+' of '+sessions.length+' sessions shown. Bar: green ≥65% · grey 40–65% · red <40%.';
+}
+
+// ── Corroboration matrix
+function renderCorroboration(state, sessions) {
+  const invSessions = sessions.filter(s=>assignMode(s.config_vector)==='INV');
+  const hasAnnouncedInv = invSessions.some(s=>!s.silent_inv);
+  const dims = ['QTY','SPT','FRT','DST','WRM','INV','ENG','SOC','UND'];
+  const STATUS_LABEL = {m:'M',c:'C',i:'I',p:'P',a:''};
+  const STATUS_CLASS = {m:'mc-m',c:'mc-c',i:'mc-i',p:'mc-p',a:'mc-a'};
+  const STATUS_TITLE = {m:'MEASURED — at least one observation in this channel',c:'CONTAMINATED — signal quality compromised',i:'INSTRUMENTED — collection started, below threshold for claims',p:'PENDING — not yet active (Phase 2)',a:'ABSENT — no instrumentation'};
+
+  function cellStatus(dim, chanIdx) {
+    // GAME channel (0)
+    if(chanIdx===0){
+      if(dim==='ENG') return sessions.length>0?'m':'a';
+      if(dim==='SOC'||dim==='UND') return 'a';
+      const d=state[dim];
+      if(!d||d.n===0) return 'a';
+      if(dim==='INV'&&hasAnnouncedInv) return 'c';
+      return 'm';
+    }
+    // BT channel (1) — pending for all mode dims
+    if(chanIdx===1) return ['QTY','SPT','FRT','DST','WRM','INV'].includes(dim)?'p':'a';
+    // NOV, ACD channels (2,3) — instrumented for mode dims
+    if(chanIdx===2||chanIdx===3) return ['QTY','SPT','FRT','DST','WRM','INV'].includes(dim)?'i':'a';
+    // TCH channel (4)
+    if(chanIdx===4) return ['ENG','SOC'].includes(dim)?'i':'a';
+    // PER channel (5)
+    if(chanIdx===5) return dim==='SOC'?'p':'a';
+    // SLF channel (6)
+    if(chanIdx===6) return dim==='UND'?'p':'a';
+    return 'a';
+  }
+
+  let html = '<table class="mx-tbl"><thead><tr><th class="mh"></th>';
+  CHANNELS.forEach(c=>{ html+='<th class="mh">'+c+'</th>'; });
+  html += '</tr></thead><tbody>';
+  dims.forEach(dim=>{
+    const color = MODE_COLORS[dim]||'#555';
+    html += '<tr><td class="ml" style="color:'+color+'">'+dim+'</td>';
+    CHANNELS.forEach((_,ci)=>{
+      const s=cellStatus(dim,ci);
+      html += '<td class="mx-cell '+STATUS_CLASS[s]+'" title="'+dim+' × '+CHANNELS[ci]+': '+(STATUS_TITLE[s]||s)+'">'+(STATUS_LABEL[s]||'')+'</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('matrix-wrap').innerHTML = html;
+}
+
+// ── Evidence feed
+function renderFeed(sessions) {
+  const el=document.getElementById('feed');
+  if(!sessions.length){el.innerHTML='<div class="no-data">No sessions yet.</div>';return;}
+  const last10=[...sessions].reverse().slice(0,10);
+  el.innerHTML = last10.map((s,i)=>{
+    const mode=assignMode(s.config_vector)||'?';
+    const rank=s.outcome&&s.outcome.rank_pct!=null?(s.outcome.rank_pct*100).toFixed(0)+'%':'—';
+    const dt=new Date(s.t*1000).toLocaleDateString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    const n=sessions.length-i;
+    const purFlags=[
+      s.silent_inv?'<span class="purity">SILENT_INV</span>':'',
+      !s.student_id_confirmed?'<span class="purity">name-hash</span>':'',
+    ].filter(Boolean).join('');
+    return '<div class="obs">' +
+      '<span class="chan chan-GAME">GAME</span>' +
+      '<strong>S'+n+' · '+mode+' · rank '+rank+'</strong>'+purFlags+
+      '<div class="meta">cfg:['+((s.config_vector||[]).slice(0,6).join(','))+'] · session_id:'+((s.session_id||'?').slice(0,12))+'… · '+dt+'</div>' +
+      '</div>';
+  }).join('');
+}
+
+// ── Compiler
+function renderCompiler(comp) {
+  const el=document.getElementById('compiler-content');
+  const modeColor=MODE_COLORS[comp.mode]||'#fff';
+  const zoneColor=ZONE_COLORS[comp.zone]||'#888';
+  const botColor=BOT_COLORS[comp.bot_profile]||'#555';
+  const scores=comp.mode_scores||{};
+  const cv=comp.config_vector||[];
+
+  const scoreRows = MODES.map(m=>{
+    const sc=scores[m]; if(!sc)return '';
+    const isChosen=m===comp.mode;
+    const bar=Math.min(100,Math.round(sc.score*100/0.8));
+    return '<div style="margin-bottom:4px'+(isChosen?';font-weight:700':'')+'">'+
+      '<div style="display:flex;align-items:center;gap:5px">'+
+      '<span style="color:'+MODE_COLORS[m]+';width:26px;font-weight:700">'+m+'</span>'+
+      '<div style="flex:1;height:7px;background:#111"><div style="height:100%;width:'+bar+'%;background:'+(isChosen?MODE_COLORS[m]:'#333')+'"></div></div>'+
+      '<span style="font-size:8px;color:#888;width:34px;text-align:right">'+sc.score.toFixed(3)+'</span>'+
+      (isChosen?'<span style="font-size:7px;color:#15803d;font-weight:700">← chosen</span>':'')+
+      '</div></div>';
+  }).join('');
+
+  el.innerHTML =
+    '<div class="comp-card">'+
+    '<div class="comp-lbl">Compiler · argmax E[KL] · <span style="color:#d97706;border:1px solid #d97706;padding:0 3px;font-size:7px">ASSERTED weights</span></div>'+
+    '<div style="display:flex;gap:10px;align-items:baseline;margin-bottom:8px;flex-wrap:wrap">'+
+    '<div class="comp-mode" style="color:'+modeColor+'">'+comp.mode+'</div>'+
+    '<div style="font-size:13px;font-weight:700;letter-spacing:2px;color:'+zoneColor+'">'+( comp.zone||'—')+'</div>'+
+    '</div>'+
+    '<div class="comp-field"><div class="comp-field-lbl">map template</div><div class="comp-field-val">'+(comp.map_filename||'none')+'</div></div>'+
+    '<div class="comp-field"><div class="comp-field-lbl">bot profile</div><div class="comp-field-val" style="color:'+botColor+';font-weight:700">'+(comp.bot_profile||'STANDARD')+'</div></div>'+
+    '<div class="comp-field"><div class="comp-field-lbl">E[rank_pct] <span style="color:#d97706;font-size:7px;border:1px solid #d97706;padding:0 2px">ASSERTED</span></div><div class="comp-field-val">'+((comp.expected_rank_pct||0)*100).toFixed(1)+'%</div></div>'+
+    '<div class="comp-field"><div class="comp-field-lbl">config_vector</div><div class="comp-field-val" style="font-size:8px">['+cv.join(', ')+']</div></div>'+
+    '</div>'+
+    '<div style="font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:6px">Mode Priority Scores</div>'+
+    '<div style="font-size:9px;line-height:1.8">'+scoreRows+'</div>'+
+    '<div style="margin-top:10px">'+
+    '<div style="font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:5px">Push to Room</div>'+
+    '<div style="display:flex;gap:5px;align-items:center">'+
+    '<input id="push-room-id" type="text" placeholder="Room ID (e.g. AbCd12)" style="flex:1;border:1px solid #ddd;padding:3px 6px;font-size:9px;font-family:monospace">'+
+    '<button onclick="pushCompiler()" style="border:1px solid #000;background:#000;color:#fff;padding:3px 8px;font-size:8px;font-weight:700;letter-spacing:1px;cursor:pointer;text-transform:uppercase">Apply</button>'+
+    '</div><div id="push-result" style="font-size:8px;margin-top:3px;color:#888"></div></div>'+
+    '<div style="margin-top:8px;font-size:8px;color:#555;border-top:1px solid #222;padding-top:6px;line-height:1.6">Based on <strong>'+comp.session_count+'</strong> sessions. <span style="color:#d97706">All weights ASSERTED.</span> Phase 3 calibrates from data.</div>';
+}
+
+async function pushCompiler() {
+  if(!currentStudent||!currentCompiler)return;
+  const roomId=document.getElementById('push-room-id').value.trim();
+  const result=document.getElementById('push-result');
+  if(!roomId){result.textContent='Enter room ID.';return;}
+  result.textContent='Applying…';
+  try{
+    const r=await fetch('/api/rooms/'+encodeURIComponent(roomId)+'/apply-compiler',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({studentId:currentStudent})
+    });
+    const data=await r.json();
+    if(!r.ok){result.style.color='#dc2626';result.textContent=data.error;return;}
+    result.style.color='#15803d';
+    result.textContent='Applied: '+data.mode+' · '+data.zone+' · bot='+data.bot_profile;
+  }catch(err){result.style.color='#dc2626';result.textContent=err.message;}
+}
+
+// ── Sessions
+function renderSessions(sessions) {
+  const el=document.getElementById('sessions-content');
+  if(!sessions.length){el.innerHTML='<div class="loading">No sessions yet</div>';return;}
+  el.innerHTML=[...sessions].reverse().map((s,i)=>{
+    const n=sessions.length-i;
+    const mode=assignMode(s.config_vector)||'?';
+    const rank=s.outcome&&s.outcome.rank_pct!=null?(s.outcome.rank_pct*100).toFixed(0)+'%':'—';
+    const oc=s.outcome&&s.outcome.rank_pct!=null?(s.outcome.rank_pct>=0.65?'#15803d':s.outcome.rank_pct>=0.4?'#888':'#dc2626'):'#888';
+    const dt=new Date(s.t*1000).toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+    const flags=[s.silent_inv?'INV':'',!s.student_id_confirmed?'hash':''].filter(Boolean).join(' · ');
+    return '<div class="sess-row'+(s.silent_inv?' sess-inv':'')+'" title="session_id: '+(s.session_id||'?')+'">'+
+      '<span style="color:#bbb">'+n+'</span>'+
+      '<span style="color:'+MODE_COLORS[mode]+';font-weight:700">'+mode+'</span>'+
+      '<span style="color:'+oc+'">'+rank+'</span>'+
+      '<span style="font-size:8px;color:#888">'+dt+(flags?' · '+flags:'')+'</span>'+
+      '</div>';
+  }).join('');
+}
+
+// ── Terminal preview (generated from compiler + state)
+function buildTerminalPreview(comp, state, sessions) {
+  const n=sessions.length+1;
+  const mode=comp.mode;
+  const zone=comp.zone||'CALIBRATION';
+  const modeState=state[mode]||{};
+  const tau=modeState.since_days||0;
+  const elo=modeState.elo||500;
+  const zpd=modeState.zpd_target||0.5;
+  const vel=modeState.velocity;
+  const isSilentInv=mode==='INV';  // simplification — in production compiler flags this explicitly
+
+  document.getElementById('sv-session-label').textContent='SESSION '+n+' · '+mode+' · '+zone;
+  document.getElementById('silent-inv-notice').style.display=isSilentInv?'block':'none';
+
+  const lines=[
+    {t:0,   s:'dim',  x:'// SESSION '+n+' — CHALLENGE COMPILER v2',
+     a:'Frame line. Session number is always disclosed — students track their own arcs. Community mechanism: "session 12" is a meaningful landmark.'},
+    {t:500, s:'dim',  x:'Scanning behavioral history...',
+     a:'Cosmetic latency. Selection completed at previous session close. This message is narrative, not functional — the selection already happened.'},
+  ];
+
+  if(tau>7&&!isSilentInv) {
+    lines.push({t:1100,s:'obs',x:'No '+mode+' engagement in '+tau+' days. This changes now.',
+      a:'<b>Source:</b> τ['+mode+']='+tau+'d (Layer 0 ledger fold). Threshold: τ>7d triggers re-engagement prompt. Verifiable — student can count the gap themselves.'});
+  }
+
+  if(vel!=null&&Math.abs(vel)>5&&!isSilentInv) {
+    const velMsg=vel>0?'Momentum from last block. Continuing.':'Last sessions have been instructive. New angle available.';
+    lines.push({t:1600,s:'obs',x:velMsg,
+      a:'<b>Source:</b> velocity['+mode+']='+vel+' (ΔElo/3 sessions). |vel|>5 threshold. Message tone differs by sign — positive velocity acknowledged, negative reframed as learning without false comfort.'});
+  }
+
+  if(!isSilentInv) {
+    lines.push({t:2100,s:'n',x:'Spectrum zone: '+zone,
+      a:'<b>Threshold:</b> Layer 1 posterior → Layer 2 vocabulary. '+( ZONE_RATIONALE[zone]||'Zone from posterior comparison.')+' Zone is shared with student — community formation mechanism, not a privileged label.'});
+    lines.push({t:2700,s:'b',x:'Mode selected: '+mode,
+      a:'<b>Layer 1 — always disclosed.</b> Elo['+mode+']='+elo+'. Selected by argmax weight formula (ASSERTED). Student may correlate mode selection with their own history — this is intentional, not a leak.'});
+  } else {
+    lines.push({t:2100,s:'n',x:'Spectrum zone: '+zone,
+      a:'<b>Threshold:</b> Zone disclosed normally. [ADMIN NOTE: Mode not disclosed — silent INV. Student terminal omits mode line entirely. This is the only architecturally justified opacity point: disclosing INVERSION creates Hawthorne effect, contaminating measurement.]'});
+    lines.push({t:2700,s:'dim',x:'[mode disclosure suppressed — silent INVERSION protocol]',
+      a:'<b>SILENT INV — admin view only.</b> This line does not appear in the student terminal. Production strips this line from the bundle served to /session/:token. The provenance field (this pane) never reaches the client.'});
+  }
+
+  const diffStr=zpd<0.3?'recalibrated downward':zpd>0.7?'elevated':'recalibrated';
+  lines.push({t:3300,s:'n',x:'Difficulty: '+diffStr+'. The system will not say by how much.',
+    a:'<b>Layer 3 boundary.</b> Admits recalibration (honest) without revealing ZPD target ('+(zpd*100).toFixed(0)+'%). False confidence would be detectable and costly — honesty calibrated, not unconditional.'});
+
+  if(comp.map_filename) {
+    const mapName=comp.map_filename.replace('.json','').replace(/_/g,' ').toUpperCase();
+    lines.push({t:3900,s:'n',x:'Template: '+mapName+' — constraint active.',
+      a:'<b>Layer 1.</b> Map selected by compiler for mode='+mode+'. Template disclosed because the constraint IS the cognitive constraint — knowing it is part of the challenge structure.'});
+  }
+
+  lines.push({t:4500,s:'blank',x:'',a:''});
+
+  const codePool=MODE_CODENAMES[mode]||['PROTOCOL'];
+  const codename=codePool[n%codePool.length];
+  lines.push({t:4700,s:'code',x:'SESSION '+n+': '+codename,
+    a:'Codename from '+mode+' pool ('+codePool.length+' entries, session-index selected for determinism). Memorable token — students say this to each other. "Session 12: EVENT HORIZON" is the community artifact. This is the mechanism, not decoration.'});
+
+  const hint=MODE_HINTS[mode]||'> Play deliberately.';
+  lines.push({t:5300,s:'hint',x:hint,
+    a:'Mode-orienting hint for '+mode+'. Non-prescriptive about method — absolute about objective. Different from a strategic tip: it describes the cognitive stance, not the tactic.'});
+
+  termLines=lines;
+  renderTerminal();
+}
+
+const T_COLORS={dim:'#333',obs:'#0f0',n:'#0af',b:'#fff',code:'#fff',hint:'#8f8',blank:'#000'};
+
+function renderTerminal() {
+  clearTimeout(termTimer);
+  const term=document.getElementById('term');
+  const ann=document.getElementById('ann');
+  term.innerHTML=''; ann.innerHTML='';
+
+  // Annotation pane — immediate
+  termLines.forEach(l=>{
+    if(l.s==='blank'||!l.a)return;
+    const div=document.createElement('div');
+    div.className='ann-line';
+    const preview=l.x?l.x.slice(0,32)+(l.x.length>32?'…':''):'[blank]';
+    div.innerHTML='<div class="at">'+preview+'</div><div class="aa">'+l.a+'</div>';
+    ann.appendChild(div);
+  });
+
+  // Terminal lines — animate in
+  termLines.forEach(l=>{
+    const div=document.createElement('div');
+    div.className='line';
+    if(l.s!=='blank'){
+      div.style.color=T_COLORS[l.s]||'#0f0';
+      if(l.s==='code'||l.s==='b')div.style.fontWeight='700';
+      if(l.s==='hint')div.style.fontStyle='italic';
+      div.textContent=l.x;
+    }
+    term.appendChild(div);
+  });
+
+  let i=0;
+  function reveal(){
+    if(i>=termLines.length)return;
+    term.querySelectorAll('.line')[i].classList.add('show');
+    i++;
+    if(i<termLines.length){
+      const delay=(termLines[i].t||0)-(termLines[i-1].t||0);
+      termTimer=setTimeout(reveal,Math.max(50,delay));
+    }
+  }
+  setTimeout(reveal,200);
+}
+
+function replayTerminal(){if(termLines.length)renderTerminal();}
+
+// ── Student view overlay
+function openStudentView(){
+  const overlay=document.getElementById('sv-overlay');
+  overlay.classList.add('open');
+  const svTerm=document.getElementById('sv-term');
+  svTerm.innerHTML='';
+  // Student view strips: blank lines pass through, [admin view only] lines suppressed, provenance (a) field never rendered
+  termLines.filter(l=>!l.x||!l.x.startsWith('[mode disclosure suppressed')).forEach(l=>{
+    const div=document.createElement('div');
+    div.className='line';
+    if(l.s!=='blank'){
+      div.style.color=T_COLORS[l.s]||'#0f0';
+      if(l.s==='code'||l.s==='b')div.style.fontWeight='700';
+      if(l.s==='hint')div.style.fontStyle='italic';
+      div.textContent=l.x;
+    }
+    svTerm.appendChild(div);
+  });
+  svReplay();
+}
+
+function svReplay(){
+  clearTimeout(svTimer);
+  const svTerm=document.getElementById('sv-term');
+  const lines=svTerm.querySelectorAll('.line');
+  lines.forEach(l=>l.classList.remove('show'));
+  let i=0;
+  const visible=termLines.filter(l=>!l.x||!l.x.startsWith('[mode disclosure suppressed'));
+  function rev(){
+    if(i>=lines.length)return;
+    lines[i].classList.add('show');
+    i++;
+    if(i<visible.length){
+      const delay=(visible[i].t||0)-(visible[i-1].t||0);
+      svTimer=setTimeout(rev,Math.max(50,delay));
+    }
+  }
+  setTimeout(rev,300);
+}
+
+function closeStudentView(){document.getElementById('sv-overlay').classList.remove('open');}
+
+// ── Tab switching
+function setTab(name,el){
+  document.querySelectorAll('.center-panel .pane').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pane-'+name).classList.add('active');
+  document.querySelectorAll('.center-panel .t-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  if(name==='trajectory'&&currentSessions.length)renderTrajectory(currentSessions);
+}
+
+function setRTab(name,el){
+  document.querySelectorAll('.r-scroll').forEach(p=>p.classList.remove('active'));
+  document.getElementById('rpane-'+name).classList.add('active');
+  document.querySelectorAll('.r-tab-bar .t-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ── Health
+async function checkHealth(){
+  const el=document.getElementById('health-result');
+  el.textContent='Checking…'; el.style.color='#888';
+  try{
+    const data=await apiFetch('/api/ledger/health');
+    el.style.color=data.ok?'#15803d':'#dc2626';
+    el.textContent=data.ok?'OK — '+data.records+' records · '+data.students+' students':'Error: '+data.error;
+  }catch(err){el.style.color='#dc2626';el.textContent=err.message;}
+}
+
+// ── Merge
+async function mergeStudents(){
+  const primary=document.getElementById('merge-primary').value.trim();
+  const secondary=document.getElementById('merge-secondary').value.trim();
+  const result=document.getElementById('merge-result');
+  if(!primary||!secondary){result.textContent='Both fields required.';return;}
+  result.textContent='Merging…';
+  try{
+    const r=await fetch('/api/ledger/students/merge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({primary,secondary})});
+    const data=await r.json();
+    if(!r.ok){result.style.color='#dc2626';result.textContent=data.error;return;}
+    result.style.color='#15803d';
+    result.textContent='Merged. Refreshing…';
+    setTimeout(refresh,800);
+  }catch(err){result.style.color='#dc2626';result.textContent=err.message;}
+}
+
+window.addEventListener('load',()=>{ refresh(); });
+</script>
+</body>
+</html>

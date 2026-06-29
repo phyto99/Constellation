@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Bot Creator - Star Conquest</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            color: #667eea;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .slider-group {
+            margin-bottom: 20px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .slider-value {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #e0e0e0;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+        }
+
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .button:active {
+            transform: translateY(0);
+        }
+
+        .button.secondary {
+            background: #6c757d;
+        }
+
+        .button.secondary:hover {
+            box-shadow: 0 10px 20px rgba(108, 117, 125, 0.4);
+        }
+
+        .output-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+
+        .output-box {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .copy-button {
+            background: #48bb78;
+            margin-top: 10px;
+        }
+
+        .copy-button:hover {
+            box-shadow: 0 10px 20px rgba(72, 187, 120, 0.4);
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .info-box p {
+            margin: 5px 0;
+            line-height: 1.6;
+        }
+
+        .priority-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✨ Custom Bot Creator</h1>
+            <p>Design your own AI personality for Star Conquest</p>
+        </div>
+
+        <div class="content">
+            <div class="info-box">
+                <p><strong>How it works:</strong> Describe your bot's personality and behavior, then generate a custom configuration that you can paste into the game.</p>
+                <p><strong>Tip:</strong> Be specific about how aggressive, defensive, or strategic you want your bot to be!</p>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Bot Personality</div>
+                
+                <div class="form-group">
+                    <label for="botName">Bot Name</label>
+                    <input type="text" id="botName" placeholder="e.g., Napoleon, Sherlock, Tesla" />
+                </div>
+
+                <div class="form-group">
+                    <label for="botDescription">Personality Description</label>
+                    <textarea id="botDescription" placeholder="Describe your bot's personality, strategy, and behavior. For example: 'A cautious strategist who focuses on building strong defenses before expanding' or 'An aggressive conqueror who steals aggressively and takes risks'"></textarea>
+                </div>
+
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <label>Aggression Level</label>
+                        <span class="slider-value" id="aggressionValue">5</span>
+                    </div>
+                    <input type="range" id="aggression" min="1" max="9" value="5" />
+                    <small style="color: #666;">1 = Very Passive, 9 = Extremely Aggressive</small>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Strategy Priorities</div>
+                <p style="margin-bottom: 15px; color: #666;">Adjust how your bot prioritizes different actions (0-200)</p>
+                
+                <div class="priority-grid">
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <label>HQ Placement</label>
+                            <span class="slider-value" id="hqValue">150</span>
+                        </div>
+                        <input type="range" id="hqPriority" min="0" max="200" value="150" />
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <label>Stealing</label>
+                            <span class="slider-value" id="stealValue">80</span>
+                        </div>
+                        <input type="range" id="stealPriority" min="0" max="200" value="80" />
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <label>Expansion</label>
+                            <span class="slider-value" id="expandValue">100</span>
+                        </div>
+                        <input type="range" id="expandPriority" min="0" max="200" value="100" />
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <label>Connection</label>
+                            <span class="slider-value" id="connectValue">70</span>
+                        </div>
+                        <input type="range" id="connectPriority" min="0" max="200" value="70" />
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <label>Wormhole Focus</label>
+                            <span class="slider-value" id="wormholeValue">50</span>
+                        </div>
+                        <input type="range" id="wormholePriority" min="0" max="200" value="50" />
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <label>Disruption</label>
+                            <span class="slider-value" id="disruptValue">40</span>
+                        </div>
+                        <input type="range" id="disruptPriority" min="0" max="200" value="40" />
+                    </div>
+                </div>
+            </div>
+
+            <button class="button" onclick="generateBot()">🎨 Generate Custom Bot</button>
+
+            <div id="outputSection" class="output-section hidden">
+                <div class="section-title">AI Prompt for Bot Generation</div>
+                <p style="margin-bottom: 10px; color: #666;">Copy this prompt and paste it into ChatGPT or Claude. Then paste the JSON response back into the game when selecting "Custom" bot:</p>
+                <div id="outputBox" class="output-box"></div>
+                <button class="button copy-button" onclick="copyToClipboard()">📋 Copy Prompt to Clipboard</button>
+                <button class="button secondary" onclick="resetForm()">🔄 Create Another Bot</button>
+            </div>
+
+            <div id="loadingSection" class="loading hidden">
+                <div class="spinner"></div>
+                <p>Generating your custom bot...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Update slider values in real-time
+        document.querySelectorAll('input[type="range"]').forEach(slider => {
+            slider.addEventListener('input', function() {
+                const valueId = this.id.replace('Priority', 'Value').replace('aggression', 'aggressionValue');
+                document.getElementById(valueId).textContent = this.value;
+            });
+        });
+
+        function generateBot() {
+            const name = document.getElementById('botName').value.trim();
+            const description = document.getElementById('botDescription').value.trim();
+            const aggression = parseInt(document.getElementById('aggression').value);
+            
+            const priorities = {
+                hq: parseInt(document.getElementById('hqPriority').value),
+                steal: parseInt(document.getElementById('stealPriority').value),
+                expand: parseInt(document.getElementById('expandPriority').value),
+                connect: parseInt(document.getElementById('connectPriority').value),
+                wormhole: parseInt(document.getElementById('wormholePriority').value),
+                disrupt: parseInt(document.getElementById('disruptPriority').value)
+            };
+
+            if (!name || !description) {
+                alert('Please fill in both the bot name and personality description!');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loadingSection').classList.remove('hidden');
+            document.getElementById('outputSection').classList.add('hidden');
+
+            // Simulate generation (in real implementation, this would call an AI API)
+            setTimeout(() => {
+                // Generate AI prompt that user can paste into ChatGPT/Claude
+                const prompt = `You are a bot strategy generator for the Star Conquest game. Generate a JSON configuration for a custom AI bot based on the following specifications:
+
+**Bot Name:** ${name}
+**Personality Description:** ${description}
+**Aggression Level:** ${aggression}/9 (1=passive, 9=extremely aggressive)
+
+**Priority Weights (0-200):**
+- HQ Placement: ${priorities.hq}
+- Stealing: ${priorities.steal}
+- Expansion: ${priorities.expand}
+- Connection: ${priorities.connect}
+- Wormhole Focus: ${priorities.wormhole}
+- Disruption: ${priorities.disrupt}
+
+**Game Context Available:**
+- gameProgress: 0.0 to 1.0 (current round / total rounds)
+- myPosition: 1-7 (team ranking, 1=winning)
+- stealsLeft: number of steals remaining
+- teamHQs.length: number of HQs placed
+- game.HM: max HQs allowed
+
+**Available Actions:**
+- 'hq': Place headquarters (required early game)
+- 'steal': Steal enemy stars (costs a steal)
+- 'expand': Capture neutral stars
+- 'connect': Connect isolated friendly stars
+- 'wormhole': Target wormhole stars specifically
+- 'disrupt': Disrupt enemy connections
+
+**Instructions:**
+Generate a JSON object with this exact structure:
+
+\`\`\`json
+{
+  "name": "${name}",
+  "description": "${description}",
+  "icon": "✨",
+  "strategy": "custom",
+  "aggression": ${aggression},
+  "priorities": {
+    "hq": ${priorities.hq},
+    "steal": ${priorities.steal},
+    "expand": ${priorities.expand},
+    "connect": ${priorities.connect},
+    "wormhole": ${priorities.wormhole},
+    "disrupt": ${priorities.disrupt}
+  },
+  "customPriorities": "function(gameState) { /* YOUR GENERATED CODE HERE */ }"
+}
+\`\`\`
+
+**For the customPriorities function:**
+1. Return an array of action objects with dynamic weights
+2. Adjust weights based on gameState variables
+3. Make the bot behave according to the personality description
+4. Use the base priority values but modify them intelligently
+5. Consider game progress, position, and remaining resources
+
+**Example pattern:**
+\`\`\`javascript
+function(gameState) {
+    const gameProgress = gameState.gameProgress;
+    const myPosition = gameState.myPosition;
+    const stealsLeft = gameState.stealsLeft;
+    const desperationMultiplier = myPosition > 3 ? 1.5 : 1;
+    const lateGameMultiplier = gameProgress > 0.7 ? 1.3 : 1;
+    
+    return [
+        { action: 'hq', weight: gameState.teamHQs.length < gameState.game.HM ? ${priorities.hq} : 0 },
+        { action: 'steal', weight: this.totalStealsThisRound < this.calculateMaxSteals(gameState) && stealsLeft > 0 ? ${priorities.steal} * desperationMultiplier : 0 },
+        { action: 'expand', weight: ${priorities.expand} * (gameProgress < 0.5 ? 1.2 : 0.9) },
+        { action: 'connect', weight: ${priorities.connect} },
+        { action: 'wormhole', weight: ${priorities.wormhole} },
+        { action: 'disrupt', weight: ${priorities.disrupt} * lateGameMultiplier }
+    ];
+}
+\`\`\`
+
+Generate the complete JSON now, making the customPriorities function match the personality: "${description}"`;
+
+                document.getElementById('outputBox').textContent = prompt;
+                document.getElementById('loadingSection').classList.add('hidden');
+                document.getElementById('outputSection').classList.remove('hidden');
+            }, 500);
+        }
+
+        function copyToClipboard() {
+            const output = document.getElementById('outputBox').textContent;
+            navigator.clipboard.writeText(output).then(() => {
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = '✅ Copied!';
+                button.style.background = '#38a169';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = '';
+                }, 2000);
+            }).catch(err => {
+                alert('Failed to copy to clipboard. Please copy manually.');
+            });
+        }
+
+        function resetForm() {
+            document.getElementById('botName').value = '';
+            document.getElementById('botDescription').value = '';
+            document.getElementById('aggression').value = 5;
+            document.getElementById('hqPriority').value = 150;
+            document.getElementById('stealPriority').value = 80;
+            document.getElementById('expandPriority').value = 100;
+            document.getElementById('connectPriority').value = 70;
+            document.getElementById('wormholePriority').value = 50;
+            document.getElementById('disruptPriority').value = 40;
+            
+            // Update displayed values
+            document.querySelectorAll('input[type="range"]').forEach(slider => {
+                const valueId = slider.id.replace('Priority', 'Value').replace('aggression', 'aggressionValue');
+                document.getElementById(valueId).textContent = slider.value;
+            });
+            
+            document.getElementById('outputSection').classList.add('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>System Map — Open Questions & Architecture</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.4}
+nav{position:sticky;top:0;z-index:100;background:#fff;border-bottom:2px solid #000;display:flex;align-items:stretch;padding:0 14px;overflow-x:auto;gap:0}
+.logo{font-size:9px;letter-spacing:2px;font-weight:700;padding:10px 14px 10px 0;border-right:1px solid #ccc;margin-right:4px;white-space:nowrap;align-self:center;text-transform:uppercase;color:#555}
+.tab{padding:10px 13px;cursor:pointer;font-size:9px;letter-spacing:1px;color:#888;border-bottom:3px solid transparent;transition:all .1s;white-space:nowrap;font-weight:700;text-transform:uppercase}
+.tab:hover{color:#000}.tab.active{color:#000;border-bottom-color:#000}
+.panel{display:none;padding:20px}.panel.active{display:block}
+h2{font-size:9px;letter-spacing:2px;font-weight:700;text-transform:uppercase;border-bottom:1px solid #000;padding-bottom:5px;margin-bottom:14px;color:#333}
+h3{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+h4{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;color:#444}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.card{border:1px solid #ccc;padding:12px;background:#fafafa}
+.sep{border:none;border-top:1px solid #ddd;margin:10px 0}
+table.t{width:100%;border-collapse:collapse;font-size:11px}
+table.t th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 8px;border-bottom:2px solid #000;text-align:left;background:#f0f0f0}
+table.t td{padding:5px 8px;border-bottom:1px solid #eee;vertical-align:top}
+table.t tr:hover td{background:#f5f5f5}
+.inset{background:#f0f0f0;border-left:3px solid #000;padding:8px 10px;font-size:11px;line-height:1.7;margin:8px 0}
+.warn{background:#f8f8f8;border:1px dashed #000;padding:8px 10px;font-size:10px;line-height:1.7;margin:8px 0}
+/* confidence colors */
+.conf-solid{border-left:4px solid #000}
+.conf-green{border-left:4px solid #15803d}
+.conf-amber{border-left:4px solid #d97706}
+.conf-red{border-left:4px solid #dc2626}
+.conf-blue{border-left:4px solid #1d4ed8}
+.conf-purple{border-left:4px solid #7c3aed}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-solid{background:#000}
+.dot-green{background:#15803d}
+.dot-amber{background:#d97706}
+.dot-red{background:#dc2626}
+.dot-blue{background:#1d4ed8}
+.dot-purple{background:#7c3aed}
+/* question cards */
+.q-card{border:1px solid #ccc;padding:12px;margin-bottom:10px;background:#fff}
+.q-card .q-status{font-size:8px;letter-spacing:2px;font-weight:700;text-transform:uppercase;margin-bottom:4px}
+.q-card .q-title{font-size:11px;font-weight:700;margin-bottom:6px}
+.q-card .q-row{display:flex;gap:10px;margin-bottom:4px;font-size:10px;line-height:1.6}
+.q-card .q-label{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:#888;width:72px;flex-shrink:0;padding-top:2px}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:#fff}::-webkit-scrollbar-thumb{background:#ccc}
+@media(max-width:760px){.grid2,.grid3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav>
+  <span class="logo">System Map</span>
+  <div class="tab active" onclick="showTab('orbital',this)">Orbital Map</div>
+  <div class="tab" onclick="showTab('questions',this)">Open Questions</div>
+  <div class="tab" onclick="showTab('bridge',this)">BT Bridge</div>
+  <div class="tab" onclick="showTab('confidence',this)">Confidence Levels</div>
+  <div class="tab" onclick="showTab('buildorder',this)">Build Order</div>
+</nav>
+
+<!-- ═══════════════════════════════════ ORBITAL MAP -->
+<div id="panel-orbital" class="panel active">
+  <h2>Complete System Map — Confidence-Coded Architecture</h2>
+  <div class="grid2" style="margin-bottom:10px">
+    <div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:9px;margin-bottom:8px">
+        <span><span class="dot dot-solid"></span>Implemented · confident</span>
+        <span><span class="dot dot-green"></span>Validated · evidence-backed</span>
+        <span><span class="dot dot-amber"></span>Directional · needs calibration</span>
+        <span><span class="dot dot-red"></span>Known problem · needs resolution</span>
+        <span><span class="dot dot-blue"></span>Open question · direction unclear</span>
+        <span><span class="dot dot-purple"></span>BT bridge · new territory</span>
+      </div>
+    </div>
+    <div style="text-align:right">
+      <button id="toggle-bt" onclick="toggleBT()" style="border:1px solid #7c3aed;color:#7c3aed;background:#fff;padding:4px 12px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer">SHOW BT BRIDGE</button>
+      <button onclick="toggleLabels()" style="border:1px solid #ccc;color:#555;background:#fff;padding:4px 12px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;margin-left:6px">TOGGLE LABELS</button>
+    </div>
+  </div>
+  <canvas id="orbital-canvas" width="100%" height="620" style="display:block;width:100%;border:1px solid #ccc;cursor:pointer"></canvas>
+  <div id="orbital-tooltip" style="min-height:50px;padding:8px 10px;border:1px solid #ddd;background:#f8f8f8;margin-top:8px;font-size:10px;line-height:1.7"></div>
+</div>
+
+<!-- ═══════════════════════════════════ OPEN QUESTIONS -->
+<div id="panel-questions" class="panel">
+  <h2>Open Questions — Every Unresolved Problem</h2>
+
+  <div class="q-card conf-red">
+    <div class="q-status" style="color:#dc2626">● CRITICAL — affects every metric</div>
+    <div class="q-title">Q1: Elo measures game performance, not cognitive skill</div>
+    <div class="q-row"><span class="q-label">Current</span><span>mode_elo[6] updated from competitive session rank. Measures how well the student performs in Constellation relative to peers.</span></div>
+    <div class="q-row"><span class="q-label">Problem</span><span>A student who memorizes FORTRESS opening sequences has high FRT Elo. A student who understands graph connectivity but plays inconsistently has lower FRT Elo. These are different cognitive states. The system cannot tell them apart.</span></div>
+    <div class="q-row"><span class="q-label">Resolution</span><span>Maintain parallel <code>transfer_elo[mode]</code> from brief out-of-game cognitive tasks administered periodically. The gap between game_elo and transfer_elo is the most diagnostic signal in the system. Wide gap = game knowledge, not cognitive development. BT system provides this.</span></div>
+    <div class="q-row"><span class="q-label">Priority</span><span style="color:#dc2626"><strong>P0 — this corrupts the objective function until resolved</strong></span></div>
+  </div>
+
+  <div class="q-card conf-red">
+    <div class="q-status" style="color:#dc2626">● CRITICAL — fundamental signal contamination</div>
+    <div class="q-title">Q2: INVERSION announces itself — the wrong signal</div>
+    <div class="q-row"><span class="q-label">Current</span><span>Terminal always announces INVERSION: "The reward structure has been altered." Student knows a reversal is happening before it starts.</span></div>
+    <div class="q-row"><span class="q-label">Problem</span><span>Genuine reversal learning — the cognitive skill being trained — is adapting to a change you did not know was coming. "Adapt to announced change" is cognitively easier than "detect and adapt to unannounced change." The system is measuring the easier skill and calling it cognitive flexibility.</span></div>
+    <div class="q-row"><span class="q-label">Resolution</span><span>Some INVERSION sessions should be silent. Terminal says nothing about an overlay. Student discovers the reversal from score feedback alone. The <code>strategy_shift_speed</code> signal from a silent INVERSION is the clean reversal learning measure. Announced INVERSION remains as an introduction; silent INVERSION is the advanced form.</span></div>
+    <div class="q-row"><span class="q-label">Priority</span><span style="color:#dc2626"><strong>P0 — corrupts the INV mode signal quality</strong></span></div>
+  </div>
+
+  <div class="q-card conf-amber">
+    <div class="q-status" style="color:#d97706">◆ STRUCTURAL — affects mode isolation claims</div>
+    <div class="q-title">Q3: The 6 modes are not cognitively orthogonal</div>
+    <div class="q-row"><span class="q-label">Current</span><span>System treats 6 modes as independent cognitive dimensions. Session selection and Elo are computed per-mode as if modes don't interact.</span></div>
+    <div class="q-row"><span class="q-label">Problem</span><span>FORTRESS (hq×500, dest×−200) requires inhibitory control — resisting the impulse to destroy when destroying is costly. Inhibitory control is DESTRUCTION's primary cognitive target. Optimal FORTRESS play uses DST's cognitive skill. The modes overlap. A student's FRT Elo incorporates their inhibitory control capacity.</span></div>
+    <div class="q-row"><span class="q-label">Resolution</span><span>Replace the independence assumption with a covariance model: mode_elo[6] as a correlated multivariate, not 6 independent scalars. The correlation structure reveals which modes are transferring to each other. A student high in FRT who improves in DST faster than expected is demonstrating the connection. BT system can map the true cognitive factor structure.</span></div>
+    <div class="q-row"><span class="q-label">Priority</span><span style="color:#d97706"><strong>P1 — affects analysis accuracy but not catastrophically</strong></span></div>
+  </div>
+
+  <div class="q-card conf-amber">
+    <div class="q-status" style="color:#d97706">◆ STRUCTURAL — affects difficulty calibration</div>
+    <div class="q-title">Q4: Forgetting curve wrong domain — Ebbinghaus is verbal memory</div>
+    <div class="q-row"><span class="q-label">Current</span><span>Forgetting decay: <code>d_adjusted = d_base × exp(−τ/14 days)</code>. 14-day half-life borrowed from Ebbinghaus forgetting curve literature on verbal recall.</span></div>
+    <div class="q-row"><span class="q-label">Problem</span><span>Strategic and procedural skills decay significantly more slowly than verbal memory. Motor learning (a closer analogue to competitive game strategy) can persist for months without practice. The 14-day assumption may be dramatically wrong, causing the system to lower difficulty too aggressively when students return after breaks.</span></div>
+    <div class="q-row"><span class="q-label">Resolution</span><span>Measure empirically: track Elo on mode return as function of days elapsed. Fit the exponential decay. Read off the true half-life for this student population and this game type. Initial guess: 30–60 days, not 14. BT system longitudinal data can cross-validate.</span></div>
+    <div class="q-row"><span class="q-label">Priority</span><span style="color:#d97706"><strong>P1 — measurable and correctable with data</strong></span></div>
+  </div>
+
+  <div class="q-card conf-blue">
+    <div class="q-status" style="color:#1d4ed8">◉ STRUCTURAL BLIND SPOT — unmodeled dimension</div>
+    <div class="q-title">Q5: The social dimension is entirely absent</div>
+    <div class="q-row"><span class="q-label">Current</span><span>System measures what the student does: star claims, HQ connections, steal rates, score rank. No measurement of social-emotional behavior.</span></div>
+    <div class="q-row"><span class="q-label">Problem</span><span>The game is multiplayer. For younger students especially, the most important developmental outcomes may be: how do they respond to losing in front of peers? Do they support or undermine teammates? Do they disengage under pressure or adapt? These are not measured. The system is cognitively complete and socially blind.</span></div>
+    <div class="q-row"><span class="q-label">Resolution</span><span>Option A: Accept the limitation — the system develops cognitive skills, and social-emotional development happens in the social context around the game, not within the system. Option B: Add participation/engagement signals (reconnection rate, session completion rate, cooperative behavior tags from teacher). Option B requires teacher input. Option A is consistent with the system's scope.</span></div>
+    <div class="q-row"><span class="q-label">Priority</span><span style="color:#1d4ed8"><strong>P2 — critical for younger students, manageable for teen primary audience</strong></span></div>
+  </div>
+
+  <div class="q-card conf-blue">
+    <div class="q-status" style="color:#1d4ed8">◉ MEASUREMENT — proxy validity uncertain</div>
+    <div class="q-title">Q6: All parameters are asserted, none validated for this context</div>
+    <div class="q-row"><span class="q-label">Parameters</span><span>difficulty coefficient 0.85 · overlay probability 0.25 · hypercube window 6 · elo_weight exponent 0.7 · flow zone 25–75th pct · budget thresholds 0/1/6/20/50</span></div>
+    <div class="q-row"><span class="q-label">Problem</span><span>Every parameter is derived from theory or educated guessing. They are probably directionally correct. They are almost certainly wrong in magnitude for this specific student population, game type, and cultural context.</span></div>
+    <div class="q-row"><span class="q-label">Resolution</span><span>Phase 2 instrumentation: log every parameter value used alongside the outcome it produced (ΔElo_velocity). Regress outcome on parameter values. The coefficients that maximize ΔElo_velocity are the correct ones. This is a 50-session data collection project, not a research program.</span></div>
+    <div class="q-row"><span class="q-label">Priority</span><span style="color:#1d4ed8"><strong>P2 — directional correctness sufficient for Phase 1</strong></span></div>
+  </div>
+
+  <div class="q-card conf-amber">
+    <div class="q-status" style="color:#d97706">◆ DESIGN — gifted track incomplete</div>
+    <div class="q-title">Q7: Gifted detection threshold is guessed, not calibrated</div>
+    <div class="q-row"><span class="q-label">Current</span><span>Gifted detection: elo_velocity ≥ 2 SD above cohort mean in sessions 1–5. Accelerate to INVERSION at session 3 instead of session 6.</span></div>
+    <div class="q-row"><span class="q-label">Problem</span><span>The 2 SD threshold and the session-3 INVERSION trigger are guesses. More critically: the gifted track is defined by what to accelerate, not by what gifted students specifically need that standard students don't. The key claim — gifted students need calibrated failure, not accelerated success — is unvalidated.</span></div>
+    <div class="q-row"><span class="q-label">Resolution</span><span>Run two gifted student cohorts: one accelerated, one standard calibration at higher difficulty. Measure which produces faster transfer_elo improvement and better outcomes on the Alpha application quality metric. BT system can provide pre/post cognitive benchmarks.</span></div>
+    <div class="q-row"><span class="q-label">Priority</span><span style="color:#d97706"><strong>P1 — gifted students are most likely to plateau if not correctly handled</strong></span></div>
+  </div>
+
+  <div class="q-card" style="border-left:4px solid #7c3aed">
+    <div class="q-status" style="color:#7c3aed">◈ BT BRIDGE — dependent on integration</div>
+    <div class="q-title">Q8: brain_metrics excluded until validated — but BT system may validate them</div>
+    <div class="q-row"><span class="q-label">Current</span><span>brain_metrics = EXCLUDE. Listed as "unvalidated mutual information with session accuracy." Not part of the core variable set.</span></div>
+    <div class="q-row"><span class="q-label">Problem</span><span>This exclusion was correct given no BT system. If the BT system provides validated cognitive scores (working memory, processing speed, spatial rotation, inhibitory control, cognitive flexibility, pattern recognition) — these are exactly the transfer measures that would upgrade brain_metrics from EXCLUDE to CORE.</span></div>
+    <div class="q-row"><span class="q-label">Resolution</span><span>BT integration: map BT cognitive dimensions to Constellation modes. BT scores become the transfer_elo[mode]. The mutual information is now measurable. What was an excluded variable becomes the most important variable in the system.</span></div>
+    <div class="q-row"><span class="q-label">Priority</span><span style="color:#7c3aed"><strong>P0 when BT system available — transforms the entire architecture</strong></span></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ BT BRIDGE -->
+<div id="panel-bridge" class="panel">
+  <h2>Brain Training Bridge — How BT and Constellation Connect</h2>
+
+  <div style="border:2px solid #7c3aed;padding:14px;margin-bottom:16px;background:#faf8ff">
+    <div style="font-size:9px;letter-spacing:2px;color:#7c3aed;margin-bottom:6px;font-weight:700">THE KEY INSIGHT</div>
+    <div style="font-size:11px;line-height:1.8;color:#111">
+      Constellation measures how students perform <em>in Constellation</em>. The brain training system measures cognitive capacity <em>independent of any game</em>. These are different things — and together they are the complete picture. Constellation without BT: we know the student performed better at the game, but not whether they got cognitively smarter. BT without Constellation: we know cognitive scores improved, but not through what mechanism. Together: we know both, and we can measure whether game training is producing genuine cognitive development.
+    </div>
+  </div>
+
+  <canvas id="bridge-canvas" width="100%" height="300" style="display:block;width:100%;border:1px solid #ccc;margin-bottom:14px"></canvas>
+
+  <div class="grid2" style="margin-bottom:14px">
+    <div>
+      <h3 style="margin-bottom:8px">Cognitive Dimension Mapping</h3>
+      <table class="t">
+        <tr><th>Constellation Mode</th><th>Cognitive Target</th><th>BT Measure</th><th>Transfer Direction</th></tr>
+        <tr>
+          <td><strong class="c-qty" style="color:#d97706">QUANTITY</strong></td>
+          <td>Rapid decision under time pressure, spatial breadth</td>
+          <td>Processing speed · Working memory span</td>
+          <td>Game QTY Elo → BT processing speed score</td>
+        </tr>
+        <tr>
+          <td><strong style="color:#2563eb">SPATIAL</strong></td>
+          <td>Euclidean estimation, path optimization</td>
+          <td>Spatial rotation · Mental navigation tasks</td>
+          <td>Game SPT Elo → BT spatial rotation score</td>
+        </tr>
+        <tr>
+          <td><strong style="color:#059669">FORTRESS</strong></td>
+          <td>Graph connectivity, multi-step planning</td>
+          <td>Executive function · Planning tasks · WM</td>
+          <td>Game FRT Elo → BT executive function score</td>
+        </tr>
+        <tr>
+          <td><strong style="color:#dc2626">DESTRUCTION</strong></td>
+          <td>Inhibitory control, opponent modeling</td>
+          <td>Inhibitory control tasks · Theory of mind</td>
+          <td>Game DST Elo → BT inhibitory control score</td>
+        </tr>
+        <tr>
+          <td><strong style="color:#7c3aed">WORMHOLE</strong></td>
+          <td>Goal-directed search, pattern recognition under noise</td>
+          <td>Pattern recognition · Sustained attention</td>
+          <td>Game WRM Elo → BT pattern recognition score</td>
+        </tr>
+        <tr>
+          <td><strong style="color:#0891b2">INVERSION</strong></td>
+          <td>Cognitive flexibility, reversal learning</td>
+          <td>Set-shifting tasks · Task switching</td>
+          <td>Game INV Elo → BT cognitive flexibility score</td>
+        </tr>
+      </table>
+    </div>
+    <div>
+      <h3 style="margin-bottom:8px">The Gap Signal</h3>
+      <div class="inset" style="margin-bottom:10px">
+        The most important measurement in the combined system is not game_elo or BT_score — it is the <strong>gap between them</strong>. A student with high game FRT Elo and low BT executive function score has learned Constellation FORTRESS strategy without developing the underlying cognitive capacity. The gap is the diagnostic. The system should detect and respond to it.
+      </div>
+      <table class="t">
+        <tr><th>Gap pattern</th><th>Interpretation</th><th>System response</th></tr>
+        <tr>
+          <td style="font-size:10px">game_elo ↑↑<br>BT_score →</td>
+          <td style="font-size:10px">Game optimization without cognitive transfer. Student has learned Constellation, not the skill.</td>
+          <td style="font-size:10px">Increase INVERSION frequency. Reduce ECHO. Force template rotation to prevent memorization.</td>
+        </tr>
+        <tr>
+          <td style="font-size:10px">game_elo →<br>BT_score ↑↑</td>
+          <td style="font-size:10px">Cognitive development not reflected in game performance. Student is developing but the game isn't capturing it.</td>
+          <td style="font-size:10px">Investigate: is the difficulty calibration wrong? Is there a mode mismatch? May need new mode templates.</td>
+        </tr>
+        <tr>
+          <td style="font-size:10px">game_elo ↑<br>BT_score ↑</td>
+          <td style="font-size:10px">Transfer occurring. Game training producing genuine cognitive development. This is the target state.</td>
+          <td style="font-size:10px">Continue current trajectory. System is working.</td>
+        </tr>
+        <tr>
+          <td style="font-size:10px">game_elo ↓<br>BT_score ↑</td>
+          <td style="font-size:10px">Cognitive development may be outpacing the game's ability to challenge the student. Game too easy at cognitive level.</td>
+          <td style="font-size:10px">Advance to design challenge track. Consider new game introduction.</td>
+        </tr>
+      </table>
+      <div class="warn" style="margin-top:8px">
+        <strong>When BT is integrated:</strong> brain_metrics changes from EXCLUDE to the most important variable in the system. transfer_elo[mode] = BT_score[corresponding_dimension]. The gap measurement becomes the primary signal driving session selection, not raw game Elo.
+      </div>
+    </div>
+  </div>
+
+  <h3 style="margin-bottom:8px">Integration Architecture</h3>
+  <canvas id="integration-canvas" width="100%" height="200" style="display:block;width:100%;border:1px solid #ccc"></canvas>
+</div>
+
+<!-- ═══════════════════════════════════ CONFIDENCE -->
+<div id="panel-confidence" class="panel">
+  <h2>Confidence Levels — What We Know vs What We're Guessing</h2>
+
+  <canvas id="conf-canvas" width="100%" height="500" style="display:block;width:100%;border:1px solid #ccc;margin-bottom:14px"></canvas>
+
+  <div class="grid3">
+    <div class="card conf-solid" style="padding-left:14px">
+      <h4 style="margin-bottom:6px">Fully confident — do not redesign</h4>
+      <ul style="font-size:10px;color:#333;line-height:1.8">
+        <li>One principle: maximize E[KL(posterior ‖ prior)]</li>
+        <li>The 6 modes as cognitively distinct targets</li>
+        <li>Latin hypercube as breadth guarantee</li>
+        <li>The variable selection criterion (mutual information)</li>
+        <li>Locked axes = cognitive constraint, free axes = difficulty</li>
+        <li>The singularity trajectory (consumer → architect)</li>
+        <li>Zone names in terminal (ECHO, RADICAL etc)</li>
+        <li>Alpha application via detective framework</li>
+        <li>Never optimize for game performance directly</li>
+        <li>The game as transparent medium for cognitive dev</li>
+        <li>Plugin architecture for multi-game</li>
+      </ul>
+    </div>
+    <div class="card conf-amber" style="padding-left:14px">
+      <h4 style="margin-bottom:6px">Directionally right — magnitudes need data</h4>
+      <ul style="font-size:10px;color:#333;line-height:1.8">
+        <li>difficulty_target = elo × 0.85 (coefficient needs calibration)</li>
+        <li>Forgetting decay ≈ exp(−τ/14d) (half-life likely 30–60d)</li>
+        <li>P(INVERSION) = 0.25 when eligible (needs optimization)</li>
+        <li>Elo weight exponent = 0.7 (needs regression)</li>
+        <li>Budget thresholds 0/1/6/20/50 (needs measurement)</li>
+        <li>Hypercube window = 6 (may be too small for some students)</li>
+        <li>Flow zone 25–75th pct (may shift with session size)</li>
+        <li>Gifted detection at 2 SD velocity (threshold guessed)</li>
+        <li>Overlay cooldown 3 sessions (guessed)</li>
+        <li>Mode adjacency map (plausible, not validated)</li>
+      </ul>
+    </div>
+    <div class="card conf-red" style="padding-left:14px">
+      <h4 style="margin-bottom:6px">Known problems — must resolve</h4>
+      <ul style="font-size:10px;color:#333;line-height:1.8">
+        <li>Elo = game performance ≠ cognitive skill (Q1)</li>
+        <li>Announced INVERSION = wrong signal (Q2)</li>
+        <li>Mode non-independence (Q3)</li>
+        <li>Wrong forgetting curve domain (Q4)</li>
+        <li>Social dimension absent (Q5)</li>
+        <li>All parameters asserted not validated (Q6)</li>
+        <li>Gifted track defined by speed not need (Q7)</li>
+        <li>brain_metrics excluded — needs BT validation (Q8)</li>
+        <li>No transfer measurement mechanism</li>
+        <li>Within-session signal unmeasured</li>
+        <li>Map generation not student-profile-driven</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ BUILD ORDER -->
+<div id="panel-buildorder" class="panel">
+  <h2>Build Order — Given What We Know</h2>
+
+  <div class="warn" style="margin-bottom:14px">
+    The architecture is philosophically complete. Building more of it before resolving the P0 problems would be building on wrong foundations. The build order is driven by: which problems, if unresolved, corrupt everything downstream?
+  </div>
+
+  <canvas id="build-canvas" width="100%" height="280" style="display:block;width:100%;border:1px solid #ccc;margin-bottom:14px"></canvas>
+
+  <div class="grid2">
+    <div>
+      <table class="t">
+        <tr><th colspan="4" style="background:#000;color:#fff">Phase 0 — Understand before building further</th></tr>
+        <tr><th>Item</th><th>Why first</th><th>What it unblocks</th><th>BT needed?</th></tr>
+        <tr>
+          <td style="font-size:10px"><strong>Silent INVERSION</strong></td>
+          <td style="font-size:10px">Current INV signal is contaminated by announcement. Clean signal needed before INV-based decisions are trusted.</td>
+          <td style="font-size:10px">Reliable cognitive flexibility measurement</td>
+          <td style="font-size:10px">No</td>
+        </tr>
+        <tr>
+          <td style="font-size:10px"><strong>Forgetting half-life measurement</strong></td>
+          <td style="font-size:10px">Return-difficulty calibration affects every student who misses sessions. Wrong value = systematic error.</td>
+          <td style="font-size:10px">Accurate difficulty calibration across gaps</td>
+          <td style="font-size:10px">No — measurable from game data</td>
+        </tr>
+        <tr>
+          <td style="font-size:10px"><strong>mode_elo_velocity tracking</strong></td>
+          <td style="font-size:10px">Most important missing variable. Plateau detection impossible without it.</td>
+          <td style="font-size:10px">Gifted detection · plateau detection · velocity bonus</td>
+          <td style="font-size:10px">No</td>
+        </tr>
+        <tr>
+          <td style="font-size:10px"><strong>recent_template_history[6]</strong></td>
+          <td style="font-size:10px">Compiler can currently repeat templates. Signal purity requires variety.</td>
+          <td style="font-size:10px">Template selection correctness</td>
+          <td style="font-size:10px">No</td>
+        </tr>
+        <tr><th colspan="4" style="background:#333;color:#fff">Phase 1 — Core system (no BT required)</th></tr>
+        <tr>
+          <td style="font-size:10px">Full terminal with zone names</td>
+          <td style="font-size:10px">Community generation starts here</td>
+          <td style="font-size:10px">Meta-community vocabulary</td>
+          <td style="font-size:10px">No</td>
+        </tr>
+        <tr>
+          <td style="font-size:10px">Alpha application system</td>
+          <td style="font-size:10px">Singularity trajectory needs this endpoint</td>
+          <td style="font-size:10px">Stage 5–6 development path</td>
+          <td style="font-size:10px">No</td>
+        </tr>
+        <tr>
+          <td style="font-size:10px">Collaborative staircase track</td>
+          <td style="font-size:10px">Younger student primary pathway</td>
+          <td style="font-size:10px">Multi-audience support</td>
+          <td style="font-size:10px">No</td>
+        </tr>
+        <tr>
+          <td style="font-size:10px">Phase 2 instrumentation</td>
+          <td style="font-size:10px">Collect data to validate all P2 parameters</td>
+          <td style="font-size:10px">Phase 3 learned parameters</td>
+          <td style="font-size:10px">No</td>
+        </tr>
+        <tr><th colspan="4" style="background:#7c3aed;color:#fff">Phase 2 — BT integration (transforms the system)</th></tr>
+        <tr>
+          <td style="font-size:10px">BT ↔ Constellation dimension mapping</td>
+          <td style="font-size:10px">Validates the 6-mode cognitive model</td>
+          <td style="font-size:10px">transfer_elo becomes real</td>
+          <td style="font-size:10px"><strong>Yes</strong></td>
+        </tr>
+        <tr>
+          <td style="font-size:10px">Gap signal implementation</td>
+          <td style="font-size:10px">Drives session selection when game Elo and BT score diverge</td>
+          <td style="font-size:10px">True cognitive development tracking</td>
+          <td style="font-size:10px"><strong>Yes</strong></td>
+        </tr>
+        <tr>
+          <td style="font-size:10px">brain_metrics upgrade from EXCLUDE to CORE</td>
+          <td style="font-size:10px">Mutual information now measurable</td>
+          <td style="font-size:10px">Complete variable set</td>
+          <td style="font-size:10px"><strong>Yes</strong></td>
+        </tr>
+        <tr><th colspan="4" style="background:#555;color:#fff">Phase 3 — Learned parameters (after data)</th></tr>
+        <tr>
+          <td style="font-size:10px">Replace all [ASSERTED] values with [LEARNED]</td>
+          <td style="font-size:10px">True calibration requires empirical data</td>
+          <td style="font-size:10px">Objectively perfect parameter set</td>
+          <td style="font-size:10px">With BT: yes; without: partially</td>
+        </tr>
+        <tr>
+          <td style="font-size:10px">Mode covariance model</td>
+          <td style="font-size:10px">Replaces independence assumption with reality</td>
+          <td style="font-size:10px">Accurate cross-mode inference</td>
+          <td style="font-size:10px">Yes — BT provides factor structure</td>
+        </tr>
+      </table>
+    </div>
+    <div>
+      <div class="card" style="border-color:#000;margin-bottom:10px">
+        <h4 style="margin-bottom:6px">The philosophical question that must be answered before Phase 2</h4>
+        <div style="font-size:10px;line-height:1.8;color:#333">
+          <strong>What is the external validation target?</strong><br><br>
+          The system develops 6 cognitive skills through game play. BT provides measures of those 6 cognitive skills independent of the game. But what counts as evidence that a student has genuinely developed?<br><br>
+          Options:<br>
+          A. BT score improvement on the 6 corresponding dimensions<br>
+          B. Improved performance on novel strategy games not trained on<br>
+          C. Improved academic performance in relevant subjects<br>
+          D. Teacher-assessed improvement in strategic thinking quality<br>
+          E. Some combination<br><br>
+          <strong>This choice changes everything.</strong> Option A makes BT the ground truth and Constellation the training tool. Option C makes academic outcomes the ground truth and both BT and Constellation as training tools. Option D reintroduces subjectivity. The system cannot be "objectively perfect" until this question has a decided answer.
+        </div>
+      </div>
+      <div class="inset">
+        <strong>The system as currently designed is complete for Option A.</strong> If BT cognitive scores are the validation target, the architecture described across these documents is the correct architecture. Every component is in the right place. The Phase 0–2 build order above produces a system that can demonstrate: game training → BT score improvement → cognitive development validated. This is the strongest version of the claim the system can make without long-term longitudinal studies.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════ DATA
+
+const NODES = [
+  // Core (innermost)
+  {id:'principle', label:'ONE PRINCIPLE', sub:'argmax E[KL]', x:0, y:0, r:52, fill:'#000', textCol:'#fff', ring:0, conf:'solid',
+   detail:'The single unifying principle. Maximize expected information gain per session. Every other decision derives from this. Fully confident — do not redesign.'},
+
+  // Ring 1: Implemented system
+  {id:'game_elo', label:'game_elo[6]', sub:'performance proxy', x:-1.0, y:0, r:36, fill:'#fff', textCol:'#000', ring:1, conf:'amber',
+   detail:'Q1: Measures Constellation performance, not cognitive skill. Directionally correct proxy. Needs transfer_elo to be complete.'},
+  {id:'session_sel', label:'SESSION\nSELECTION', sub:'ZPD + hypercube', x:-0.3, y:-1.0, r:36, fill:'#000', textCol:'#fff', ring:1, conf:'solid',
+   detail:'The argmax operation. Selects session maximizing expected information gain subject to ZPD and hypercube constraints. Implemented. Correct.'},
+  {id:'terminal', label:'TERMINAL', sub:'zone names + obs', x:0.8, y:-0.6, r:36, fill:'#fff', textCol:'#000', ring:1, conf:'solid',
+   detail:'The student experience layer. Zone names (ECHO, RADICAL), behavioral observations, codename reveals. Design is correct. Community generation mechanism validated.'},
+  {id:'modes', label:'6 MODES', sub:'QTY SPT FRT\nDST WRM INV', x:0.8, y:0.6, r:36, fill:'#fff', textCol:'#000', ring:1, conf:'solid',
+   detail:'The 6 cognitive dimensions. Implemented in game via multiplier configuration. Correct as distinct cognitive targets. Note: not fully orthogonal — Q3.'},
+  {id:'alpha', label:'ALPHA\nSYSTEM', sub:'detective track', x:-0.3, y:1.0, r:36, fill:'#fff', textCol:'#000', ring:1, conf:'solid',
+   detail:'Alpha application via detective analysis. Stage 5–6 of singularity trajectory. Preserves mystery. Architecture correct.'},
+  {id:'params', label:'PARAMETERS', sub:'0.85 · 0.25 · 14d', x:-1.0, y:0.5, r:36, fill:'#fff', textCol:'#d97706', ring:1, conf:'amber',
+   detail:'All asserted parameters. Directionally correct. Magnitudes need empirical calibration. Q6: Must instrument and learn these values.'},
+
+  // Ring 2: Open problems
+  {id:'q1', label:'Q1', sub:'elo ≠ cognitive\nskill', x:-1.0, y:-0.5, r:28, fill:'#fff', textCol:'#dc2626', ring:2, conf:'red',
+   detail:'CRITICAL: game_elo measures Constellation performance, not cognitive capacity. Until transfer_elo exists, the objective function is measuring the wrong thing.'},
+  {id:'q2', label:'Q2', sub:'announced\nINVERSION', x:-0.6, y:-1.0, r:28, fill:'#fff', textCol:'#dc2626', ring:2, conf:'red',
+   detail:'CRITICAL: Announcing the reversal measures "adapt to announced change" — an easier skill than true reversal learning. Silent INVERSION sessions needed.'},
+  {id:'q3', label:'Q3', sub:'mode\noverlap', x:0.2, y:-1.0, r:28, fill:'#fff', textCol:'#d97706', ring:2, conf:'amber',
+   detail:'STRUCTURAL: Modes are not cognitively orthogonal. FRT requires DST\'s inhibitory control. Covariance model needed, not independence assumption.'},
+  {id:'q4', label:'Q4', sub:'wrong\nforgetting', x:1.0, y:-0.2, r:28, fill:'#fff', textCol:'#d97706', ring:2, conf:'amber',
+   detail:'STRUCTURAL: 14-day half-life is from verbal memory research. Strategic skills decay slower (30–60 days likely). Calibration needed.'},
+  {id:'q5', label:'Q5', sub:'social\nblind spot', x:1.0, y:0.4, r:28, fill:'#fff', textCol:'#1d4ed8', ring:2, conf:'blue',
+   detail:'BLIND SPOT: System is cognitively complete, socially blind. Critical for younger students. For teen primary audience: manageable.'},
+  {id:'q8', label:'Q8', sub:'brain_metrics\nexcluded', x:0.2, y:1.0, r:28, fill:'#fff', textCol:'#7c3aed', ring:2, conf:'purple',
+   detail:'BT BRIDGE: brain_metrics excluded until validated. BT integration transforms this from EXCLUDE to CORE — the most important variable.'},
+  {id:'q7', label:'Q7', sub:'gifted\ntrack', x:-0.6, y:1.0, r:28, fill:'#fff', textCol:'#d97706', ring:2, conf:'amber',
+   detail:'DESIGN: Gifted detection threshold guessed. Gifted track defined by acceleration, not by what gifted students specifically need.'},
+
+  // BT Satellite (outer)
+  {id:'bt', label:'BRAIN TRAINING\nSYSTEM', sub:'external cognitive\nbenchmarks', x:1.5, y:0.0, r:44, fill:'#faf8ff', textCol:'#7c3aed', ring:3, conf:'purple',
+   detail:'External cognitive benchmark system. Provides transfer_elo[mode] via validated cognitive tasks. Transforms brain_metrics from EXCLUDE to CORE. Connects Q1, Q3, Q8 simultaneously.'},
+];
+
+let showBT = false;
+let showLabels = true;
+let hoveredNode = null;
+
+function getRingRadius(ring, W, H) {
+  const base = Math.min(W, H) * 0.5;
+  if (ring === 0) return 0;
+  if (ring === 1) return base * 0.36;
+  if (ring === 2) return base * 0.65;
+  if (ring === 3) return base * 0.88;
+  return base;
+}
+
+function getConfColor(conf) {
+  return {solid:'#000', green:'#15803d', amber:'#d97706', red:'#dc2626', blue:'#1d4ed8', purple:'#7c3aed'}[conf] || '#000';
+}
+
+function drawOrbital() {
+  const c = document.getElementById('orbital-canvas'); if (!c) return;
+  const W = c.clientWidth || 900, H = 620;
+  c.setAttribute('width', W); c.setAttribute('height', H);
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+  const cx = W / 2, cy = H / 2;
+
+  // Ring circles
+  [1,2,3].forEach(ring => {
+    if (ring === 3 && !showBT) return;
+    const r = getRingRadius(ring, W, H);
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = ring === 3 ? '#e8d8ff' : '#f0f0f0';
+    ctx.lineWidth = ring === 3 ? 1.5 : 1;
+    ctx.setLineDash(ring === 3 ? [4,3] : []);
+    ctx.stroke(); ctx.setLineDash([]);
+  });
+
+  // Connection lines from BT to problem nodes
+  if (showBT) {
+    const btNode = NODES.find(n => n.id === 'bt');
+    const btR = getRingRadius(3, W, H);
+    const btX = cx + btNode.x * btR * 0.7;
+    const btY = cy + btNode.y * btR * 0.7;
+    ['q1','q3','q8'].forEach(id => {
+      const n = NODES.find(x => x.id === id);
+      const r = getRingRadius(n.ring, W, H);
+      const nx = cx + n.x * r * 0.7, ny = cy + n.y * r * 0.7;
+      ctx.beginPath(); ctx.moveTo(btX, btY); ctx.lineTo(nx, ny);
+      ctx.strokeStyle = '#c4b5fd'; ctx.lineWidth = 1.5; ctx.setLineDash([3,2]); ctx.stroke();
+    });
+    ctx.setLineDash([]);
+  }
+
+  // Draw nodes
+  NODES.forEach(n => {
+    if (n.ring === 3 && !showBT) return;
+    const r = getRingRadius(n.ring, W, H);
+    const nx = cx + n.x * r * 0.7;
+    const ny = cy + n.y * r * 0.7;
+    const col = getConfColor(n.conf);
+    const isHovered = hoveredNode && hoveredNode.id === n.id;
+
+    // Node circle
+    ctx.beginPath(); ctx.arc(nx, ny, n.r + (isHovered ? 3 : 0), 0, Math.PI * 2);
+    ctx.fillStyle = n.fill; ctx.fill();
+    ctx.strokeStyle = col; ctx.lineWidth = isHovered ? 3 : (n.ring === 0 ? 0 : 1.5);
+    ctx.stroke();
+
+    // Confidence ring on outer
+    if (n.ring > 0) {
+      ctx.beginPath(); ctx.arc(nx, ny, n.r + 5, 0, Math.PI * 2);
+      ctx.strokeStyle = col + '40'; ctx.lineWidth = 3; ctx.stroke();
+    }
+
+    if (!showLabels && n.ring > 0) return;
+
+    // Label
+    ctx.fillStyle = n.textCol;
+    ctx.font = `bold ${n.ring === 0 ? 9 : 8}px Arial`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const lines = n.label.split('\n');
+    const lineH = 11;
+    const totalH = lines.length * lineH;
+    lines.forEach((line, i) => {
+      ctx.fillText(line, nx, ny - totalH/2 + i*lineH + lineH/2 - (n.sub?3:0));
+    });
+    if (n.sub && n.ring > 0) {
+      ctx.font = `7px Arial`;
+      ctx.fillStyle = n.conf === 'solid' ? (n.fill === '#000' ? '#888' : '#555') : getConfColor(n.conf) + 'aa';
+      n.sub.split('\n').forEach((sl, si) => {
+        ctx.fillText(sl, nx, ny + (lines.length * lineH)/2 - 2 + si * 9);
+      });
+    }
+  });
+
+  // Store node positions for hover
+  c._nodePositions = NODES.filter(n => n.ring < 3 || showBT).map(n => {
+    const r = getRingRadius(n.ring, W, H);
+    return { ...n, px: cx + n.x * r * 0.7, py: cy + n.y * r * 0.7 };
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const c = document.getElementById('orbital-canvas'); if (!c) return;
+  c.addEventListener('mousemove', e => {
+    const r = c.getBoundingClientRect();
+    const mx = (e.clientX - r.left) * (c.width / r.width);
+    const my = (e.clientY - r.top) * (c.height / r.height);
+    if (!c._nodePositions) return;
+    let hit = null;
+    c._nodePositions.forEach(n => {
+      const d = Math.sqrt((mx-n.px)**2 + (my-n.py)**2);
+      if (d < n.r + 8) hit = n;
+    });
+    if (hit !== hoveredNode) {
+      hoveredNode = hit;
+      drawOrbital();
+      const tt = document.getElementById('orbital-tooltip');
+      if (tt) tt.innerHTML = hit ? `<strong style="color:${getConfColor(hit.conf)}">${hit.label.replace('\n',' ')}</strong><br>${hit.detail}` : 'Hover a node for detail.';
+    }
+  });
+});
+
+function toggleBT() {
+  showBT = !showBT;
+  document.getElementById('toggle-bt').textContent = showBT ? 'HIDE BT BRIDGE' : 'SHOW BT BRIDGE';
+  document.getElementById('toggle-bt').style.background = showBT ? '#7c3aed' : '#fff';
+  document.getElementById('toggle-bt').style.color = showBT ? '#fff' : '#7c3aed';
+  drawOrbital();
+}
+function toggleLabels() { showLabels = !showLabels; drawOrbital(); }
+
+// ════════════════════════ BRIDGE CANVAS
+
+function drawBridge() {
+  const c = document.getElementById('bridge-canvas'); if (!c) return;
+  const W = c.clientWidth || 800, H = 300;
+  c.setAttribute('width', W);
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  const cols = [
+    {label:'STUDENT', x: W*0.12, fill:'#f0f0f0', stroke:'#000'},
+    {label:'CONSTELLATION\nGAME', x: W*0.32, fill:'#fff', stroke:'#000'},
+    {label:'GAME_ELO[6]', x: W*0.52, fill:'#fff', stroke:'#d97706'},
+    {label:'GAP\nSIGNAL', x: W*0.65, fill:'#fff', stroke:'#dc2626'},
+    {label:'TRANSFER_ELO[6]', x: W*0.78, fill:'#faf8ff', stroke:'#7c3aed'},
+    {label:'BRAIN\nTRAINING', x: W*0.92, fill:'#f8f0ff', stroke:'#7c3aed'},
+  ];
+  const nW = W*0.13, nH = 60;
+
+  cols.forEach(n => {
+    ctx.fillStyle = n.fill; ctx.strokeStyle = n.stroke; ctx.lineWidth = 1.5;
+    ctx.fillRect(n.x - nW/2, 100, nW, nH);
+    ctx.strokeRect(n.x - nW/2, 100, nW, nH);
+    ctx.fillStyle = n.stroke === '#fff' ? '#888' : n.stroke;
+    ctx.font = 'bold 8px Arial'; ctx.textAlign = 'center';
+    n.label.split('\n').forEach((line, i) => ctx.fillText(line, n.x, 120 + i*12 + (n.label.includes('\n')?-5:5)));
+  });
+
+  // Arrows
+  const arrows = [
+    {from:cols[0].x, to:cols[1].x, label:'plays', col:'#555'},
+    {from:cols[1].x, to:cols[2].x, label:'produces', col:'#d97706'},
+    {from:cols[2].x, to:cols[3].x, label:'compared', col:'#dc2626'},
+    {from:cols[3].x, to:cols[4].x, label:'measures', col:'#7c3aed', dash:true},
+    {from:cols[5].x, to:cols[4].x, label:'provides', col:'#7c3aed'},
+  ];
+  arrows.forEach(a => {
+    const dir = a.to > a.from ? 1 : -1;
+    ctx.strokeStyle = a.col; ctx.lineWidth = 1.5;
+    if (a.dash) ctx.setLineDash([4,2]);
+    ctx.beginPath(); ctx.moveTo(a.from + dir*nW*0.5, 130); ctx.lineTo(a.to - dir*nW*0.5, 130); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = a.col;
+    ctx.beginPath();
+    ctx.moveTo(a.to - dir*nW*0.5, 126); ctx.lineTo(a.to - dir*(nW*0.5 - 8), 130); ctx.lineTo(a.to - dir*nW*0.5, 134);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = a.col + 'cc'; ctx.font = '8px Arial'; ctx.textAlign = 'center';
+    ctx.fillText(a.label, (a.from + a.to)/2, 148);
+  });
+
+  // Bottom note
+  ctx.fillStyle = '#dc2626'; ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('GAP = game_elo − transfer_elo per mode', W/2, 210);
+  ctx.fillStyle = '#555'; ctx.font = '9px Arial';
+  ctx.fillText('Wide gap → student optimized for game, not cognitive development → system responds', W/2, 225);
+  ctx.fillStyle = '#15803d'; ctx.font = '9px Arial';
+  ctx.fillText('Narrow gap + both improving → transfer occurring → system is working', W/2, 240);
+}
+
+// ════════════════════════ CONFIDENCE CANVAS
+
+function drawConf() {
+  const c = document.getElementById('conf-canvas'); if (!c) return;
+  const W = c.clientWidth || 800, H = 500;
+  c.setAttribute('width', W);
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  const items = [
+    // Column 1: Confident
+    {col:0, items:[
+      {t:'ONE PRINCIPLE', c:'solid'},{t:'6 MODE STRUCTURE', c:'solid'},{t:'LATIN HYPERCUBE', c:'solid'},
+      {t:'VARIABLE CRITERION', c:'solid'},{t:'LOCKED / FREE AXES', c:'solid'},{t:'SINGULARITY TRAJECTORY', c:'solid'},
+      {t:'ZONE NAMES (ECHO etc)', c:'solid'},{t:'ALPHA DETECTIVE SYSTEM', c:'solid'},{t:'PLUGIN ARCHITECTURE', c:'solid'},
+      {t:'NEVER OPTIMIZE FOR GAME', c:'solid'},
+    ]},
+    // Column 2: Amber
+    {col:1, items:[
+      {t:'difficulty × 0.85', c:'amber'},{t:'forgetting: 14 days', c:'amber'},{t:'P(INV) = 0.25', c:'amber'},
+      {t:'elo exponent = 0.7', c:'amber'},{t:'budget 0/1/6/20/50', c:'amber'},{t:'hypercube window = 6', c:'amber'},
+      {t:'flow zone 25–75th', c:'amber'},{t:'gifted: 2SD velocity', c:'amber'},{t:'overlay cooldown: 3', c:'amber'},
+      {t:'mode adjacency map', c:'amber'},
+    ]},
+    // Column 3: Red/Blue/Purple problems
+    {col:2, items:[
+      {t:'Q1 game_elo ≠ cognitive', c:'red'},{t:'Q2 announced INVERSION', c:'red'},{t:'Q3 mode non-orthogonal', c:'amber'},
+      {t:'Q4 wrong forgetting curve', c:'amber'},{t:'Q5 social dimension absent', c:'blue'},
+      {t:'Q6 all params asserted', c:'blue'},{t:'Q7 gifted track incomplete', c:'amber'},
+      {t:'Q8 brain_metrics excluded', c:'purple'},{t:'no transfer measurement', c:'red'},
+      {t:'within-session signal', c:'blue'},
+    ]},
+  ];
+
+  const colLabels = ['FULLY CONFIDENT\ndo not redesign', 'DIRECTIONALLY RIGHT\nneed calibration', 'KNOWN PROBLEMS\nmust resolve'];
+  const colColors = ['#000', '#d97706', '#dc2626'];
+  const cw = (W - 30) / 3;
+
+  items.forEach((col, ci) => {
+    const ox = 10 + ci * cw;
+    ctx.fillStyle = '#f8f8f8'; ctx.strokeStyle = colColors[ci]; ctx.lineWidth = ci === 0 ? 2 : 1;
+    ctx.fillRect(ox, 10, cw - 10, H - 20);
+    ctx.strokeRect(ox, 10, cw - 10, H - 20);
+    ctx.fillStyle = colColors[ci]; ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center';
+    colLabels[ci].split('\n').forEach((line, li) => ctx.fillText(line, ox + (cw-10)/2, 28 + li*12));
+    col.items.forEach((item, ii) => {
+      const iy = 60 + ii * 38;
+      const ic = getConfColor(item.c);
+      ctx.fillStyle = '#fff'; ctx.strokeStyle = ic; ctx.lineWidth = 1;
+      ctx.fillRect(ox + 10, iy, cw - 30, 28);
+      ctx.strokeRect(ox + 10, iy, cw - 30, 28);
+      ctx.fillStyle = ic; ctx.font = 'bold 8px Arial'; ctx.textAlign = 'center';
+      ctx.fillText(item.t, ox + (cw-10)/2, iy + 16);
+    });
+  });
+}
+
+// ════════════════════════ BUILD ORDER CANVAS
+
+function drawBuild() {
+  const c = document.getElementById('build-canvas'); if (!c) return;
+  const W = c.clientWidth || 800, H = 280;
+  c.setAttribute('width', W);
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  const phases = [
+    {label:'PHASE 0\nUnderstand', sub:'Silent INV\nVelocity tracking\nForgetting measure\nTemplate history', col:'#dc2626', x:.10},
+    {label:'PHASE 1\nCore Build', sub:'Terminal zones\nAlpha system\nCollab staircase\nInstrumentation', col:'#d97706', x:.33},
+    {label:'PHASE 2\nBT Integration', sub:'Dimension mapping\nGap signal\nbrain_metrics → core\nTransfer Elo', col:'#7c3aed', x:.57},
+    {label:'PHASE 3\nLearned Params', sub:'Replace [ASSERTED]\nCovariance model\nAll parameters\nfrom data', col:'#15803d', x:.80},
+  ];
+
+  const pw = W * 0.2, ph = 200;
+  phases.forEach((p, i) => {
+    const px = p.x * W - pw/2;
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = p.col; ctx.lineWidth = 2;
+    ctx.fillRect(px, 20, pw, ph);
+    ctx.strokeRect(px, 20, pw, ph);
+    // Header
+    ctx.fillStyle = p.col; ctx.fillRect(px, 20, pw, 36);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 8px Arial'; ctx.textAlign = 'center';
+    p.label.split('\n').forEach((line, li) => ctx.fillText(line, px + pw/2, 32 + li * 13));
+    // Body
+    ctx.fillStyle = '#555'; ctx.font = '8px Arial';
+    p.sub.split('\n').forEach((line, li) => ctx.fillText('· ' + line, px + pw/2, 70 + li * 18));
+    // Arrow
+    if (i < phases.length - 1) {
+      const next = phases[i+1];
+      const ax = px + pw + 4, ay = 120;
+      ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax + (next.x - p.x)*W - pw - 8, ay); ctx.stroke();
+      ctx.fillStyle = '#ccc'; ctx.beginPath();
+      ctx.moveTo(ax + (next.x-p.x)*W-pw-8, ay-4); ctx.lineTo(ax+(next.x-p.x)*W-pw-2, ay);
+      ctx.lineTo(ax+(next.x-p.x)*W-pw-8, ay+4); ctx.closePath(); ctx.fill();
+    }
+  });
+
+  ctx.fillStyle = '#888'; ctx.font = '9px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('Do not build Phase 2 without resolving Phase 0. Building on Q1 (wrong Elo) corrupts everything downstream.', W/2, 255);
+}
+
+// ════════════════════════ INTEGRATION CANVAS
+
+function drawIntegration() {
+  const c = document.getElementById('integration-canvas'); if (!c) return;
+  const W = c.clientWidth || 800, H = 200;
+  c.setAttribute('width', W);
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  // Student state + BT side by side → combined profile
+  const boxes = [
+    {label:'GAME STATE', sub:'mode_elo[6]\nelo_velocity[6]\nsessions_since[6]', x:.18, col:'#000'},
+    {label:'BT STATE', sub:'cognitive_score[6]\n(working memory,\nprocessing speed etc)', x:.52, col:'#7c3aed'},
+    {label:'COMBINED PROFILE', sub:'game_elo[6]\ntransfer_elo[6]\ngap_signal[6]', x:.85, col:'#15803d'},
+  ];
+
+  boxes.forEach(b => {
+    const bx = b.x * W, bw = 150, bh = 110;
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = b.col; ctx.lineWidth = b.col==='#15803d'?2:1.5;
+    ctx.fillRect(bx - bw/2, 20, bw, bh);
+    ctx.strokeRect(bx - bw/2, 20, bw, bh);
+    ctx.fillStyle = b.col; ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center';
+    ctx.fillText(b.label, bx, 38);
+    ctx.fillStyle = '#555'; ctx.font = '8px Arial';
+    b.sub.split('\n').forEach((line, li) => ctx.fillText(line, bx, 58 + li * 13));
+  });
+
+  // Arrows
+  [[boxes[0], boxes[2]], [boxes[1], boxes[2]]].forEach(([a, b]) => {
+    ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(a.x*W+75, 75); ctx.lineTo(b.x*W-75, 75); ctx.stroke();
+    ctx.fillStyle = '#ccc'; ctx.beginPath();
+    ctx.moveTo(b.x*W-75, 71); ctx.lineTo(b.x*W-69, 75); ctx.lineTo(b.x*W-75, 79);
+    ctx.closePath(); ctx.fill();
+  });
+
+  ctx.fillStyle = '#15803d'; ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('Session selection driven by gap_signal[mode] when BT integrated', W/2, 165);
+  ctx.fillStyle = '#7c3aed'; ctx.font = '8px Arial';
+  ctx.fillText('brain_metrics: EXCLUDE → CORE', W/2, 182);
+}
+
+// ════════════════════════ TABS
+
+function showTab(name, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  el.classList.add('active');
+  setTimeout(() => {
+    drawOrbital(); drawBridge(); drawConf(); drawBuild(); drawIntegration();
+  }, 50);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => { drawOrbital(); drawBridge(); drawConf(); drawBuild(); drawIntegration(); }, 100);
+});
+window.addEventListener('resize', () => { drawOrbital(); drawBridge(); drawConf(); drawBuild(); drawIntegration(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Constellation — Student Panel</title>
+<script src="https://accounts.google.com/gsi/client" async></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-height:100vh}
+
+/* ── HEADER ── */
+.hdr{border-bottom:2px solid #000;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;background:#fff;position:sticky;top:0;z-index:30}
+.hdr-left{display:flex;align-items:baseline;gap:12px}
+.logo{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase}
+.hdr-sub{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#999}
+.hdr-right{display:flex;align-items:center;gap:14px}
+.conn{display:flex;align-items:center;gap:5px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#bbb}
+.dot{width:6px;height:6px;border-radius:50%;background:#bbb}
+.dot.live{background:#059669;animation:pulse 2s infinite}
+.dot.err{background:#dc2626}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.whoami{font-size:11px;color:#888}
+.whoami b{color:#111}
+.admin-lnk{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#bbb;text-decoration:none}
+.admin-lnk:hover{color:#111}
+
+/* ── LAYOUT ── */
+.wrap{max-width:740px;margin:0 auto;padding:28px 24px 140px}
+
+/* ── MODE SELECT ── */
+.mode-pick{display:grid;grid-template-columns:1fr 1fr;gap:0;border:2px solid #000;margin-bottom:28px}
+.mode-btn{padding:14px 20px;cursor:pointer;border:none;background:#fff;text-align:left;font-family:Arial,sans-serif;border-right:1px solid #000;transition:background .1s}
+.mode-btn:last-child{border-right:none}
+.mode-btn.active{background:#000;color:#fff}
+.mode-btn.active .mode-lbl{color:#fff}
+.mode-btn.active .mode-desc{color:#888}
+.mode-lbl{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:4px}
+.mode-desc{font-size:10px;color:#666;line-height:1.5;display:block}
+.mode-btn.active .mode-lbl{color:#fff}
+
+/* ── TERMINAL ── */
+.term{background:#0a0a0a;margin-bottom:24px}
+.term-hdr{border-bottom:1px solid #111;padding:7px 18px;display:flex;justify-content:space-between;align-items:center}
+.term-hdr-lbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#2a2a2a}
+.term-badge{font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:1px 6px;border:1px solid #1a1a1a;color:#333;font-weight:700}
+.term-badge.rdy{border-color:#1a3a2a;color:#059669}
+.term-badge.warn{border-color:#3a2a0a;color:#d97706}
+.term-body{padding:18px 22px;font-family:Arial,sans-serif;font-size:10.5px;line-height:2;color:#e0e0e0}
+.trow{display:flex;margin-bottom:0}
+.tk{color:#2a2a2a;min-width:120px;flex-shrink:0}
+.tv{color:#e0e0e0}.tv.a{color:#d97706}.tv.g{color:#059669}.tv.w{color:#fff;font-weight:700}.tv.r{color:#dc2626}
+.thr{border:none;border-top:1px solid #111;margin:8px 0}
+.tmsg{color:#aaa;line-height:2;font-size:10px}
+.tcursor::after{content:'█';animation:blink 1.2s step-end infinite;color:#444}
+
+/* -- FIRST SESSION CARD (in-terminal grey rectangle) -- */
+.msg-card-wrap{padding:4px 0 8px}
+.msg-card{background:#303030;padding:26px 28px 22px;text-align:center;position:relative}
+.mc-line{display:block;font-size:11px;line-height:2;color:#ffffff}
+.mc-blank{display:block;height:.65em}
+.mc-close{position:absolute;top:8px;right:10px;background:none;border:none;color:#666;font-size:10px;cursor:pointer;padding:2px 4px;line-height:1}
+.mc-close:hover{color:#aaa}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.term-foot{border-top:1px solid #111;padding:10px 18px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn-launch{background:#fff;color:#000;border:2px solid #fff;padding:6px 18px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-launch:hover{background:#ddd}
+.btn-launch:disabled{opacity:.3;cursor:default}
+.btn-customize{background:transparent;color:#444;border:1px solid #2a2a2a;padding:5px 12px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-customize:hover{color:#e0e0e0;border-color:#555}
+.term-aside{margin-left:auto;font-size:9px;color:#2a2a2a;font-family:Arial,sans-serif;font-style:italic}
+
+/* ── SECTION LABEL ── */
+.slbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#aaa;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.slbl::after{content:'';flex:1;height:1px;background:#f0f0f0}
+.section{margin-bottom:22px}
+
+/* ── FORM ROWS ── */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.fg label{font-size:11px;font-weight:700}
+.fg .hint{font-size:9px;color:#aaa;font-weight:400;margin-left:3px}
+.inp{padding:7px 9px;border:1px solid #ddd;font-size:12px;font-family:Arial,sans-serif;width:100%}
+.inp:focus{outline:2px solid #000}
+
+/* slider */
+.sl-row{display:flex;align-items:center;gap:10px;margin-top:4px}
+.sl-row input[type=range]{flex:1;accent-color:#000}
+.sl-val{font-size:11px;font-weight:700;min-width:36px;text-align:right;font-family:'Courier New',monospace}
+
+/* toggles */
+.tg{display:inline-flex;border:1px solid #ddd;overflow:hidden}
+.tg-opt{padding:5px 13px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;background:#fff;color:#aaa;border:none;font-family:Arial,sans-serif}
+.tg-opt.on{background:#000;color:#fff}
+.tg-opt.on-warn{background:#d97706;color:#fff}
+
+/* challenge */
+.ch{display:flex;border:1px solid #ddd;overflow:hidden}
+.ch-opt{flex:1;padding:6px 0;text-align:center;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;background:#fff;color:#aaa;border:none;font-family:Arial,sans-serif}
+.ch-opt+.ch-opt{border-left:1px solid #ddd}
+.ch-opt.on{background:#000;color:#fff}
+.ch-hint{font-size:9px;color:#bbb;margin-top:4px;font-style:italic}
+
+/* map grid */
+.map-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.mc{border:1px solid #ddd;padding:5px 10px;cursor:pointer;font-size:10px;background:#fff;white-space:nowrap}
+.mc:hover{border-color:#666}
+.mc.sel{border:2px solid #000;font-weight:700;background:#f8f8f8}
+.mc.rnd{border-style:dashed}
+
+/* teams */
+.teams-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.team-chip{border:1px solid #ddd;padding:4px 10px;cursor:pointer;font-size:10px;font-weight:700;background:#fff;font-family:'Courier New',monospace}
+.team-chip.sel{border-color:#000;border-width:2px;background:#000;color:#fff}
+
+/* actions */
+.form-actions{margin-top:24px;padding-top:16px;border-top:2px solid #000;display:flex;gap:10px;align-items:center}
+.btn-primary{padding:10px 26px;background:#000;color:#fff;border:2px solid #000;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-primary:hover{background:#222}
+.btn-primary:disabled{background:#ccc;border-color:#ccc;cursor:default}
+.act-msg{font-size:10px;color:#888;font-style:italic}
+
+/* ── ROOM STATE ── */
+.room-state{display:none;border:2px solid #000;margin-top:20px;padding:0}
+.room-state.vis{display:block}
+.rs-hdr{border-bottom:1px solid #eee;padding:12px 18px;display:flex;align-items:baseline;justify-content:space-between}
+.rs-title{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.rs-phase{font-size:9px;color:#059669;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.rs-body{padding:18px}
+.room-id{font-size:22px;font-weight:700;letter-spacing:5px;font-family:'Courier New',monospace;margin-bottom:10px}
+.link-row{display:flex;gap:6px;margin-bottom:18px}
+.link-box{flex:1;padding:6px 9px;border:1px solid #eee;font-size:11px;font-family:'Courier New',monospace;background:#f8f8f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn-copy{padding:6px 14px;background:#000;color:#fff;border:none;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-copy:hover{background:#333}
+
+/* live players */
+.players-section{margin-bottom:18px}
+.plbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#aaa;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.plbl::after{content:'';flex:1;height:1px;background:#f0f0f0}
+.pchips{display:flex;flex-wrap:wrap;gap:6px;min-height:32px}
+.pchip{border:1px solid #ddd;padding:4px 10px;font-size:11px;display:flex;align-items:center;gap:6px}
+.pchip.you{border-color:#000;font-weight:700}
+.pchip .sessions-badge{font-size:8px;color:#aaa;font-family:'Courier New',monospace}
+.pchip.new-player .sessions-badge{color:#d97706}
+.pchip.waiting{color:#ccc;border-style:dashed;font-style:italic}
+
+/* live compiler re-recommendation */
+.live-rec{background:#0a0a0a;margin-bottom:18px;padding:12px 18px;font-family:Arial,sans-serif;font-size:10px;line-height:1.8;color:#333;display:none}
+.live-rec.vis{display:block}
+.live-rec .lrt{color:#2a2a2a;min-width:100px;display:inline-block}
+.live-rec .lrv{color:#d97706}
+.live-rec .lrv.g{color:#059669}
+.live-rec .lrv.r{color:#dc2626}
+
+.rs-actions{display:flex;gap:8px;border-top:1px solid #eee;padding:14px 18px}
+.btn-go{flex:1;padding:11px;background:#000;color:#fff;border:none;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif;text-decoration:none;display:flex;align-items:center;justify-content:center}
+.btn-go:hover{background:#222}
+.btn-go:disabled{background:#ccc;cursor:default}
+.btn-close-room{padding:10px 16px;background:#fff;color:#aaa;border:1px solid #ddd;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-close-room:hover{color:#111;border-color:#111}
+
+/* ── STATUS BAR ── */
+.sb{position:fixed;bottom:0;left:0;right:0;border-top:1px solid #f0f0f0;background:#fff;padding:7px 24px;display:flex;align-items:center;gap:16px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#bbb;z-index:20}
+.sb-dot-wrap{display:flex;align-items:center;gap:5px}
+
+@media(max-width:560px){.two{grid-template-columns:1fr}.mode-pick{grid-template-columns:1fr}.mode-btn{border-right:none;border-bottom:1px solid #000}.mode-btn:last-child{border-bottom:none}}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-left">
+    <span class="logo">Constellation</span>
+    <span class="hdr-sub">Student Panel</span>
+  </div>
+  <div class="hdr-right">
+    <span class="whoami" id="whoami" style="display:none">Playing as <b id="whoamiName"></b></span>
+    <button id="signInBtn" onclick="triggerSignIn()" style="font-size:9px;letter-spacing:1px;text-transform:uppercase;border:1px solid #ddd;background:#fff;padding:3px 9px;cursor:pointer;font-family:Arial,sans-serif;color:#888">Sign in</button>
+    <div class="conn"><div class="dot" id="connDot"></div><span id="connLbl">Connecting</span></div>
+    <a href="/admin" class="admin-lnk">Admin ↗</a>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- MODE SELECTOR -->
+  <div class="mode-pick">
+    <button class="mode-btn active" id="mode-train" onclick="setMode('train')">
+      <span class="mode-lbl">Personal Training</span>
+      <span class="mode-desc">Solo session tuned to your development. The system knows what you need.</span>
+    </button>
+    <button class="mode-btn" id="mode-host" onclick="setMode('host')">
+      <span class="mode-lbl">Host for Friends</span>
+      <span class="mode-desc">You set it up. Everyone plays. You pick the shape; the system handles the rest.</span>
+    </button>
+  </div>
+
+  <!-- TERMINAL -->
+  <div class="term">
+    <div class="term-hdr">
+      <span class="term-hdr-lbl" id="termLabel">System</span>
+      <span class="term-badge" id="termBadge">Loading</span>
+    </div>
+    <div class="term-body" id="termBody">
+      <div class="trow"><span class="tk">────────────</span></div>
+      <div class="trow" style="margin-top:4px"><span class="tv w">CONSTELLATION</span><span class="tk" style="padding-left:12px;font-size:9px;color:#1a1a1a">cognitive development system</span></div>
+      <div class="trow" style="margin-top:8px" id="tZoneRow"><span class="tk">zone</span><span class="tv w" id="tZone">—</span></div>
+      <div class="trow" id="tSignalRow"><span class="tk">signal</span><span class="tv g" id="tSignal">—</span></div>
+      <div class="trow" id="tModeRow" style="display:none"><span class="tk">mode</span><span class="tv" id="tMode">—</span></div>
+      <div class="trow" id="tExpRow" style="display:none"><span class="tk">expected</span><span class="tv" id="tExp">—</span></div>
+      <div class="trow" id="tCfgRow" style="display:none"><span class="tk">config</span><span class="tv" id="tCfg">—</span></div>
+      <div class="trow" id="tReasonRow" style="display:none"><span class="tk">why</span><span class="tv" style="color:#555;font-size:9.5px" id="tReason">—</span></div>
+      <div class="thr" id="tDivider"></div>
+
+      <!-- session 1: grey card -->
+      <div class="msg-card-wrap" id="tLetter" style="display:none">
+        <div class="msg-card" id="msgCard">
+          <button class="mc-close" onclick="dismissLetterCard()" aria-label="Dismiss">&#x2715;</button>
+          <span class="mc-line" id="lLine1"></span>
+          <span class="mc-line" id="lLine2"></span>
+          <span class="mc-blank"></span>
+          <span class="mc-line" id="lLine3"></span>
+        </div>
+      </div>
+
+      <!-- sessions 2+: normal terminal voice -->
+      <div id="tMsgs">
+        <div class="tmsg" id="tMsg1"></div>
+        <div class="tmsg" id="tMsg2"></div>
+        <div class="tmsg" id="tMsg3"></div>
+        <div class="tmsg" id="tMsg4"></div>
+        <div class="tmsg" id="tMsg5"></div>
+        <div id="tBehavior" style="color:#555;margin-top:6px;font-size:9.5px;letter-spacing:.5px;line-height:2"></div>
+      </div>
+
+      <div style="margin-top:10px"><span class="tk">────────────</span></div>
+      <div style="margin-top:2px"><span class="tk" id="tFooter">ready when you are</span><span class="tcursor"></span></div>
+    </div>
+    <div class="term-foot">
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <button class="btn-launch" id="btnLaunchRec" onclick="launchRecommended()">Launch Recommended</button>
+        <span id="btnLaunchHint" style="font-size:8px;color:#555;letter-spacing:.5px"></span>
+      </div>
+      <button class="btn-customize" onclick="scrollToConfig()">Customize ›</button>
+      <span class="term-aside" id="termAside">—</span>
+    </div>
+    <div id="tDevNote" style="display:none;font-size:9px;color:#444;padding:8px 18px;border-top:1px solid #111;letter-spacing:.5px;line-height:1.7">The system chose this configuration for signal quality. Customize below to deviate — deviations are recorded.</div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       TRAIN CONFIG
+  ═══════════════════════════════════ -->
+  <div id="config-train">
+
+    <div class="section">
+      <div class="slbl">Map</div>
+      <div class="fg">
+        <label>Which map <span class="hint">or let the system choose for you</span></label>
+        <div class="map-grid" id="train-maps">
+          <div class="mc rnd sel" data-map="" onclick="pickMap('train','',this)">System Selects</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="slbl">Session Length</div>
+      <div class="two">
+        <div class="fg">
+          <label>Rounds</label>
+          <div class="sl-row">
+            <input type="range" id="t-rounds" min="5" max="15" value="10"
+              oninput="document.getElementById('t-rounds-v').textContent=this.value">
+            <span class="sl-val" id="t-rounds-v">10</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Round Length <span class="hint">seconds</span></label>
+          <div class="sl-row">
+            <input type="range" id="t-rt" min="15" max="60" step="5" value="30"
+              oninput="document.getElementById('t-rt-v').textContent=this.value+'s'">
+            <span class="sl-val" id="t-rt-v">30s</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="slbl">AI Opponent</div>
+      <div class="two">
+        <div class="fg">
+          <label>Include AI</label>
+          <div class="tg">
+            <button class="tg-opt" id="t-bot-off" onclick="setBot('train',false)">Off</button>
+            <button class="tg-opt on" id="t-bot-on" onclick="setBot('train',true)">On</button>
+          </div>
+        </div>
+        <div class="fg" id="t-ch-section">
+          <label>Challenge</label>
+          <div class="ch">
+            <button class="ch-opt" onclick="setCh('train','easy',this)">Easy</button>
+            <button class="ch-opt on" onclick="setCh('train','standard',this)">Standard</button>
+            <button class="ch-opt" onclick="setCh('train','hard',this)">Hard</button>
+          </div>
+          <div class="ch-hint">Opponent style is assigned at session start</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn-primary" id="btn-train" onclick="createSession('train')">Launch Training Session</button>
+      <span class="act-msg" id="train-act-msg"></span>
+    </div>
+
+    <!-- room state: train -->
+    <div class="room-state" id="rs-train">
+      <div class="rs-hdr">
+        <span class="rs-title">Session Created</span>
+        <span class="rs-phase">Ready to join</span>
+      </div>
+      <div class="rs-body">
+        <div class="room-id" id="rs-train-id">—</div>
+        <div class="link-row">
+          <div class="link-box" id="rs-train-link">—</div>
+          <button class="btn-copy" onclick="copyLink('train')">Copy</button>
+        </div>
+        <div class="players-section">
+          <div class="plbl">In the room</div>
+          <div class="pchips" id="rs-train-chips">
+            <div class="pchip waiting">Waiting for players…</div>
+          </div>
+        </div>
+      </div>
+      <div class="rs-actions">
+        <a class="btn-go" id="rs-train-join" href="#" target="_blank">Join Game →</a>
+        <button class="btn-close-room" onclick="closeRoom('train')">Close Room</button>
+      </div>
+    </div>
+
+  </div><!-- /config-train -->
+
+  <!-- ══════════════════════════════════
+       HOST CONFIG
+  ═══════════════════════════════════ -->
+  <div id="config-host" style="display:none">
+
+    <div class="section">
+      <div class="slbl">Session Identity</div>
+      <div class="fg">
+        <label>Session Name <span class="hint">shown on the join screen</span></label>
+        <input class="inp" id="h-name" type="text" placeholder="Friday practice, Period 3, etc." maxlength="50">
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="slbl">Map</div>
+      <div class="fg">
+        <label>Choose a map <span class="hint">or leave it as a surprise</span></label>
+        <div class="map-grid" id="host-maps">
+          <div class="mc rnd sel" data-map="" onclick="pickMap('host','',this)">Surprise Me</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="slbl">Session Length</div>
+      <div class="two">
+        <div class="fg">
+          <label>Rounds</label>
+          <div class="sl-row">
+            <input type="range" id="h-rounds" min="3" max="20" value="10"
+              oninput="document.getElementById('h-rounds-v').textContent=this.value">
+            <span class="sl-val" id="h-rounds-v">10</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Round Length <span class="hint">seconds</span></label>
+          <div class="sl-row">
+            <input type="range" id="h-rt" min="15" max="90" step="5" value="30"
+              oninput="document.getElementById('h-rt-v').textContent=this.value+'s'">
+            <span class="sl-val" id="h-rt-v">30s</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="slbl">Rules</div>
+      <div class="two">
+        <div class="fg">
+          <label>Teams</label>
+          <div class="teams-row" id="h-teams-row">
+            <div class="team-chip sel" data-v="2" onclick="pickTeams(2,this)">2</div>
+            <div class="team-chip" data-v="3" onclick="pickTeams(3,this)">3</div>
+            <div class="team-chip" data-v="4" onclick="pickTeams(4,this)">4</div>
+            <div class="team-chip" data-v="6" onclick="pickTeams(6,this)">6</div>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Players Pick Their Own Team</label>
+          <div class="tg">
+            <button class="tg-opt on" id="h-pts-off" onclick="setTgl('pts',false)">Off</button>
+            <button class="tg-opt" id="h-pts-on" onclick="setTgl('pts',true)">On</button>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Steals</label>
+          <div class="tg">
+            <button class="tg-opt" id="h-st-off" onclick="setTgl('steals',false)">Off</button>
+            <button class="tg-opt on" id="h-st-on" onclick="setTgl('steals',true)">On</button>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Headquarters</label>
+          <div class="tg">
+            <button class="tg-opt" id="h-hq-off" onclick="setTgl('hq',false)">Off</button>
+            <button class="tg-opt on" id="h-hq-on" onclick="setTgl('hq',true)">On</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="slbl">AI Opponent</div>
+      <div class="two">
+        <div class="fg">
+          <label>Include AI</label>
+          <div class="tg">
+            <button class="tg-opt on" id="h-bot-off" onclick="setBot('host',false)">Off</button>
+            <button class="tg-opt" id="h-bot-on" onclick="setBot('host',true)">On</button>
+          </div>
+        </div>
+        <div class="fg" id="h-ch-section">
+          <label>Challenge</label>
+          <div class="ch">
+            <button class="ch-opt" onclick="setCh('host','easy',this)">Easy</button>
+            <button class="ch-opt on" onclick="setCh('host','standard',this)">Standard</button>
+            <button class="ch-opt" onclick="setCh('host','hard',this)">Hard</button>
+          </div>
+          <div class="ch-hint">If new players are detected, engagement mode takes over</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn-primary" id="btn-host" onclick="createSession('host')">Create Session</button>
+      <span class="act-msg" id="host-act-msg"></span>
+    </div>
+
+    <!-- room state: host — two-phase -->
+    <div class="room-state" id="rs-host">
+      <div class="rs-hdr">
+        <span class="rs-title">Session Open</span>
+        <span class="rs-phase" id="rs-host-phase">Waiting for players</span>
+      </div>
+      <div class="rs-body">
+        <div class="room-id" id="rs-host-id">—</div>
+        <div class="link-row">
+          <div class="link-box" id="rs-host-link">—</div>
+          <button class="btn-copy" onclick="copyLink('host')">Copy</button>
+        </div>
+
+        <!-- live compiler re-recommendation as players join -->
+        <div class="live-rec" id="live-rec">
+          <div><span class="lrt">optimization target</span><span class="lrv" id="lr-target">—</span></div>
+          <div><span class="lrt">new players</span><span class="lrv" id="lr-new">—</span></div>
+          <div><span class="lrt">adjustment</span><span class="lrv g" id="lr-adj">—</span></div>
+        </div>
+
+        <div class="players-section">
+          <div class="plbl">Players in room <span id="player-count-lbl" style="color:#bbb;font-size:8px;margin-left:6px;font-weight:400;text-transform:none;letter-spacing:0"></span></div>
+          <div class="pchips" id="rs-host-chips">
+            <div class="pchip waiting">Share the link above to invite players…</div>
+          </div>
+        </div>
+      </div>
+      <div class="rs-actions">
+        <a class="btn-go" id="rs-host-join" href="#" target="_blank">Join Game →</a>
+        <button class="btn-close-room" onclick="closeRoom('host')">Close Room</button>
+      </div>
+    </div>
+
+  </div><!-- /config-host -->
+
+</div><!-- /wrap -->
+
+<div class="sb">
+  <div class="sb-dot-wrap"><div class="dot" id="sbDot"></div><span id="sbLbl">Connecting</span></div>
+  <span id="sbName" style="display:none"></span>
+  <span style="margin-left:auto">Constellation · Student Panel</span>
+</div>
+
+<script src="https://unpkg.com/colyseus.js@0.15.24/dist/colyseus.js"></script>
+<script>
+const WS  = (location.protocol==='https:'?'wss':'ws')+'://'+location.host;
+const API = location.origin;
+const BOT_TYPES = ['HAL','CAESAR','ATHENA','ROBIN_HOOD','EINSTEIN','LORENZ'];
+const BOT_PROFILE_AGGRESSION = {TURTLER:2,STANDARD:5,CONTESTER:6,ACCELERANT:8,MIRROR:5,THEORETICIAN:5};
+const AGG_RANGE = {easy:[1,3],standard:[4,6],hard:[7,9]};
+
+const S = {
+  mode:'train', student:null, studentId:null,
+  compiler:null, sessionCount:0,
+  maps:[],
+  train:{ map:'', bot:true,  challenge:'standard' },
+  host: { map:'', bot:false, challenge:'standard', steals:true, hq:true, teams:2, pts:false },
+  rooms:{ train:null, host:null },
+  playerData:{ host:[] },
+};
+
+// ── BOOT
+const GOOGLE_CLIENT_ID = ''; // Set your Google OAuth 2.0 client_id here
+
+function triggerSignIn(){
+  if(!GOOGLE_CLIENT_ID){alert('Sign-in not configured.');return;}
+  google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:handleGoogleSignIn});
+  google.accounts.id.prompt();
+}
+async function handleGoogleSignIn(response){
+  try{
+    const p=JSON.parse(atob(response.credential.split('.')[1]));
+    const name=p.name||p.email;
+    localStorage.setItem('constellation_name',name);
+    S.student=name;
+    document.getElementById('whoamiName').textContent=name;
+    document.getElementById('signInBtn').style.display='none';
+    // Resolve Google name to ledger UUID (same path as name-entry login)
+    try {
+      const r = await fetch(API+'/api/ledger/resolve-name/'+encodeURIComponent(name));
+      if (r.ok) { const d = await r.json(); S.studentId = d.student_id; }
+      else { S.studentId = name.toLowerCase().replace(/[^a-z0-9]/g,'-'); }
+    } catch(e2) { S.studentId = name.toLowerCase().replace(/[^a-z0-9]/g,'-'); }
+    loadCompiler();
+  }catch(e){console.error('Sign-in error',e);}
+}
+
+function buildReason(c){
+  if(!c||!c.state_snapshot||!c.mode) return '';
+  const st=c.state_snapshot[c.mode]||{};
+  const parts=[];
+  if(st.n) parts.push(st.n+' session'+(st.n===1?'':'s')+' in '+c.mode);
+  if(st.elo) parts.push('elo '+st.elo);
+  if(st.since_days>14) parts.push(Math.round(st.since_days)+'d gap · decay applied');
+  const zr={ECHO:'consolidating',RADICAL:'gap detected',REMATCH:'retry signaled',SHIFTING:'mode rotated',PARALLEL:'parameters shifted',CALIBRATION:'forming baseline'};
+  if(zr[c.zone]) parts.push(zr[c.zone]);
+  return parts.join(' · ');
+}
+
+function syncSlidersToCompiler(){
+  const c=S.compiler; if(!c||!c.config_vector) return;
+  const cv=c.config_vector;
+  if(cv[6]){document.getElementById('t-rounds').value=cv[6];document.getElementById('t-rounds-v').textContent=cv[6];}
+  if(cv[5]){document.getElementById('t-rt').value=cv[5];document.getElementById('t-rt-v').textContent=cv[5]+'s';}
+}
+
+window.addEventListener('DOMContentLoaded', async ()=>{
+  const name = localStorage.getItem('constellation_name')||'Guest';
+  S.student = name;
+  document.getElementById('whoamiName').textContent = name;
+  document.getElementById('whoami').style.display    = 'inline-flex';
+  document.getElementById('sbName').textContent      = name;
+  document.getElementById('sbName').style.display    = 'inline';
+
+  // Resolve name -> real ledger UUID so compiler sees actual session history
+  try {
+    const r = await fetch(API+'/api/ledger/resolve-name/'+encodeURIComponent(name));
+    if (r.ok) { const d = await r.json(); S.studentId = d.student_id; }
+    else { S.studentId = name.toLowerCase().replace(/[^a-z0-9]/g,'-'); }
+  } catch(e) { S.studentId = name.toLowerCase().replace(/[^a-z0-9]/g,'-'); }
+
+  connect();
+  loadMaps();
+  loadCompiler();
+});
+
+function connect(){
+  try{ new Colyseus.Client(WS); setConn(true); }catch(e){ setConn(false); }
+}
+function setConn(ok){
+  ['connDot','sbDot'].forEach(id=>{
+    const d=document.getElementById(id);
+    d.className='dot'+(ok?' live':' err');
+  });
+  const lbl=ok?'Live':'Offline';
+  document.getElementById('connLbl').textContent=lbl;
+  document.getElementById('sbLbl').textContent=ok?'Server connected':'Server offline';
+}
+
+// ── MAPS
+async function loadMaps(){
+  try{
+    const r=await fetch(API+'/api/maps/topology');
+    if(!r.ok) return;
+    const d=await r.json();
+    S.maps=(d.maps||[]).slice(0,16);
+    renderMaps();
+  }catch(_){}
+}
+function renderMaps(){
+  const defs={train:{id:'train-maps',label:'System Selects'},host:{id:'host-maps',label:'Surprise Me'}};
+  Object.entries(defs).forEach(([mode,cfg])=>{
+    const grid=document.getElementById(cfg.id);
+    grid.innerHTML=`<div class="mc rnd sel" data-map="" onclick="pickMap('${mode}','',this)">${cfg.label}</div>`;
+    S.maps.forEach(m=>{
+      const name=m.name.replace(/\.json$/,'');
+      const c=document.createElement('div');
+      c.className='mc'; c.dataset.map=m.name;
+      c.textContent=name;
+      c.onclick=()=>pickMap(mode,m.name,c);
+      grid.appendChild(c);
+    });
+  });
+}
+function pickMap(mode,val,el){
+  S[mode].map=val;
+  const id=mode==='train'?'train-maps':'host-maps';
+  document.querySelectorAll('#'+id+' .mc').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+// ── COMPILER
+async function loadCompiler(){
+  try{
+    const r=await fetch(API+'/api/compiler/'+encodeURIComponent(S.studentId));
+    if(!r.ok){ fallbackCompiler(); return; }
+    S.compiler=await r.json();
+    S.sessionCount=S.compiler.session_count||0;
+    syncSlidersToCompiler();
+    renderTerminal(S.mode);
+  }catch(_){ fallbackCompiler(); }
+}
+function fallbackCompiler(){
+  S.compiler=null; S.sessionCount=0;
+  renderTerminal(S.mode);
+}
+
+// ── TERMINAL VOICE SYSTEM
+// Authoritative copy: philosophy development/terminal-voice.html
+// Cycling rule: index = sessionCount % pool.length
+// Zone index resets when zone changes (tracked in localStorage)
+
+const STAGE2 = [
+  [ 'You came back.', '', "That's usually how it starts." ],
+  [ 'The chaos is designed.', 'Most people feel it as a problem.', '', 'The ones who stay notice it as information.' ],
+  [ 'The system is still listening.', '', 'A few more sessions before it has', 'anything specific to say.' ],
+];
+
+const ZONE_POOLS = {
+  CALIBRATION: {
+    signal: 'listening \xb7 forming a picture',
+    msgs: [
+      [ 'CALIBRATION.', '', 'The system is still forming a picture of you.', 'Give it a few more sessions.' ],
+      [ 'CALIBRATION.', '', 'Not enough yet to say anything worth saying.', 'Keep going.' ],
+    ]
+  },
+  ECHO: {
+    signal: 'familiar ground \xb7 consolidating',
+    msgs: [
+      [ 'ECHO.', '', 'You built something in this territory.', 'Now find out how deep it goes.' ],
+      [ 'ECHO. The system knows you here.', '', "The question isn't whether you can win.", "It's what you notice while doing it." ],
+      [ 'ECHO.', '', "Familiar ground isn't the same as easy ground.", "Find the parts of it you still don't fully own." ],
+    ]
+  },
+  PARALLEL: {
+    signal: 'same target \xb7 conditions shifted',
+    msgs: [
+      [ 'PARALLEL.', '', 'Same cognitive target. Different terrain.', 'What you built here still applies.', 'Not directly.' ],
+      [ 'PARALLEL.', '', 'The system has chosen a different approach to the same challenge.', 'What you learned last time is relevant.', 'Find where.' ],
+      [ 'PARALLEL.', '', 'Same destination. New route.', 'The territory has shifted. Your tools have not.' ],
+    ]
+  },
+  SHIFTING: {
+    signal: 'adjacent territory \xb7 mode change',
+    msgs: [
+      [ 'SHIFTING.', '', 'The system has moved to adjacent territory.', 'What you learned here will partially apply.', 'Find the part that does.' ],
+      [ 'SHIFTING.', '', 'Adjacent domain selected.', 'The last session is not irrelevant.', 'But it is not a map.' ],
+      [ 'SHIFTING.', '', 'Something about this session is different.', 'The system is not going to tell you what.', 'Figure it out.' ],
+    ]
+  },
+  RADICAL: {
+    signal: 'new territory \xb7 gap detected',
+    msgs: [
+      [ 'RADICAL.', '', 'Something outpaced something else.', 'This session goes after the gap.' ],
+      [ 'RADICAL. The system found an edge.', '', 'This will feel different.', 'That is the point.' ],
+      [ 'RADICAL.', '', 'One dimension of your thinking has outpaced another.', 'This is what the gap looks like from the inside.' ],
+    ]
+  },
+  REMATCH: {
+    signal: 'incomplete signal \xb7 retry',
+    msgs: [
+      [ 'REMATCH.', '', 'The signal from last time was incomplete.', 'The system requires one more attempt.' ],
+      [ 'REMATCH.', '', 'The previous session ended before the system had what it needed.', 'Same territory. Different attempt.' ],
+      [ 'REMATCH.', '', 'Close loss. The system is not finished here.', 'The system remembers the last time you were here.' ],
+    ]
+  },
+};
+
+const HOST_MSGS = [
+  [ "You're setting this up for others.", '', 'The system will read the room as people join.', 'Build it how you want.' ],
+  [ 'New players get something accessible.', 'Known players get pushed.', '', 'The room shapes the configuration once people arrive.' ],
+  [ 'The chaos is the same for everyone in the room.', '', "How each person meets it — that's the interesting part." ],
+];
+
+function getZoneIndex(zone, n){
+  const stored = JSON.parse(localStorage.getItem('cx_zone_state')||'{}');
+  if(stored.zone !== zone){
+    localStorage.setItem('cx_zone_state', JSON.stringify({zone, lastSession:n}));
+    return 0;
+  }
+  return n % (ZONE_POOLS[zone]?.msgs.length||1);
+}
+
+function renderTerminal(mode){
+  const c=S.compiler; const n=S.sessionCount;
+  const isTrain=mode==='train';
+  const zone=(c?.zone)||'CALIBRATION';
+
+  document.getElementById('termLabel').textContent=isTrain?'System':'Before You Start';
+
+  const badge=document.getElementById('termBadge');
+  if(!isTrain){
+    badge.textContent='hosting'; badge.className='term-badge';
+  } else if(n===0){
+    badge.textContent='first session'; badge.className='term-badge';
+  } else {
+    badge.textContent=zone; badge.className='term-badge rdy';
+  }
+
+  const showZone=isTrain&&n>=5;
+  document.getElementById('tZoneRow').style.display=showZone?'flex':'none';
+  document.getElementById('tSignalRow').style.display=showZone?'flex':'none';
+  if(showZone){
+    document.getElementById('tZone').textContent=zone;
+    document.getElementById('tSignal').textContent=(c?.signal_text)||(ZONE_POOLS[zone]?.signal||'—');
+    const MODE_NAMES={QTY:'QUANTITY',SPT:'SPATIAL',FRT:'FORTRESS',DST:'DESTRUCTION',WRM:'WORMHOLE',INV:'INVERSION'};
+    const showMode=c?.mode&&c.mode!=='INV';
+    document.getElementById('tModeRow').style.display=showMode?'flex':'none';
+    if(showMode) document.getElementById('tMode').textContent=MODE_NAMES[c.mode]||c.mode;
+    const showExp=c?.expected_rank_pct!=null;
+    document.getElementById('tExpRow').style.display=showExp?'flex':'none';
+    if(showExp) document.getElementById('tExp').textContent=Math.round(c.expected_rank_pct*100)+'th percentile';
+    if(c&&c.config_vector){
+      var cv=c.config_vector;
+      document.getElementById('tCfgRow').style.display='flex';
+      document.getElementById('tCfg').textContent=(cv[6]||10)+' rounds · '+(cv[5]||30)+'s · '+(c.bot_profile||'STANDARD');
+      document.getElementById('tReasonRow').style.display='flex';
+      document.getElementById('tReason').textContent=buildReason(c);
+      document.getElementById('tDevNote').style.display='block';
+    }
+  } else {
+    document.getElementById('tModeRow').style.display='none';
+    document.getElementById('tExpRow').style.display='none';
+    document.getElementById('tCfgRow').style.display='none';
+    document.getElementById('tReasonRow').style.display='none';
+    document.getElementById('tDevNote').style.display='none';
+  }
+
+  // session 1 - grey card inside terminal
+  const s1Dismissed = localStorage.getItem('cx_s1_dismissed')==='1';
+  const isFirstSession = isTrain && n===0 && !s1Dismissed;
+  document.getElementById('tLetter').style.display  = isFirstSession ? 'block' : 'none';
+  document.getElementById('tMsgs').style.display    = isFirstSession ? 'none'  : 'block';
+  document.getElementById('tDivider').style.display = isFirstSession ? 'none'  : 'block';
+
+  if(isFirstSession){
+    document.getElementById('lLine1').textContent = 'Looks like this is your first game.';
+    document.getElementById('lLine2').textContent = 'If you can adapt fast enough, you may win.';
+    document.getElementById('lLine3').textContent = 'Embrace the chaos.';
+    document.getElementById('tFooter').textContent = 'the system is listening';
+    document.getElementById('termAside').textContent = 'no prior sessions';
+    return;
+  }
+
+  let lines, footer;
+
+  if(!isTrain){
+    lines=HOST_MSGS[n%HOST_MSGS.length];
+    footer='create the session, then share the link';
+  } else if(n<5){
+    lines=STAGE2[n-1]||STAGE2[0];
+    footer='calibration in progress';
+  } else {
+    const pool=ZONE_POOLS[zone]||ZONE_POOLS['CALIBRATION'];
+    lines=pool.msgs[getZoneIndex(zone,n)]||pool.msgs[0];
+    footer='launch the recommendation or adjust below';
+  }
+
+  ['tMsg1','tMsg2','tMsg3','tMsg4','tMsg5'].forEach((id,i)=>{
+    document.getElementById(id).textContent=lines[i]||'';
+  });
+  const _bObs=document.getElementById('tBehavior');
+  if(_bObs) _bObs.textContent=showZone?getBehavioralObs():'';
+  document.getElementById('tFooter').textContent=footer;
+
+  const aside=document.getElementById('termAside');
+  if(!isTrain)     aside.textContent='hosting mode';
+  else if(n===0)   aside.textContent='no prior sessions';
+  else if(n<5)     aside.textContent='calibrating';
+  else{const _mn=c?.mode&&c.mode!=='INV'?c.mode+' \xb7 ':''; aside.textContent=_mn+zone;}
+
+
+}
+
+// ── BEHAVIORAL OBSERVATION
+function getBehavioralObs(){
+  const c=S.compiler;
+  if(!c||!c.state_snapshot||!c.mode) return '';
+  const st=c.state_snapshot[c.mode];
+  if(!st) return '';
+  if(c.zone==='REMATCH'){
+    const pct=st.last_rank_pct!=null?Math.round(st.last_rank_pct*100)+'th pct':'below threshold';
+    return 'prior session \xb7 '+pct+' \xb7 retry queued';
+  }
+  if(st.since_days!==null&&st.since_days>14) return Math.round(st.since_days)+' days since last '+c.mode+' \xb7 decay applied';
+  if(st.velocity!==null&&st.velocity>2) return 'improving in '+c.mode+' \xb7 '+st.n+' session'+(st.n===1?'':'s');
+  if(st.n===1) return 'baseline established in '+c.mode;
+  if(st.n>1) return st.n+' sessions in '+c.mode+' \xb7 elo '+st.elo;
+  return '';
+}
+
+// ── MODE
+function setMode(mode){
+  S.mode=mode;
+  const isTrain=mode==='train';
+  document.getElementById('mode-train').classList.toggle('active',isTrain);
+  document.getElementById('mode-host').classList.toggle('active',!isTrain);
+  document.getElementById('config-train').style.display=isTrain?'block':'none';
+  document.getElementById('config-host').style.display=isTrain?'none':'block';
+  renderTerminal(mode);
+}
+
+// ── CONTROLS
+function setBot(mode,on){
+  S[mode].bot=on;
+  if(mode==='train'){
+    document.getElementById('t-bot-off').classList.toggle('on',!on);
+    document.getElementById('t-bot-on').classList.toggle('on',on);
+  } else {
+    document.getElementById('h-bot-off').classList.toggle('on',!on);
+    document.getElementById('h-bot-on').classList.toggle('on',on);
+  }
+}
+function setCh(mode,level,btn){
+  S[mode].challenge=level;
+  const sec=mode==='train'?'t-ch-section':'h-ch-section';
+  document.querySelectorAll('#'+sec+' .ch-opt').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+function setTgl(key,on){
+  S.host[key]=on;
+  const map={steals:'h-st',hq:'h-hq',pts:'h-pts'};
+  const base=map[key];
+  if(base){
+    document.getElementById(base+'-off').classList.toggle('on',!on);
+    document.getElementById(base+'-on').classList.toggle('on',on);
+  }
+}
+function pickTeams(n,el){
+  S.host.teams=n;
+  document.querySelectorAll('#h-teams-row .team-chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+// ── SCROLL
+function scrollToConfig(){ document.getElementById('config-'+S.mode).scrollIntoView({behavior:'smooth',block:'start'}); }
+
+// ── LAUNCH RECOMMENDED (train mode)
+function devMockLaunch(mode){
+  var chars='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  var fakeId='';
+  for(var i=0;i<6;i++)fakeId+=chars[Math.floor(Math.random()*chars.length)];
+  var isTrain=mode==='train';
+  var launchBtn=isTrain?document.getElementById('btnLaunchRec'):document.getElementById('btn-'+mode);
+  var msgEl=document.getElementById(isTrain?'train-act-msg':'host-act-msg');
+  if(launchBtn){launchBtn.disabled=true;launchBtn.textContent='Launching…';}
+  if(msgEl)msgEl.textContent='';
+  setTimeout(function(){
+    showRoomState(isTrain?'train':'host',fakeId);
+    if(launchBtn){
+      launchBtn.textContent=isTrain?'Launched ✓':'Create Session';
+      if(isTrain)setTimeout(function(){launchBtn.disabled=false;launchBtn.textContent='Launch Recommended';},2500);
+      else launchBtn.disabled=false;
+    }
+    if(msgEl)msgEl.textContent='[DEV — no real room created — room ID is fake]';
+  },800);
+}
+async function launchRecommended(){
+  if(_devActive){devMockLaunch('train');return;}
+  const wasRec=true; // record deviation signal if student customized
+  const btn=document.getElementById('btnLaunchRec');
+  btn.disabled=true; btn.textContent='Launching…';
+  try{
+    const client=new Colyseus.Client(WS);
+    const opts=buildTrainOpts(true);
+    const room=await client.create('constellation',opts);
+    window.open(API+'/game/'+room.id,'_blank');
+    btn.textContent='Launched ✓';
+    setTimeout(()=>{ btn.disabled=false; btn.textContent='Launch Recommended'; },3000);
+  }catch(e){
+    btn.disabled=false; btn.textContent='Launch Recommended';
+    document.getElementById('train-act-msg').textContent='Failed — check server';
+  }
+}
+
+// ── CREATE SESSION
+async function createSession(mode){
+  if(_devActive){devMockLaunch(mode);return;}
+  const btnId=mode==='train'?'btn-train':'btn-host';
+  const msgId=mode==='train'?'train-act-msg':'host-act-msg';
+  const btn=document.getElementById(btnId);
+  btn.disabled=true; btn.textContent='Creating…';
+  document.getElementById(msgId).textContent='';
+  try{
+    const client=new Colyseus.Client(WS);
+    const opts=mode==='train'?buildTrainOpts(false):buildHostOpts();
+    const room=await client.create('constellation',opts);
+    S.rooms[mode]=room;
+    showRoomState(mode,room.id);
+    room.onStateChange(st=>handleState(mode,st));
+    room.onLeave(()=>{ S.rooms[mode]=null; });
+    // Q6: record panel choices as SELF signal (fire-and-forget)
+    recordPanelSignal(mode,opts);
+  }catch(e){
+    document.getElementById(msgId).textContent='Could not create session — is the server running?';
+  }
+  btn.disabled=false;
+  btn.textContent=mode==='train'?'Launch Training Session':'Create Session';
+}
+
+function buildTrainOpts(useRec){
+  const c=S.compiler; const cv=c?.config_vector||[];
+  const usedRec=useRec&&!!c;
+  const botFromProfile=usedRec&&c.bot_profile?{
+    type:'HAL',
+    aggression:BOT_PROFILE_AGGRESSION[c.bot_profile]||5,
+    team:1,
+  }:null;
+  return{
+    multipliers:     usedRec?{count:cv[0]??500,distance:cv[1]??1,hq:cv[2]??10,destruction:cv[3]??1}:{count:500,distance:1,hq:10,destruction:1},
+    rounds:          usedRec?(cv[6]||10):+document.getElementById('t-rounds').value,
+    roundLength:     +document.getElementById('t-rt').value,
+    moves:           usedRec?(cv[4]||15):15,
+    steals:          usedRec?(cv[7]??15):15,
+    headquarters:    usedRec?(cv[8]||2):2,
+    colorTeamCount:  2,
+    customMapFilename: usedRec?c.map_filename:null,
+    playerName:      S.student,
+    aiBots:          S.train.bot?(botFromProfile?[botFromProfile]:[botCfg(S.train.challenge)]):[],
+    allowPlayerTeamSelection:false,
+    _source:'student-train',_studentId:S.studentId,
+    _usedRecommendation:usedRec,
+  };
+}
+function buildHostOpts(){
+  const h=S.host;
+  // slight multiplier variation: prevents cross-session optimization memorization
+  const vary=v=>Math.round(v*(0.92+Math.random()*0.16));
+  return{
+    countMultiplier:       vary(500),
+    distanceMultiplier:    vary(1),
+    hqMultiplier:          vary(10),
+    destructionMultiplier: vary(1),
+    rounds:     +document.getElementById('h-rounds').value,
+    roundTime:  +document.getElementById('h-rt').value,
+    movesPerRound:15,
+    stealLimit: h.steals?12:0,
+    hqMax:      h.hq?2:0,
+    colorTeamCount:h.teams,
+    allowPlayerTeamSelection:h.pts,
+    mapJson:    getMapJson(h.map),
+    playerName: S.student,
+    aiBots:     h.bot?[botCfg(h.challenge)]:[],
+    _source:'student-host', _studentId:S.studentId,
+    _sessionName:document.getElementById('h-name').value.trim()||undefined,
+  };
+}
+
+function botCfg(level){
+  const [lo,hi]=AGG_RANGE[level]||[4,6];
+  return{
+    type:BOT_TYPES[Math.floor(Math.random()*BOT_TYPES.length)],
+    aggression:lo+Math.floor(Math.random()*(hi-lo+1)),
+    team:1,
+  };
+}
+function getMapJson(name){ const m=S.maps.find(x=>x.name===name); return m?.json||''; }
+function getMapJsonByFilename(fn){ if(!fn)return ''; const n=fn.replace(/\.json$/i,''); const m=S.maps.find(x=>x.name===n||x.name===fn); return m?.json||''; }
+
+// Q6: record panel interaction as SELF channel signal
+function recordPanelSignal(mode,opts){
+  try{
+    fetch(API+'/api/ledger/signal',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        channel:'SELF',type:'panel_config',
+        studentId:S.studentId,mode,
+        map:S[mode].map||'system',
+        bot:S[mode].bot,challenge:S[mode].challenge,
+        deviatedFromRecommendation:mode==='train'&&!!S.compiler,
+        ts:Date.now(),
+      })
+    });
+  }catch(_){}
+}
+
+// ── ROOM STATE
+function showRoomState(mode,roomId){
+  const link=API+'/game/'+roomId;
+  const p=mode==='train'?'rs-train':'rs-host';
+  document.getElementById(p+'-id').textContent=roomId;
+  document.getElementById(p+'-link').textContent=link;
+  document.getElementById(p+'-link').dataset.link=link;
+  document.getElementById(p+'-join').href=link;
+  const box=document.getElementById(p.replace('rs-','rs-')+'');
+  document.getElementById(mode==='train'?'rs-train':'rs-host').classList.add('vis');
+  document.getElementById(mode==='train'?'rs-train':'rs-host').scrollIntoView({behavior:'smooth'});
+}
+
+// ── MULTIPLAYER AWARENESS (philosophy cases 1-4)
+function handleState(mode,st){
+  if(!st?.players) return;
+  const players=[];
+  st.players.forEach((p,id)=>players.push({id,name:p.name,sessions:p._sessions||0}));
+
+  if(mode==='train'){
+    renderChips('rs-train-chips',players);
+    return;
+  }
+
+  // HOST — case detection
+  renderChips('rs-host-chips',players);
+
+  const newPlayers=players.filter(p=>p.sessions<5);
+  const hasNew=newPlayers.length>0;
+  const allKnown=players.every(p=>p.sessions>=5);
+  const maxSessions=Math.max(0,...players.map(p=>p.sessions));
+  const count=players.length;
+
+  // live compiler recommendation update
+  const lr=document.getElementById('live-rec');
+  if(count>0){ lr.classList.add('vis'); } else { lr.classList.remove('vis'); }
+
+  let target='—', newLbl='none', adj='—';
+  if(count===0){
+    target='—'; newLbl='—'; adj='—';
+  } else if(hasNew){
+    // Case 3: engagement-first
+    target='all players (new player detected)';
+    newLbl=newPlayers.length+' player'+(newPlayers.length>1?'s':'')+' with <5 sessions';
+    adj='engagement mode · more teams · kinetic scoring';
+    document.getElementById('rs-host-phase').textContent='Engagement mode active';
+  } else if(allKnown&&count>1){
+    // Case 2 or 4
+    target='highest player ('+maxSessions+' sessions)';
+    newLbl='none';
+    adj='ZPD target · all players pushed upward';
+    document.getElementById('rs-host-phase').textContent='Competitive calibration';
+  } else {
+    // Case 1: creator only
+    target='you (creator)';
+    newLbl='none detected';
+    adj='creator ZPD with engagement floor';
+    document.getElementById('rs-host-phase').textContent='Creator baseline';
+  }
+
+  document.getElementById('lr-target').textContent=target;
+  document.getElementById('lr-new').textContent=newLbl;
+  document.getElementById('lr-adj').textContent=adj;
+
+  // count label
+  document.getElementById('player-count-lbl').textContent=count>0?count+' player'+(count!==1?'s':''):'';
+}
+
+function renderChips(containerId,players){
+  const box=document.getElementById(containerId);
+  if(!players.length){
+    box.innerHTML='<div class="pchip waiting">Waiting for players…</div>';
+    return;
+  }
+  box.innerHTML='';
+  players.forEach(p=>{
+    const c=document.createElement('div');
+    const isNew=p.sessions<5;
+    c.className='pchip'+(isNew?' new-player':'');
+    c.innerHTML=`${escHtml(p.name||'Player')}<span class="sessions-badge">${p.sessions?p.sessions+'s':' new'}</span>`;
+    box.appendChild(c);
+  });
+}
+
+function closeRoom(mode){
+  if(S.rooms[mode]){ try{S.rooms[mode].leave();}catch(_){} S.rooms[mode]=null; }
+  document.getElementById(mode==='train'?'rs-train':'rs-host').classList.remove('vis');
+  if(mode==='host'){ document.getElementById('live-rec').classList.remove('vis'); }
+}
+
+function copyLink(mode){
+  const box=document.getElementById(mode==='train'?'rs-train-link':'rs-host-link');
+  const link=box.dataset.link||box.textContent;
+  navigator.clipboard.writeText(link).catch(()=>{
+    const i=document.createElement('input');i.value=link;
+    document.body.appendChild(i);i.select();document.execCommand('copy');document.body.removeChild(i);
+  });
+  const btn=box.nextElementSibling;
+  btn.textContent='Copied!';
+  setTimeout(()=>btn.textContent='Copy',1800);
+}
+
+function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+
+<!-- DEV PANEL -->
+<style>
+.dev-float-btn{position:fixed;bottom:10px;right:16px;background:#1a0d00;border:1px solid #5a3200;color:#d97706;font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:6px 13px;cursor:pointer;font-family:Arial,sans-serif;z-index:210;line-height:1}
+.dev-panel{position:fixed;bottom:44px;right:16px;width:186px;background:#0d0800;border:1px solid #2a1800;z-index:200;font-family:Arial,sans-serif;display:none;flex-direction:column;max-height:80vh;overflow-y:auto}
+.dev-panel.open{display:flex}
+.dev-sec{padding:8px 12px;border-bottom:1px solid #140c00}
+.dev-sec-lbl{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#5a3800;margin-bottom:6px}
+.dev-btns{display:flex;gap:3px;flex-wrap:wrap}
+.dev-btn{padding:3px 8px;font-size:9px;font-weight:700;background:transparent;border:1px solid #2a1800;color:#a06020;cursor:pointer;font-family:Arial,sans-serif}
+.dev-btn:hover,.dev-btn.on{background:#1a0d00;border-color:#d97706;color:#d97706}
+.dev-state-line{padding:6px 12px;font-size:9px;color:#5a3800;font-family:"Courier New",monospace}
+</style>
+<button class="dev-float-btn" id="devToggleBtn" onclick="toggleDevPanel()">DEV</button>
+<div class="dev-panel" id="devPanel">
+  <div class="dev-sec">
+    <div class="dev-sec-lbl">Scenario</div>
+    <div class="dev-btns">
+      <button class="dev-btn" onclick="devScenario('first')">First game</button>
+      <button class="dev-btn" onclick="devScenario('early')">Returning</button>
+      <button class="dev-btn" onclick="devScenario('zoned')">Echo zone</button>
+      <button class="dev-btn" onclick="devScenario('advanced')">Alpha zone</button>
+      <button class="dev-btn" onclick="devScenario('host')">Hosting</button>
+      <button class="dev-btn" onclick="devScenario('invitee')">New invitee</button>
+    </div>
+  </div>
+  <div class="dev-sec">
+    <div class="dev-sec-lbl" style="display:flex;justify-content:space-between">Session #<span id="devSessVal" style="color:#d97706;font-weight:700">0</span></div>
+    <input type="range" id="devSessSlider" min="0" max="60" value="0" oninput="devSetSessionSlider(this.value)" style="width:calc(100% - 24px);margin:6px 12px 2px;accent-color:#d97706;display:block">
+  </div>
+  <div class="dev-sec">
+    <div class="dev-sec-lbl">Zone</div>
+    <div class="dev-btns" id="devZoneBtns">
+      <button class="dev-btn on" onclick="devSetZone('CALIBRATION',this)">CAL</button>
+      <button class="dev-btn" onclick="devSetZone('ECHO',this)">ECHO</button>
+      <button class="dev-btn" onclick="devSetZone('PARALLEL',this)">PAR</button>
+      <button class="dev-btn" onclick="devSetZone('SHIFTING',this)">SHF</button>
+      <button class="dev-btn" onclick="devSetZone('RADICAL',this)">RAD</button>
+      <button class="dev-btn" onclick="devSetZone('REMATCH',this)">REM</button>
+    </div>
+  </div>
+  <div class="dev-sec">
+    <div class="dev-sec-lbl">Mode</div>
+    <div class="dev-btns" id="devModeBtns">
+      <button class="dev-btn on" onclick="devSetMode('train',this)">TRAIN</button>
+      <button class="dev-btn" onclick="devSetMode('host',this)">HOST</button>
+    </div>
+  </div>
+  <div class="dev-state-line" id="devStateStr">s0 &middot; CAL &middot; train</div>
+</div>
+<script>
+function dismissLetterCard(){
+  localStorage.setItem('cx_s1_dismissed','1');
+  document.getElementById('tLetter').style.display='none';
+}
+var _devSession=0,_devZone="CALIBRATION",_devMode="train",_devActive=false;
+// Per-zone compiler shapes — mode, config_vector, bot, map match what the real compiler would assign
+var DEV_COMPILERS={
+  CALIBRATION:{mode:'QTY',config_vector:[500,1,10,1,15,90,8,5,2,0,0,50], bot_profile:'TURTLER',      map_filename:'Ad Astra by Josh Dahn.json', expected_rank_pct:0.50},
+  ECHO:       {mode:'SPT',config_vector:[1,500,1,1,12,35,10,5,0,1,1,70],  bot_profile:'STANDARD',     map_filename:'Northfield.json',           expected_rank_pct:0.52},
+  PARALLEL:   {mode:'SPT',config_vector:[1,500,1,1,10,32,10,5,0,1,5,60],  bot_profile:'CONTESTER',    map_filename:'Delta Nine.json',           expected_rank_pct:0.48},
+  SHIFTING:   {mode:'FRT',config_vector:[50,1,500,-200,15,30,10,3,4,2,0,50],bot_profile:'STANDARD',   map_filename:'Cluster IV.json',           expected_rank_pct:0.45},
+  RADICAL:    {mode:'DST',config_vector:[1,1,1,320,15,30,10,40,2,0,3,60],  bot_profile:'ACCELERANT',  map_filename:'Archipelago.json',          expected_rank_pct:0.42},
+  REMATCH:    {mode:'QTY',config_vector:[500,1,5,1,15,30,8,15,2,0,2,80],   bot_profile:'CONTESTER',   map_filename:'Ad Astra by Josh Dahn.json',expected_rank_pct:0.38},
+  ALPHA:      {mode:'INV',config_vector:[-100,1,1,1,15,30,10,15,2,0,5,40], bot_profile:'MIRROR',      map_filename:'Cluster IV.json',           expected_rank_pct:0.55},
+};
+function toggleDevPanel(){
+  var p=document.getElementById("devPanel");
+  var b=document.getElementById("devToggleBtn");
+  var open=p.classList.toggle("open");
+  _devActive=open;
+  b.textContent=open?"DEV ▼":"DEV";
+  renderTerminal(S.mode);
+}
+function _devApply(){
+  S.sessionCount=_devSession;
+  if(_devSession===0){
+    S.compiler=null;
+    localStorage.removeItem('cx_s1_dismissed');
+  } else {
+    var dc=DEV_COMPILERS[_devZone]||DEV_COMPILERS.CALIBRATION;
+    var mm=dc.mode;
+    var ss={}; ss[mm]={elo:500+_devSession*8,n:_devSession,velocity:_devSession>3?1.5:null,last_rank_pct:dc.expected_rank_pct,since_days:2};
+    S.compiler={zone:_devZone,mode:mm,signal_text:(ZONE_POOLS[_devZone]||{}).signal||'--',session_count:_devSession,expected_rank_pct:dc.expected_rank_pct,state_snapshot:ss,config_vector:dc.config_vector,bot_profile:dc.bot_profile,map_filename:dc.map_filename};
+  }
+  document.getElementById("devStateStr").textContent="s"+_devSession+" · "+_devZone.slice(0,3)+" · "+mm+" · "+_devMode;
+}
+function devSetSessionSlider(v){
+  _devSession=+v;
+  document.getElementById('devSessVal').textContent=v;
+  _devApply();renderTerminal(_devMode);
+}
+function devSetSession(n,btn){
+  _devSession=n;
+  document.querySelectorAll("#devSessBtns .dev-btn").forEach(function(b){b.classList.remove("on");});
+  if(btn)btn.classList.add("on");
+  _devApply();renderTerminal(_devMode);
+}
+function devSetZone(z,btn){
+  _devZone=z;
+  document.querySelectorAll("#devZoneBtns .dev-btn").forEach(function(b){b.classList.remove("on");});
+  if(btn)btn.classList.add("on");
+  _devApply();renderTerminal(_devMode);
+}
+function devSetMode(m,btn){
+  _devMode=m;
+  document.querySelectorAll("#devModeBtns .dev-btn").forEach(function(b){b.classList.remove("on");});
+  if(btn)btn.classList.add("on");
+  _devApply();setMode(m);
+}
+var DEV_SCENARIOS={
+  first:{session:0,zone:"CALIBRATION",mode:"train"},
+  early:{session:2,zone:"CALIBRATION",mode:"train"},
+  zoned:{session:8,zone:"ECHO",mode:"train"},
+  advanced:{session:20,zone:"RADICAL",mode:"train"},
+  host:{session:5,zone:"ECHO",mode:"host"},
+  invitee:{session:0,zone:"CALIBRATION",mode:"host"}
+};
+function devScenario(key){
+  var sc=DEV_SCENARIOS[key];if(!sc)return;
+  _devSession=sc.session;_devZone=sc.zone;_devMode=sc.mode;
+  var sl=document.getElementById("devSessSlider");if(sl){sl.value=sc.session;}
+  var sv=document.getElementById("devSessVal");if(sv){sv.textContent=sc.session;}
+  document.querySelectorAll("#devZoneBtns .dev-btn").forEach(function(b){b.classList.remove("on");});
+  document.querySelectorAll("#devModeBtns .dev-btn").forEach(function(b){b.classList.remove("on");});
+  _devApply();setMode(sc.mode);
+}
+</script>
+
+</body>
+</html>

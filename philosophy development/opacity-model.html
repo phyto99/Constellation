@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Opacity Model — Constellation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0a;--surface:#0f0f0f;--surface2:#141414;
+  --border:#1c1c1c;--border2:#242424;
+  --text:#e0e0e0;--dim:#4a4a4a;--dim2:#333;
+}
+body{background:var(--bg);color:var(--text);font-family:Arial,sans-serif;font-size:12px;line-height:1.6;min-height:100vh}
+
+.header{padding:28px 32px 22px;border-bottom:1px solid var(--border)}
+.header-label{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.header-title{font-size:22px;font-weight:700;letter-spacing:-.5px;margin-bottom:6px}
+.header-sub{font-size:10px;color:var(--dim);line-height:1.8;max-width:580px}
+
+.main{max-width:700px;margin:0 auto;padding:36px 32px 100px}
+
+.section{margin-bottom:44px}
+.section-hd{
+  font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;
+  color:var(--dim);margin-bottom:16px;
+  display:flex;align-items:center;gap:10px;
+}
+.section-hd::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.body{font-size:11px;line-height:1.9;color:#888}
+.body p{margin-bottom:16px}
+.body p:last-child{margin-bottom:0}
+.hi{color:var(--text)}
+.lo{color:var(--dim2)}
+.verdict{color:var(--text);font-weight:700}
+
+.callout{
+  background:var(--surface2);border-left:3px solid var(--border2);
+  padding:12px 16px;margin:20px 0;
+  font-size:11px;line-height:1.8;color:#666;
+}
+.callout.strong{border-color:#7c3aed;color:#a78bfa}
+.callout.warning{border-color:#dc2626;color:#f87171}
+.callout.affirm{border-color:#059669;color:#6ee7b7}
+
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:20px 0}
+.col-card{background:var(--surface2);border:1px solid var(--border);padding:14px 16px}
+.col-card-hd{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
+.col-card-body{font-size:10px;line-height:1.8;color:#666}
+
+table.opacity-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:10px}
+.opacity-table th{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);text-align:left;padding:5px 10px 7px;border-bottom:1px solid var(--border)}
+.opacity-table td{padding:7px 10px;border-bottom:1px solid var(--border);line-height:1.6}
+.opacity-table tr:last-child td{border-bottom:none}
+.opacity-table .j-strong{color:#6ee7b7}
+.opacity-table .j-weak{color:#f87171}
+.opacity-table .j-none{color:var(--dim2)}
+
+.principle{
+  border:1px solid var(--border2);padding:16px 20px;margin:20px 0;
+  font-size:11px;color:var(--dim);line-height:1.8;
+}
+.principle-num{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--dim2);margin-bottom:6px}
+.principle-body{color:#888}
+.principle-body span{color:var(--text)}
+
+@media(max-width:640px){
+  .header,.main{padding-left:16px;padding-right:16px}
+  .two-col{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-label">Constellation · Philosophy Development</div>
+  <div class="header-title">The Opacity Model</div>
+  <div class="header-sub">What the system reveals, when, and why. A precise account of what requires secrecy for the model to function versus what uses mystery as experience design — and why conflating them produces a philosophically incoherent architecture.</div>
+</div>
+
+<div class="main">
+
+<!-- ── THE QUESTION ── -->
+<div class="section">
+  <div class="section-hd">The question that exposed the problem</div>
+  <div class="body">
+    <p>Can a student with Alpha-tier access — who sees the compiler's internals, zone assignments, and zone vocabulary with their meanings — tell another student what those things mean? And if so, what should prevent them?</p>
+    <p>The first instinct is legal: an NDA. The second instinct is architectural: per-player zone codenames, so the words that leak don't transfer meaning. Both instincts are wrong, and understanding why they're wrong clarifies something more important — that the system's opacity has not been fully justified, and where it hasn't been justified, it shouldn't exist.</p>
+  </div>
+</div>
+
+<!-- ── THE FLAW ── -->
+<div class="section">
+  <div class="section-hd">Why per-player codenames fail</div>
+  <div class="body">
+    <p>The per-player vocabulary idea: assign each student a unique set of codenames for the zone types. Alex's RADICAL is Jordan's CASCADE. When Alex tells Jordan "you're getting RADICAL," Jordan's terminal shows CASCADE, and the leak doesn't land.</p>
+    <p>This solves the surface problem — the words can't be transmitted — while destroying a mechanism that is explicitly identified as a company asset.</p>
+  </div>
+  <div class="callout warning">
+    The zone vocabulary is a <span style="color:var(--text)">community formation mechanism</span>. Students sharing the same words — RADICAL, ECHO, SHIFTING, PARALLEL, REMATCH — is how an in-group language forms. "I got RADICAL today" is a social object. It travels. It creates the meta-community the virality model depends on. Fragmenting the vocabulary per-player makes this impossible. You cannot build community around words that are private.
+  </div>
+  <div class="body">
+    <p>The per-player solution confuses two different things: protecting the system's measurement validity, and protecting the student's first-encounter experience. It destroys a community mechanism to solve an experience design problem — and it doesn't even solve it cleanly, because the meaning can still be transmitted even if the word changes.</p>
+  </div>
+</div>
+
+<!-- ── OPACITY TABLE ── -->
+<div class="section">
+  <div class="section-hd">What opacity actually requires justification</div>
+  <div class="body">
+    <p>The system has two different reasons to withhold information. They are not the same, and should not be treated as the same.</p>
+  </div>
+
+  <table class="opacity-table">
+    <thead>
+      <tr>
+        <th>What is withheld</th>
+        <th>From whom</th>
+        <th>Stated reason</th>
+        <th>Is the reason sound?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>INVERSION mode — that it is running, that it is even a mode</td>
+        <td>All students below Alpha</td>
+        <td>Announcing INVERSION produces Hawthorne effect. Behavior under observation of inversion is not the same as natural behavior. The measurement is corrupted by disclosure.</td>
+        <td class="j-strong">Justified. Strong. The argument is specific and falsifiable. Silent INVERSION is architecturally protected for a genuine epistemic reason.</td>
+      </tr>
+      <tr>
+        <td>Zone assignment meanings (what RADICAL, ECHO, etc. actually mean)</td>
+        <td>Students below Alpha</td>
+        <td>Knowing the zone assignment changes how the student plays, producing non-natural behavior and corrupting the signal.</td>
+        <td class="j-weak">Weak. The zone describes why a configuration was chosen — not what the student is being tested on. Knowing "the system is maximally uncertain about me in DST" does not obviously corrupt play the way knowing you're in INVERSION does. The argument has not been made precisely.</td>
+      </tr>
+      <tr>
+        <td>The compiler's internal weights and decision logic</td>
+        <td>Students below Alpha</td>
+        <td>Gaming the selection algorithm. If students know the staleness threshold, they could deliberately avoid modes to force certain zone assignments.</td>
+        <td class="j-weak">Partially justified. Gaming is possible but detectable and itself a signal. The majority of students will not engage in this, and those who do are demonstrating a level of system engagement that is informative.</td>
+      </tr>
+      <tr>
+        <td>The Ledger schema and what is recorded</td>
+        <td>All students (by default)</td>
+        <td>Progressive unlock — students see more of their record as they move along the trajectory. The raw Ledger is available at Alpha.</td>
+        <td class="j-strong">Justified as experience design and pedagogical sequencing. The student is not ready to interpret Layer 0 records without the conceptual scaffold that earlier tiers build. This is opacity in service of legibility, not secrecy.</td>
+      </tr>
+      <tr>
+        <td>That the system is computing a cognitive model of the student</td>
+        <td>Nobody — this is disclosed</td>
+        <td>Transparent medium is the design principle. The game is not the point. The meta-system is disclosed at the appropriate tier.</td>
+        <td class="j-strong">Not withheld. The transparency is the point.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    The pattern: opacity is justified when disclosure would corrupt the measurement by changing the behavior being measured. It is not justified merely because mystery produces a better first-encounter experience. Those are different categories.
+  </div>
+</div>
+
+<!-- ── INVERSION ── -->
+<div class="section">
+  <div class="section-hd">INVERSION: the only fully justified silence</div>
+  <div class="body">
+    <p>INVERSION is the one case where the argument for opacity is both precise and strong.</p>
+    <p>The mode works by presenting the student with a configuration that inverts a key parameter (the destination multiplier sign, reversing strategic incentives) without announcing that the inversion has occurred. The student's natural response — confusion, adaptation, or failure — is the signal the system is collecting. If the student knows they are in INVERSION, they play to understand the inversion rather than playing naturally. The data collected is data about their response to knowing they're being tested in an unusual mode, not data about their native cognitive flexibility.</p>
+    <p>This is a clean Hawthorne effect argument. The measurement requires that the student not know they are being measured in this particular way at this particular moment. Architectural silence is not a design choice layered on top of the system — it is constitutive of what INVERSION measures.</p>
+  </div>
+  <div class="callout affirm">
+    INVERSION architectural silence survives all philosophical scrutiny. It is the only opacity in the system where disclosure would not merely change the student experience — it would change what the measurement measures. This distinction is the standard every other opacity claim should be held to.
+  </div>
+  <div class="body">
+    <p>Note: even Alpha students who know INVERSION exists and understand its mechanism cannot leak a specific INVERSION session to the student who experienced it — because the session is already complete, the student can't verify it, and the information changes nothing about what happened. The architectural protection persists even when the existence of the mode is known.</p>
+  </div>
+</div>
+
+<!-- ── ALPHA LEAK ── -->
+<div class="section">
+  <div class="section-hd">The Alpha leak is the trajectory functioning</div>
+  <div class="body">
+    <p>The singularity trajectory ends at Architect — a student who understands the system well enough to design it. The penultimate stage is Teacher. For a student to become a teacher of the system, they must be able to explain what RADICAL means, why the compiler assigns it, what the zone vocabulary is for.</p>
+    <p>If an Alpha student learns what RADICAL means and explains it to a friend who is curious, this is not a failure of the secrecy model. It is the system doing what it is designed to do: moving a student along a trajectory from consumer to architect. The friend who receives the explanation is receiving a piece of the trajectory ahead of schedule — but they are receiving it from a peer who understands it, in a social context, which is arguably a more meaningful disclosure than a tier-unlock would be.</p>
+  </div>
+  <div class="callout">
+    Treating knowledge transfer between students as a threat reveals a design that wants to be simultaneously transparent (the game is a transparent medium) and secret (the meta-system must not be fully known). These goals are in tension. The resolution is not to prevent knowledge transfer — it is to ensure the opacity only covers what genuinely requires it.
+  </div>
+  <div class="body">
+    <p>The NDA instinct comes from the same place. An NDA asks a student to hold knowledge and voluntarily not share it with people they know and care about. This is a real ask, and it's one the design should not need to make. If the system is right that most of its opacity is experience design rather than measurement necessity, then the cost of that opacity being breached is low — the friend who learns what RADICAL means still has to play the game, still gets their own terminal message, still encounters the zone in their own session. Secondhand knowledge does not replicate the present-tense experience.</p>
+  </div>
+</div>
+
+<!-- ── NDA ── -->
+<div class="section">
+  <div class="section-hd">Why the NDA instinct is wrong</div>
+  <div class="body">
+    <p>Legal first:</p>
+  </div>
+  <div class="two-col">
+    <div class="col-card">
+      <div class="col-card-hd" style="color:#dc2626">NDA problems</div>
+      <div class="col-card-body">
+        Legally unenforceable with minors in most jurisdictions without parental co-signature. Creates administrative burden at scale. Philosophically punitive — asks students to sign a document restricting speech as a condition of intellectual access. Out of character with the system's stated relationship to students (transparent medium, not secrecy agreement). Signals distrust of the students the system has invested most in building.
+      </div>
+    </div>
+    <div class="col-card">
+      <div class="col-card-hd" style="color:#059669">What the Alpha application already does</div>
+      <div class="col-card-body">
+        The application process selects for students who understand the system's epistemic design — specifically, why calibrated opacity exists and what happens when it's breached carelessly. A student who passes the Alpha application understands the reason for opacity. This is stronger than a signed document, because understanding is more reliable than compliance. The implicit cultural agreement is already in the application. It does not need to be made legal.
+      </div>
+    </div>
+  </div>
+  <div class="body">
+    <p>The appropriate additional protection for Alpha students who also receive administrative or research access — where they might see aggregate data about other students, not just their own model — is a lightweight written understanding of data responsibilities. This is distinct from an NDA about zone vocabulary. One is about protecting other students' data. The other is about protecting the system's experience design. They are not the same thing and should not be handled with the same instrument.</p>
+  </div>
+</div>
+
+<!-- ── COHERENT MODEL ── -->
+<div class="section">
+  <div class="section-hd">The coherent version of the opacity model</div>
+
+  <div class="principle">
+    <div class="principle-num">Principle 1</div>
+    <div class="principle-body">Opacity is justified only when <span>disclosure would change what the measurement measures</span>, not merely when disclosure would change the student's experience of the system. Apply this test to every withheld piece of information before defending the withholding.</div>
+  </div>
+
+  <div class="principle">
+    <div class="principle-num">Principle 2</div>
+    <div class="principle-body">INVERSION architectural silence is the model for justified opacity. <span>It passes the test precisely.</span> All other opacity claims should be held to the same standard and will mostly fail it — which is fine. Mystery as experience design is legitimate, but it should be designed to survive casual disclosure, not engineered to prevent it.</div>
+  </div>
+
+  <div class="principle">
+    <div class="principle-num">Principle 3</div>
+    <div class="principle-body">The zone vocabulary is a community asset. <span>It must remain shared across all players.</span> Any solution to the Alpha-leak problem that fragments the vocabulary destroys more than it protects. The vocabulary's value as a social mechanism outweighs the risk that its meaning will be transmitted between students.</div>
+  </div>
+
+  <div class="principle">
+    <div class="principle-num">Principle 4</div>
+    <div class="principle-body">Knowledge transfer between students is the trajectory functioning, not the trajectory failing. <span>Design for a world where Alpha students talk to their friends</span> — because they will — and ensure the system's core measurements are robust to that reality. Only INVERSION requires protection from this. Everything else should survive it.</div>
+  </div>
+
+  <div class="principle">
+    <div class="principle-num">Principle 5</div>
+    <div class="principle-body">The Alpha application is the cultural mechanism. <span>It selects for understanding, not compliance.</span> Do not add legal instruments where cultural selection already does the work. Reserve formal written agreements for data-access responsibilities (protecting other students' records), not for experience-design secrecy (protecting zone meanings).</div>
+  </div>
+
+  <div class="principle">
+    <div class="principle-num">Principle 6 — The residual</div>
+    <div class="principle-body">Accept that some students will learn what RADICAL means before the tier system would have shown them. <span>The experience of the terminal message is present-tense and personal.</span> Secondhand knowledge of zone mechanics does not replicate it. Design the terminal messages for the student who knows nothing and the student who knows everything — and trust that both experiences are valuable.</div>
+  </div>
+</div>
+
+<!-- ── WHAT THIS CHANGES ── -->
+<div class="section">
+  <div class="section-hd">What this changes in practice</div>
+  <div class="body">
+    <p><span class="hi">INVERSION</span> — no change. Architectural silence maintained. No announcement, ever, to any tier below Alpha. Alpha knowledge of its existence does not require silence about that knowledge — only silence about specific sessions.</p>
+    <p><span class="hi">Zone vocabulary</span> — shared across all players, not per-player. Meanings are tier-gated as they are now. Alpha students who share meanings with friends are engaging in exactly the knowledge transfer the trajectory is designed to produce. This is acceptable.</p>
+    <p><span class="hi">Alpha application</span> — include an explicit prompt about why opacity exists and what is lost when it is breached carelessly. This is not an NDA. It is a test of understanding. Passing it means the student has internalized the reason, which is more reliable than signing a document.</p>
+    <p><span class="hi">Compiler internals</span> — disclosed at Alpha as designed. The gaming risk (avoiding modes to force RADICAL) is real but minor, measurable, and arguably informative. A student gaming the selection algorithm in a sophisticated way is demonstrating a level of system engagement worth recording.</p>
+    <p class="lo">The one thing that does not change: nothing about this analysis requires modifying the system as currently built. These are design principles being made explicit, not architectural corrections. The current implementation is not wrong. The opacity model just needed to be justified rather than assumed.</p>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

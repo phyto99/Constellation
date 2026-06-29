@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Constellation — Alpha</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:12px;background:#fff;color:#111;min-height:100vh}
+
+/* ── HEADER ── */
+.hdr{border-bottom:2px solid #000;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;background:#fff;position:sticky;top:0;z-index:30}
+.hdr-left{display:flex;align-items:baseline;gap:12px}
+.logo{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase}
+.hdr-sub{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#999}
+.stage-badge{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border:1px solid #000;padding:2px 8px;margin-left:4px}
+.stage-badge.alpha{background:#000;color:#fff;border-color:#000}
+.hdr-right{display:flex;align-items:center;gap:14px}
+.conn{display:flex;align-items:center;gap:5px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#bbb}
+.dot{width:6px;height:6px;border-radius:50%;background:#bbb}
+.dot.live{background:#059669;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.whoami{font-size:11px;color:#888}.whoami b{color:#111}
+.btn-dev-toggle{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #ddd;padding:3px 8px;cursor:pointer;background:#fff;color:#bbb}
+.btn-dev-toggle:hover{border-color:#aaa;color:#666}
+.btn-nav{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#bbb;text-decoration:none;border-bottom:1px solid transparent}
+.btn-nav:hover{color:#111;border-bottom-color:#111}
+
+/* ── WRAP ── */
+.wrap{max-width:760px;margin:0 auto;padding:28px 24px 100px}
+
+/* ── SECTION LABEL ── */
+.slbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#aaa;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.slbl::after{content:"";flex:1;height:1px;background:#f0f0f0}
+.section{margin-bottom:28px}
+
+/* ── TERMINAL ── */
+.term{background:#0a0a0a;margin-bottom:28px}
+.term-hdr{border-bottom:1px solid #111;padding:7px 18px;display:flex;justify-content:space-between;align-items:center}
+.term-hdr-lbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#2a2a2a}
+.term-badge{font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:1px 6px;border:1px solid #1a1a1a;color:#333;font-weight:700}
+.term-body{padding:18px 22px;font-family:"Courier New",monospace;font-size:11px;line-height:1.9;color:#e0e0e0;min-height:160px}
+.tline{display:block;margin-bottom:2px;opacity:0;transition:opacity .08s}
+.tline.show{opacity:1}
+.tline.dim{color:#444}
+.tline.muted{color:#2a2a2a}
+.tline.accent{color:#aaa}
+.tzone{font-size:20px;font-weight:700;letter-spacing:6px;color:#fff;display:block;margin:8px 0 4px}
+.tzone.radical{letter-spacing:8px;font-size:22px}
+
+/* ── ZONE HISTORY ── */
+.zone-history{display:flex;flex-direction:column;gap:3px}
+.zh-row{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #f5f5f5}
+.zh-row:last-child{border-bottom:none}
+.zh-n{font-size:9px;color:#bbb;min-width:28px;font-family:"Courier New",monospace}
+.zh-pill{display:inline-block;padding:1px 9px;font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border:1px solid;flex-shrink:0;min-width:80px;text-align:center}
+.zh-pill.ECHO{background:#0a0a0a;color:#6ae06a;border-color:#1a3a1a}
+.zh-pill.PARALLEL{background:#fff;color:#000;border-color:#000}
+.zh-pill.SHIFTING{background:#fff;color:#888;border-color:#bbb}
+.zh-pill.RADICAL{background:#000;color:#fff;border-color:#000}
+.zh-pill.REMATCH{background:#f8f8f8;color:#888;border-color:#ccc}
+.zh-pill.none{background:#fff;color:#ccc;border-color:#eee;letter-spacing:1px;font-size:8px}
+.zh-mode{font-size:8px;color:#ccc;letter-spacing:1px;font-family:"Courier New",monospace}
+.zh-out{font-size:8px;color:#bbb;margin-left:auto}
+.zh-out.w{color:#059669}
+.zh-out.l{color:#ccc}
+
+/* ── ALPHA TRACK ── */
+.track{display:flex;flex-direction:column;gap:0}
+.track-stage{display:flex;gap:10px;padding:9px 12px;border-left:2px solid #eee;margin-left:8px;position:relative}
+.track-stage::before{content:"";width:8px;height:8px;border-radius:50%;background:#eee;position:absolute;left:-5px;top:14px;border:2px solid #fff}
+.track-stage.done{border-left-color:#ccc}
+.track-stage.done::before{background:#ccc}
+.track-stage.current{border-left-color:#000}
+.track-stage.current::before{background:#000}
+.track-stage.future{border-left-color:#f0f0f0}
+.track-stage.alpha-final{border-left-color:#000}
+.track-stage.alpha-final::before{background:#000;border-color:#fff;box-shadow:0 0 0 2px #000}
+.ts-content{display:flex;flex-direction:column;gap:2px}
+.ts-name{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#111}
+.track-stage.future .ts-name{color:#ccc}
+.track-stage.alpha-final .ts-name{color:#000}
+.ts-desc{font-size:9px;color:#aaa;line-height:1.5}
+.track-stage.current .ts-name{font-size:10px}
+.ts-marker{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:#000;color:#fff;padding:1px 5px;margin-left:auto;align-self:flex-start;white-space:nowrap}
+
+/* ── ELIGIBILITY ── */
+.elig-list{display:flex;flex-direction:column;gap:6px}
+.elig-row{display:flex;align-items:center;gap:8px;font-size:10px}
+.elig-icon{width:14px;height:14px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700}
+.elig-icon.ok{background:#059669;color:#fff}
+.elig-icon.no{background:#f0f0f0;color:#bbb;border:1px solid #ddd}
+.elig-label{flex:1;color:#555}
+.elig-prog{font-size:9px;font-family:"Courier New",monospace;color:#999;margin-left:auto}
+.elig-bar{height:2px;background:#f0f0f0;border-radius:1px;margin-top:2px;overflow:hidden}
+.elig-fill{height:100%;background:#000;border-radius:1px;transition:width .4s}
+
+/* ── APPLY BUTTON ── */
+.apply-zone{border-top:2px solid #000;padding-top:18px;margin-top:4px}
+.btn-apply{padding:11px 28px;background:#000;color:#fff;border:2px solid #000;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-apply:hover{background:#222}
+.btn-apply:disabled{background:#eee;border-color:#eee;color:#bbb;cursor:default}
+.apply-hint{font-size:9px;color:#aaa;margin-top:6px;line-height:1.6}
+
+/* ── APPLICATION FORM ── */
+.app-form{border:2px solid #000;padding:24px;margin-top:28px;display:none}
+.app-form.open{display:block}
+.app-intro{background:#000;color:#ccc;padding:14px 16px;font-size:10px;line-height:1.9;margin-bottom:20px}
+.app-intro .ai-tag{font-size:8px;letter-spacing:2px;color:#555;display:block;margin-bottom:4px}
+.ph-block{border:1px solid #ddd;padding:14px;margin-bottom:12px}
+.ph-block.key-phase{border-color:#000;border-width:2px}
+.ph-title{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid #eee}
+.ph-block.key-phase .ph-title{border-bottom-color:#ddd}
+.ph-q{font-size:10px;color:#444;line-height:1.7;margin-bottom:8px}
+.ph-q strong{color:#000}
+.ph-note{font-size:9px;color:#bbb;font-style:italic;margin-bottom:6px;line-height:1.5}
+.ph-inp{width:100%;border:1px solid #ddd;padding:8px;font-family:Arial,sans-serif;font-size:10px;resize:vertical;min-height:60px;background:#fff}
+.ph-inp:focus{outline:2px solid #000;border-color:#000}
+.ph-block.key-phase .ph-inp{border-color:#aaa;min-height:80px}
+.ph-ref{margin-bottom:10px}
+.ph-ref input{width:100%;border:1px solid #ddd;padding:7px 9px;font-family:Arial,sans-serif;font-size:11px}
+.ph-ref input:focus{outline:2px solid #000}
+.app-footer{border:2px solid #000;padding:14px 16px;margin-top:4px;font-size:10px;color:#555;line-height:1.8}
+.app-actions{margin-top:16px;display:flex;gap:10px;align-items:center}
+.btn-submit{padding:10px 26px;background:#000;color:#fff;border:2px solid #000;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-submit:hover{background:#222}
+.btn-cancel{padding:9px 14px;background:transparent;color:#888;border:1px solid #ddd;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif}
+.btn-cancel:hover{border-color:#aaa;color:#555}
+.act-msg{font-size:10px;color:#888;font-style:italic}
+
+/* ── SUBMITTED STATE ── */
+.submitted-card{border:2px solid #000;padding:24px;text-align:center;display:none}
+.submitted-card.show{display:block}
+.sc-tag{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#555;margin-bottom:8px}
+.sc-title{font-size:14px;font-weight:700;letter-spacing:2px;margin-bottom:10px}
+.sc-body{font-size:10px;color:#555;line-height:1.9;max-width:480px;margin:0 auto}
+
+/* ── TWO COLUMN ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:600px){.two-col{grid-template-columns:1fr}}
+
+/* ── DEV PANEL ── */
+.dev-panel{display:none;background:#f8f8f8;border:1px solid #ddd;padding:10px 14px;margin-bottom:16px;font-size:10px}
+.dev-panel.open{display:block}
+.dev-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+.dev-lbl{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;min-width:90px}
+.dev-btn{font-size:8px;font-weight:700;letter-spacing:1px;border:1px solid #ddd;padding:2px 8px;cursor:pointer;background:#fff;color:#888}
+.dev-btn.on{background:#000;color:#fff;border-color:#000}
+.dev-note{font-size:8px;color:#bbb;margin-top:2px;font-style:italic}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-left">
+    <span class="logo">Constellation</span>
+    <span class="hdr-sub">Alpha</span>
+    <span class="stage-badge" id="stageBadge">PLAYER</span>
+  </div>
+  <div class="hdr-right">
+    <a href="/student-next" class="btn-nav">Session Panel</a>
+    <span class="whoami"><b id="nameDisplay">—</b></span>
+    <span class="conn"><span class="dot" id="connDot"></span><span id="connLabel">connecting</span></span>
+    <button class="btn-dev-toggle" id="devToggleBtn" onclick="toggleDev()">DEV</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- DEV PANEL -->
+  <div class="dev-panel" id="devPanel">
+    <div class="dev-row">
+      <span class="dev-lbl">Stage override</span>
+      <button class="dev-btn on" id="dv-s0" onclick="devSetStage(0,this)">Player</button>
+      <button class="dev-btn" id="dv-s1" onclick="devSetStage(1,this)">Observer</button>
+      <button class="dev-btn" id="dv-s2" onclick="devSetStage(2,this)">Theorist</button>
+      <button class="dev-btn" id="dv-s3" onclick="devSetStage(3,this)">Candidate</button>
+      <button class="dev-btn" id="dv-s4" onclick="devSetStage(4,this)">Alpha</button>
+    </div>
+    <div class="dev-row">
+      <span class="dev-lbl">Eligibility</span>
+      <button class="dev-btn" id="dv-elig" onclick="devToggleElig(this)">Override eligible</button>
+      <button class="dev-btn" id="dv-form" onclick="devOpenForm()">Open form</button>
+    </div>
+    <div class="dev-row">
+      <span class="dev-lbl">Last zone</span>
+      <button class="dev-btn on" id="dv-z0" onclick="devSetZone('RADICAL',this)">RADICAL</button>
+      <button class="dev-btn" id="dv-z1" onclick="devSetZone('ECHO',this)">ECHO</button>
+      <button class="dev-btn" id="dv-z2" onclick="devSetZone('PARALLEL',this)">PARALLEL</button>
+      <button class="dev-btn" id="dv-z3" onclick="devSetZone('SHIFTING',this)">SHIFTING</button>
+      <button class="dev-btn" id="dv-z4" onclick="devSetZone('REMATCH',this)">REMATCH</button>
+    </div>
+    <div class="dev-note" id="devNote">using mock data</div>
+  </div>
+
+  <!-- CURRENT TERMINAL DECLARATION -->
+  <div class="term" id="termBlock">
+    <div class="term-hdr">
+      <span class="term-hdr-lbl">Next Session — Compiler Declaration</span>
+      <span class="term-badge" id="termBadge">—</span>
+    </div>
+    <div class="term-body" id="termBody">
+      <span class="tline dim show">// CHALLENGE COMPILER v2</span>
+      <span class="tline muted show" id="tl-loading">loading session history...</span>
+    </div>
+  </div>
+
+  <!-- ZONE HISTORY + ALPHA TRACK -->
+  <div class="two-col">
+
+    <!-- LEFT: ZONE HISTORY -->
+    <div class="section">
+      <div class="slbl">Zone History</div>
+      <div class="zone-history" id="zoneHistory">
+        <span style="font-size:10px;color:#ccc">loading...</span>
+      </div>
+    </div>
+
+    <!-- RIGHT: ALPHA TRACK + ELIGIBILITY -->
+    <div>
+      <div class="section">
+        <div class="slbl">Alpha Track</div>
+        <div class="track" id="alphaTrack">
+          <!-- rendered by JS -->
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="slbl">Eligibility</div>
+        <div class="elig-list" id="eligList">
+          <!-- rendered by JS -->
+        </div>
+
+        <div class="apply-zone" id="applyZone" style="margin-top:18px">
+          <button class="btn-apply" id="btnApply" onclick="openApplication()" disabled>Apply for Alpha ◈</button>
+          <div class="apply-hint" id="applyHint">complete eligibility requirements to apply</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SUBMITTED CONFIRMATION -->
+  <div class="submitted-card" id="submittedCard">
+    <div class="sc-tag">Application Submitted</div>
+    <div class="sc-title">◈</div>
+    <div class="sc-body">Your analysis has been submitted for review. You will receive a response — not a score, but a reaction. Applications are not ranked; they are either accepted, returned with specific feedback, or declined with direction toward what to develop further. There is no penalty for applying and being declined. The application itself is a development exercise.</div>
+  </div>
+
+  <!-- APPLICATION FORM -->
+  <div class="app-form" id="appForm">
+    <div class="app-intro">
+      <span class="ai-tag">CONSTELLATION — ALPHA APPLICATION</span>
+      Submit a constructive analysis of a team's Constellation session. Your analysis is evaluated not on whether the team won or lost, but on the quality of your observations. Alpha status is awarded for demonstrated understanding, not for performance.
+    </div>
+
+    <div class="ph-block ph-ref">
+      <div class="ph-title">Session Reference</div>
+      <div class="ph-q"><strong>Which session are you analyzing?</strong></div>
+      <input type="text" id="ph-ref" placeholder="e.g. Session 7, Team B vs HAL — Tuesday class">
+    </div>
+
+    <div class="ph-block">
+      <div class="ph-title">Phase 1 — Before the Session</div>
+      <div class="ph-q"><strong>If you observed the planning stage:</strong> What was the team's apparent strategy going in? Did they have a shared understanding of what the session required? What did their preparation reveal?</div>
+      <div class="ph-note">If no planning stage was visible, note what the team's opening moves suggest about their pre-game thinking.</div>
+      <textarea class="ph-inp" id="ph1" placeholder="Describe what you observed before the session started, if available."></textarea>
+    </div>
+
+    <div class="ph-block">
+      <div class="ph-title">Phase 2 — The Playing Stage</div>
+      <div class="ph-q"><strong>Walk through the session as a detective.</strong> What did the team do in each round? Where did decisions align with the session's requirements, and where did they not? Be specific — name rounds, name players if possible, name the decision and why you read it as you do.</div>
+      <div class="ph-note">You are not narrating the game. You are reading what the decisions reveal about the team's model of the session.</div>
+      <textarea class="ph-inp" id="ph2" style="min-height:90px" placeholder="Round-by-round analysis. Focus on decisions and what they reveal about how the team understood the challenge."></textarea>
+    </div>
+
+    <div class="ph-block">
+      <div class="ph-title">Phase 3 — Team Coordination</div>
+      <div class="ph-q"><strong>How effectively did the team work together?</strong> Who drove the key decisions? Were there moments where individual play diverged from team strategy? What was the effect?</div>
+      <textarea class="ph-inp" id="ph3" placeholder="Team dynamics analysis. Not about blaming individuals — about understanding how coordination affected collective performance."></textarea>
+    </div>
+
+    <div class="ph-block key-phase">
+      <div class="ph-title">Phase 4 — Detective Observations</div>
+      <div class="ph-q" style="color:#000"><strong>What did you notice that the team probably didn't notice themselves?</strong> A pattern across rounds. A resource consistently left unused. A decision that made sense locally but cost them at the session level. Something specific and verifiable — not general advice.</div>
+      <div class="ph-note">This is the most important part of your application. The more specific the better — "their steal rate dropped to zero after round 5, even though their opponent's network was most vulnerable in rounds 6 and 7" is better than "they didn't steal enough."</div>
+      <textarea class="ph-inp" id="ph4" placeholder="Your sharpest observation. Something the replay would confirm if someone went back to check."></textarea>
+    </div>
+
+    <div class="ph-block">
+      <div class="ph-title">Phase 5 — Course Correction</div>
+      <div class="ph-q"><strong>If you could pause the session at the end of round 3 and say one thing to the team</strong> — not after, during — what would it be? Why round 3? What did you know by then that they apparently didn't?</div>
+      <div class="ph-note">Round 3 is significant: early enough to change the session, late enough to have real data.</div>
+      <textarea class="ph-inp" id="ph5" placeholder="One intervention, one moment, one sentence. Explain why this is the right moment and what you would say."></textarea>
+    </div>
+
+    <div class="ph-block">
+      <div class="ph-title">Anything Else</div>
+      <div class="ph-q">Anything your analysis didn't capture. Questions you had. Things you noticed but couldn't fully explain.</div>
+      <textarea class="ph-inp" id="ph6"></textarea>
+    </div>
+
+    <div class="app-footer">
+      Your application will be reviewed by the class administrator and, if other Alphas exist, by them as well. You will receive a response — not a score, but a reaction. There is no penalty for applying and being declined.
+    </div>
+
+    <div class="app-actions">
+      <button class="btn-submit" onclick="submitApplication()">Submit Analysis</button>
+      <button class="btn-cancel" onclick="closeApplication()">Cancel</button>
+      <span class="act-msg" id="submitMsg"></span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var API = window.location.origin;
+var _devOpen = false;
+var _devStage = -1;
+var _devEligOverride = false;
+var _devZone = null;
+
+var STAGES = [
+  { key:"player",    label:"Player",          desc:"Plays sessions. Receives terminal observations. Starts noticing patterns." },
+  { key:"observer",  label:"Observer",         desc:"Connects terminal language to outcomes. Develops theories. Compares with others." },
+  { key:"theorist",  label:"Theorist",         desc:"Consistent theories about what the system tracks. Can predict terminal output." },
+  { key:"candidate", label:"Alpha Candidate",  desc:"Submits a constructive analysis of another team's session. Under review." },
+  { key:"alpha",     label:"Alpha ◈",     desc:"Accepted. Access to design tools. Can review future applications." },
+];
+
+var ZONE_SEQS = {
+  RADICAL: [
+    {t:0,   text:"// SESSION — CHALLENGE COMPILER v2", cls:"dim"},
+    {t:400, text:"Scanning behavioral history...", cls:""},
+    {t:900, text:"Rank percentile: elevated. Margin: dominant.", cls:""},
+    {t:1400,text:"Performance threshold exceeded. Recalibrating.", cls:""},
+    {t:1900,text:"Prior session data noted and set aside.", cls:"muted"},
+    {t:2500,text:"", cls:""},
+    {t:2600,text:"RADICAL.", cls:"tzone radical"},
+    {t:3000,text:"A fundamentally different target has been selected.", cls:"accent"},
+    {t:3500,text:"What you learned here does not apply there.", cls:"accent"},
+    {t:4000,text:"Proceed accordingly.", cls:"muted"},
+  ],
+  ECHO: [
+    {t:0,   text:"// SESSION — CHALLENGE COMPILER v2", cls:"dim"},
+    {t:400, text:"Scanning behavioral history...", cls:""},
+    {t:900, text:"Win margin: narrow. Signal unresolved.", cls:""},
+    {t:1400,text:"Same-mode data: incomplete.", cls:""},
+    {t:2000,text:"", cls:""},
+    {t:2100,text:"ECHO.", cls:"tzone"},
+    {t:2500,text:"An unresolved challenge has been detected.", cls:"accent"},
+    {t:2900,text:"The system is returning you to it.", cls:"accent"},
+  ],
+  PARALLEL: [
+    {t:0,   text:"// SESSION — CHALLENGE COMPILER v2", cls:"dim"},
+    {t:400, text:"Scanning behavioral history...", cls:""},
+    {t:900, text:"Mode productive. Performance within flow zone.", cls:""},
+    {t:1500,text:"", cls:""},
+    {t:1600,text:"PARALLEL.", cls:"tzone"},
+    {t:2000,text:"Same cognitive target. Different terrain.", cls:"accent"},
+    {t:2400,text:"Template rotated. The objective is unchanged.", cls:"accent"},
+  ],
+  SHIFTING: [
+    {t:0,   text:"// SESSION — CHALLENGE COMPILER v2", cls:"dim"},
+    {t:400, text:"Scanning behavioral history...", cls:""},
+    {t:900, text:"Comfortable win. Current mode: above flow zone.", cls:""},
+    {t:1500,text:"", cls:""},
+    {t:1600,text:"SHIFTING.", cls:"tzone"},
+    {t:2000,text:"Adjacent territory selected.", cls:"accent"},
+    {t:2400,text:"Prior expertise is partially applicable.", cls:"accent"},
+  ],
+  REMATCH: [
+    {t:0,   text:"// SESSION — CHALLENGE COMPILER v2", cls:"dim"},
+    {t:400, text:"Scanning behavioral history...", cls:""},
+    {t:900, text:"Challenge exceeded current capacity.", cls:""},
+    {t:1400,text:"", cls:""},
+    {t:1500,text:"REMATCH.", cls:"tzone"},
+    {t:1900,text:"The system requires one more signal.", cls:"accent"},
+    {t:2300,text:"The previous session ended before the data was complete.", cls:"accent"},
+  ],
+};
+
+var MOCK = {
+  name: "STUDENT",
+  sessions: 12,
+  modesEncountered: ["QTY","SPT","FRT","DST","WRM"],
+  hasInversion: false,
+  inRematch: false,
+  history: [
+    {n:12, zone:"RADICAL",  mode:"SPT", won:true},
+    {n:11, zone:"SHIFTING", mode:"FRT", won:false},
+    {n:10, zone:"PARALLEL", mode:"QTY", won:true},
+    {n:9,  zone:"ECHO",     mode:"FRT", won:false},
+    {n:8,  zone:"RADICAL",  mode:"DST", won:true},
+    {n:7,  zone:"PARALLEL", mode:"QTY", won:true},
+    {n:6,  zone:"SHIFTING", mode:"WRM", won:false},
+    {n:5,  zone:"ECHO",     mode:"SPT", won:false},
+    {n:4,  zone:"PARALLEL", mode:"QTY", won:true},
+    {n:3,  zone:"ECHO",     mode:"QTY", won:false},
+    {n:2,  zone:"REMATCH",  mode:"QTY", won:false},
+    {n:1,  zone:null,       mode:"QTY", won:false},
+  ]
+};
+
+var S = {
+  data: null,
+  stageIdx: 0,
+  eligible: false,
+  lastZone: null,
+};
+
+var _termTimers = [];
+
+function computeStage(data) {
+  if (_devStage >= 0) return _devStage;
+  var n = data.sessions || 0;
+  var modes = (data.modesEncountered || []).length;
+  var inv = !!data.hasInversion;
+  var rem = !!data.inRematch;
+  if (n < 5) return 0;
+  if (n < 10) return 1;
+  if (n < 15 || modes < 6 || !inv || rem) return 2;
+  return 3;
+}
+
+function computeEligible(data) {
+  if (_devEligOverride) return true;
+  return (data.sessions || 0) >= 15
+    && (data.modesEncountered || []).length >= 6
+    && !!data.hasInversion
+    && !data.inRematch;
+}
+
+function render(data) {
+  S.data = data;
+  S.stageIdx = computeStage(data);
+  S.eligible = computeEligible(data);
+  S.lastZone = _devZone || (data.history && data.history[0] && data.history[0].zone) || null;
+
+  renderStageBadge();
+  renderTrack();
+  renderEligibility(data);
+  renderZoneHistory(data.history || []);
+  renderTerminal(S.lastZone);
+}
+
+function renderStageBadge() {
+  var badge = document.getElementById("stageBadge");
+  var stage = STAGES[S.stageIdx];
+  badge.textContent = stage.label.toUpperCase();
+  badge.className = "stage-badge" + (S.stageIdx === 4 ? " alpha" : "");
+}
+
+function renderTrack() {
+  var container = document.getElementById("alphaTrack");
+  var html = "";
+  STAGES.forEach(function(s, i) {
+    var cls = "track-stage";
+    if (i < S.stageIdx) cls += " done";
+    else if (i === S.stageIdx) cls += " current";
+    else cls += " future";
+    if (i === 4) cls += " alpha-final";
+    html += "<div class=\"" + cls + "\">";
+    html += "<div class=\"ts-content\">";
+    html += "<span class=\"ts-name\">" + s.label + "</span>";
+    html += "<span class=\"ts-desc\">" + s.desc + "</span>";
+    html += "</div>";
+    if (i === S.stageIdx) html += "<span class=\"ts-marker\">YOU</span>";
+    html += "</div>";
+  });
+  container.innerHTML = html;
+}
+
+function renderEligibility(data) {
+  var n = data.sessions || 0;
+  var modes = (data.modesEncountered || []).length;
+  var inv = !!data.hasInversion;
+  var rem = !!data.inRematch;
+
+  var rows = [
+    { ok: n >= 15, label: "15+ competitive sessions", prog: Math.min(n,15) + "/15", pct: n/15 },
+    { ok: modes >= 6, label: "All 6 modes encountered", prog: modes + "/6", pct: modes/6 },
+    { ok: inv, label: "At least one INVERSION session", prog: inv ? "✓" : "—", pct: inv ? 1 : 0 },
+    { ok: !rem, label: "Not currently in REMATCH loop", prog: !rem ? "✓" : "in REMATCH", pct: !rem ? 1 : 0 },
+  ];
+
+  var html = "";
+  rows.forEach(function(r) {
+    var ov = _devEligOverride ? true : r.ok;
+    html += "<div>";
+    html += "<div class=\"elig-row\">";
+    html += "<div class=\"elig-icon " + (ov ? "ok" : "no") + "\">" + (ov ? "✓" : "") + "</div>";
+    html += "<span class=\"elig-label\">" + r.label + "</span>";
+    html += "<span class=\"elig-prog\">" + r.prog + "</span>";
+    html += "</div>";
+    if (!r.ok && !_devEligOverride) {
+      html += "<div class=\"elig-bar\"><div class=\"elig-fill\" style=\"width:" + Math.round(Math.min(r.pct,1)*100) + "%\"></div></div>";
+    }
+    html += "</div>";
+  });
+
+  document.getElementById("eligList").innerHTML = html;
+
+  var btn = document.getElementById("btnApply");
+  var hint = document.getElementById("applyHint");
+  btn.disabled = !S.eligible;
+  hint.textContent = S.eligible
+    ? "you meet the requirements — submit a case file below"
+    : "complete all requirements to apply";
+}
+
+function renderZoneHistory(history) {
+  var container = document.getElementById("zoneHistory");
+  if (!history || !history.length) {
+    container.innerHTML = "<span style=\"font-size:10px;color:#ccc\">no sessions recorded</span>";
+    return;
+  }
+  var html = "";
+  history.forEach(function(row) {
+    html += "<div class=\"zh-row\">";
+    html += "<span class=\"zh-n\">S" + row.n + "</span>";
+    if (row.zone) {
+      html += "<span class=\"zh-pill " + row.zone + "\">" + row.zone + "</span>";
+    } else {
+      html += "<span class=\"zh-pill none\">first session</span>";
+    }
+    html += "<span class=\"zh-mode\">" + (row.mode || "") + "</span>";
+    html += "<span class=\"zh-out " + (row.won ? "w" : "l") + "\">" + (row.won ? "WIN" : "LOSS") + "</span>";
+    html += "</div>";
+  });
+  container.innerHTML = html;
+}
+
+function renderTerminal(zone) {
+  _termTimers.forEach(clearTimeout);
+  _termTimers = [];
+  var body = document.getElementById("termBody");
+  var badge = document.getElementById("termBadge");
+  body.innerHTML = "";
+
+  if (!zone) {
+    badge.textContent = "CALIBRATION";
+    badge.className = "term-badge";
+    var line = document.createElement("span");
+    line.className = "tline dim show";
+    line.textContent = "// awaiting first session data";
+    body.appendChild(line);
+    return;
+  }
+
+  badge.textContent = zone;
+  badge.className = "term-badge rdy";
+
+  var seq = ZONE_SEQS[zone] || [];
+  seq.forEach(function(l) {
+    var id = setTimeout(function() {
+      var span = document.createElement("span");
+      if (!l.text) {
+        span.className = "tline show";
+        span.innerHTML = "&nbsp;";
+      } else {
+        span.className = "tline " + (l.cls || "") + " show";
+        span.textContent = l.text;
+      }
+      body.appendChild(span);
+      body.scrollTop = body.scrollHeight;
+    }, l.t);
+    _termTimers.push(id);
+  });
+}
+
+/* ── OPEN / CLOSE APPLICATION ── */
+function openApplication() {
+  document.getElementById("appForm").classList.add("open");
+  document.getElementById("appForm").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+function closeApplication() {
+  document.getElementById("appForm").classList.remove("open");
+}
+
+function submitApplication() {
+  var ref = document.getElementById("ph-ref").value.trim();
+  var ph4 = document.getElementById("ph4").value.trim();
+  if (!ref || !ph4) {
+    document.getElementById("submitMsg").textContent = "session reference and detective observations are required";
+    return;
+  }
+  document.getElementById("submitMsg").textContent = "submitting...";
+
+  var payload = {
+    student: (S.data && S.data.name) || document.getElementById("nameDisplay").textContent,
+    sessionRef: ref,
+    phases: {
+      planning:    document.getElementById("ph1").value,
+      playing:     document.getElementById("ph2").value,
+      coordination:document.getElementById("ph3").value,
+      detective:   ph4,
+      correction:  document.getElementById("ph5").value,
+      other:       document.getElementById("ph6").value,
+    }
+  };
+
+  fetch(API + "/api/alpha/apply", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(payload)
+  }).then(function(r) {
+    showSubmitted();
+  }).catch(function() {
+    showSubmitted();
+  });
+}
+
+function showSubmitted() {
+  document.getElementById("appForm").classList.remove("open");
+  document.getElementById("appForm").style.display = "none";
+  document.getElementById("submittedCard").classList.add("show");
+  document.getElementById("btnApply").disabled = true;
+  document.getElementById("applyHint").textContent = "application submitted — awaiting review";
+}
+
+/* ── DEV PANEL ── */
+function toggleDev() {
+  _devOpen = !_devOpen;
+  document.getElementById("devPanel").className = "dev-panel" + (_devOpen ? " open" : "");
+  document.getElementById("devToggleBtn").textContent = _devOpen ? "DEV ▼" : "DEV";
+}
+
+function devSetStage(idx, btn) {
+  _devStage = idx;
+  document.querySelectorAll("[id^=dv-s]").forEach(function(b) { b.classList.remove("on"); });
+  btn.classList.add("on");
+  if (S.data) render(S.data);
+}
+
+function devToggleElig(btn) {
+  _devEligOverride = !_devEligOverride;
+  btn.classList.toggle("on", _devEligOverride);
+  btn.textContent = _devEligOverride ? "Override: ELIGIBLE" : "Override eligible";
+  S.eligible = computeEligible(S.data || MOCK);
+  if (S.data) renderEligibility(S.data);
+  document.getElementById("btnApply").disabled = !S.eligible;
+  document.getElementById("applyHint").textContent = S.eligible
+    ? "you meet the requirements — submit a case file below"
+    : "complete all requirements to apply";
+}
+
+function devOpenForm() {
+  document.getElementById("appForm").classList.add("open");
+  document.getElementById("appForm").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+function devSetZone(zone, btn) {
+  _devZone = zone;
+  document.querySelectorAll("[id^=dv-z]").forEach(function(b) { b.classList.remove("on"); });
+  btn.classList.add("on");
+  S.lastZone = zone;
+  renderTerminal(zone);
+}
+
+/* ── LOAD ── */
+function loadData() {
+  var name = localStorage.getItem("constellation_name") || "Guest";
+  document.getElementById("nameDisplay").textContent = name;
+
+  fetch(API + "/api/ledger/state/" + encodeURIComponent(name))
+    .then(function(r) { if (!r.ok) throw new Error(); return r.json(); })
+    .then(function(data) {
+      document.getElementById("connDot").className = "dot live";
+      document.getElementById("connLabel").textContent = "live";
+      document.getElementById("devNote").textContent = "using live data";
+      render(data);
+    })
+    .catch(function() {
+      document.getElementById("connDot").className = "dot";
+      document.getElementById("connLabel").textContent = "offline";
+      document.getElementById("devNote").textContent = "using mock data — server unreachable or no ledger entry";
+      var mock = Object.assign({}, MOCK, {name: name});
+      render(mock);
+    });
+}
+
+loadData();
+</script>
+</body>
+</html>

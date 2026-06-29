@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Perfect System — Constellation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.4}
+nav{position:sticky;top:0;z-index:100;background:#fff;border-bottom:2px solid #000;display:flex;align-items:stretch;padding:0 14px;gap:0;overflow-x:auto}
+.logo{font-size:9px;letter-spacing:2px;font-weight:700;padding:10px 14px 10px 0;border-right:1px solid #ccc;margin-right:4px;white-space:nowrap;align-self:center;text-transform:uppercase;color:#555}
+.tab{padding:10px 13px;cursor:pointer;font-size:9px;letter-spacing:1px;color:#888;border-bottom:3px solid transparent;transition:all .1s;white-space:nowrap;font-weight:700;text-transform:uppercase}
+.tab:hover{color:#000}.tab.active{color:#000;border-bottom-color:#000}
+.panel{display:none;padding:20px}.panel.active{display:block}
+h2{font-size:9px;letter-spacing:2px;font-weight:700;text-transform:uppercase;border-bottom:1px solid #000;padding-bottom:5px;margin-bottom:14px;color:#333}
+h3{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+h4{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;color:#444}
+p{font-size:11px;line-height:1.8;color:#333;margin-bottom:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.card{border:1px solid #ccc;padding:12px;background:#fafafa}
+.card-dk{border:2px solid #000;padding:14px;background:#000;color:#fff}
+.sep{border:none;border-top:1px solid #ddd;margin:10px 0}
+table.t{width:100%;border-collapse:collapse;font-size:11px}
+table.t th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 8px;border-bottom:2px solid #000;text-align:left;background:#f0f0f0}
+table.t td{padding:5px 8px;border-bottom:1px solid #eee;vertical-align:top}
+table.t tr:hover td{background:#f5f5f5}
+.inset{background:#f0f0f0;border-left:3px solid #000;padding:8px 10px;font-size:11px;line-height:1.7;margin:8px 0}
+.warn{background:#f8f8f8;border:1px dashed #000;padding:8px 10px;font-size:10px;line-height:1.7;margin:8px 0}
+.formula{font-family:'Courier New',monospace;font-size:11px;line-height:2;background:#f0f0f0;border:1px solid #ccc;padding:12px 14px;white-space:pre-wrap}
+.badge{display:inline-block;padding:1px 7px;font-size:9px;letter-spacing:1px;text-transform:uppercase;border:1px solid #000;font-weight:700}
+.badge-inv{background:#000;color:#fff}
+/* earned color: verdicts */
+.c-in{color:#15803d}    /* INCLUDE — confirmed necessary */
+.c-out{color:#dc2626}   /* EXCLUDE — redundant or harmful */
+.c-add{color:#1d4ed8}   /* MISSING — must add */
+.c-cond{color:#92400e}  /* CONDITIONAL — earn at higher budget */
+/* earned color: modes */
+.c-qty{color:#d97706}.c-spt{color:#2563eb}.c-frt{color:#059669}
+.c-dst{color:#dc2626}.c-wrm{color:#7c3aed}.c-inv{color:#0891b2}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:#fff}::-webkit-scrollbar-thumb{background:#ccc}
+@media(max-width:760px){.grid2,.grid3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav>
+  <span class="logo">The Perfect System</span>
+  <div class="tab active" onclick="showTab('criterion',this)">The Criterion</div>
+  <div class="tab" onclick="showTab('audit',this)">Variable Audit</div>
+  <div class="tab" onclick="showTab('spec',this)">Minimum Specification</div>
+  <div class="tab" onclick="showTab('self',this)">Self-Similarity</div>
+  <div class="tab" onclick="showTab('formal',this)">Formal System</div>
+</nav>
+
+<!-- ═══════════════════════════════════════ THE CRITERION -->
+<div id="panel-criterion" class="panel active">
+  <h2>The Selection Criterion — What Belongs in a Perfect System</h2>
+
+  <div class="card-dk" style="margin-bottom:16px">
+    <div style="font-size:9px;letter-spacing:2px;color:#888;margin-bottom:8px">THE META-PRINCIPLE</div>
+    <div style="font-family:'Courier New',monospace;font-size:13px;line-height:2.2;color:#fff">
+      Include variable V  ⟺  I( session_accuracy ; V | existing_variables ) &gt; ε
+    </div>
+    <div style="font-size:10px;color:#aaa;margin-top:8px;line-height:1.8">
+      A variable belongs if and only if it provides information about session selection accuracy
+      that is NOT already contained in the variables already present.
+      This is mutual information used as a feature selection criterion.
+      It is not a philosophical preference. It is a measurement.
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-bottom:16px">
+    <div>
+      <h3 style="margin-bottom:8px">Why this criterion is the right one</h3>
+      <p>The system's objective is maximum student development. Every decision it makes — which mode, which template, which difficulty — is an attempt to select the session that produces the largest update to the student's cognitive model.</p>
+      <p>A variable is useful only insofar as it helps the system make that selection more accurately. A variable that does not improve selection accuracy is not merely redundant — it actively harms the system by adding noise to the decision process, increasing the complexity of maintenance, and reducing the interpretability of outcomes.</p>
+      <div class="inset">
+        The criterion is self-applying. You use it to decide which student variables to track. You use it to decide which system parameters to keep. You use it to decide which game signals to capture. The same question at every level: does this improve the accuracy of what comes next?
+      </div>
+    </div>
+    <div>
+      <h3 style="margin-bottom:8px">What "should some variables be left out?" resolves to</h3>
+      <p>Yes. Several variables in the current system fail the criterion:</p>
+      <table class="t">
+        <tr><th>Variable</th><th>Why it fails</th></tr>
+        <tr><td><code>global_elo</code></td><td>Completely determined by <code>mode_elo[6]</code>. Zero independent information. Should be computed, not stored.</td></tr>
+        <tr><td><code>same_mode_streak</code></td><td>Derivable from <code>session_history</code>. No independent information. Kept as optimization cache only.</td></tr>
+        <tr><td><code>brain_metrics</code></td><td>Unvalidated mutual information with session accuracy. May introduce external measurement error greater than signal. Exclude until Phase 4 measures it.</td></tr>
+        <tr><td><code>bot_affinity[6]</code></td><td>Low mutual information given <code>mode_elo[6]</code> at low session counts. Only earns inclusion at budget 4 when sample size makes the inference reliable.</td></tr>
+        <tr><td><code>target_hit_rate</code></td><td>Different objective function (target-delta vs rank). Belongs in a separate collaborative subsystem, not the competitive development system.</td></tr>
+      </table>
+      <p style="margin-top:8px">And several variables are <em>missing</em> that would clearly pass the criterion:</p>
+      <table class="t">
+        <tr><th>Missing variable</th><th>Why it passes</th></tr>
+        <tr><td><code>mode_elo_velocity[6]</code></td><td>Rate of Elo change per mode. High information about plateau vs acceleration — the current system has no plateau detection at all.</td></tr>
+        <tr><td><code>sessions_since_last[6]</code></td><td>Time elapsed per mode. Required for forgetting decay. Without it, returning students get incorrectly calibrated difficulty.</td></tr>
+        <tr><td><code>recent_template_history[6]</code></td><td>Which templates were used in the last 3 sessions per mode. Prevents template repetition within a mode — currently the compiler can select MISER repeatedly.</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="warn">
+    <strong>The philosophical point on parsimony.</strong>
+    The perfect system is not the most comprehensive system. It is the system with minimum description length: the smallest set of variables that is sufficient to select the optimal next session.
+    Every variable beyond that minimum is not neutral — it adds noise, complexity, and maintenance cost.
+    Parsimony is not a trade-off against accuracy. Below the sufficiency threshold, removing variables hurts accuracy.
+    Above it, adding variables hurts it. The minimum sufficient set is the exact correct set.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ VARIABLE AUDIT -->
+<div id="panel-audit" class="panel">
+  <h2>Variable Audit — Every Variable Evaluated Against the Criterion</h2>
+
+  <div class="grid2" style="margin-bottom:16px">
+    <div>
+      <h3 style="margin-bottom:8px">Signal vs Complexity Map</h3>
+      <div style="font-size:10px;color:#555;margin-bottom:6px">Each variable plotted: information value (x) vs implementation complexity (y). Green zone = include. Red zone = exclude. Variables above the diagonal earn their cost; below it do not.</div>
+      <canvas id="audit-canvas" width="420" height="340" style="display:block;border:1px solid #ccc"></canvas>
+      <div style="display:flex;gap:12px;margin-top:6px;font-size:9px;flex-wrap:wrap">
+        <span class="c-in">■ INCLUDE</span>
+        <span class="c-add">■ MISSING — add</span>
+        <span class="c-cond">■ CONDITIONAL</span>
+        <span class="c-out">■ EXCLUDE</span>
+      </div>
+    </div>
+    <div>
+      <h3 style="margin-bottom:8px">Complete Variable Table</h3>
+      <table class="t">
+        <tr><th>Variable</th><th>Verdict</th><th>Mutual information with session accuracy</th></tr>
+        <tr>
+          <td><code>mode_elo[6]</code></td>
+          <td><strong class="c-in">INCLUDE</strong></td>
+          <td>Very high. Direct measure of cognitive position. The core variable the entire system is built around.</td>
+        </tr>
+        <tr>
+          <td><code style="color:#1d4ed8">mode_elo_velocity[6]</code></td>
+          <td><strong class="c-add">ADD (missing)</strong></td>
+          <td>High. Rate of change is independent information from position. Essential for plateau detection — a student at Elo 400 improving fast needs different sessions than one stuck at 400.</td>
+        </tr>
+        <tr>
+          <td><code style="color:#1d4ed8">sessions_since_last[6]</code></td>
+          <td><strong class="c-add">ADD (missing)</strong></td>
+          <td>High. Forgetting curve input. Recency is not captured by session count. A student returning after 3 weeks needs difficulty reduction the current system cannot provide.</td>
+        </tr>
+        <tr>
+          <td><code style="color:#1d4ed8">recent_template_history[6]</code></td>
+          <td><strong class="c-add">ADD (missing)</strong></td>
+          <td>Moderate-high. Prevents template overuse within a mode. Without it, the compiler has no memory of which templates have been used and may repeat them.</td>
+        </tr>
+        <tr>
+          <td><code>last_outcome</code> (percentile, margin)</td>
+          <td><strong class="c-in">INCLUDE</strong></td>
+          <td>High. Immediate state for spectrum zone selection. Without this, the system cannot distinguish a close win from a landslide and cannot calibrate the next session similarity.</td>
+        </tr>
+        <tr>
+          <td><code>mode_sessions[6]</code></td>
+          <td><strong class="c-in">INCLUDE (modified)</strong></td>
+          <td>Moderate. Currently used for entropy budget gating. Replace with <code>sessions_since_last[6]</code> which is strictly more informative (contains both count and recency).</td>
+        </tr>
+        <tr>
+          <td><code>global_elo</code></td>
+          <td><strong class="c-out">EXCLUDE</strong></td>
+          <td>Zero independent information given <code>mode_elo[6]</code>. It is a weighted average of the mode Elos — fully determined by them. Should be computed on demand, never stored as an independent variable.</td>
+        </tr>
+        <tr>
+          <td><code>same_mode_streak</code></td>
+          <td><strong class="c-out">EXCLUDE</strong></td>
+          <td>Derivable from session history in O(1). No independent information. Keep as a cached computation, not a first-class variable.</td>
+        </tr>
+        <tr>
+          <td><code>bot_affinity[6]</code></td>
+          <td><strong class="c-cond">CONDITIONAL (budget ≥4)</strong></td>
+          <td>Low at small sample sizes. Bot affinity is only reliably estimable after 3+ sessions per bot per mode — requiring 18+ total sessions minimum. At budget 4 (20+ sessions) it earns inclusion. Before that, it adds noise.</td>
+        </tr>
+        <tr>
+          <td><code>brain_metrics</code></td>
+          <td><strong class="c-out">EXCLUDE (until validated)</strong></td>
+          <td>Unknown mutual information with in-game session accuracy. External cognitive assessments may correlate with cognitive development, or may not. Including unvalidated variables is not caution — it is the introduction of unquantified noise. Exclude until Phase 4 measures the mutual information directly.</td>
+        </tr>
+        <tr>
+          <td><code>target_hit_rate</code></td>
+          <td><strong class="c-out">SEPARATE SYSTEM</strong></td>
+          <td>This variable belongs to a different objective function (collaborative target-delta vs competitive rank). Mixing it into the competitive development system confounds the signal. It should live in a parallel staircase system with its own variables and its own update rules.</td>
+        </tr>
+        <tr>
+          <td><code>within_session_strategy_delta</code></td>
+          <td><strong class="c-cond">CONDITIONAL (budget ≥3)</strong></td>
+          <td>Moderate-high when measurable. Did the student's behavior change between round 1 and round 5? This is a within-session learning signal — the finest-grained evidence of cognitive updating. Requires round-by-round signal tracking. Worth the cost at budget 3+.</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ MINIMUM SPECIFICATION -->
+<div id="panel-spec" class="panel">
+  <h2>Minimum Sufficient Specification — The Three-Layer Architecture</h2>
+
+  <div class="inset" style="margin-bottom:14px">
+    Three layers, cleanly separated. The state layer describes where the student is. The selection layer decides where they should go next. The implementation layer makes it happen in the game. The layers are independent in the right way: you can replace the game without changing how you think about the student, and you can improve how you think about the student without changing how you select sessions.
+  </div>
+
+  <!-- THREE LAYER DIAGRAM -->
+  <div style="margin-bottom:16px">
+    <canvas id="layers-canvas" width="100%" height="220" id="layers-canvas" style="display:block;width:100%;border:1px solid #ccc"></canvas>
+  </div>
+
+  <div class="grid3" style="margin-bottom:16px">
+    <div class="card" style="border-color:#000;border-width:2px">
+      <h4 style="margin-bottom:6px">Layer 1 — STATE</h4>
+      <div style="font-family:'Courier New',monospace;font-size:10px;line-height:1.8;margin-bottom:8px;background:#f0f0f0;padding:8px">S(student, t) = {
+  mode_elo[6],          <span style="color:#555">← position</span>
+  mode_elo_velocity[6], <span style="color:#555">← momentum</span>
+  sessions_since_last[6]<span style="color:#555">← recency</span>
+}</div>
+      <p>A point in an 18-dimensional space. Everything the system needs to know about where the student is, how fast they are moving, and how long they have been away. Nothing else. The state is minimal and complete.</p>
+      <div class="warn" style="font-size:10px">
+        <strong>What mode_elo alone cannot tell you.</strong> Two students with identical mode_elo[6] may have completely different needs: one is improving rapidly (high velocity) and needs to stay in the current challenge arc; the other has plateaued (zero velocity) and needs a fundamentally different perturbation. Without velocity, the system treats them identically. That is wrong.
+      </div>
+    </div>
+    <div class="card">
+      <h4 style="margin-bottom:6px">Layer 2 — SELECTION</h4>
+      <div style="font-family:'Courier New',monospace;font-size:10px;line-height:1.8;margin-bottom:8px;background:#f0f0f0;padding:8px">next(S) = argmax<sub>C</sub> 𝔼[
+  KL( posterior_S | config C )
+]
+subject to:
+  C ∈ ZPD(S)
+  C.mode ∈ hypercube(S)
+  C.template ∉ recent(S)</div>
+      <p>One operation on the state. The system asks: given where the student is now, which configuration of the game produces the largest expected update to their cognitive model? Subject to three hard constraints: stay within what the student can handle (ZPD), guarantee breadth across modes (hypercube), and don't repeat recent templates.</p>
+      <p>Everything else — the spectrum zone, the difficulty coefficient, the overlay probability — is an implementation of this argmax in terms the game can act on.</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-bottom:6px">Layer 3 — IMPLEMENTATION</h4>
+      <div style="font-family:'Courier New',monospace;font-size:10px;line-height:1.8;margin-bottom:8px;background:#f0f0f0;padding:8px">config(argmax_result) = {
+  mode,
+  template,         <span style="color:#555">← max locked axes</span>
+  difficulty,       <span style="color:#555">← elo_vel × 0.85</span>
+  spectrum_zone,    <span style="color:#555">← exposure depth</span>
+  overlay_flags,    <span style="color:#555">← if eligible</span>
+  codename,
+  loading_sequence
+}</div>
+      <p>The translation of an abstract selection into concrete game parameters. This layer is game-specific — it knows about Constellation's templates, multipliers, bot types. If the game changes, only this layer changes. The state representation and the selection principle are game-agnostic.</p>
+      <p>The loading sequence and codename are in this layer, not the selection layer. They are the psychological implementation of the session — they affect engagement and therefore signal quality, but they do not change what the system has decided to train.</p>
+    </div>
+  </div>
+
+  <!-- THE MINIMUM SUFFICIENT STATE DIAGRAM -->
+  <h3 style="margin-bottom:8px">The Minimum Sufficient Student State</h3>
+  <div class="grid2">
+    <div>
+      <canvas id="state-canvas" width="420" height="300" style="display:block;border:1px solid #ccc"></canvas>
+      <div style="font-size:9px;color:#555;margin-top:6px">
+        Outer ring = Elo 000 (strongest). Center = 999 (weakest). Arrow length = Elo velocity. Color = sessions_since_last (darker = more recent). Drag mode Elo sliders to update.
+      </div>
+      <div id="state-sliders" style="margin-top:10px"></div>
+    </div>
+    <div>
+      <h4 style="margin-bottom:8px">Why 18 dimensions and not more</h4>
+      <table class="t" style="margin-bottom:10px">
+        <tr><th>Dimension group</th><th>What it captures</th><th>Cannot be derived from others</th></tr>
+        <tr><td><code>mode_elo[6]</code></td><td>Current cognitive position per dimension</td><td>Yes — no other variable tells you where the student IS</td></tr>
+        <tr><td><code>mode_elo_velocity[6]</code></td><td>Rate of change per dimension</td><td>Yes — elo alone doesn't distinguish improving vs plateaued at same value</td></tr>
+        <tr><td><code>sessions_since_last[6]</code></td><td>Forgetting decay input per dimension</td><td>Yes — total session count doesn't tell you which modes have been neglected</td></tr>
+      </table>
+      <div class="inset">
+        <strong>Why not add more?</strong> Each additional dimension increases the state space exponentially. At 18 dimensions the system already requires many sessions to estimate the state reliably. Adding brain_metrics (8 more), bot_affinity (6 more), or behavioral signal history (unbounded) expands the state space faster than the data can fill it. The result is a system that is wrong with great precision — it makes highly specific selections based on an unreliable state estimate.
+      </div>
+      <div class="inset">
+        <strong>The recency dimension specifically.</strong> Sessions_since_last is not a proxy for forgetting — it IS the forgetting input, directly. The forgetting curve (Ebbinghaus) is well-validated: retention decays approximately exponentially with time. Difficulty on mode return should scale as: <code style="font-size:10px">d_adjusted = d_base × exp(−days/half_life)</code>. The half_life is the one parameter to learn from data (~14 days initially). Without this dimension, a student returning to SPATIAL after a month receives the same difficulty as one who played it yesterday. That is a systematic error.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ SELF-SIMILARITY -->
+<div id="panel-self" class="panel">
+  <h2>Self-Similarity — The System Applies Its Own Principles to Itself</h2>
+
+  <div class="card-dk" style="margin-bottom:16px">
+    <h4 style="color:#fff;margin-bottom:8px">The recursive structure</h4>
+    <div style="font-size:11px;line-height:1.9;color:#ccc">
+      The system selects sessions to maximize the student's information gain. It uses mutual information to decide which student variables to track. It uses the same criterion to decide which of its own parameters to keep. It applies the information-maximization principle at every level of its own design. <strong style="color:#fff">A system that uses the same principle at every scale is structurally beautiful.</strong> A system that uses different principles at different levels is not — it is a collection of solutions that happen to be assembled together.
+    </div>
+  </div>
+
+  <canvas id="self-canvas" width="100%" height="300" style="display:block;width:100%;border:1px solid #ccc;margin-bottom:14px"></canvas>
+
+  <div class="grid3" style="margin-bottom:14px">
+    <div class="card">
+      <h4 style="margin-bottom:6px">Scale 1: Session selection</h4>
+      <p><em>Which session maximizes the student's information gain?</em></p>
+      <div class="formula" style="font-size:10px">argmax_C 𝔼[ KL(posterior_S | C) ]</div>
+      <p>The fundamental operation. Applied to choose the next session from all possible game configurations.</p>
+    </div>
+    <div class="card" style="border-color:#000">
+      <h4 style="margin-bottom:6px">Scale 2: Variable selection</h4>
+      <p><em>Which variables improve session selection accuracy?</em></p>
+      <div class="formula" style="font-size:10px">include V ⟺
+  I(accuracy; V | existing) &gt; ε</div>
+      <p>The same logic applied to the system's own representation. A variable is included if it reduces the system's uncertainty about which session to select next.</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-bottom:6px">Scale 3: Parameter tuning</h4>
+      <p><em>Which parameter values maximize developmental outcomes?</em></p>
+      <div class="formula" style="font-size:10px">θ* = argmax_θ
+  𝔼[ ΔElo_velocity | θ ]</div>
+      <p>The same logic applied to the system's own parameters. The 0.85 coefficient, the 6-session window, the overlay probability — each is an argument to the same optimization.</p>
+    </div>
+  </div>
+
+  <h3 style="margin-bottom:8px">The anti-pattern — where current systems break self-similarity</h3>
+  <table class="t" style="margin-bottom:14px">
+    <tr><th>Decision</th><th>Current justification</th><th>What self-similarity requires</th></tr>
+    <tr>
+      <td>Difficulty coefficient 0.85</td>
+      <td>Derived from Vygotsky ZPD theory — targets lower edge of flow zone</td>
+      <td>Should be the value θ that maximizes observed ΔElo_velocity across students. Theory suggested the direction; data should determine the magnitude. Currently asserted, not measured.</td>
+    </tr>
+    <tr>
+      <td>Overlay probability P=0.25</td>
+      <td>Seems right for a 1-in-4 surprise rate given eligibility</td>
+      <td>Should be the probability that maximizes reversal_learning_speed signal quality in eligible students. A purely intuitive choice that should be replaced by the value that actually produces fastest cognitive flexibility development.</td>
+    </tr>
+    <tr>
+      <td>Latin hypercube window = 6</td>
+      <td>There are 6 modes — one window covers all modes once</td>
+      <td>The window size should minimize the expected time for a student to develop all 6 modes above a threshold. For some students 6 may be too small (mode mastery requires more repetition); for others too large (coverage forces modes they're already strong in). Should be student-adaptive.</td>
+    </tr>
+    <tr>
+      <td>Entropy budget thresholds (0, 1, 6, 20, 50)</td>
+      <td>Reasonable session counts for reliable inference at each level</td>
+      <td>Should be derived from the actual information gain curves of the system's own inference. At how many sessions does global Elo inference become reliable? Measure the inflection point. Don't guess.</td>
+    </tr>
+    <tr>
+      <td>Forgetting half_life ≈ 14 days</td>
+      <td>Consistent with general Ebbinghaus curve literature</td>
+      <td>Should be measured on this specific student population for this specific game. Cognitive skill retention in competitive games may have a different curve than the original verbal memory experiments. The general direction is right; the magnitude must be learned.</td>
+    </tr>
+  </table>
+
+  <div class="warn">
+    <strong>None of these are failures of design — they are the correct starting values given no data.</strong>
+    The system that runs on day one must use theory-derived parameters because there is no data yet.
+    The self-similar system records the data it needs to eventually replace every asserted value with a measured one.
+    The transition from Phase 1 (asserted) to Phase 3 (learned) is not a redesign — it is the same system becoming more accurate about itself.
+    A self-similar system knows how to improve itself. That is what makes it complete.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ FORMAL SYSTEM -->
+<div id="panel-formal" class="panel">
+  <h2>The Formal System — Complete Minimal Specification</h2>
+
+  <div class="inset" style="margin-bottom:14px">
+    This is the complete specification. It is minimal — nothing can be removed without losing something necessary. It is sufficient — nothing need be added to achieve the objective. Every parameter marked <strong>[ASSERTED]</strong> should eventually become <strong>[LEARNED]</strong> from observed ΔElo_velocity data. Every threshold marked <strong>[MEASURE]</strong> is a claim that should be tested.
+  </div>
+
+  <div class="grid2" style="margin-bottom:14px">
+    <div>
+      <h3 style="margin-bottom:8px">The State</h3>
+      <div class="formula">S(student) = {
+  <span class="c-in">e[6]</span>    : mode_elo[6]           ∈ [0,999]⁶
+  <span class="c-in">ė[6]</span>    : mode_elo_velocity[6]  ∈ ℝ⁶   (Δelo/session, signed)
+  <span class="c-in">τ[6]</span>    : sessions_since_last[6] ∈ ℝ⁺⁶  (days)
+  <span class="c-in">o</span>       : last_outcome           = (percentile, margin)
+  <span class="c-cond">h[6]</span>   : recent_template_ids[6] ∈ list  (last 3 per mode)
+}
+
+Derived (compute, do not store):
+  global_elo = weighted_mean(e[6])        <span class="c-out">← NOT independent</span>
+  streak     = run_length(session_history) <span class="c-out">← NOT independent</span>
+  budget     = f(min sessions per mode)    <span class="c-out">← NOT independent</span></div>
+
+      <h3 style="margin-bottom:8px;margin-top:14px">The Objective</h3>
+      <div class="formula">maximize over student lifetime:
+  Σ_t  𝔼[ KL( S(t+1) ‖ S(t) ) ]
+
+where KL is over the 6-dimensional cognitive position space.
+This is the cumulative cognitive displacement — how far the
+student has moved from their starting position across all
+6 dimensions by session T.
+
+Note: KL here is a proxy for development.
+The true objective is external cognitive transfer,
+which requires Phase 4 validation to confirm.</div>
+    </div>
+
+    <div>
+      <h3 style="margin-bottom:8px">The Selection Function</h3>
+      <div class="formula">select(S) = argmax<sub>C ∈ valid(S)</sub> 𝔼[ΔKL(C, S)]
+
+valid(S) requires all of:
+  C.difficulty ∈ ZPD(S)
+    ZPD_min = e[mode]/999 − 0.25      [MEASURE]
+    ZPD_max = e[mode]/999 + 0.15      [MEASURE]
+    target   = ZPD_min + 0.3×width    [ASSERTED → 0.85×e/999]
+
+  C.mode ∈ hypercube_eligible(S)
+    window = 6 sessions                [ASSERTED → MEASURE]
+    weight = (e[mode]/999)^0.7
+           × 1/(sessions_seen+1)
+           × elo_velocity_bonus(ė)    [NEW]
+
+  C.template satisfies:
+    C.template.id ∉ h[mode]
+    prefer max(locked_axes_count)
+
+  C.difficulty adjusted for recency:
+    d_adj = d × exp(−τ[mode]/λ)       [λ ≈ 14 days, ASSERTED → MEASURE]
+
+  C.overlay_flags:
+    P(INV) = 0.25 if e[mode]&lt;300 AND τ[mode]&lt;7 AND sessions≥6  [ASSERTED]
+    P(INV) = 0.05 otherwise
+    cooldown: ≥3 sessions between INV on same mode              [NEW]</div>
+
+      <h3 style="margin-bottom:8px;margin-top:14px">The Update Function</h3>
+      <div class="formula">after session outcome O = (percentile, margin, signals):
+
+  e[mode]  ← Elo_update(e[mode], percentile)        <span style="color:#555">← existing</span>
+  ė[mode]  ← rolling_mean(Δe, window=5)             <span class="c-add">← NEW</span>
+  τ[mode]  ← 0  (reset: mode just played)            <span class="c-add">← NEW</span>
+  τ[other] ← τ[other] + days_elapsed                <span class="c-add">← NEW</span>
+  h[mode]  ← h[mode].push(C.template.id).tail(3)    <span class="c-add">← NEW</span>
+  o        ← (percentile, margin)                    <span style="color:#555">← existing</span>
+
+  if ė[mode] ≈ 0 for N sessions:                    <span class="c-add">← NEW: plateau detect</span>
+    override difficulty_target upward by 0.10
+    flag for template rotation within mode</div>
+    </div>
+  </div>
+
+  <!-- WHAT IS ASSERTED VS LEARNED -->
+  <h3 style="margin-bottom:8px">Parameters: Asserted vs Learned</h3>
+  <table class="t" style="margin-bottom:14px">
+    <tr><th>Parameter</th><th>Current value</th><th>Status</th><th>How to measure it</th><th>Expected direction of update</th></tr>
+    <tr>
+      <td><code>difficulty_target coefficient</code></td>
+      <td>0.85 × (e/999)</td>
+      <td><span class="badge">ASSERTED</span></td>
+      <td>Regress ΔElo_velocity on difficulty_used for all sessions. The coefficient maximizing ΔElo_velocity is the correct one.</td>
+      <td>Likely close to 0.85 — Vygotsky ZPD is well-validated. May differ per mode.</td>
+    </tr>
+    <tr>
+      <td><code>elo_weight exponent</code></td>
+      <td>0.7</td>
+      <td><span class="badge">ASSERTED</span></td>
+      <td>Test exponents 0.4–1.0. Which produces highest mean ΔElo_velocity? Caveat: must control for regression to mean.</td>
+      <td>May be lower (0.5–0.6) — weaker students may need more correction than the current formula provides.</td>
+    </tr>
+    <tr>
+      <td><code>forgetting half_life</code></td>
+      <td>~14 days</td>
+      <td><span class="badge">ASSERTED</span></td>
+      <td>Measure Elo on mode return vs days since last session. Fit exponential decay. Read off half_life directly.</td>
+      <td>Unknown. Competitive game skills may decay slower than verbal memory (motor/strategic memory is more durable).</td>
+    </tr>
+    <tr>
+      <td><code>overlay probability (eligible)</code></td>
+      <td>0.25</td>
+      <td><span class="badge">ASSERTED</span></td>
+      <td>Compare reversal_learning_speed signal quality at P=0.10, 0.20, 0.25, 0.33. Optimal P maximizes signal quality without overlay fatigue.</td>
+      <td>Probably lower. 0.25 means ~1 in 4 sessions — this may be too frequent to prevent adaptation to INVERSION itself.</td>
+    </tr>
+    <tr>
+      <td><code>hypercube window</code></td>
+      <td>6 sessions</td>
+      <td><span class="badge">ASSERTED</span></td>
+      <td>Compare mode Elo development rates at window=4, 6, 8, 12. Smallest window consistent with all-mode development is correct.</td>
+      <td>May increase to 8–10 for students with strong mode preferences — forcing underdeveloped modes more frequently may produce faster total development.</td>
+    </tr>
+    <tr>
+      <td><code>plateau detection window N</code></td>
+      <td>Not yet defined</td>
+      <td><span class="badge c-add">NEW — MUST DEFINE</span></td>
+      <td>At how many sessions of zero ΔElo does the system conclude plateau? Minimum: 3 (statistical noise). Maximum: 8 (too slow to detect).</td>
+      <td>5 sessions is a reasonable starting value. Plateau over 5 sessions in the same mode under calibrated difficulty is a genuine signal.</td>
+    </tr>
+  </table>
+
+  <!-- THE COMPLETENESS CLAIM -->
+  <div class="card-dk" style="padding:16px 20px">
+    <h4 style="color:#fff;margin-bottom:10px">The completeness claim — and its limits</h4>
+    <div style="font-size:11px;line-height:1.9;color:#ccc">
+      This specification is <strong style="color:#fff">complete within the competitive development objective</strong>. Given the goal of maximizing mode Elo development across 6 cognitive dimensions, this is the minimum sufficient specification — nothing can be removed without losing something necessary, nothing need be added to achieve the goal.<br><br>
+      It is <strong style="color:#fff">not complete</strong> in two ways that matter:<br><br>
+      <strong style="color:#fff">1. The objective may be wrong.</strong> Mode Elo development is a proxy for cognitive development. It may not be the right proxy. External cognitive transfer (do SPATIAL gains improve real-world spatial reasoning?) has not been measured. The system is perfectly optimized for the wrong objective until Phase 4 validates the proxy.<br><br>
+      <strong style="color:#fff">2. The parameters are asserted, not learned.</strong> Every value marked [ASSERTED] is a theory-derived starting point. The system as specified above knows how to replace each of them with learned values — the measurement criteria are explicit. Until the measurements are taken, the system is well-designed but not empirically validated.<br><br>
+      Philosophical beauty does not require empirical validation. Objective perfection does. The system is philosophically complete. It will become objectively perfect when the asserted values become learned ones.
+    </div>
+  </div>
+</div>
+
+<script>
+// ── VARIABLE AUDIT CANVAS ─────────────────────────────────────────────────────
+
+const VARIABLES = [
+  {name:'mode_elo[6]',     x:.92, y:.15, verdict:'in',   label:'mode_elo[6]'},
+  {name:'elo_velocity[6]', x:.82, y:.25, verdict:'add',  label:'elo_velocity[6] ←add'},
+  {name:'sessions_since',  x:.72, y:.10, verdict:'add',  label:'sessions_since[6] ←add'},
+  {name:'last_outcome',    x:.78, y:.12, verdict:'in',   label:'last_outcome'},
+  {name:'tmpl_history',    x:.58, y:.18, verdict:'add',  label:'template_history[6] ←add'},
+  {name:'mode_sessions',   x:.50, y:.14, verdict:'in',   label:'mode_sessions[6]'},
+  {name:'global_elo',      x:.12, y:.10, verdict:'out',  label:'global_elo ✕'},
+  {name:'streak',          x:.18, y:.08, verdict:'out',  label:'same_mode_streak ✕'},
+  {name:'bot_affinity',    x:.45, y:.55, verdict:'cond', label:'bot_affinity[6]'},
+  {name:'brain_metrics',   x:.32, y:.80, verdict:'out',  label:'brain_metrics ✕'},
+  {name:'target_hit_rate', x:.28, y:.35, verdict:'out',  label:'target_hit_rate ✕'},
+  {name:'within_sess_sig', x:.65, y:.52, verdict:'cond', label:'within_session_delta'},
+];
+
+const VERDICT_COLORS = {in:'#15803d', add:'#1d4ed8', out:'#dc2626', cond:'#92400e'};
+
+function drawAudit() {
+  const c = document.getElementById('audit-canvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+  const PAD = {l:48, r:16, t:16, b:44};
+  const IW = W - PAD.l - PAD.r, IH = H - PAD.t - PAD.b;
+  const px = x => PAD.l + x * IW;
+  const py = y => PAD.t + (1 - y) * IH;
+
+  // Verdict zones
+  ctx.fillStyle = 'rgba(21,128,61,.06)';
+  ctx.fillRect(px(.50), PAD.t, IW*.50, IH*.50); // high signal, low cost
+  ctx.fillStyle = 'rgba(220,38,38,.06)';
+  ctx.fillRect(PAD.l, py(.50), IW*.50, IH*.50); // low signal, high cost
+
+  // Diagonal (value = cost line)
+  ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1; ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(PAD.l, PAD.t + IH); ctx.lineTo(PAD.l + IW, PAD.t); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Grid
+  ctx.strokeStyle = '#f0f0f0'; ctx.lineWidth = 1;
+  [.2,.4,.6,.8].forEach(v => {
+    ctx.beginPath(); ctx.moveTo(PAD.l, py(v)); ctx.lineTo(PAD.l+IW, py(v)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px(v), PAD.t); ctx.lineTo(px(v), PAD.t+IH); ctx.stroke();
+  });
+
+  // Axes
+  ctx.strokeStyle = '#999'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD.l, PAD.t); ctx.lineTo(PAD.l, PAD.t+IH); ctx.lineTo(PAD.l+IW, PAD.t+IH); ctx.stroke();
+
+  // Axis labels
+  ctx.fillStyle = '#888'; ctx.font = '9px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('information value (mutual information with session accuracy)', PAD.l+IW/2, PAD.t+IH+28);
+  ctx.save(); ctx.translate(14, PAD.t+IH/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('implementation complexity', 0, 0); ctx.restore();
+  ['0','0.2','0.4','0.6','0.8','1.0'].forEach((v,i) => ctx.fillText(v, px(i/5), PAD.t+IH+14));
+
+  // Zone labels
+  ctx.fillStyle='rgba(21,128,61,.4)'; ctx.font='bold 8px Arial'; ctx.textAlign='right';
+  ctx.fillText('INCLUDE ZONE', PAD.l+IW-4, PAD.t+12);
+  ctx.fillStyle='rgba(220,38,38,.4)'; ctx.textAlign='left';
+  ctx.fillText('EXCLUDE ZONE', PAD.l+4, PAD.t+IH-8);
+
+  // Variables
+  VARIABLES.forEach(v => {
+    const vx = px(v.x), vy = py(v.y);
+    const col = VERDICT_COLORS[v.verdict];
+    ctx.beginPath(); ctx.arc(vx, vy, 5, 0, Math.PI*2);
+    ctx.fillStyle = col; ctx.fill();
+    ctx.strokeStyle = col; ctx.lineWidth = v.verdict==='add' ? 2 : 1;
+    if(v.verdict==='add'){
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(vx, vy, 8, 0, Math.PI*2); ctx.stroke();
+    }
+    ctx.fillStyle = col; ctx.font = v.verdict==='in'||v.verdict==='add' ? 'bold 8px Arial' : '8px Arial';
+    ctx.textAlign = v.x > 0.6 ? 'right' : 'left';
+    const lx = v.x > 0.6 ? vx - 10 : vx + 10;
+    ctx.fillText(v.label, lx, vy - 8);
+  });
+}
+
+// ── THREE LAYERS CANVAS ───────────────────────────────────────────────────────
+
+function drawLayers() {
+  const el = document.getElementById('layers-canvas');
+  if (!el) return;
+  const W = el.clientWidth || 800, H = 220;
+  el.setAttribute('width', W);
+  el.setAttribute('height', H);
+  const ctx = el.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  const layers = [
+    {name:'LAYER 1 — STATE', sub:'mode_elo[6] · elo_velocity[6] · sessions_since[6]', note:'Where the student is', fill:'#fff', stroke:'#000', tw:2},
+    {name:'LAYER 2 — SELECTION', sub:'argmax 𝔼[KL(posterior ‖ prior)] subject to ZPD', note:'What comes next', fill:'#000', stroke:'#000', tw:2},
+    {name:'LAYER 3 — IMPLEMENTATION', sub:'mode · template · difficulty · spectrum · overlays · config', note:'How the game does it', fill:'#fff', stroke:'#ccc', tw:1},
+  ];
+
+  const lw = (W - 40) / 3;
+  layers.forEach((l, i) => {
+    const x = 20 + i * lw;
+    ctx.fillStyle = l.fill; ctx.strokeStyle = l.stroke; ctx.lineWidth = l.tw;
+    ctx.fillRect(x, 20, lw - 12, 140); ctx.strokeRect(x, 20, lw - 12, 140);
+    const tc = l.fill === '#000' ? '#fff' : '#000';
+    ctx.fillStyle = tc; ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center';
+    ctx.fillText(l.name, x + (lw-12)/2, 52);
+    ctx.fillStyle = l.fill === '#000' ? '#aaa' : '#555';
+    ctx.font = '9px Arial';
+    const words = l.sub.split(' · ');
+    words.forEach((w, wi) => ctx.fillText(w, x+(lw-12)/2, 74+wi*14));
+    ctx.fillStyle = l.fill === '#000' ? '#888' : '#aaa';
+    ctx.font = 'italic 9px Arial';
+    ctx.fillText('↓ ' + l.note, x+(lw-12)/2, 148);
+
+    if (i < 2) {
+      const ax = x + lw - 12, ay = 90;
+      ctx.strokeStyle = '#888'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax + 8, ay); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ax+8, ay-4); ctx.lineTo(ax+14, ay); ctx.lineTo(ax+8, ay+4); ctx.closePath();
+      ctx.fillStyle = '#888'; ctx.fill();
+    }
+  });
+
+  // Labels
+  const labels = ['Game-agnostic\ncognitive model','Game-agnostic\noptimization','Game-specific\nmechanics'];
+  labels.forEach((l, i) => {
+    const x = 20 + i * lw + (lw-12)/2;
+    ctx.fillStyle = '#aaa'; ctx.font = '8px Arial'; ctx.textAlign = 'center';
+    l.split('\n').forEach((line, li) => ctx.fillText(line, x, 180 + li*12));
+  });
+}
+
+// ── SELF-SIMILARITY CANVAS ────────────────────────────────────────────────────
+
+function drawSelf() {
+  const el = document.getElementById('self-canvas');
+  if (!el) return;
+  const W = el.clientWidth || 800, H = 300;
+  el.setAttribute('width', W);
+  const ctx = el.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  const scales = [
+    {label:'SESSION SELECTION', sub:'argmax 𝔼[KL(posterior|session)]', x:W*.15, y:80, w:180, h:60, fill:'#000'},
+    {label:'VARIABLE SELECTION', sub:'include V ⟺ I(accuracy;V|existing) > ε', x:W*.42, y:80, w:200, h:60, fill:'#fff'},
+    {label:'PARAMETER TUNING', sub:'θ* = argmax 𝔼[ΔElo_velocity | θ]', x:W*.72, y:80, w:190, h:60, fill:'#fff'},
+  ];
+
+  // Central principle
+  ctx.fillStyle = '#f0f0f0'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(W/2-160, 210, 320, 50, 4); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#000'; ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('ONE PRINCIPLE: maximize information gain', W/2, 232);
+  ctx.fillStyle = '#888'; ctx.font = '8px Arial';
+  ctx.fillText('applied at every scale of the system\'s own design', W/2, 248);
+
+  scales.forEach((s, i) => {
+    ctx.fillStyle = s.fill; ctx.strokeStyle = '#000'; ctx.lineWidth = s.fill==='#000'?2:1;
+    ctx.fillRect(s.x - s.w/2, s.y, s.w, s.h);
+    ctx.strokeRect(s.x - s.w/2, s.y, s.w, s.h);
+    const tc = s.fill==='#000'?'#fff':'#000';
+    ctx.fillStyle = tc; ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center';
+    ctx.fillText(s.label, s.x, s.y+22);
+    ctx.fillStyle = s.fill==='#000'?'#aaa':'#666';
+    ctx.font = '8px Arial';
+    ctx.fillText(s.sub, s.x, s.y+40);
+
+    // Arrow to central
+    ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1; ctx.setLineDash([3,2]);
+    ctx.beginPath(); ctx.moveTo(s.x, s.y+s.h); ctx.lineTo(W/2, 210); ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  // Labels
+  const scaleLabels = ['Selects next session', 'Decides what to track', 'Tunes its own parameters'];
+  scaleLabels.forEach((l, i) => {
+    ctx.fillStyle = '#aaa'; ctx.font = 'italic 8px Arial'; ctx.textAlign = 'center';
+    ctx.fillText(l, scales[i].x, scales[i].y + scales[i].h + 16);
+  });
+
+  ctx.fillStyle = '#888'; ctx.font = '9px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('A system that applies the same principle at every scale is structurally self-similar.', W/2, 285);
+  ctx.fillText('Self-similar systems are the only systems that can improve themselves using their own logic.', W/2, 297);
+}
+
+// ── STATE RADAR ───────────────────────────────────────────────────────────────
+
+const MODE_NAMES = ['QTY','SPT','FRT','DST','WRM','INV'];
+const MODE_COLORS = ['#d97706','#2563eb','#059669','#dc2626','#7c3aed','#0891b2'];
+const eloS = [400,600,300,700,500,450];
+const veloS = [30,-10,50,-20,0,40];
+
+function initStateSliders() {
+  const el = document.getElementById('state-sliders');
+  if (!el) return;
+  el.innerHTML = '<h4 style="margin-bottom:6px">Mode Elo (drag to update radar)</h4>' +
+    MODE_NAMES.map((name, i) => `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="width:28px;font-size:9px;font-weight:700;color:${MODE_COLORS[i]}">${name}</span>
+        <input type="range" min="0" max="999" value="${eloS[i]}" style="flex:1;accent-color:${MODE_COLORS[i]}"
+          oninput="eloS[${i}]=+this.value;drawStateRadar()">
+        <span style="width:30px;font-size:9px;text-align:right;color:${MODE_COLORS[i]}" id="er-${i}">${eloS[i]}</span>
+      </div>`).join('');
+  drawStateRadar();
+}
+
+function drawStateRadar() {
+  const c = document.getElementById('state-canvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+  const cx = W/2, cy = H/2, R = Math.min(W,H)/2 - 44;
+  const N = 6;
+  const ang = i => (i/N)*Math.PI*2 - Math.PI/2;
+  const pt = (i, r) => ({x: cx + r*Math.cos(ang(i)), y: cy + r*Math.sin(ang(i))});
+
+  // Update display values
+  MODE_NAMES.forEach((_, i) => {
+    const el = document.getElementById('er-'+i);
+    if (el) el.textContent = eloS[i];
+  });
+
+  // Rings
+  [1,2,3,4].forEach(ring => {
+    ctx.beginPath();
+    for (let i = 0; i <= N; i++) {
+      const p = pt(i%N, R*ring/4);
+      i === 0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y);
+    }
+    ctx.closePath(); ctx.strokeStyle='#e8e8e8'; ctx.lineWidth=1; ctx.stroke();
+  });
+
+  // Spokes
+  for (let i = 0; i < N; i++) {
+    const p = pt(i, R);
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(p.x,p.y);
+    ctx.strokeStyle='#e8e8e8'; ctx.lineWidth=1; ctx.stroke();
+  }
+
+  // Elo polygon
+  ctx.beginPath();
+  for (let i = 0; i < N; i++) {
+    const norm = 1 - eloS[i]/999;
+    const p = pt(i, R*norm);
+    i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y);
+  }
+  ctx.closePath();
+  ctx.fillStyle='rgba(0,0,0,0.05)'; ctx.fill();
+  ctx.strokeStyle='#000'; ctx.lineWidth=2; ctx.stroke();
+
+  // Velocity arrows
+  for (let i = 0; i < N; i++) {
+    const norm = 1 - eloS[i]/999;
+    const p = pt(i, R*norm);
+    const vel = veloS[i];
+    if (Math.abs(vel) > 5) {
+      const vnorm = 1 - (eloS[i] + vel*3)/999;
+      const pv = pt(i, R*Math.max(0,Math.min(1,vnorm)));
+      ctx.strokeStyle = vel>0 ? '#15803d' : '#dc2626';
+      ctx.lineWidth = 2; ctx.setLineDash([2,2]);
+      ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(pv.x,pv.y); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.beginPath(); ctx.arc(p.x,p.y,4,0,Math.PI*2);
+    ctx.fillStyle=MODE_COLORS[i]; ctx.fill();
+  }
+
+  // Mode labels
+  for (let i = 0; i < N; i++) {
+    const p = pt(i, R+22);
+    ctx.fillStyle=MODE_COLORS[i]; ctx.font='bold 9px Arial';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(MODE_NAMES[i], p.x, p.y);
+    const pv = pt(i, R+34);
+    ctx.fillStyle='#888'; ctx.font='8px Arial';
+    ctx.fillText(String(eloS[i]).padStart(3,'0'), pv.x, pv.y);
+  }
+
+  // Center
+  ctx.fillStyle='#ccc'; ctx.font='8px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('cognitive', cx, cy-5);
+  ctx.fillText('position', cx, cy+5);
+
+  // Legend
+  ctx.fillStyle='#15803d'; ctx.font='8px Arial'; ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.fillText('-- improving (velocity)', 8, H-30);
+  ctx.fillStyle='#dc2626';
+  ctx.fillText('-- declining (velocity)', 8, H-18);
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+
+function showTab(name, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  el.classList.add('active');
+  setTimeout(() => {
+    drawAudit();
+    drawLayers();
+    drawSelf();
+    drawStateRadar();
+  }, 50);
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+
+window.addEventListener('DOMContentLoaded', () => {
+  drawAudit();
+  setTimeout(() => { drawLayers(); drawSelf(); }, 100);
+  initStateSliders();
+});
+window.addEventListener('resize', () => { drawLayers(); drawSelf(); drawAudit(); });
+</script>
+</body>
+</html>

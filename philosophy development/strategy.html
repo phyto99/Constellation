@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Strategy — Constellation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.6}
+header{border-bottom:2px solid #000;padding:18px 28px 12px;position:sticky;top:0;background:#fff;z-index:100}
+.hd-label{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:3px}
+.hd-title{font-size:18px;font-weight:700;margin-bottom:5px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+.leg{display:flex;align-items:center;gap:5px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+nav{display:flex;gap:0;overflow-x:auto;border-top:1px solid #eee;margin-top:8px}
+.tab{padding:7px 0;margin-right:20px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.tab:hover{color:#000}.tab.active{color:#000;border-bottom-color:#000}
+.content{max-width:1020px;margin:0 auto;padding:28px 28px 80px}
+.panel{display:none}.panel.active{display:block}
+
+/* type */
+h1{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;border-bottom:2px solid #000;padding-bottom:5px;margin-bottom:18px}
+h2{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #ddd;padding-bottom:3px;margin:22px 0 10px}
+h3{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
+p{font-size:11px;line-height:1.85;color:#222;margin-bottom:9px;max-width:700px}
+.sep{border:none;border-top:1px solid #eee;margin:24px 0}
+ul{margin-left:16px;margin-bottom:8px}
+li{font-size:11px;line-height:1.8;color:#333;margin-bottom:2px}
+
+/* domain colors */
+:root{
+  --legal:#2563eb;--legal-bg:#eff6ff;--legal-light:#dbeafe;
+  --viral:#0891b2;--viral-bg:#ecfeff;--viral-light:#cffafe;
+  --research:#059669;--research-bg:#f0fdf4;--research-light:#bbf7d0;
+  --school:#7c3aed;--school-bg:#faf5ff;--school-light:#e9d5ff;
+  --awards:#d97706;--awards-bg:#fffbeb;--awards-light:#fde68a;
+  --urgent:#dc2626;--urgent-bg:#fef2f2;--urgent-light:#fecaca;
+}
+
+/* inset blocks */
+.inset{padding:10px 14px;font-size:11px;line-height:1.8;margin:10px 0;max-width:720px}
+.inset-legal{background:var(--legal-bg);border-left:3px solid var(--legal)}
+.inset-viral{background:var(--viral-bg);border-left:3px solid var(--viral)}
+.inset-research{background:var(--research-bg);border-left:3px solid var(--research)}
+.inset-school{background:var(--school-bg);border-left:3px solid var(--school)}
+.inset-awards{background:var(--awards-bg);border-left:3px solid var(--awards)}
+.inset-urgent{background:var(--urgent-bg);border-left:3px solid var(--urgent)}
+.inset-dk{background:#000;color:#bbb;border-left:none;padding:14px 18px}
+.inset-dk strong{color:#fff}
+
+/* badges */
+.badge{display:inline-block;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:1px 7px;border:1px solid;vertical-align:middle;margin-left:4px}
+.b-live{background:#059669;color:#fff;border-color:#059669}
+.b-designed{background:#fffbeb;color:#d97706;border-color:#d97706}
+.b-built{background:#f0fdf4;color:#059669;border-color:#059669}
+.b-notstarted{background:#fef2f2;color:#dc2626;border-color:#dc2626}
+.b-p0{background:#dc2626;color:#fff;border-color:#dc2626}
+.b-p1{background:#d97706;color:#fff;border-color:#d97706}
+.b-p2{background:#888;color:#fff;border-color:#888}
+.b-legal{color:var(--legal);border-color:var(--legal)}
+.b-viral{color:var(--viral);border-color:var(--viral)}
+.b-research{color:var(--research);border-color:var(--research)}
+.b-school{color:var(--school);border-color:var(--school)}
+.b-awards{color:var(--awards);border-color:var(--awards)}
+
+/* tables */
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:11px}
+th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 10px;border-bottom:2px solid #000;text-align:left;background:#f5f5f5}
+td{padding:7px 10px;border-bottom:1px solid #eee;vertical-align:top;line-height:1.65}
+tr:last-child td{border-bottom:none}
+.td-c{text-align:center}
+
+/* phase track */
+.phase-track{display:flex;gap:0;margin:16px 0;overflow-x:auto}
+.phase-node{flex:1;min-width:160px;border:1px solid #ddd;padding:12px 14px;position:relative;background:#fff}
+.phase-node+.phase-node{border-left:none}
+.phase-node.active-phase{border-color:#000;border-width:2px;z-index:1}
+.phase-dot{width:10px;height:10px;border-radius:50%;margin-bottom:6px}
+.phase-label{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px}
+.phase-title{font-size:11px;font-weight:700;margin-bottom:5px}
+.phase-horizon{font-size:9px;color:#888;margin-bottom:7px}
+.phase-items{list-style:none;margin:0;padding:0}
+.phase-items li{font-size:9px;line-height:1.7;color:#444;display:flex;gap:5px;align-items:baseline}
+.phase-items li::before{content:'·';color:#bbb;flex-shrink:0}
+
+/* grid */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:12px 0}
+.card{border:1px solid #ddd;padding:12px 14px}
+.card-title{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+
+/* legal gap table */
+.gap-row{display:grid;grid-template-columns:220px 1fr 1fr;gap:0;border-bottom:1px solid #eee;align-items:start}
+.gap-row:first-child{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:#f5f5f5;border-bottom:2px solid #000}
+.gap-cell{padding:8px 10px;font-size:10px;line-height:1.65}
+.gap-cell:not(:last-child){border-right:1px solid #eee}
+
+/* award tiers */
+.tier-row{border-left:4px solid;padding:12px 14px;margin-bottom:8px;background:#fafafa}
+.tier-row-title{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
+.tier-name{font-size:11px;font-weight:700}
+.tier-meta{font-size:9px;color:#888;margin-top:2px}
+.tier-body{font-size:10px;color:#444;line-height:1.7;margin-top:5px}
+
+/* action list */
+.action-block{border:1px solid #ddd;margin-bottom:10px}
+.action-header{padding:8px 14px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;display:flex;align-items:center;gap:8px;border-bottom:1px solid #ddd}
+.action-body{padding:0}
+.action-row{display:flex;gap:0;border-bottom:1px solid #f0f0f0;align-items:stretch}
+.action-row:last-child{border-bottom:none}
+.action-num{width:32px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#888;flex-shrink:0;border-right:1px solid #f0f0f0;background:#fafafa}
+.action-content{flex:1;padding:8px 12px}
+.action-title{font-size:10px;font-weight:700;margin-bottom:2px}
+.action-detail{font-size:9px;color:#555;line-height:1.65}
+.action-tag{font-size:8px;font-weight:700;padding:1px 5px;border:1px solid;text-transform:uppercase;letter-spacing:1px;margin-left:4px;vertical-align:middle}
+
+/* viral mechanics */
+.mechanic{border-left:3px solid var(--viral);padding:10px 14px;margin-bottom:8px;background:var(--viral-bg)}
+.mechanic-name{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--viral);margin-bottom:3px}
+.mechanic-body{font-size:11px;color:#222;line-height:1.75}
+
+/* competitor table */
+.comp-winner{background:#f0fdf4;font-weight:700;color:#059669}
+.comp-loser{background:#fef2f2;color:#888}
+.comp-neutral{background:#fafafa;color:#444}
+
+/* terminal */
+.terminal{background:#0a0a0a;color:#d0d0d0;font-family:'Courier New',monospace;font-size:10px;line-height:1.85;padding:14px 18px;margin:12px 0;max-width:720px}
+.t-dim{color:#3a3a3a}.t-white{color:#fff;font-weight:700}.t-green{color:#059669}.t-amber{color:#d97706}.t-red{color:#dc2626}.t-blue{color:#60a5fa}.t-cyan{color:#0891b2}.t-purple{color:#a78bfa}
+.t-line{display:block;margin-bottom:1px}
+
+/* synthesis comparison */
+.syn-row{display:grid;grid-template-columns:160px 1fr 1fr;gap:0;border-bottom:1px solid #eee}
+.syn-row.header{background:#000;color:#fff}
+.syn-cell{padding:8px 12px;font-size:10px;line-height:1.6;border-right:1px solid #eee}
+.syn-cell:last-child{border-right:none}
+
+@media(max-width:720px){
+  header{padding:14px 14px 10px;position:relative}
+  .content{padding:20px 14px 40px}
+  .grid2,.grid3{grid-template-columns:1fr}
+  .phase-track{flex-direction:column}
+  .phase-node+.phase-node{border-left:1px solid #ddd;border-top:none}
+  .gap-row{grid-template-columns:1fr;border-bottom:1px solid #ccc}
+  .gap-row>div+div{border-top:1px solid #eee;border-right:none}
+  .syn-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd-label">Constellation — Company Strategy</div>
+  <div class="hd-title">Market, Legal, Credibility & Virality</div>
+  <div class="legend">
+    <div class="leg"><div class="leg-dot" style="background:var(--urgent)"></div>Urgent / P0</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--legal)"></div>Legal</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--viral)"></div>Virality / Community</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--research)"></div>Research / Evidence</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--school)"></div>Schools / Institutional</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--awards)"></div>Awards / Recognition</div>
+  </div>
+  <nav>
+    <div class="tab active" onclick="show('thesis',this)">Core Thesis</div>
+    <div class="tab" onclick="show('phases',this)">Phase Map</div>
+    <div class="tab" onclick="show('legal',this)">Legal Gap</div>
+    <div class="tab" onclick="show('credibility',this)">Credibility Stack</div>
+    <div class="tab" onclick="show('virality',this)">Virality</div>
+    <div class="tab" onclick="show('competitors',this)">Competitors</div>
+    <div class="tab" onclick="show('actions',this)">Actions</div>
+  </nav>
+</header>
+
+<div class="content">
+
+<!-- ══════════════════════════════════════ THESIS -->
+<div id="panel-thesis" class="panel active">
+<h1>Core Thesis — The Strategic Insight</h1>
+
+<div class="inset inset-dk" style="max-width:100%;margin-bottom:18px">
+  <strong>The sequence that doesn't work:</strong> evidence → schools → virality → scale.<br>
+  <strong>The sequence that does:</strong> virality → demand → evidence → schools.<br><br>
+  Schools are a lagging indicator. They follow culture, not research. Evidence removes blockers. Virality creates demand. Build in that order.
+</div>
+
+<div class="grid2">
+  <div>
+    <h2>Why Schools Won't Move First</h2>
+    <p>Astra Nova, Ad Astra, and Synthesis are the right comparators. Synthesis didn't get school adoption by proving cognitive outcomes. They built consumer traction first — with Elon as origin story — then layered research credibility on top. Schools followed the students, not the papers.</p>
+    <p>Constellation has no famous origin story. It has something more interesting to researchers but less immediately legible to schools: a philosophically rigorous, falsifiable cognitive architecture. That card is played differently. It goes to researchers first, not principals.</p>
+
+    <div class="inset inset-school" style="margin-top:8px">
+      <strong>What schools need before they move:</strong><br>
+      Common Sense Media rating · At least one credible research citation · Another school already using it · Teacher demand from students who already play
+    </div>
+  </div>
+
+  <div>
+    <h2>What Constellation Actually Has</h2>
+    <table>
+      <tr><th>Asset</th><th>Status</th></tr>
+      <tr><td>Game (exceptional on its own terms)</td><td><span class="badge b-built">Built</span></td></tr>
+      <tr><td>Cognitive architecture (argmax E[KL])</td><td><span class="badge b-designed">Designed</span></td></tr>
+      <tr><td>Ledger / Observatory</td><td><span class="badge b-built">Built</span></td></tr>
+      <tr><td>Legal layer</td><td><span class="badge b-designed">Designed</span></td></tr>
+      <tr><td>Terminal zone vocabulary</td><td><span class="badge b-designed">Designed, not live</span></td></tr>
+      <tr><td>Alpha track</td><td><span class="badge b-designed">Designed, not live</span></td></tr>
+      <tr><td>Research partnership</td><td><span class="badge b-notstarted">Not started</span></td></tr>
+      <tr><td>Community / players</td><td><span class="badge b-notstarted">Not started</span></td></tr>
+      <tr><td>Common Sense Media rating</td><td><span class="badge b-notstarted">Not started</span></td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="sep"></div>
+<h2>The Two Unlock Conditions</h2>
+
+<div class="grid2">
+  <div class="inset inset-viral">
+    <strong style="color:var(--viral)">Unlock 1 — Teen Social Virality</strong><br><br>
+    The meta-community forms around the zone vocabulary and the second game. Teens share "I got a RADICAL again" before they share "this developed my spatial reasoning." The viral unit is the mystery, not the outcomes. The terminal aesthetic is visually distinct from anything else teens encounter in education — screenshots travel. The Alpha track creates aspirational exclusivity: "top 1% by understanding, not performance." That sentence generates social pressure to understand the system.<br><br>
+    <strong>What activates this: terminal zones live in the game + 50 active players.</strong>
+  </div>
+  <div class="inset inset-research">
+    <strong style="color:var(--research)">Unlock 2 — Researcher Relationship</strong><br><br>
+    Not a study. Not a paper. A researcher who finds the data interesting. The pitch: "We have a running system with pre-registered refutation conditions on every parameter, a JSONL ledger of behavioral signals, and an information-theoretic framework. We want a research partner — not validation, collaboration." Researchers want interesting problems and clean data. Most EdTech doesn't have refutation conditions. This does.<br><br>
+    <strong>What activates this: 3 months of ledger data + one cold email to the right person.</strong>
+  </div>
+</div>
+
+<div class="sep"></div>
+<h2>The Gap That Matters Most Right Now</h2>
+<div class="inset inset-urgent">
+  <strong style="color:var(--urgent)">The ledger must be recording.</strong> Every session played without the ledger running is permanently lost data. The philosophy is complete. The architecture is complete. The legal layer is complete. The gap is: are real sessions generating real JSONL records? Verify this before everything else. Nothing else compounds without the ledger running.
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════ PHASES -->
+<div id="panel-phases" class="panel">
+<h1>Phase Map — Market Strategy</h1>
+
+<div class="phase-track">
+  <div class="phase-node active-phase">
+    <div class="phase-dot" style="background:var(--urgent)"></div>
+    <div class="phase-label" style="color:var(--urgent)">Now — Month 3</div>
+    <div class="phase-title">Foundation</div>
+    <div class="phase-horizon">Ledger live · Legal live · First players</div>
+    <ul class="phase-items">
+      <li>Verify ledger recording real sessions</li>
+      <li>Legal flows in production (age gate, consent, deletion)</li>
+      <li>Terminal zone names live in game</li>
+      <li>Silent INVERSION implemented</li>
+      <li>First 50 active players (any channel)</li>
+      <li>Common Sense Media submission</li>
+    </ul>
+  </div>
+  <div class="phase-node">
+    <div class="phase-dot" style="background:var(--viral)"></div>
+    <div class="phase-label" style="color:var(--viral)">Month 3–9</div>
+    <div class="phase-title">Community + Researcher</div>
+    <div class="phase-horizon">Meta-community forming · First research contact</div>
+    <ul class="phase-items">
+      <li>Zone vocabulary spreading organically</li>
+      <li>Alpha track live in admin</li>
+      <li>Contact 2–3 cognitive scientists</li>
+      <li>Apply to Games for Change</li>
+      <li>Apply to SXSW EDU Launch</li>
+      <li>One alternative school / after-school pilot</li>
+      <li>SIIA CODiE submission</li>
+    </ul>
+  </div>
+  <div class="phase-node">
+    <div class="phase-dot" style="background:var(--research)"></div>
+    <div class="phase-label" style="color:var(--research)">Month 9–24</div>
+    <div class="phase-title">Credibility Stack</div>
+    <div class="phase-horizon">Research preprint · Awards · ESSA evidence</div>
+    <ul class="phase-items">
+      <li>Research preprint on SSRN / PsyArXiv</li>
+      <li>Digital Promise seal</li>
+      <li>ISTE Seal of Alignment</li>
+      <li>ESSA Tier 3 evidence (university study)</li>
+      <li>Apply to BAFTA Game Beyond Entertainment</li>
+      <li>IGF Excellence in Design</li>
+      <li>Feature press placement (games or EdTech)</li>
+    </ul>
+  </div>
+  <div class="phase-node">
+    <div class="phase-dot" style="background:var(--school)"></div>
+    <div class="phase-label" style="color:var(--school)">Month 24+</div>
+    <div class="phase-title">School Adoption</div>
+    <div class="phase-horizon">Inbound from schools · Federal funding eligible</div>
+    <ul class="phase-items">
+      <li>Schools approach you (inbound)</li>
+      <li>ESSA Tier 3 unlocks Title IV-A funding</li>
+      <li>Reimagine Education (Wharton/QS)</li>
+      <li>NEA or major union endorsement</li>
+      <li>District-level DPA pipeline</li>
+      <li>BT integration (Phase 2 system)</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sep"></div>
+<h2>What Each Phase Requires to Unlock</h2>
+<table>
+<tr><th>Phase</th><th>Unlock condition</th><th>Who does it</th><th>Blocking?</th></tr>
+<tr><td style="color:var(--urgent);font-weight:700">Foundation</td><td>Ledger running + legal flows in production</td><td>Engineering (you)</td><td style="color:var(--urgent);font-weight:700">Yes — everything waits on this</td></tr>
+<tr><td style="color:var(--viral);font-weight:700">Community</td><td>Terminal zones live + 50 active players</td><td>Engineering + distribution</td><td>Yes — virality needs players</td></tr>
+<tr><td style="color:var(--research);font-weight:700">Credibility</td><td>3+ months of ledger data + one researcher partner</td><td>Outreach + data</td><td>Partial — can start outreach now</td></tr>
+<tr><td style="color:var(--school);font-weight:700">School Adoption</td><td>Research citation + Common Sense rating + one school reference</td><td>Compounding from prior phases</td><td>No — arrives automatically if prior phases execute</td></tr>
+</table>
+
+<div class="sep"></div>
+<h2>System Build Order vs Market Phase Order</h2>
+<div class="inset inset-legal">
+  <strong>These are parallel tracks, not the same sequence.</strong> The system build order (Phase −1 through Phase 3) is the technical roadmap. The market phase map is the go-to-market sequence. Phase 0 of the system (silent INVERSION, elo_velocity) corresponds to Foundation on the market map. Phase 1 of the system (terminal zones, Alpha track) corresponds to the Community phase. They should move together.
+</div>
+
+<table style="max-width:720px">
+<tr><th>System Build Phase</th><th>Market Phase</th><th>Shared milestone</th></tr>
+<tr><td>Phase −1: Ledger running</td><td>Foundation</td><td>First real JSONL records in /ledger/</td></tr>
+<tr><td>Phase 0: Silent INV, elo_velocity</td><td>Foundation</td><td>Model produces honest signal</td></tr>
+<tr><td>Phase 1: Terminal zones, Alpha</td><td>Community</td><td>Zone vocabulary goes live — community can form</td></tr>
+<tr><td>Phase 1: Instrumentation</td><td>Credibility</td><td>Clean data for researcher</td></tr>
+<tr><td>Phase 2: BT integration</td><td>School Adoption</td><td>Gap signal — strongest cognitive claim</td></tr>
+<tr><td>Phase 3: Replace ASSERTED</td><td>School Adoption</td><td>Validated parameters — peer-reviewed study possible</td></tr>
+</table>
+</div>
+
+
+<!-- ══════════════════════════════════════ LEGAL GAP -->
+<div id="panel-legal" class="panel">
+<h1>Legal Gap — Designed vs Production-Ready</h1>
+
+<div class="inset inset-legal">
+  <strong style="color:var(--legal)">The legal architecture is complete as design.</strong> Two documents cover every required touchpoint: legal-architecture.html and legal-encounters.html. Bulletproof in production requires each flow to actually execute — not prototype, live. The gap below is the implementation checklist.
+</div>
+
+<div style="border:1px solid #ddd;margin:14px 0">
+  <div class="gap-row" style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:#f5f5f5;border-bottom:2px solid #000">
+    <div class="gap-cell">Requirement</div>
+    <div class="gap-cell">Current state</div>
+    <div class="gap-cell">What "live" means</div>
+  </div>
+  <div class="gap-row">
+    <div class="gap-cell" style="font-weight:700">Privacy policy at live URL</div>
+    <div class="gap-cell"><span class="badge b-designed">Designed</span> Full text drafted in legal-architecture.html</div>
+    <div class="gap-cell">Served at [url]/privacy · Version-dated · Linked from every entry point · Indexed by Common Sense Media</div>
+  </div>
+  <div class="gap-row">
+    <div class="gap-cell" style="font-weight:700">Age gate in game flow</div>
+    <div class="gap-cell"><span class="badge b-designed">Designed</span> Three visual variants prototyped</div>
+    <div class="gap-cell">Birth year selector on first load · Under-13 path redirects to parental consent · Year stored server-side with student record</div>
+  </div>
+  <div class="gap-row">
+    <div class="gap-cell" style="font-weight:700">Student consent recording</div>
+    <div class="gap-cell"><span class="badge b-designed">Designed</span> Three onboarding variants</div>
+    <div class="gap-cell">Checkbox state written to student record in DB · Timestamp + version of policy consented to stored · Cannot play without consent recorded</div>
+  </div>
+  <div class="gap-row">
+    <div class="gap-cell" style="font-weight:700">Parental consent backend</div>
+    <div class="gap-cell"><span class="badge b-notstarted">Not started</span></div>
+    <div class="gap-cell">Form submission endpoint · Email confirmation sent to parent · Student account not activated until consent record exists · Admin panel shows consent status per student</div>
+  </div>
+  <div class="gap-row">
+    <div class="gap-cell" style="font-weight:700">Deletion endpoint</div>
+    <div class="gap-cell"><span class="badge b-notstarted">Not started</span></div>
+    <div class="gap-cell">/api/delete-student/:id · Flags records excluded from all reads within 24h · Clears Layer 1 state immediately · Sends deletion receipt to student/parent · Logs deletion timestamp for audit</div>
+  </div>
+  <div class="gap-row">
+    <div class="gap-cell" style="font-weight:700">Privacy contact</div>
+    <div class="gap-cell"><span class="badge b-notstarted">Not started</span></div>
+    <div class="gap-cell">A real monitored email address · Listed in privacy policy · Responds to requests within 30 days · Required by COPPA, GDPR, CCPA</div>
+  </div>
+  <div class="gap-row">
+    <div class="gap-cell" style="font-weight:700">School DPA (signed)</div>
+    <div class="gap-cell"><span class="badge b-designed">Designed</span> Summary document complete</div>
+    <div class="gap-cell">Lawyer drafts binding version from the summary · One signed PDF per school on file · School administrator listed as signatory · DPA stored with expiration date</div>
+  </div>
+  <div class="gap-row">
+    <div class="gap-cell" style="font-weight:700">Data export endpoint</div>
+    <div class="gap-cell"><span class="badge b-notstarted">Not started</span></div>
+    <div class="gap-cell">/api/export-student/:id → JSONL download · Includes all Layer 0 records + Layer 1 state · Delivered within 15 days per DPA · Required for GDPR portability</div>
+  </div>
+  <div class="gap-row">
+    <div class="gap-cell" style="font-weight:700">Append-only vs deletion reconciliation</div>
+    <div class="gap-cell"><span class="badge b-designed">Designed</span> Documented in legal-encounters.html</div>
+    <div class="gap-cell">Deletion flag field in JSONL · Excluded from all reads immediately · Physical purge within 30 days · GDPR Article 17 requires actual deletion — the append-only philosophy does not override it</div>
+  </div>
+</div>
+
+<div class="sep"></div>
+<h2>Implementation Effort Estimate</h2>
+<table style="max-width:680px">
+<tr><th>Item</th><th>Effort</th><th>Blocking what</th></tr>
+<tr><td>Privacy policy at live URL</td><td>1 hour</td><td>Common Sense Media submission, all school conversations</td></tr>
+<tr><td>Age gate in game flow</td><td>Half day</td><td>COPPA compliance, any user under 13</td></tr>
+<tr><td>Student consent recording</td><td>Half day</td><td>All active users — currently no consent on file</td></tr>
+<tr><td>Parental consent backend</td><td>2–3 days</td><td>Any under-13 user (US) or under-16 user (EU)</td></tr>
+<tr><td>Deletion endpoint</td><td>1 day</td><td>GDPR right to erasure, COPPA, every DPA</td></tr>
+<tr><td>Privacy contact email</td><td>15 minutes</td><td>COPPA requirement — technically non-compliant without it</td></tr>
+<tr><td>Data export endpoint</td><td>Half day</td><td>GDPR portability, DPA commitment</td></tr>
+</table>
+
+<div class="inset inset-urgent" style="margin-top:12px">
+  <strong style="color:var(--urgent)">Without the privacy contact email, the system is technically non-compliant with COPPA right now.</strong> It takes 15 minutes. Do it first.
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════ CREDIBILITY -->
+<div id="panel-credibility" class="panel">
+<h1>Credibility Stack — Awards, Research & Partnerships</h1>
+<p>Ordered by ROI. Tier 1 awards unlock specific procurement channels. Tier 2 builds institutional credibility. Tier 3 is prestige — valuable but not load-bearing for school adoption.</p>
+
+<h2>Tier 1 — Highest ROI · Do These First</h2>
+
+<div class="tier-row" style="border-color:var(--research)">
+  <div class="tier-row-title">
+    <div>
+      <div class="tier-name">Common Sense Media Education Review <span class="badge b-notstarted">Not Started</span></div>
+      <div class="tier-meta" style="color:var(--research)">Free · Submit now · Schools check this before anything else</div>
+    </div>
+    <div style="text-align:right;font-size:9px;color:#888">Timeline: submit immediately<br>Cost: free</div>
+  </div>
+  <div class="tier-body">Teachers and parents search Common Sense Media before approving any EdTech tool — it functions as a Yelp for educational software. A 5/5 Learning Rating unlocks more school conversations than any award. Your legal architecture is essentially pre-written submission material. Their rubric rewards: privacy practices (strong), engagement quality (strong), skill-building evidence (needs researcher). Submit the privacy policy and the game description. Get the rating before any school conversations begin.</div>
+</div>
+
+<div class="tier-row" style="border-color:var(--awards)">
+  <div class="tier-row-title">
+    <div>
+      <div class="tier-name">SIIA CODiE Award — Best Educational Game for Secondary <span class="badge b-notstarted">Not Started</span></div>
+      <div class="tier-meta" style="color:var(--awards)">~$500 entry · Annual · Opens school procurement doors</div>
+    </div>
+    <div style="text-align:right;font-size:9px;color:#888">Timeline: Phase Community<br>Cost: ~$500</div>
+  </div>
+  <div class="tier-body">Called the "Oscars of EdTech" by the people who write school software budgets. Winning or being a finalist gets you onto approved vendor lists. Results announced in May. Apply when you have real student data (even 50 students, one semester). The jury rewards: clear cognitive outcomes claim, privacy posture, teacher utility. Your architecture makes a stronger cognitive claim than most EdTech because every parameter has a refutation condition — that is unusual and the jury will notice.</div>
+</div>
+
+<div class="tier-row" style="border-color:var(--viral)">
+  <div class="tier-row-title">
+    <div>
+      <div class="tier-name">Games for Change — Best Learning Game <span class="badge b-notstarted">Not Started</span></div>
+      <div class="tier-meta" style="color:var(--viral)">Moderate entry · Annual · Network &gt; award</div>
+    </div>
+    <div style="text-align:right;font-size:9px;color:#888">Timeline: Phase Community<br>Cost: moderate</div>
+  </div>
+  <div class="tier-body">The network is the value. G4C connects games, educators, and researchers in one room. One conversation at G4C with the right school district contact takes 2 months off a sales cycle that would otherwise take 2 years. The award itself is moderately prestigious; being in the room is what matters. Apply annually.</div>
+</div>
+
+<h2>Tier 2 — Build in Year 2 · Requires Evidence</h2>
+
+<div class="grid2">
+  <div class="tier-row" style="border-color:var(--research);margin-bottom:0">
+    <div class="tier-name" style="margin-bottom:3px">Digital Promise Research-Practice Partnership <span class="badge b-notstarted">Not Started</span></div>
+    <div class="tier-meta" style="color:var(--research);margin-bottom:6px">Research seal · 12–18 months · Unlocks university collaborations</div>
+    <div class="tier-body">Digital Promise connects EdTech companies with university researchers. The seal appears in district procurement decisions. Start conversations now — the research takes 12–18 months.</div>
+  </div>
+  <div class="tier-row" style="border-color:var(--school);margin-bottom:0">
+    <div class="tier-name" style="margin-bottom:3px">ESSA Evidence Tier 3 <span class="badge b-notstarted">Not Started</span></div>
+    <div class="tier-meta" style="color:var(--school);margin-bottom:6px">Federal standard · Unlocks Title IV-A school funding</div>
+    <div class="tier-body">Schools can spend federal Title IV-A funds on tools with ESSA Tier 3 evidence. Tier 3 requires a quasi-experimental study with a comparison group. One university partner + one real study = ESSA Tier 3 = grantable. This is the single biggest financial unlock for school adoption.</div>
+  </div>
+  <div class="tier-row" style="border-color:var(--viral);margin-bottom:0">
+    <div class="tier-name" style="margin-bottom:3px">SXSW EDU Launch Competition <span class="badge b-notstarted">Not Started</span></div>
+    <div class="tier-meta" style="color:var(--viral);margin-bottom:6px">Annual · Austin · Press visibility</div>
+    <div class="tier-body">Past winners turned SXSW EDU wins into major school partnerships within 12 months. Good press ROI relative to cost. The narrative — "game built on information-theoretic principles of cognitive development" — is unusual enough to get written up.</div>
+  </div>
+  <div class="tier-row" style="border-color:var(--school);margin-bottom:0">
+    <div class="tier-name" style="margin-bottom:3px">ISTE Seal of Alignment <span class="badge b-notstarted">Not Started</span></div>
+    <div class="tier-meta" style="color:var(--school);margin-bottom:6px">Standards-based · Districts with ISTE programs look for this</div>
+    <div class="tier-body">School districts with ISTE programs specify this in EdTech evaluation. Apply once you have research evidence in hand — their rubric rewards demonstrated learning outcomes.</div>
+  </div>
+</div>
+
+<h2>Tier 3 — Prestige · Long Game</h2>
+<table>
+<tr><th>Award</th><th>Category</th><th>Why it matters</th><th>Timeline</th></tr>
+<tr><td><strong>BAFTA Games — Game Beyond Entertainment</strong></td><td><span class="badge" style="color:var(--awards);border-color:var(--awards)">Prestige</span></td><td>Globally recognized. Opens conversations with publishers, distributors, press. Not a procurement unlock — a narrative unlock.</td><td>Year 3+ · Requires polished product and press history</td></tr>
+<tr><td><strong>IGF — Excellence in Design</strong></td><td><span class="badge" style="color:var(--viral);border-color:var(--viral)">Games Industry</span></td><td>Most prestigious indie games award. The configural variability argument is genuine. Winning positions Constellation as a serious game design achievement, not just EdTech.</td><td>Year 2–3 · Cost-effective to enter</td></tr>
+<tr><td><strong>Reimagine Education (Wharton/QS)</strong></td><td><span class="badge" style="color:var(--school);border-color:var(--school)">Global</span></td><td>Opens international school network and university system conversations. Apply once you have ESSA evidence and a track record.</td><td>Year 3+</td></tr>
+</table>
+
+<div class="sep"></div>
+<h2>The Research Partnership Path — Most Important Non-Award Item</h2>
+<div class="inset inset-research">
+  <strong style="color:var(--research)">One published preprint from one credible researcher does more for school procurement than all Tier 1 awards combined.</strong><br><br>
+  The pitch: "We have a cognitive development system with pre-registered refutation conditions on every parameter, a running JSONL ledger of behavioral signals, and an information-theoretic framework. We are looking for a research partner — not validation, collaboration." Target: cognitive science or learning sciences programs at CMU (HCII), Stanford (SCALE), UIUC, or similar. They want interesting problems and clean data. Most EdTech doesn't have refutation conditions. Yours does.<br><br>
+  Start this outreach at month 3 — the moment you have 3 months of real data. A preprint takes 6–9 months from first contact. Starting at month 3 means you have a citable preprint by month 12–15.
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════ VIRALITY -->
+<div id="panel-virality" class="panel">
+<h1>Virality — How the Meta-Community Forms</h1>
+<div class="inset inset-viral">
+  <strong style="color:var(--viral)">The viral unit is the mystery, not the outcomes.</strong> Teens share "I got a RADICAL again — does anyone know what that means?" before they share "this improved my spatial reasoning." The distribution mechanism is already in the design. It activates when terminal zones go live and players start comparing notes.
+</div>
+
+<h2>The Three Viral Mechanics Already in the Design</h2>
+
+<div class="mechanic">
+  <div class="mechanic-name">Zone Vocabulary — The Shareable Mystery</div>
+  <div class="mechanic-body">ECHO, PARALLEL, SHIFTING, RADICAL, REMATCH — these are words that mean something specific and are never explained. The terminal declares them as facts. Students compare notes, form theories, argue about what they mean. This is community formation through reverse engineering. The vocabulary travels because it's both mysterious and memorable. "I got a RADICAL" is a sentence you say to your friend at lunch. "The system moved me to a higher difficulty tier" is not.<br><br>
+  <strong>What this requires to activate:</strong> Terminal zone names displaying in post-session output. Currently designed, not live.</div>
+</div>
+
+<div class="mechanic">
+  <div class="mechanic-name">The Alpha Track — Aspirational Exclusivity</div>
+  <div class="mechanic-body">Alpha is not awarded for winning. It's awarded for demonstrated understanding of what the game develops. "Top 1% by understanding, not performance" — that sentence creates social pressure that no leaderboard can. Teens who win a lot but don't understand the system cannot reach Alpha. Teens who play less but think more carefully can. This inverts the normal competitive dynamic in a way that is immediately interesting to talk about.<br><br>
+  The five-phase detective framework (application by submitting analysis of another team's session) is a genuine admission ceremony. The exclusivity is structurally earned, not artificially gated. That makes it more compelling, not less.<br><br>
+  <strong>What this requires to activate:</strong> Alpha track implementation in admin panel. Currently designed, not live.</div>
+</div>
+
+<div class="mechanic">
+  <div class="mechanic-name">The Terminal Aesthetic — Visually Distinct</div>
+  <div class="mechanic-body">The terminal output is visually and tonally unlike anything else teens interact with in an educational context. Black screen, monospace font, declarative language, no encouragement, no smiley faces. "The system is not finished with this challenge. ECHO configuration active." — that sentence does not sound like school. It sounds like being taken seriously by something intelligent. Screenshots of terminal output travel. The aesthetic is the distribution mechanism as much as the content.<br><br>
+  <strong>What this requires:</strong> Already in the design. Depends on terminal zones being live.</div>
+</div>
+
+<div class="sep"></div>
+<h2>The Second Game — The Community's Shared Project</h2>
+<p>Students who compare terminal messages and develop theories about what the system is tracking are collectively doing cognitive science — forming and testing hypotheses about a system they cannot directly observe. This is not an accident; it's the design. The meta-community's shared project is reverse-engineering the measurement system. That project generates discussion, debate, and investigation that no social feature engineered for engagement can replicate — because it's genuine inquiry, not manufactured interaction.</p>
+
+<div class="inset inset-viral">
+  <strong>The Alpha application makes this explicit:</strong> to apply, a student must submit a constructive analysis of another team's session — demonstrating they understand what the system is measuring. The community that forms around preparing Alpha applications is doing the most cognitively demanding collaborative work the system offers. That community is also the most organically viral, because mastery communities are inherently aspirational to those outside them.
+</div>
+
+<h2>The Distribution Strategy by Channel</h2>
+<table>
+<tr><th>Channel</th><th>Why it works for Constellation specifically</th><th>Phase</th></tr>
+<tr><td><strong>Discord servers</strong> (games, education, gifted students)</td><td>Community discussion channels are exactly where "what does RADICAL mean?" spreads. Gifted student communities are already discussing systems thinking and metacognition — highly receptive.</td><td><span class="badge b-p0">Now</span></td></tr>
+<tr><td><strong>Reddit</strong> (r/giftedkids, r/education, r/indiegaming)</td><td>Parents of gifted students in r/giftedkids are actively seeking cognitively demanding tools. r/indiegaming covers novel game design. Both are high signal-to-noise.</td><td><span class="badge b-p0">Now</span></td></tr>
+<tr><td><strong>After-school programs</strong></td><td>Lower adoption barrier than schools. Program directors are more experimental. One good after-school cohort generates both data and parent word-of-mouth.</td><td><span class="badge b-p1">Month 1–3</span></td></tr>
+<tr><td><strong>Homeschool communities</strong></td><td>Homeschool parents are actively evaluating every tool. They have high autonomy to adopt. The philosophical framing resonates strongly — they've already rejected standard approaches.</td><td><span class="badge b-p1">Month 1–3</span></td></tr>
+<tr><td><strong>Microschools</strong></td><td>The fastest growing segment of alternative education. High philosophical alignment. Lower procurement barrier than traditional schools. One signed DPA.</td><td><span class="badge b-p1">Month 3–6</span></td></tr>
+<tr><td><strong>Press (games + EdTech)</strong></td><td>"A competitive strategy game built on information-theoretic principles, where the algorithm is intentionally withheld because figuring it out is the development mechanism" — this is a story. Games journalists find it unusual. EdTech journalists find it rigorous.</td><td><span class="badge b-p2">Month 6+</span></td></tr>
+</table>
+</div>
+
+
+<!-- ══════════════════════════════════════ COMPETITORS -->
+<div id="panel-competitors" class="panel">
+<h1>Competitive Context — Synthesis, Astra Nova, Ad Astra</h1>
+
+<div class="terminal" style="max-width:100%">
+  <span class="t-dim t-line">// honest competitive analysis</span>
+  <span class="t-line" style="margin-top:8px">Synthesis didn't build academic credibility before building consumer traction.</span>
+  <span class="t-line">They built traction first — with Elon as the origin story — then layered research on top.</span>
+  <span class="t-line" style="margin-top:6px">Constellation has no Elon. It has a more interesting architecture.</span>
+  <span class="t-line">Those are different cards. Played differently.</span>
+</div>
+
+<h2>Direct Comparison</h2>
+<div style="border:1px solid #ddd;margin:14px 0">
+  <div class="syn-row header">
+    <div class="syn-cell" style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-right:1px solid #333">Dimension</div>
+    <div class="syn-cell" style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-right:1px solid #333">Synthesis</div>
+    <div class="syn-cell" style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase">Constellation</div>
+  </div>
+  <div class="syn-row">
+    <div class="syn-cell" style="font-weight:700;background:#fafafa">Origin story</div>
+    <div class="syn-cell comp-winner">Elon Musk's school. Immediate press. Immediate parent trust. No cognitive science needed.</div>
+    <div class="syn-cell comp-neutral">None yet. The architecture is the story. Needs to be told.</div>
+  </div>
+  <div class="syn-row">
+    <div class="syn-cell" style="font-weight:700;background:#fafafa">Game design</div>
+    <div class="syn-cell comp-neutral">Collaborative problem-solving. Multiple game types. Good production values. No formal cognitive architecture.</div>
+    <div class="syn-cell comp-winner">One game with six cognitive modes derived from information-theoretic principles. Falsifiable architecture. Every parameter has a refutation condition.</div>
+  </div>
+  <div class="syn-row">
+    <div class="syn-cell" style="font-weight:700;background:#fafafa">Cognitive claim</div>
+    <div class="syn-cell comp-neutral">"Develops critical thinking and collaboration." No formal measurement. No refutation conditions.</div>
+    <div class="syn-cell comp-winner">argmax E[KL(posterior ‖ prior)]. Six specific cognitive dimensions. Elo model with confidence intervals. ASSERTED parameters scheduled for replacement by measured values.</div>
+  </div>
+  <div class="syn-row">
+    <div class="syn-cell" style="font-weight:700;background:#fafafa">Research credibility</div>
+    <div class="syn-cell comp-neutral">Growing. Published some engagement data. No peer-reviewed outcomes study as of 2025.</div>
+    <div class="syn-cell comp-neutral">None yet. Architecture is more interesting to researchers. Needs one partner.</div>
+  </div>
+  <div class="syn-row">
+    <div class="syn-cell" style="font-weight:700;background:#fafafa">Teen virality</div>
+    <div class="syn-cell comp-winner">Strong parent community. Network effects from Elon association. Consumer subscription model.</div>
+    <div class="syn-cell comp-neutral">Not yet started. Zone vocabulary + Alpha track are the designed mechanism. Needs players.</div>
+  </div>
+  <div class="syn-row">
+    <div class="syn-cell" style="font-weight:700;background:#fafafa">Business model</div>
+    <div class="syn-cell comp-winner">Consumer subscription (~$30/month). Large addressable market. Low friction.</div>
+    <div class="syn-cell comp-neutral">Unclear. School DPA + subscription? Consumer? Freemium? Needs definition.</div>
+  </div>
+  <div class="syn-row">
+    <div class="syn-cell" style="font-weight:700;background:#fafafa">The meta-system</div>
+    <div class="syn-cell comp-loser">No meta-system. The game is the product. No adaptive cognitive model. No ledger.</div>
+    <div class="syn-cell comp-winner">The meta-system is the product. The game is the medium. This is a genuinely different architecture and a genuine advantage once it has data behind it.</div>
+  </div>
+  <div class="syn-row">
+    <div class="syn-cell" style="font-weight:700;background:#fafafa">Interesting to cognitive scientists?</div>
+    <div class="syn-cell comp-loser">Probably not. No formal measurement architecture. Nothing falsifiable to study.</div>
+    <div class="syn-cell comp-winner">Yes. Pre-registered refutation conditions, information-theoretic framework, clean JSONL ledger. Exactly what researchers want.</div>
+  </div>
+</div>
+
+<div class="sep"></div>
+<h2>Astra Nova / Ad Astra</h2>
+<p>These are schools, not products. They don't compete with Constellation directly — they validate the market hypothesis. If Elon's school is built around the idea that traditional schooling is wrong, and Synthesis (their spinout) has reached hundreds of thousands of subscribers, the market for cognitively serious alternatives to traditional educational games is proven. The question is not "does this market exist" but "how do we enter it without Elon."</p>
+<div class="inset inset-viral">
+  <strong>The answer Synthesis gives:</strong> consumer-direct, parent communities, word of mouth.<br>
+  <strong>The answer Constellation's architecture gives:</strong> teen meta-community, researcher relationships, the architecture as the story.<br>
+  These are not the same path. Both can work. Synthesis's path requires more capital for consumer acquisition. Constellation's path requires one good press placement and one research partner.
+</div>
+
+<div class="sep"></div>
+<h2>The Business Model Question</h2>
+<p>This document does not resolve it — it flags it. Three viable models, each with different implications:</p>
+<table style="max-width:720px">
+<tr><th>Model</th><th>Advantages</th><th>Disadvantages</th></tr>
+<tr><td><strong>School B2B (DPA + annual license)</strong></td><td>Higher ACV. ESSA funding eligible. Institutional stability.</td><td>Slow sales cycle. Requires credibility before first sale. Legal overhead per school.</td></tr>
+<tr><td><strong>Consumer subscription (parent-pays)</strong></td><td>Fast distribution. Viral growth possible. No institutional approval required.</td><td>COPPA friction for under-13. CAC is high without organic viral. Competes with Synthesis directly.</td></tr>
+<tr><td><strong>Freemium (free play, paid model access)</strong></td><td>Removes adoption barrier. Viral growth possible. Converts when value is demonstrated.</td><td>Revenue delayed. "Free" reduces perceived seriousness in school contexts.</td></tr>
+</table>
+<div class="inset inset-school" style="margin-top:10px">Recommendation: consumer-freemium to build community and virality first, then add institutional B2B layer once you have the credibility stack. Synthesis proved the consumer path is viable. Your architecture makes the institutional path more defensible long-term.</div>
+</div>
+
+
+<!-- ══════════════════════════════════════ ACTIONS -->
+<div id="panel-actions" class="panel">
+<h1>Immediate Actions — Prioritized</h1>
+
+<div class="action-block">
+  <div class="action-header" style="background:var(--urgent-bg);border-color:var(--urgent-light)">
+    <div class="leg-dot" style="background:var(--urgent)"></div>
+    <span style="color:var(--urgent)">This Week — Blocking Everything</span>
+  </div>
+  <div class="action-body">
+    <div class="action-row">
+      <div class="action-num">1</div>
+      <div class="action-content">
+        <div class="action-title">Verify the ledger is recording <span class="badge b-legal">Legal</span> <span class="badge b-p0">P0</span></div>
+        <div class="action-detail">Run a real session. Check /ledger/ for a new JSONL file with a real record. If it's not there, everything else is irrelevant — every session played is permanently lost data. This takes 10 minutes to verify.</div>
+      </div>
+    </div>
+    <div class="action-row">
+      <div class="action-num">2</div>
+      <div class="action-content">
+        <div class="action-title">Create a privacy contact email <span class="badge b-legal">Legal</span> <span class="badge b-p0">P0</span></div>
+        <div class="action-detail">privacy@[yourdomain] or similar. Set it to forward to you. List it in the privacy policy. Without a designated privacy contact, the system is technically non-compliant with COPPA right now. 15 minutes.</div>
+      </div>
+    </div>
+    <div class="action-row">
+      <div class="action-num">3</div>
+      <div class="action-content">
+        <div class="action-title">Serve privacy policy at a live URL <span class="badge b-legal">Legal</span></div>
+        <div class="action-detail">Take the text from legal-architecture.html and serve it at [url]/privacy. Link it from the game lobby. Required for Common Sense Media, all school conversations, and every user-facing consent screen. 1 hour.</div>
+      </div>
+    </div>
+    <div class="action-row">
+      <div class="action-num">4</div>
+      <div class="action-content">
+        <div class="action-title">Implement silent INVERSION <span class="badge b-p0">P0</span></div>
+        <div class="action-detail">Every announced INVERSION session generates noise, not signal. The fix: INVERSION runs unannounced, flagged silent_inv: true in the ledger. Until this is live, the cognitive model is systematically wrong for every INVERSION session accumulated.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="action-block">
+  <div class="action-header" style="background:var(--viral-bg);border-color:var(--viral-light)">
+    <div class="leg-dot" style="background:var(--viral)"></div>
+    <span style="color:var(--viral)">This Month — Community Activation</span>
+  </div>
+  <div class="action-body">
+    <div class="action-row">
+      <div class="action-num">5</div>
+      <div class="action-content">
+        <div class="action-title">Terminal zone names live in post-session output <span class="badge b-viral">Virality</span> <span class="badge b-p0">P0</span></div>
+        <div class="action-detail">ECHO / PARALLEL / SHIFTING / RADICAL / REMATCH displaying after sessions is the community vocabulary generator. Every session without this is a missed community-formation opportunity. Designed in student-design.html — needs to be wired to the game output.</div>
+      </div>
+    </div>
+    <div class="action-row">
+      <div class="action-num">6</div>
+      <div class="action-content">
+        <div class="action-title">Age gate + consent recording in production <span class="badge b-legal">Legal</span></div>
+        <div class="action-detail">The designs are in legal-encounters.html. Implement the birth year selector on first load, store consent state with timestamp and policy version per student record. Required before acquiring any new users in compliance.</div>
+      </div>
+    </div>
+    <div class="action-row">
+      <div class="action-num">7</div>
+      <div class="action-content">
+        <div class="action-title">Submit to Common Sense Media <span class="badge b-research">Research</span></div>
+        <div class="action-detail">Free. The privacy policy just needs to be live (action 3). Submit the game description using the system's actual philosophy as the learning claim. Teachers search Common Sense Media before any other research. This takes half a day and unlocks every subsequent school conversation.</div>
+      </div>
+    </div>
+    <div class="action-row">
+      <div class="action-num">8</div>
+      <div class="action-content">
+        <div class="action-title">Get first 50 real players <span class="badge b-viral">Virality</span></div>
+        <div class="action-detail">Any channel: friends, family, Discord, after-school program, homeschool co-op. The specific channel matters less than the ledger having real data. 50 active players for 3 months = enough data for the first researcher conversation. Without players there is no data. Without data there is no research. Without research there is no credibility.</div>
+      </div>
+    </div>
+    <div class="action-row">
+      <div class="action-num">9</div>
+      <div class="action-content">
+        <div class="action-title">Implement deletion endpoint <span class="badge b-legal">Legal</span></div>
+        <div class="action-detail">/api/delete-student/:id. Flag records excluded from reads within 24h, clear Layer 1 state immediately, send deletion receipt. Required by GDPR, COPPA, and every DPA. Without this, the legal architecture is complete on paper but non-functional.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="action-block">
+  <div class="action-header" style="background:var(--research-bg);border-color:var(--research-light)">
+    <div class="leg-dot" style="background:var(--research)"></div>
+    <span style="color:var(--research)">Next Quarter — Credibility Foundations</span>
+  </div>
+  <div class="action-body">
+    <div class="action-row">
+      <div class="action-num">10</div>
+      <div class="action-content">
+        <div class="action-title">Alpha track implementation in admin.html <span class="badge b-viral">Virality</span></div>
+        <div class="action-detail">The Alpha system is designed at 95% accuracy in alpha-system.html. The detective framework, application form, five-phase review — implement in the admin panel. Alpha track live = aspirational structure exists = community has something to aim toward.</div>
+      </div>
+    </div>
+    <div class="action-row">
+      <div class="action-num">11</div>
+      <div class="action-content">
+        <div class="action-title">Contact 2–3 cognitive scientists <span class="badge b-research">Research</span></div>
+        <div class="action-detail">Target: cognitive science or learning sciences programs at CMU (HCII), Stanford (SCALE), UIUC. Pitch: "pre-registered refutation conditions, running JSONL ledger, information-theoretic framework, looking for collaboration not validation." Start at month 3 when you have real data. A preprint from month 3 contact arrives by month 12–15.</div>
+      </div>
+    </div>
+    <div class="action-row">
+      <div class="action-num">12</div>
+      <div class="action-content">
+        <div class="action-title">Apply to Games for Change + SXSW EDU <span class="badge b-awards">Awards</span></div>
+        <div class="action-detail">Annual application windows. Games for Change is the network that accelerates school conversations. SXSW EDU is the press placement. Both are cost-effective relative to ROI. Don't wait for the research preprint — apply with the architecture and the engagement data you have.</div>
+      </div>
+    </div>
+    <div class="action-row">
+      <div class="action-num">13</div>
+      <div class="action-content">
+        <div class="action-title">One alternative school or after-school pilot <span class="badge b-school">Schools</span></div>
+        <div class="action-detail">Microschool, homeschool co-op, or after-school enrichment provider. Sign a DPA. Get real institutional data. One program with a signed DPA and real sessions gives you "used in educational programs" — a different claim from "used by individual students" and enough for the SIIA CODiE application.</div>
+      </div>
+    </div>
+    <div class="action-row">
+      <div class="action-num">14</div>
+      <div class="action-content">
+        <div class="action-title">Define the business model <span class="badge" style="color:#888;border-color:#888">Strategy</span></div>
+        <div class="action-detail">Consumer freemium + institutional B2B is the recommendation. But this needs to be decided before the SIIA CODiE application, which asks for pricing. Consumer freemium to build community; institutional license layer added once credibility exists. Decide and commit — ambiguity here costs money in every direction.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sep"></div>
+<div class="terminal" style="max-width:720px">
+  <span class="t-dim t-line">// summary</span>
+  <span class="t-line" style="margin-top:8px">The philosophy is complete.</span>
+  <span class="t-line">The architecture is complete.</span>
+  <span class="t-line">The legal layer is complete.</span>
+  <span class="t-line" style="margin-top:8px">The gap is between the design and the running system.</span>
+  <span class="t-line" style="margin-top:8px"><span class="t-green">Close that gap one session at a time.</span></span>
+  <span class="t-line" style="margin-top:4px"><span class="t-green">Starting with the ledger.</span></span>
+</div>
+</div>
+
+</div><!-- /content -->
+
+<script>
+function show(id,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  el.classList.add('active');
+  window.scrollTo(0,0);
+}
+</script>
+</body>
+</html>

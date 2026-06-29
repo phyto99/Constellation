@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map Maker</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #080808;
+            --surface: #111;
+            --border: #1e1e1e;
+            --border-hover: #333;
+            --text: #ccc;
+            --muted: #555;
+            --accent: #3d8af7;
+            --success: #3ecf7a;
+            --error: #e05252;
+            --dot1: #ddd;
+            --dot2: #e8c44a;
+            --dot3: #4ab8e8;
+            --dot4: #e84a4a;
+        }
+
+        body {
+            font-family: ui-monospace, 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+            font-size: 12px;
+        }
+
+        /* ── sidebar ── */
+        .sidebar {
+            width: 280px;
+            flex-shrink: 0;
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .sidebar::-webkit-scrollbar { width: 4px; }
+        .sidebar::-webkit-scrollbar-track { background: transparent; }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--border-hover); }
+
+        .logo {
+            font-size: 11px;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: var(--muted);
+            padding-bottom: 4px;
+        }
+
+        hr { border: none; border-top: 1px solid var(--border); }
+
+        label {
+            display: block;
+            font-size: 10px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 5px;
+        }
+
+        input[type=text],
+        input[type=password],
+        input[type=number],
+        textarea,
+        select {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 7px 9px;
+            font-family: inherit;
+            font-size: 12px;
+            outline: none;
+            transition: border-color 0.12s;
+            appearance: none;
+        }
+
+        input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+
+        textarea {
+            resize: vertical;
+            min-height: 90px;
+            line-height: 1.5;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .file-label {
+            display: block;
+            width: 100%;
+            padding: 7px 9px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            cursor: pointer;
+            transition: border-color 0.12s, color 0.12s;
+            text-align: center;
+            font-family: inherit;
+            font-size: 11px;
+        }
+
+        .file-label:hover { border-color: var(--border-hover); color: var(--text); }
+        .file-label.has-file { border-color: var(--accent); color: var(--text); }
+
+        input[type=file] { display: none; }
+
+        .btn {
+            width: 100%;
+            padding: 9px;
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            cursor: pointer;
+            border: none;
+            transition: opacity 0.12s;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .btn-primary:hover { opacity: 0.85; }
+        .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--muted);
+            border: 1px solid var(--border);
+            transition: border-color 0.12s, color 0.12s;
+        }
+
+        .btn-ghost:hover:not(:disabled) { border-color: var(--border-hover); color: var(--text); }
+        .btn-ghost:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .status {
+            font-size: 11px;
+            padding: 7px 9px;
+            border-left: 2px solid var(--muted);
+            color: var(--muted);
+            line-height: 1.4;
+        }
+
+        .status.error  { border-color: var(--error);   color: var(--error);   }
+        .status.success{ border-color: var(--success);  color: var(--success); }
+        .status.info   { border-color: var(--accent);   color: var(--text);    }
+
+        .legend {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px 8px;
+            font-size: 10px;
+            color: var(--muted);
+        }
+
+        .dot {
+            display: inline-block;
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+
+        /* ── canvas area ── */
+        .canvas-area {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: var(--bg);
+        }
+
+        #preview {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .map-info {
+            position: absolute;
+            bottom: 14px;
+            right: 16px;
+            font-size: 10px;
+            color: rgba(255,255,255,0.2);
+            letter-spacing: 0.08em;
+            pointer-events: none;
+        }
+
+        .spinner {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.6);
+            font-size: 11px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .spinner.active { display: flex; }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="logo">Map Maker</div>
+
+    <div>
+        <label>Gemini API Key</label>
+        <input type="password" id="apiKey" placeholder="AIza..." autocomplete="off" spellcheck="false">
+    </div>
+
+    <hr>
+
+    <div>
+        <label>Prompt</label>
+        <textarea id="prompt" placeholder="Describe the map…">Symmetric competitive map. Contested center with 3 victory dots forming a triangle. Two flanking routes. Explosive dots at major intersections. Dense center, sparse edges.</textarea>
+    </div>
+
+    <div class="row">
+        <div>
+            <label>Width</label>
+            <input type="number" id="dimX" value="320" min="50" max="2000">
+        </div>
+        <div>
+            <label>Height</label>
+            <input type="number" id="dimY" value="180" min="50" max="2000">
+        </div>
+    </div>
+
+    <div>
+        <label>Reference Image</label>
+        <label class="file-label" id="fileLabel" for="imageUpload">Choose image…</label>
+        <input type="file" id="imageUpload" accept="image/*">
+    </div>
+
+    <button class="btn btn-primary" id="generateBtn">Generate</button>
+
+    <div id="status" class="status" style="display:none"></div>
+
+    <hr>
+
+    <div class="legend">
+        <span><span class="dot" style="background:var(--dot1)"></span>Normal</span>
+        <span><span class="dot" style="background:var(--dot2)"></span>Special</span>
+        <span><span class="dot" style="background:var(--dot3)"></span>Victory</span>
+        <span><span class="dot" style="background:var(--dot4)"></span>Explosive</span>
+    </div>
+
+    <hr>
+
+    <button class="btn btn-ghost" id="downloadBtn" disabled>Download JSON</button>
+    <button class="btn btn-ghost" id="copyBtn" disabled>Copy JSON</button>
+</aside>
+
+<main class="canvas-area">
+    <canvas id="preview"></canvas>
+    <div class="map-info" id="mapInfo"></div>
+    <div class="spinner" id="spinner">Generating…</div>
+</main>
+
+<script type="importmap">
+{
+    "imports": {
+        "@google/generative-ai": "https://esm.run/@google/generative-ai"
+    }
+}
+</script>
+<script type="module">
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+// ── constants ──────────────────────────────────────────────
+
+const MODEL = 'gemini-1.5-flash';
+
+const SYSTEM = `You generate strategic game maps in JSON format.
+
+GAME: Players claim dots and draw lines between them. Score = connections × line_length.
+
+DOT TYPES:
+1 = normal
+2 = special marker
+3 = victory — connect N type-3 dots without reusing lines to win
+4 = explosive — connecting N type-4 dots destroys those connections
+
+DESIGN PRINCIPLES:
+- Multiple viable strategies, not a single optimal path
+- Contested areas where risk and reward meet
+- Choke points, corridors, and open fields
+- Victory dots (3): valuable but exposed
+- Explosive dots (4): threatening but not dominant
+- Vary density: clusters, corridors, sparse zones
+
+SCALE (scale dot/line count to map dimensions):
+- ≤120 per axis → 20–60 dots, 30–100 lines
+- 120–300 per axis → 80–200 dots, 150–400 lines
+- 300+ per axis → 200–600 dots, 400–1200 lines
+
+OUTPUT: strict JSON only, no markdown, no explanation.
+{"author":"AI","dimensions":[w,h],"lines":[[i,j],...],"stars":[[x,y,type?],...],"title":"..."}
+
+RULES:
+- Line indices are 0-based into stars array
+- No index >= stars.length
+- No self-referencing line (i ≠ j)
+- All coordinates within [0,w] × [0,h]
+- Omit type for normal dots (saves space)`;
+
+// ── state ──────────────────────────────────────────────────
+
+let genAI = null;
+let currentMap = null;
+
+// ── canvas ─────────────────────────────────────────────────
+
+const canvas = document.getElementById('preview');
+const ctx = canvas.getContext('2d');
+
+function fitCanvas() {
+    const area = canvas.parentElement;
+    canvas.width = area.offsetWidth;
+    canvas.height = area.offsetHeight;
+    if (currentMap) drawMap(currentMap); else drawEmpty();
+}
+
+window.addEventListener('resize', fitCanvas);
+fitCanvas();
+
+function drawEmpty() {
+    const W = canvas.width, H = canvas.height;
+    ctx.fillStyle = '#080808';
+    ctx.fillRect(0, 0, W, H);
+}
+
+function drawMap(map) {
+    const W = canvas.width, H = canvas.height;
+    const [mw, mh] = map.dimensions;
+
+    const scale = Math.min(W / mw, H / mh) * 0.94;
+    const ox = (W - mw * scale) / 2;
+    const oy = (H - mh * scale) / 2;
+
+    ctx.fillStyle = '#080808';
+    ctx.fillRect(0, 0, W, H);
+
+    // lines
+    ctx.lineWidth = 0.8;
+    for (const [a, b] of map.lines) {
+        const s1 = map.stars[a], s2 = map.stars[b];
+        const t1 = s1[2] || 1, t2 = s2[2] || 1;
+        const special = t1 > 1 || t2 > 1;
+        ctx.strokeStyle = special ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.06)';
+        ctx.beginPath();
+        ctx.moveTo(ox + s1[0] * scale, oy + s1[1] * scale);
+        ctx.lineTo(ox + s2[0] * scale, oy + s2[1] * scale);
+        ctx.stroke();
+    }
+
+    // dots
+    const COLORS = { 1: '#dddddd', 2: '#e8c44a', 3: '#4ab8e8', 4: '#e84a4a' };
+    const RADII  = { 1: 2, 2: 3, 3: 3.5, 4: 3 };
+
+    ctx.shadowBlur = 0;
+
+    for (const star of map.stars) {
+        const x = ox + star[0] * scale;
+        const y = oy + star[1] * scale;
+        const type = star[2] || 1;
+        const color = COLORS[type] || COLORS[1];
+        const r = RADII[type] || RADII[1];
+
+        if (type > 1) {
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = color;
+        }
+
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+
+        if (type > 1) ctx.shadowBlur = 0;
+    }
+
+    document.getElementById('mapInfo').textContent =
+        `${map.title || 'untitled'}  ·  ${mw}×${mh}  ·  ${map.stars.length} dots  ·  ${map.lines.length} lines`;
+}
+
+// ── generation ─────────────────────────────────────────────
+
+function parseMap(text, w, h) {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('No JSON in response');
+
+    const map = JSON.parse(match[0]);
+    map.dimensions = [w, h];
+
+    if (!Array.isArray(map.stars) || map.stars.length < 3)
+        throw new Error('Map needs at least 3 dots');
+
+    map.stars = map.stars.filter(s => s[0] >= 0 && s[0] <= w && s[1] >= 0 && s[1] <= h);
+
+    const n = map.stars.length;
+    map.lines = (map.lines || []).filter(l =>
+        l.length >= 2 && l[0] >= 0 && l[0] < n && l[1] >= 0 && l[1] < n && l[0] !== l[1]
+    );
+
+    return map;
+}
+
+function setStatus(msg, type = 'info') {
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.className = `status ${type}`;
+    el.style.display = 'block';
+}
+
+async function generate() {
+    const key = document.getElementById('apiKey').value.trim();
+    if (!key) { setStatus('API key required', 'error'); return; }
+
+    if (!genAI) genAI = new GoogleGenerativeAI(key);
+    sessionStorage.setItem('geminiKey', key);
+
+    const prompt = document.getElementById('prompt').value.trim() || 'A balanced competitive map.';
+    const w = parseInt(document.getElementById('dimX').value) || 320;
+    const h = parseInt(document.getElementById('dimY').value) || 180;
+    const imageFile = document.getElementById('imageUpload').files[0];
+
+    const btn = document.getElementById('generateBtn');
+    btn.disabled = true;
+    document.getElementById('spinner').classList.add('active');
+    document.getElementById('status').style.display = 'none';
+
+    try {
+        const model = genAI.getGenerativeModel({ model: MODEL });
+
+        let userMsg = `Map dimensions: ${w}×${h}\n\nRequest: ${prompt}`;
+        if (imageFile) userMsg += '\n\nAn image is attached. Use its topology, structure, and features to inform the map layout.';
+
+        const parts = [SYSTEM + '\n\n' + userMsg];
+
+        if (imageFile) {
+            const b64 = await new Promise((res, rej) => {
+                const r = new FileReader();
+                r.onload = e => res(e.target.result);
+                r.onerror = rej;
+                r.readAsDataURL(imageFile);
+            });
+            parts.push({ inlineData: { mimeType: imageFile.type, data: b64.split(',')[1] } });
+        }
+
+        const result = await model.generateContent(parts);
+        const text = result.response.text();
+
+        const map = parseMap(text, w, h);
+        currentMap = map;
+
+        drawMap(map);
+
+        document.getElementById('downloadBtn').disabled = false;
+        document.getElementById('copyBtn').disabled = false;
+        setStatus(`${map.stars.length} dots · ${map.lines.length} lines`, 'success');
+
+    } catch (err) {
+        setStatus(err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        document.getElementById('spinner').classList.remove('active');
+    }
+}
+
+// ── events ─────────────────────────────────────────────────
+
+document.getElementById('generateBtn').addEventListener('click', generate);
+
+document.getElementById('imageUpload').addEventListener('change', e => {
+    const label = document.getElementById('fileLabel');
+    const file = e.target.files[0];
+    label.textContent = file ? file.name : 'Choose image…';
+    label.classList.toggle('has-file', !!file);
+});
+
+document.getElementById('downloadBtn').addEventListener('click', () => {
+    const json = JSON.stringify(currentMap, null, 2);
+    const a = Object.assign(document.createElement('a'), {
+        href: URL.createObjectURL(new Blob([json], { type: 'application/json' })),
+        download: `${(currentMap.title || 'map').replace(/\s+/g, '_')}.json`
+    });
+    a.click();
+    URL.revokeObjectURL(a.href);
+});
+
+document.getElementById('copyBtn').addEventListener('click', () => {
+    navigator.clipboard.writeText(JSON.stringify(currentMap, null, 2));
+    setStatus('Copied to clipboard', 'success');
+});
+
+// ── restore key ────────────────────────────────────────────
+
+const savedKey = sessionStorage.getItem('geminiKey');
+if (savedKey) {
+    document.getElementById('apiKey').value = savedKey;
+    genAI = new GoogleGenerativeAI(savedKey);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Evidence Engine — Universal Measurement Architecture</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.4}
+nav{position:sticky;top:0;z-index:100;background:#fff;border-bottom:2px solid #000;display:flex;align-items:stretch;padding:0 14px;overflow-x:auto;gap:0}
+.logo{font-size:9px;letter-spacing:2px;font-weight:700;padding:10px 14px 10px 0;border-right:1px solid #ccc;margin-right:4px;white-space:nowrap;align-self:center;text-transform:uppercase;color:#555}
+.tab{padding:10px 13px;cursor:pointer;font-size:9px;letter-spacing:1px;color:#888;border-bottom:3px solid transparent;transition:all .1s;white-space:nowrap;font-weight:700;text-transform:uppercase}
+.tab:hover{color:#000}.tab.active{color:#000;border-bottom-color:#000}
+.panel{display:none;padding:20px}.panel.active{display:block}
+h2{font-size:9px;letter-spacing:2px;font-weight:700;text-transform:uppercase;border-bottom:1px solid #000;padding-bottom:5px;margin-bottom:14px;color:#333}
+h3{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+h4{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;color:#444}
+p{font-size:11px;line-height:1.8;color:#222;margin-bottom:8px}
+ul,ol{margin-left:16px;margin-bottom:10px}
+li{font-size:11px;line-height:1.8;color:#222;margin-bottom:2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.card{border:1px solid #ccc;padding:12px;background:#fafafa}
+.card-dk{border:2px solid #000;padding:14px;background:#000;color:#fff}
+.sep{border:none;border-top:1px solid #ddd;margin:10px 0}
+table.t{width:100%;border-collapse:collapse;font-size:11px}
+table.t th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 8px;border-bottom:2px solid #000;text-align:left;background:#f0f0f0}
+table.t td{padding:5px 8px;border-bottom:1px solid #eee;vertical-align:top}
+table.t tr:hover td{background:#f5f5f5}
+.inset{background:#f0f0f0;border-left:3px solid #000;padding:8px 10px;font-size:11px;line-height:1.7;margin:8px 0}
+.warn{background:#f8f8f8;border:1px dashed #000;padding:8px 10px;font-size:10px;line-height:1.7;margin:8px 0}
+.formula{font-family:'Courier New',monospace;font-size:10px;line-height:1.9;background:#f0f0f0;border:1px solid #ccc;padding:10px 12px;white-space:pre-wrap}
+/* epistemic status chips — same confidence language as system-map */
+.st{display:inline-block;padding:1px 7px;font-size:8px;letter-spacing:1px;text-transform:uppercase;font-weight:700;border:1px solid}
+.st-asserted{border-color:#d97706;color:#d97706}
+.st-instrumented{border-color:#1d4ed8;color:#1d4ed8}
+.st-measured{border-color:#555;color:#555}
+.st-corroborated{border-color:#15803d;color:#15803d}
+.st-validated{border-color:#15803d;color:#fff;background:#15803d}
+.st-refuted{border-color:#dc2626;color:#fff;background:#dc2626}
+.st-contaminated{border-color:#dc2626;color:#dc2626}
+.st-pending{border-color:#7c3aed;color:#7c3aed}
+.num{font-size:40px;font-weight:700;opacity:.08;float:right;line-height:1;margin-left:8px}
+code{font-family:'Courier New',monospace;font-size:10px;background:#f0f0f0;padding:1px 4px}
+.c-in{color:#15803d}.c-out{color:#dc2626}.c-add{color:#1d4ed8}.c-cond{color:#92400e}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:#fff}::-webkit-scrollbar-thumb{background:#ccc}
+@media(max-width:760px){.grid2,.grid3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav>
+  <span class="logo">Evidence Engine</span>
+  <div class="tab active" onclick="showTab('axiom',this)">The Axiom</div>
+  <div class="tab" onclick="showTab('schema',this)">Schema</div>
+  <div class="tab" onclick="showTab('channels',this)">Channels</div>
+  <div class="tab" onclick="showTab('conundrum',this)">Conundrum Protocol</div>
+  <div class="tab" onclick="showTab('params',this)">Parameter Registry</div>
+  <div class="tab" onclick="showTab('reactions',this)">Reaction Library</div>
+</nav>
+
+<!-- ═══════════════════════════════════ THE AXIOM -->
+<div id="panel-axiom" class="panel active">
+  <h2>The Axiom — Record Observations, Not Interpretations</h2>
+
+  <div class="card-dk" style="margin-bottom:16px">
+    <span class="num" style="color:#fff;opacity:.12">0</span>
+    <div style="font-size:9px;letter-spacing:2px;color:#888;margin-bottom:6px;font-weight:700">THE EVIDENCE AXIOM</div>
+    <div style="font-size:12px;line-height:1.9;color:#fff">
+      Every measurement event is recorded once, raw, with full provenance, forever. Every interpretation — category, score, diagnosis, validation verdict — is a <em style="color:#aaa">view</em> computed over those records. Views are cheap, disposable, and recomputable. Records are permanent. <strong>Categories are views, not containers.</strong> No exceptions.
+    </div>
+  </div>
+
+  <p>This is the system's answer to a question that will otherwise recur forever: <em>which category does this observation belong to?</em> Does a blackhole chain count as DESTRUCTION signal or SPATIAL signal? Is teacher feedback validation evidence or engagement evidence? Is academic improvement the ground truth or a side effect? Every one of these questions is a fork where choosing wrong loses data permanently — and choosing at all is unnecessary. The conundrum dissolves when storage and interpretation are separated: store the event with every applicable tag, defer the categorization to read time, and recompute freely as understanding improves.</p>
+
+  <div class="grid2" style="margin-bottom:16px">
+    <div>
+      <h3>The Two Inclusion Criteria — Ledger vs State</h3>
+      <p>The variable audit (system-complete.html) says: include variable V in the state iff <code>I(accuracy; V | existing) &gt; ε</code>. That criterion is correct — <em>for the state.</em> It was never a rule about what to record. Conflating them is the error this document exists to prevent.</p>
+      <table class="t">
+        <tr><th></th><th>The State (Layer 1)</th><th>The Ledger (Layer 0)</th></tr>
+        <tr><td><strong>Purpose</strong></td><td>Drive session selection now</td><td>Answer every future question</td></tr>
+        <tr><td><strong>Criterion</strong></td><td>Minimum sufficient — include iff it improves selection</td><td>Maximum complete — record everything cheap to capture</td></tr>
+        <tr><td><strong>Size</strong></td><td>18 dimensions, fixed</td><td>Unbounded, append-only</td></tr>
+        <tr><td><strong>Mutability</strong></td><td>Updated every session</td><td>Never modified, only appended</td></tr>
+        <tr><td><strong>Cost of inclusion</strong></td><td>Complexity in the selection function</td><td>Bytes. Nothing else.</td></tr>
+        <tr><td><strong>Cost of exclusion</strong></td><td>Slightly worse sessions</td><td>A question that can never be answered</td></tr>
+      </table>
+      <div class="inset" style="margin-top:8px">
+        The state is derived <em>from</em> the ledger as a view. <code>mode_elo[6]</code> is a fold over rank observations. <code>elo_velocity[6]</code> is its derivative. When a parameter changes — when the forgetting half-life is corrected from 14 days to 40 — the entire Elo history can be recomputed from raw ranks under the new parameter. A system that stores only the state can never correct its own past.
+      </div>
+    </div>
+    <div>
+      <h3>What This Resolves</h3>
+      <canvas id="axiom-canvas" width="100%" height="280" style="display:block;width:100%;border:1px solid #ccc;margin-bottom:8px"></canvas>
+      <div class="warn">
+        <strong>brain_metrics was never wrong to exclude — it was wrong to not record.</strong> The Q8 decision (EXCLUDE until validated) was correct at the state level and destructive at the ledger level. Under the evidence axiom, brain metrics are recorded from day one as low-confidence observations in their own channel. When the BT bridge validates them, the entire history is already there — the mutual information measurement Q8 requires runs over years of data the day the question is asked, not starting from zero. Recording is not endorsement. The ledger has no opinion.
+      </div>
+    </div>
+  </div>
+
+  <h3>The Resolution of the Validation Question</h3>
+  <p>system-map.html names "the philosophical question that must be answered before Phase 2": what counts as evidence that a student has genuinely developed — BT scores (A), novel-game transfer (B), academic outcomes (C), teacher assessment (D), or some combination (E)? It states: <em>"The system cannot be objectively perfect until this question has a decided answer."</em></p>
+  <div class="inset">
+    <strong>The question is not answered. It is dissolved.</strong> Choosing a ground truth in advance is the same error as choosing a category at write time — it privileges one channel before the data exists to justify the privilege. The evidence engine tracks all five paths simultaneously as independent channels. Ground truth is not an input to the architecture; it is an <em>output</em>: the channel structure that emerges from measured mutual information between channels. If BT scores predict novel-game transfer and academic outcomes, BT earns ground-truth weight. If teacher assessment adds no information beyond game signals, it loses weight. The system does not assert what development means — it measures which definitions of development agree with each other, and reports the agreement structure. Option E was always the answer, but E is not a compromise between A–D. E is the corroboration matrix.
+  </div>
+  <p>This is the same move the system already makes everywhere else, applied to itself one more time: the multiplier doesn't choose a cognitive target — it parameterizes all of them. The compiler doesn't choose a curriculum — it derives one per student per session. The evidence engine doesn't choose a ground truth — it maintains all candidates and lets accumulated mutual information decide. Same principle, one level up. The recursion is the proof of fit.</p>
+
+  <h3>Why This Is the Flexible System — Permanently</h3>
+  <div class="grid3">
+    <div class="card">
+      <h4>New discovery</h4>
+      <div style="font-size:10px;line-height:1.8;color:#333">A 7th cognitive mode is proposed. A new signal type is found in round-timing data. A new game joins. <strong>Nothing changes in the ledger.</strong> A new tag vocabulary entry is minted; new views are defined; old records are reinterpreted under the new vocabulary for free, because they were stored raw.</div>
+    </div>
+    <div class="card">
+      <h4>New conundrum</h4>
+      <div style="font-size:10px;line-height:1.8;color:#333">An observation fits two categories, or none. <strong>No decision is forced.</strong> Multi-tag it, file a boundary case, continue. Categories adjust to evidence; evidence is never trimmed to fit categories. The protocol is on the Conundrum tab. It is the same protocol for every future situation, which is what makes it perfect: it does not need to anticipate the situation.</div>
+    </div>
+    <div class="card">
+      <h4>New question</h4>
+      <div style="font-size:10px;line-height:1.8;color:#333">"Does forgetting differ by mode?" "Do gifted students plateau differently?" "Did the 0.85 coefficient help?" <strong>Every question becomes a query.</strong> If the ledger is complete, the answer is a view over existing records. The library of cognitive reaction data (Reaction Library tab) is this property at full scale.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ SCHEMA -->
+<div id="panel-schema" class="panel">
+  <h2>Schema — Four Record Types, One Discipline</h2>
+
+  <div class="grid2" style="margin-bottom:14px">
+    <div>
+      <h3>1. Observation — the atom</h3>
+      <div class="formula">Observation = {
+  id, t                      <span style="color:#888">← identity, timestamp (absolute)</span>
+  subject: {student, cohort, team?}
+  context: {
+    game, session_id, round?,
+    mode, template, overlay,
+    config_hash,             <span style="color:#888">← exact multiplier config</span>
+    params_version           <span style="color:#888">← which parameter set was live</span>
+  }
+  channel: GAME | BT | NOVEL | ACADEMIC
+         | TEACHER | PEER | SELF | SYSTEM
+  signal: {name, value, unit}  <span style="color:#888">← OPEN vocabulary</span>
+  tags: [..]                 <span style="color:#888">← multi-tag, never single</span>
+  quality: {noise, coverage, purity_flags[]}
+}</div>
+      <div style="font-size:10px;color:#555;line-height:1.7;margin-top:6px">
+        <strong>Open vocabulary:</strong> <code>signal.name</code> is not an enum. <code>hq_connection_round</code>, <code>steal_rate_2nd_half</code>, <code>strategy_shift_speed</code>, <code>bt_inhibitory_score</code>, <code>teacher_tag_supportive</code> — all legal, including names that do not exist yet. A closed vocabulary is a category decision made at write time, which the axiom forbids.<br><br>
+        <strong>Purity flags travel with the data:</strong> an INV observation from an <em>announced</em> INVERSION session carries <code>purity: [announced_overlay]</code> permanently (Q2). Any view computing cognitive flexibility sees the contamination and can include, exclude, or down-weight it. The flag is recorded once; the judgment is recomputed forever.
+      </div>
+    </div>
+    <div>
+      <h3>2. Claim — the interpretation</h3>
+      <div class="formula">Claim = {
+  id, statement              <span style="color:#888">← "INV flexibility improving"</span>
+  dimension                  <span style="color:#888">← mode | engagement | social | NEW</span>
+  support: {channel → [observation ids]}
+  corroboration: k of n      <span style="color:#888">← independent channels agreeing</span>
+  status: ASSERTED → INSTRUMENTED → MEASURED
+        → CORROBORATED → VALIDATED | REFUTED
+}</div>
+      <h3 style="margin-top:12px">3. Parameter — the hypothesis</h3>
+      <div class="formula">Parameter = {
+  name, value, version
+  status: ASSERTED | LEARNED
+  rationale                  <span style="color:#888">← why this value, source</span>
+  outcomes: [observation ids]<span style="color:#888">← logged at every use</span>
+}</div>
+      <h3 style="margin-top:12px">4. View — the disposable lens</h3>
+      <div class="formula">View = pure_fn(Ledger, Params, Vocab) → display
+
+mode_elo[6]        = fold(rank obs, elo_params)
+gap[mode]          = view(GAME) − view(BT)
+corroboration_mtx  = agreement(channels × dims)
+student_panel      = compose(all of the above)</div>
+      <div style="font-size:10px;color:#555;line-height:1.7;margin-top:6px">Views own no data. Deleting every view loses nothing. This is what makes the system a living organism rather than a structure: the skeleton (ledger) is permanent; the organs (views) regenerate.</div>
+    </div>
+  </div>
+
+  <h3>The Epistemic Lifecycle — Every Claim Walks the Same Path</h3>
+  <canvas id="lifecycle-canvas" width="100%" height="160" style="display:block;width:100%;border:1px solid #ccc;margin-bottom:8px"></canvas>
+  <div class="grid2">
+    <div class="inset">
+      <strong>Nothing skips stages and nothing is exempt.</strong> "Maximize E[KL] per session" is itself a claim, currently at MEASURED (it demonstrably selects sessions; its developmental superiority is not yet corroborated by a second channel). The 6-mode structure is a claim. The zone vocabulary's community effect is a claim. The engine applies to the system's own philosophy with the same discipline it applies to a student's steal rate. A system that audits everything except itself is not objective — it is merely strict.
+    </div>
+    <div class="warn">
+      <strong>REFUTED is a success state.</strong> A refuted claim with full provenance is worth more than an unexamined assertion. When the 14-day forgetting half-life is refuted by return-Elo data, the system gets <em>better</em> — and the refutation is itself recorded, so the same wrong value is never asserted twice. The only failure state in this architecture is an event that was not recorded.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ CHANNELS -->
+<div id="panel-channels" class="panel">
+  <h2>Channels — Every Validation Path, Tracked Simultaneously</h2>
+
+  <table class="t" style="margin-bottom:14px">
+    <tr><th>Channel</th><th>Source</th><th>What it can claim</th><th>Independence</th><th>Status today</th></tr>
+    <tr><td><strong>GAME</strong></td><td>Constellation session telemetry</td><td>Performance, behavior, within-session adaptation</td><td>Baseline — all others measured against it</td><td><span class="st st-measured">MEASURED</span></td></tr>
+    <tr><td><strong>BT</strong></td><td>Brain training cognitive tasks</td><td>Cognitive capacity independent of any game</td><td>Fully independent of game mechanics</td><td><span class="st st-pending">BRIDGE PENDING</span></td></tr>
+    <tr><td><strong>NOVEL</strong></td><td>Untrained strategy games (incl. Centauri first contact)</td><td>Transfer — the strongest development evidence</td><td>Independent of trained mechanics</td><td><span class="st st-instrumented">INSTRUMENTED</span></td></tr>
+    <tr><td><strong>ACADEMIC</strong></td><td>School outcomes in mapped subjects</td><td>Far transfer — the claim parents care about</td><td>Independent but slow and confounded</td><td><span class="st st-asserted">ASSERTED</span></td></tr>
+    <tr><td><strong>TEACHER</strong></td><td>Structured observation tags</td><td>Social dimension (Q5), strategic-thinking quality</td><td>Subjective — weight learned, not assumed</td><td><span class="st st-asserted">ASSERTED</span></td></tr>
+    <tr><td><strong>PEER</strong></td><td>Alpha analyses, community theories</td><td>Understanding-level evidence; meta-community health</td><td>Semi-independent</td><td><span class="st st-instrumented">INSTRUMENTED</span></td></tr>
+    <tr><td><strong>SELF</strong></td><td>Design challenges, predictions, applications</td><td>Singularity-trajectory position — internalization</td><td>The only channel that can prove Stage 4+</td><td><span class="st st-instrumented">INSTRUMENTED</span></td></tr>
+    <tr><td><strong>SYSTEM</strong></td><td>The engine's own inferences</td><td>Probabilistic patterns ("false enough to be interesting")</td><td>Not independent — never counts toward corroboration</td><td><span class="st st-measured">MEASURED</span></td></tr>
+  </table>
+
+  <div class="grid2" style="margin-bottom:14px">
+    <div>
+      <h3>The Corroboration Matrix — hover any cell</h3>
+      <canvas id="corr-canvas" width="100%" height="320" style="display:block;width:100%;border:1px solid #ccc;cursor:crosshair"></canvas>
+      <div id="corr-tooltip" style="min-height:44px;padding:6px 10px;border:1px solid #ddd;background:#f8f8f8;margin-top:6px;font-size:10px;line-height:1.7">Hover a cell for detail.</div>
+    </div>
+    <div>
+      <h3>The Generalized Gap Signal</h3>
+      <p>system-map.html defines the gap signal as <code>game_elo − transfer_elo</code> per mode. That is one instance of the general form:</p>
+      <div class="formula">gap(d, c₁, c₂) = view(d | c₁) − view(d | c₂)
+
+for any dimension d, any channel pair (c₁, c₂)</div>
+      <table class="t" style="margin-top:8px">
+        <tr><th>Gap instance</th><th>What divergence means</th></tr>
+        <tr><td style="font-size:10px">GAME − BT</td><td style="font-size:10px">Game knowledge without cognitive transfer (the original Q1 gap)</td></tr>
+        <tr><td style="font-size:10px">GAME − NOVEL</td><td style="font-size:10px">Constellation-specific optimization — the medium has gone opaque</td></tr>
+        <tr><td style="font-size:10px">BT − ACADEMIC</td><td style="font-size:10px">Cognitive gains not reaching the classroom — mapping or transfer-distance problem</td></tr>
+        <tr><td style="font-size:10px">SELF − GAME</td><td style="font-size:10px">Understanding outruns performance: design-track candidate. Or inverse: performing without understanding — Alpha not yet.</td></tr>
+        <tr><td style="font-size:10px">TEACHER − all</td><td style="font-size:10px">Teacher channel adds no information → reduce its learned weight; or teacher sees what nothing else sees (Q5 social) → its unique signal is exactly there</td></tr>
+      </table>
+      <div class="inset" style="margin-top:8px">
+        <strong>Corroboration rule:</strong> a claim's strength is the number of <em>independent</em> channels supporting it, not the volume of evidence within one channel. A thousand game sessions are one witness. One witness, however eloquent, is ASSERTED→MEASURED at best. CORROBORATED requires a second independent channel; VALIDATED requires the corroboration to survive a pre-registered prediction. SYSTEM-channel inferences never count — the system cannot corroborate itself.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ CONUNDRUM PROTOCOL -->
+<div id="panel-conundrum" class="panel">
+  <h2>The Conundrum Protocol — What To Do Every Time Categories Fail</h2>
+
+  <div class="warn" style="margin-bottom:14px">
+    This protocol exists because the question "which category?" will arise again, in a form not anticipated here, after every new discovery. The protocol does not enumerate cases. It is one rule applied identically to all of them, which is the only way a protocol survives contact with situations its authors did not imagine.
+  </div>
+
+  <canvas id="protocol-canvas" width="100%" height="240" style="display:block;width:100%;border:1px solid #ccc;margin-bottom:14px"></canvas>
+
+  <div class="grid3" style="margin-bottom:14px">
+    <div class="card">
+      <h4>Worked: the blackhole chain</h4>
+      <div style="font-size:10px;line-height:1.8;color:#333">
+        SYNTHESIS insight #2: blackhole chains demonstrate DESTRUCTION <em>and</em> SPATIAL reasoning. The old system filed it as DST and lost the SPT signal.<br><br>
+        <strong>Protocol:</strong> record once, <code>tags:[dst, spt, composite]</code>. Views that compute DST Elo and SPT inference both see it. No committee, no redesign. When enough composite signals accumulate, they become the empirical basis for the Q3 covariance model — the boundary cases <em>are</em> the dataset.
+      </div>
+    </div>
+    <div class="card">
+      <h4>Worked: the social dimension</h4>
+      <div style="font-size:10px;line-height:1.8;color:#333">
+        Q5 framed social-emotional behavior as Option A (out of scope) vs Option B (add teacher tags) — a category decision.<br><br>
+        <strong>Protocol:</strong> reconnection rate, session completion, teammate-support tags are cheap to record. Record them in TEACHER and GAME channels under a <code>social</code> dimension with no claims attached. The scope decision is deferred to the moment evidence forces it — which is when it stops being philosophical and becomes empirical.
+      </div>
+    </div>
+    <div class="card">
+      <h4>Worked: a signal with no name</h4>
+      <div style="font-size:10px;line-height:1.8;color:#333">
+        A student pauses 11 seconds before every move that precedes a strategy shift. No existing signal type covers pre-move latency.<br><br>
+        <strong>Protocol:</strong> mint <code>pre_move_latency</code> on the spot (open vocabulary), record, file a boundary case. If it recurs across students, it graduates to a candidate state variable and enters the variable audit. The audit governs promotion to the state — never permission to record.
+      </div>
+    </div>
+  </div>
+
+  <h3>Boundary Case Lifecycle</h3>
+  <table class="t">
+    <tr><th>#</th><th>Step</th><th>Rule</th><th>Forbidden alternative</th></tr>
+    <tr><td>1</td><td><strong>Never force the near-miss.</strong></td><td>An observation that 80%-fits a category is multi-tagged with the fit noted, not rounded to 100%.</td><td>Silent coercion into the closest bucket — corrupts that bucket's signal purity forever.</td></tr>
+    <tr><td>2</td><td><strong>Record raw, tag all candidates.</strong></td><td>Storage is cheap; every plausible tag goes on. Tags are claims of relevance, not truth.</td><td>Waiting for the taxonomy debate to resolve before recording. The event happens once.</td></tr>
+    <tr><td>3</td><td><strong>File the boundary case.</strong></td><td>A card: what happened, why categories failed, candidate interpretations. Visible in the Observatory inbox.</td><td>A workaround in someone's head. Undocumented exceptions are how instruments drift.</td></tr>
+    <tr><td>4</td><td><strong>Mint at threshold.</strong></td><td>≥5 structurally similar boundary cases → mint a vocabulary entry (new signal, tag, dimension, or channel). Minting is versioned in the vocabulary registry.</td><td>Minting on the first exciting anomaly. One observation is an anecdote.</td></tr>
+    <tr><td>5</td><td><strong>Reinterpret retroactively.</strong></td><td>New vocabulary triggers view recomputation over the full ledger. Past raw records are reread under the new lens — free, because of the axiom.</td><td>Grandfathering old data under old categories. The whole point of raw storage is that the past stays correctable.</td></tr>
+  </table>
+
+  <div class="inset" style="margin-top:10px">
+    <strong>The protocol is the design philosophy applied to epistemics.</strong> "Every visual choice must do semantic work" becomes "every category must do inferential work." A category that forces information loss at write time is decoration with a cost. The ledger refuses it the same way the documents refuse unearned color.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ PARAMETER REGISTRY -->
+<div id="panel-params" class="panel">
+  <h2>Parameter Registry — Every Hardcoded Value Is a Hypothesis On Trial</h2>
+
+  <p style="margin-bottom:12px">SYNTHESIS insight #13 stated it; this registry operationalizes it. Every parameter is versioned, carries its rationale, and logs an observation at every use — <code>{params_version}</code> in the observation context is the join key. The regression that replaces [ASSERTED] with [LEARNED] is a standing view over the ledger, not a research project to be scheduled.</p>
+
+  <table class="t" style="margin-bottom:14px">
+    <tr><th>Parameter</th><th>Value</th><th>Status</th><th>Rationale on file</th><th>Refutation condition (pre-registered)</th></tr>
+    <tr><td><code>difficulty_coeff</code></td><td>0.85</td><td><span class="st st-asserted">ASSERTED</span></td><td>ZPD theory: target below current ceiling</td><td>argmax over outcome regression lands outside [0.80, 0.90]</td></tr>
+    <tr><td><code>forgetting_half_life</code></td><td>14d</td><td><span class="st st-asserted">ASSERTED</span></td><td>Ebbinghaus — wrong domain, flagged Q4</td><td>Return-Elo decay fit yields τ½ outside [10, 18]d — expected to refute toward 30–60d</td></tr>
+    <tr><td><code>P(INVERSION)</code></td><td>0.25</td><td><span class="st st-asserted">ASSERTED</span></td><td>Frequent enough to train, rare enough to surprise</td><td>INV strategy_shift_speed improvement differs across P-arms by &gt;1 SD</td></tr>
+    <tr><td><code>elo_weight_exp</code></td><td>0.7</td><td><span class="st st-asserted">ASSERTED</span></td><td>Sub-linear priority on weak modes</td><td>Outcome regression coefficient</td></tr>
+    <tr><td><code>budget_thresholds</code></td><td>0/1/6/20/50</td><td><span class="st st-asserted">ASSERTED</span></td><td>Model-reliability staging</td><td>Signal reliability curves cross thresholds elsewhere</td></tr>
+    <tr><td><code>hypercube_window</code></td><td>6</td><td><span class="st st-asserted">ASSERTED</span></td><td>One full mode rotation</td><td>Coverage-vs-depth outcome comparison</td></tr>
+    <tr><td><code>flow_zone</code></td><td>25–75 pct (25–65 young)</td><td><span class="st st-asserted">ASSERTED</span></td><td>Engagement constraint, age-tiered</td><td>Disengagement events cluster inside the asserted zone</td></tr>
+    <tr><td><code>gifted_velocity_sd</code></td><td>2.0</td><td><span class="st st-asserted">ASSERTED</span></td><td>Q7 — threshold guessed</td><td>Cohort comparison: accelerated vs high-difficulty-standard</td></tr>
+    <tr><td><code>overlay_cooldown</code></td><td>3 sessions</td><td><span class="st st-asserted">ASSERTED</span></td><td>Prevent overlay fatigue</td><td>Adaptation-speed × cooldown interaction</td></tr>
+    <tr><td><code>boundary_mint_threshold</code></td><td>5 cases</td><td><span class="st st-asserted">ASSERTED</span></td><td>This document. The engine's own parameter — on trial like all others</td><td>Minted-type survival rate: too many dead types → raise; missed recurring patterns → lower</td></tr>
+  </table>
+
+  <div class="grid2">
+    <div class="inset">
+      <strong>The refutation condition is mandatory and written in advance.</strong> A hypothesis that cannot say what would refute it is not a hypothesis — it is a setting. Pre-registration is what separates "the data will decide" from "we will rationalize whatever happens." The registry holds the conditions; the views check them continuously; a parameter whose condition fires is flagged in the Observatory the same way a student anomaly is.
+    </div>
+    <div class="warn">
+      <strong>Note the last row.</strong> The evidence engine's own thresholds are registered in the registry they define. This recursion is deliberate and load-bearing: the moment the engine exempts itself, it becomes the one unexamined assertion in a system whose entire identity is that nothing is unexamined.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ REACTION LIBRARY -->
+<div id="panel-reactions" class="panel">
+  <h2>The Reaction Library — Cognitive Chemistry, Recorded Completely</h2>
+
+  <p>A session is a reaction: a student state (reagents) under a session configuration (conditions) yields a state change plus emitted signals (products). The objective of the ledger, at full scale, is the complete reaction record — every student × training-method interaction the program has ever run, queryable. Not a metaphor: the record below is the literal join of existing record types.</p>
+
+  <div class="formula" style="margin-bottom:14px">Reaction = {
+  reagents:   S(t)        <span style="color:#888">← full 18-dim state + age tier + track + trajectory stage</span>
+  conditions: C, θ        <span style="color:#888">← mode, template, overlay, difficulty, map seed,
+                             team composition, bot archetypes, params_version</span>
+  products:   ΔS, [obs]   <span style="color:#888">← state delta + every observation emitted, all channels</span>
+  yield:      E[KL] realized vs predicted   <span style="color:#888">← did the session inform as expected?</span>
+}</div>
+
+  <div class="grid2" style="margin-bottom:14px">
+    <div>
+      <h3>What the library answers</h3>
+      <table class="t">
+        <tr><th>Question</th><th>Query shape</th></tr>
+        <tr><td style="font-size:10px">Which template moves plateaued FRT students?</td><td style="font-size:10px">reactions where reagents.vel[frt]≈0, group by conditions.template, rank by products.Δelo[frt]</td></tr>
+        <tr><td style="font-size:10px">Does silent INVERSION measure what announced cannot? (Q2)</td><td style="font-size:10px">compare strategy_shift_speed across overlay.announced ∈ {true, false}, purity-filtered</td></tr>
+        <tr><td style="font-size:10px">What does a gifted plateau look like 3 sessions before it happens?</td><td style="font-size:10px">reactions preceding vel collapse in gifted cohort — the early-warning signature</td></tr>
+        <tr><td style="font-size:10px">Which reactions transfer? (the whole point)</td><td style="font-size:10px">conditions ranked by downstream NOVEL/BT/ACADEMIC channel gains, not GAME gains</td></tr>
+        <tr><td style="font-size:10px">Is yield prediction itself calibrated?</td><td style="font-size:10px">realized vs predicted E[KL] — the system grading its own foresight, continuously</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3>Yield — the session grading itself</h3>
+      <canvas id="yield-canvas" width="100%" height="200" style="display:block;width:100%;border:1px solid #ccc;margin-bottom:8px"></canvas>
+      <div style="font-size:10px;color:#555;line-height:1.7">Predicted information gain is recorded <em>before</em> the session (it is why the session was selected). Realized gain is computed after. The scatter of predicted vs realized is the system's calibration curve — drift from the diagonal is the earliest possible warning that the model of the students no longer matches the students.</div>
+    </div>
+  </div>
+
+  <div class="card-dk">
+    <h4 style="color:#fff;margin-bottom:6px">What "best library of cognitive data" actually requires</h4>
+    <div style="font-size:10px;line-height:1.9;color:#ccc">
+      Not volume. <strong style="color:#fff">Completeness of provenance.</strong> A reaction record is research-grade when an outsider could re-derive every conclusion from the raw records alone: which parameters were live, which overlay was announced, which channel produced which number, what the system predicted before it knew the outcome. Every record in this architecture carries that provenance by construction — not by policy, which decays, but by schema, which doesn't. The library is not a future project. It is what the ledger <em>is</em>, the day recording starts, growing one fully-described reaction per session forever.
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════ AXIOM CANVAS — ledger → views
+function drawAxiom(){
+  const c=document.getElementById('axiom-canvas');if(!c)return;
+  const W=c.clientWidth||560,H=280;c.setAttribute('width',W);c.setAttribute('height',H);
+  const ctx=c.getContext('2d');ctx.clearRect(0,0,W,H);
+  // Ledger block
+  ctx.fillStyle='#000';ctx.fillRect(20,H/2-50,150,100);
+  ctx.fillStyle='#fff';ctx.font='bold 10px Arial';ctx.textAlign='center';
+  ctx.fillText('LEDGER',95,H/2-28);
+  ctx.fillStyle='#888';ctx.font='8px Arial';
+  ['append-only','raw observations','full provenance','permanent'].forEach((s,i)=>ctx.fillText(s,95,H/2-12+i*13));
+  // Views
+  const views=['mode_elo[6]','gap signals','corroboration matrix','student panel','parameter regression','reaction queries'];
+  views.forEach((v,i)=>{
+    const vy=24+i*(H-48)/5;
+    ctx.fillStyle='#fff';ctx.strokeStyle='#999';ctx.lineWidth=1;
+    ctx.fillRect(W-190,vy-12,170,26);ctx.strokeRect(W-190,vy-12,170,26);
+    ctx.fillStyle='#333';ctx.font='9px Courier New';ctx.textAlign='center';
+    ctx.fillText(v,W-105,vy+3);
+    // arrow
+    ctx.strokeStyle='#bbb';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(172,H/2);ctx.lineTo(W-194,vy+1);ctx.stroke();
+    ctx.fillStyle='#bbb';
+    const ang=Math.atan2(vy+1-H/2,W-194-172);
+    ctx.save();ctx.translate(W-194,vy+1);ctx.rotate(ang);
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-7,-3);ctx.lineTo(-7,3);ctx.closePath();ctx.fill();ctx.restore();
+  });
+  ctx.fillStyle='#555';ctx.font='italic 9px Arial';ctx.textAlign='center';
+  ctx.fillText('recompute freely — views own no data',(W+170-190)/2,H-8);
+  ctx.fillStyle='#000';ctx.font='bold 8px Arial';ctx.textAlign='left';
+  ctx.fillText('WRITE ONCE',24,H/2+62);
+  ctx.textAlign='right';ctx.fillText('READ FOREVER',W-24,H/2+62);
+}
+
+// ════════════════════════ LIFECYCLE CANVAS
+function drawLifecycle(){
+  const c=document.getElementById('lifecycle-canvas');if(!c)return;
+  const W=c.clientWidth||800,H=160;c.setAttribute('width',W);c.setAttribute('height',H);
+  const ctx=c.getContext('2d');ctx.clearRect(0,0,W,H);
+  const stages=[
+    {n:'ASSERTED',s:'theory only',col:'#d97706'},
+    {n:'INSTRUMENTED',s:'being recorded',col:'#1d4ed8'},
+    {n:'MEASURED',s:'one channel',col:'#555'},
+    {n:'CORROBORATED',s:'≥2 independent',col:'#15803d'},
+    {n:'VALIDATED',s:'survived prediction',col:'#15803d',fill:true},
+  ];
+  const bw=Math.min(130,(W-60)/5-14),y=34,bh=56;
+  stages.forEach((s,i)=>{
+    const x=30+i*((W-60)/5)+((W-60)/5-bw)/2;
+    ctx.fillStyle=s.fill?s.col:'#fff';ctx.strokeStyle=s.col;ctx.lineWidth=s.fill?2:1.5;
+    ctx.fillRect(x,y,bw,bh);ctx.strokeRect(x,y,bw,bh);
+    ctx.fillStyle=s.fill?'#fff':s.col;ctx.font='bold 9px Arial';ctx.textAlign='center';
+    ctx.fillText(s.n,x+bw/2,y+24);
+    ctx.fillStyle=s.fill?'#cfe9d6':'#888';ctx.font='8px Arial';
+    ctx.fillText(s.s,x+bw/2,y+40);
+    if(i<4){
+      const ax=x+bw+3,nx=30+(i+1)*((W-60)/5)+((W-60)/5-bw)/2-3;
+      ctx.strokeStyle='#bbb';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(ax,y+bh/2);ctx.lineTo(nx-6,y+bh/2);ctx.stroke();
+      ctx.fillStyle='#bbb';ctx.beginPath();ctx.moveTo(nx-6,y+bh/2-4);ctx.lineTo(nx,y+bh/2);ctx.lineTo(nx-6,y+bh/2+4);ctx.closePath();ctx.fill();
+    }
+  });
+  // refuted branch
+  ctx.strokeStyle='#dc2626';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+  const fx=30+3.5*((W-60)/5);
+  ctx.beginPath();ctx.moveTo(fx,y+bh);ctx.lineTo(fx,y+bh+24);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#fff';ctx.strokeStyle='#dc2626';ctx.lineWidth=1.5;
+  ctx.fillRect(fx-58,y+bh+24,116,24);ctx.strokeRect(fx-58,y+bh+24,116,24);
+  ctx.fillStyle='#dc2626';ctx.font='bold 9px Arial';ctx.textAlign='center';
+  ctx.fillText('REFUTED — recorded, never re-asserted',fx,y+bh+39);
+}
+
+// ════════════════════════ CORROBORATION MATRIX
+const DIMS=[
+  {id:'QTY',col:'#d97706'},{id:'SPT',col:'#2563eb'},{id:'FRT',col:'#059669'},
+  {id:'DST',col:'#dc2626'},{id:'WRM',col:'#7c3aed'},{id:'INV',col:'#0891b2'},
+  {id:'ENG',col:'#555'},{id:'SOC',col:'#555'},
+];
+const CHANS=['GAME','BT','NOVEL','ACAD','TEACH'];
+// cell status: m=measured, c=contaminated, i=instrumented, p=bridge-pending, a=absent
+const CELLS={
+  QTY:['m','p','i','a','a'], SPT:['m','p','i','a','a'], FRT:['m','p','i','a','a'],
+  DST:['m','p','i','a','a'], WRM:['m','p','i','a','a'], INV:['c','p','i','a','a'],
+  ENG:['m','a','a','a','i'], SOC:['a','a','a','a','i'],
+};
+const CELLNOTES={
+  m:{col:'#15803d',label:'MEASURED',note:'Active signal in this channel.'},
+  c:{col:'#dc2626',label:'CONTAMINATED',note:'INV game signal carries announced-overlay purity flags (Q2). Recorded with flags; silent-INVERSION sessions will clean it.'},
+  i:{col:'#1d4ed8',label:'INSTRUMENTED',note:'Recording begun; insufficient volume for claims.'},
+  p:{col:'#7c3aed',label:'BRIDGE PENDING',note:'BT channel records when integration lands; dimension mapping per system-map.html.'},
+  a:{col:'#bbb',label:'NOT YET RECORDED',note:'Cheap to instrument. Absence here is a decision the ledger makes visible rather than hides.'},
+};
+let corrHover=null;
+function drawCorr(){
+  const c=document.getElementById('corr-canvas');if(!c)return;
+  const W=c.clientWidth||520,H=320;c.setAttribute('width',W);c.setAttribute('height',H);
+  const ctx=c.getContext('2d');ctx.clearRect(0,0,W,H);
+  const ox=70,oy=40,cw=(W-ox-20)/CHANS.length,ch=(H-oy-40)/DIMS.length;
+  ctx.font='bold 9px Arial';ctx.textAlign='center';
+  CHANS.forEach((ch_,i)=>{ctx.fillStyle='#333';ctx.fillText(ch_,ox+i*cw+cw/2,oy-12)});
+  DIMS.forEach((d,ri)=>{
+    ctx.fillStyle=d.col;ctx.textAlign='right';ctx.font='bold 9px Arial';
+    ctx.fillText(d.id,ox-10,oy+ri*ch+ch/2+3);
+    CHANS.forEach((_,ci)=>{
+      const st=CELLS[d.id][ci],info=CELLNOTES[st];
+      const x=ox+ci*cw,y=oy+ri*ch;
+      const hov=corrHover&&corrHover.r===ri&&corrHover.c===ci;
+      ctx.fillStyle=hov?'#f0f0f0':'#fff';
+      ctx.fillRect(x+2,y+2,cw-4,ch-4);
+      ctx.strokeStyle=hov?'#000':'#e0e0e0';ctx.lineWidth=hov?1.5:1;
+      ctx.strokeRect(x+2,y+2,cw-4,ch-4);
+      ctx.beginPath();ctx.arc(x+cw/2,y+ch/2,6,0,Math.PI*2);
+      if(st==='a'){ctx.strokeStyle=info.col;ctx.lineWidth=1.5;ctx.stroke();}
+      else{ctx.fillStyle=info.col;ctx.fill();}
+    });
+  });
+  // corroboration count column
+  ctx.fillStyle='#888';ctx.font='8px Arial';ctx.textAlign='left';
+  ctx.fillText('● filled = recording   ○ outline = absent   independent witnesses per dimension = filled non-SYSTEM cells',ox,H-14);
+  c._geo={ox,oy,cw,ch};
+}
+document.addEventListener('mousemove',e=>{
+  const c=document.getElementById('corr-canvas');if(!c||!c._geo)return;
+  const r=c.getBoundingClientRect();
+  if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom){if(corrHover){corrHover=null;drawCorr();}return;}
+  const mx=(e.clientX-r.left)*(c.width/r.width),my=(e.clientY-r.top)*(c.height/r.height);
+  const {ox,oy,cw,ch}=c._geo;
+  const ci=Math.floor((mx-ox)/cw),ri=Math.floor((my-oy)/ch);
+  let nh=null;
+  if(ci>=0&&ci<CHANS.length&&ri>=0&&ri<DIMS.length)nh={r:ri,c:ci};
+  if(JSON.stringify(nh)!==JSON.stringify(corrHover)){
+    corrHover=nh;drawCorr();
+    const tt=document.getElementById('corr-tooltip');
+    if(tt){
+      if(nh){
+        const d=DIMS[nh.r],st=CELLS[d.id][nh.c],info=CELLNOTES[st];
+        tt.innerHTML=`<strong style="color:${d.col}">${d.id}</strong> × <strong>${CHANS[nh.c]}</strong> — <span style="color:${info.col};font-weight:700">${info.label}</span><br>${info.note}`;
+      } else tt.textContent='Hover a cell for detail.';
+    }
+  }
+});
+
+// ════════════════════════ PROTOCOL CANVAS
+function drawProtocol(){
+  const c=document.getElementById('protocol-canvas');if(!c)return;
+  const W=c.clientWidth||900,H=240;c.setAttribute('width',W);c.setAttribute('height',H);
+  const ctx=c.getContext('2d');ctx.clearRect(0,0,W,H);
+  const steps=[
+    {n:'EVENT',s:'anything observed',x:.07},
+    {n:'FITS VOCAB?',s:'existing tags suffice',x:.24,diamond:true},
+    {n:'RECORD',s:'multi-tag · raw · provenance',x:.43},
+    {n:'BOUNDARY CASE',s:'card filed · visible in inbox',x:.62},
+    {n:'MINT AT ≥5',s:'new vocab entry · versioned',x:.80},
+    {n:'REINTERPRET',s:'recompute views over full ledger',x:.93},
+  ];
+  const y=70,bw2=110,bh=52;
+  steps.forEach((s,i)=>{
+    const x=s.x*W-bw2/2;
+    ctx.fillStyle='#fff';ctx.strokeStyle='#000';ctx.lineWidth=s.diamond?1.5:1.5;
+    if(s.diamond){
+      ctx.beginPath();ctx.moveTo(s.x*W,y-10);ctx.lineTo(x+bw2+10,y+bh/2);ctx.lineTo(s.x*W,y+bh+10);ctx.lineTo(x-10,y+bh/2);ctx.closePath();
+      ctx.fill();ctx.stroke();
+    } else {ctx.fillRect(x,y,bw2,bh);ctx.strokeRect(x,y,bw2,bh);}
+    ctx.fillStyle='#000';ctx.font='bold 9px Arial';ctx.textAlign='center';
+    ctx.fillText(s.n,s.x*W,y+22);
+    ctx.fillStyle='#888';ctx.font='7px Arial';
+    s.s.split(' · ').forEach((l,li)=>ctx.fillText(l,s.x*W,y+34+li*9));
+    if(i<steps.length-1){
+      const nx=steps[i+1].x*W-bw2/2-(steps[i+1].diamond?12:0);
+      const ax=x+bw2+(s.diamond?12:0);
+      ctx.strokeStyle='#999';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(ax,y+bh/2);ctx.lineTo(nx-6,y+bh/2);ctx.stroke();
+      ctx.fillStyle='#999';ctx.beginPath();ctx.moveTo(nx-6,y+bh/2-4);ctx.lineTo(nx,y+bh/2);ctx.lineTo(nx-6,y+bh/2+4);ctx.closePath();ctx.fill();
+    }
+  });
+  // YES branch from diamond straight to RECORD (already the main path) — label branches
+  ctx.fillStyle='#15803d';ctx.font='bold 8px Arial';ctx.textAlign='center';
+  ctx.fillText('NO → continue right',(.24+.43)/2*W,y+bh/2-8);
+  ctx.fillStyle='#555';
+  ctx.fillText('YES',.24*W,y+bh+26);
+  ctx.strokeStyle='#555';ctx.lineWidth=1.2;ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(.24*W,y+bh+10);ctx.quadraticCurveTo(.24*W,y+bh+48,.43*W-58,y+bh+48);
+  ctx.quadraticCurveTo(.43*W,y+bh+48,.43*W,y+bh+4);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#555';ctx.font='7px Arial';
+  ctx.fillText('record normally — protocol exits',.335*W,y+bh+58);
+  // never branch
+  ctx.fillStyle='#dc2626';ctx.font='bold 8px Arial';
+  ctx.fillText('THE ONLY FORBIDDEN MOVE: forcing the event into the nearest category and moving on',W/2,28);
+}
+
+// ════════════════════════ YIELD CANVAS
+function drawYield(){
+  const c=document.getElementById('yield-canvas');if(!c)return;
+  const W=c.clientWidth||440,H=200;c.setAttribute('width',W);c.setAttribute('height',H);
+  const ctx=c.getContext('2d');ctx.clearRect(0,0,W,H);
+  const P={l:46,r:14,t:14,b:34},IW=W-P.l-P.r,IH=H-P.t-P.b;
+  const px=x=>P.l+x*IW,py=y=>P.t+(1-y)*IH;
+  ctx.strokeStyle='#bbb';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+IH);ctx.lineTo(P.l+IW,P.t+IH);ctx.stroke();
+  ctx.strokeStyle='#ddd';ctx.setLineDash([4,3]);
+  ctx.beginPath();ctx.moveTo(px(0),py(0));ctx.lineTo(px(1),py(1));ctx.stroke();ctx.setLineDash([]);
+  // simulated calibration points
+  const pts=[[.15,.18],[.22,.19],[.30,.33],[.38,.35],[.42,.47],[.50,.44],[.55,.60],[.62,.55],[.68,.74],[.74,.66],[.80,.85],[.86,.72],[.90,.81]];
+  pts.forEach(([x,y])=>{
+    const off=Math.abs(y-x);
+    ctx.beginPath();ctx.arc(px(x),py(y),4,0,Math.PI*2);
+    ctx.fillStyle=off<.08?'#15803d':off<.15?'#d97706':'#dc2626';ctx.fill();
+  });
+  ctx.fillStyle='#888';ctx.font='8px Arial';ctx.textAlign='center';
+  ctx.fillText('predicted E[KL] (recorded before session)',P.l+IW/2,H-8);
+  ctx.save();ctx.translate(12,P.t+IH/2);ctx.rotate(-Math.PI/2);ctx.fillText('realized gain (computed after)',0,0);ctx.restore();
+  ctx.fillStyle='#555';ctx.font='italic 8px Arial';ctx.textAlign='right';
+  ctx.fillText('diagonal = perfectly calibrated foresight',px(1),py(1)-8);
+}
+
+// ════════════════════════ TABS
+function showTab(name,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  el.classList.add('active');
+  setTimeout(()=>{drawAxiom();drawLifecycle();drawCorr();drawProtocol();drawYield();},50);
+}
+window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{drawAxiom();drawLifecycle();drawCorr();drawProtocol();drawYield();},100));
+window.addEventListener('resize',()=>{drawAxiom();drawLifecycle();drawCorr();drawProtocol();drawYield();});
+</script>
+</body>
+</html>

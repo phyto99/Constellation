@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Student Profile — Constellation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0a;--surface:#0f0f0f;--surface2:#141414;--surface3:#1a1a1a;
+  --border:#1c1c1c;--border2:#242424;--border3:#2e2e2e;
+  --text:#e0e0e0;--dim:#4a4a4a;--dim2:#333;
+  --qty:#d97706;--spt:#2563eb;--frt:#7c3aed;--dst:#dc2626;--wrm:#059669;--inv:#555;
+  --zone-color:#1c1c1c;
+}
+body{background:var(--bg);color:var(--text);font-family:Arial,sans-serif;font-size:12px;line-height:1.6;min-height:100vh}
+
+/* ── TIER BANNER ── */
+.tier-bar{
+  height:2px;width:100%;
+  background:linear-gradient(90deg,var(--zone-color) 0%,var(--zone-color) 100%);
+  transition:background 600ms;
+}
+
+/* ── HEADER ── */
+.hdr{padding:20px 32px 0;border-bottom:1px solid var(--border)}
+.hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.hdr-label{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--dim)}
+
+/* tier selector — for demo only */
+.tier-sel{display:flex;gap:2px}
+.ts{padding:3px 8px;font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  border:1px solid var(--border2);background:transparent;color:var(--dim);cursor:pointer;font-family:Arial,sans-serif;
+  transition:border-color 140ms,color 140ms}
+.ts.on{border-color:#444;color:var(--text)}
+.ts:first-child{border-radius:3px 0 0 3px}
+.ts:last-child{border-radius:0 3px 3px 0}
+
+/* identity strip */
+.identity{display:flex;align-items:center;gap:16px;padding-bottom:16px}
+.av{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#1a0820,#0a1628);
+  border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;
+  font-size:17px;font-weight:700;color:var(--dim);flex-shrink:0}
+.id-name{font-size:16px;font-weight:700;letter-spacing:-.3px}
+.id-tier{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+.id-meta{font-size:9px;color:var(--dim);margin-top:3px}
+.id-badges{display:flex;gap:6px;margin-left:auto;align-items:center;flex-wrap:wrap}
+.ibadge{padding:2px 7px;border:1px solid;border-radius:2px;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+
+/* zone strip */
+.zone-strip{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 32px;border-bottom:1px solid var(--border);
+  font-size:9px;
+}
+.zone-label{font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.zone-desc{color:var(--dim)}
+.zone-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* ── TABS ── */
+.tabs{display:flex;padding:0 32px;border-bottom:1px solid var(--border);gap:0}
+.tab{
+  padding:10px 14px;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--dim);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+  transition:color 140ms,border-color 140ms;
+}
+.tab.on{color:var(--text);border-color:var(--text)}
+.tab-panel{display:none;padding:28px 32px 60px}
+.tab-panel.on{display:block}
+
+/* ── shared panel styles ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.panel-hd{font-size:8px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--dim);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.panel-hd::after{content:'';flex:1;height:1px;background:var(--border)}
+.asserted{font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#2a2a2a;border:1px solid #1e1e1e;padding:0 4px;vertical-align:middle}
+
+/* mode table */
+.mode-table{width:100%;border-collapse:collapse}
+.mode-table th{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);text-align:left;padding:4px 8px 6px;border-bottom:1px solid var(--border)}
+.mode-table td{padding:5px 8px;border-bottom:1px solid var(--border);font-size:10px}
+.mode-table tr:last-child td{border-bottom:none}
+.mode-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle;flex-shrink:0}
+.elo-bar-wrap{display:flex;align-items:center;gap:6px}
+.elo-bar-bg{flex:1;height:3px;background:var(--border2);border-radius:2px;position:relative;max-width:80px}
+.elo-bar-fill{height:100%;border-radius:2px;transition:width 400ms}
+.elo-ci{opacity:.25;position:absolute;top:0;height:100%;border-radius:2px}
+.gap-alert{display:inline-block;padding:1px 5px;font-size:8px;color:#dc2626;border:1px solid #7f1d1d;margin-left:4px}
+
+/* ── TAB 1: MODEL ── */
+.radar-wrap{position:relative}
+canvas.radar{display:block;margin:0 auto}
+
+/* ── TAB 2: GEOLOGY ── */
+.geo-wrap{overflow-x:auto;padding-bottom:8px}
+.geo-legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.geo-leg-item{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--dim)}
+.geo-leg-dot{width:8px;height:8px;border-radius:1px;flex-shrink:0}
+
+/* timeline */
+.timeline-outer{position:relative;padding-top:20px;padding-bottom:40px}
+.timeline-axis{position:absolute;bottom:32px;left:0;right:0;height:1px;background:var(--border)}
+canvas.timeline{display:block}
+.tl-labels{display:flex;margin-top:4px;font-size:8px;color:var(--dim)}
+
+/* forgetting curves section */
+.forget-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:4px}
+.forget-card{background:var(--surface2);border:1px solid var(--border);padding:10px}
+.forget-title{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px}
+canvas.forget-curve{display:block;width:100%;height:60px}
+
+/* ── TAB 3: UNCERTAINTY ── */
+.unc-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.unc-mode{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;width:28px;text-align:right;flex-shrink:0}
+.unc-bar-outer{flex:1;height:16px;background:var(--surface3);border:1px solid var(--border);position:relative;overflow:visible}
+.unc-ci{position:absolute;top:0;height:100%;opacity:.18}
+.unc-fill{position:absolute;top:2px;height:calc(100% - 4px);left:2px;border-radius:1px}
+.unc-val{font-size:9px;color:var(--dim);width:70px;flex-shrink:0;text-align:right}
+.unc-sessions{font-size:8px;color:var(--dim2);width:50px;flex-shrink:0;text-align:right}
+
+.open-q{background:var(--surface2);border:1px solid var(--border);padding:12px 14px;margin-bottom:8px}
+.oq-hd{font-size:9px;font-weight:700;color:var(--dim);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.oq-body{font-size:10px;color:#333;line-height:1.6}
+.oq-evidence{font-size:9px;color:var(--dim2);margin-top:4px}
+
+/* ── TAB 4: COMPILER ── */
+.compiler-out{background:var(--surface2);border:1px solid var(--border);padding:16px}
+.co-line{display:flex;gap:10px;margin-bottom:8px;font-size:10px;line-height:1.5}
+.co-key{color:var(--dim);flex-shrink:0;width:140px;font-size:9px;text-transform:uppercase;letter-spacing:.8px;padding-top:1px}
+.co-val{color:var(--text);flex:1}
+.co-reason{color:var(--dim);font-size:9px;margin-top:1px}
+.co-sep{height:1px;background:var(--border);margin:10px 0}
+.co-vector{font-size:9px;line-height:2;color:var(--dim)}
+.co-vector span{color:var(--text);margin-right:14px}
+.co-hash{font-size:9px;color:var(--dim2);margin-top:10px}
+.weight-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.weight-label{font-size:9px;color:var(--dim);width:120px;flex-shrink:0}
+.weight-bar{flex:1;height:3px;background:var(--border2)}
+.weight-fill{height:100%;background:#2a2a2a}
+.weight-val{font-size:9px;color:var(--dim2);width:30px;text-align:right}
+
+/* ── TAB 5: LETTER ── */
+.letter{max-width:560px;font-size:11px;line-height:1.9;color:#888}
+.letter p{margin-bottom:14px}
+.letter .hi{color:var(--text)}
+.letter .lo{color:var(--dim2)}
+.letter .datum{border-bottom:1px solid var(--border2);padding-bottom:0;cursor:default}
+.letter .datum:hover{color:var(--text);border-color:#444}
+.letter-sig{margin-top:24px;font-size:9px;color:var(--dim2);line-height:1.8}
+
+/* ── TAB 6: NETWORK (connections view) ── */
+.network-wrap{position:relative}
+canvas.network{display:block;width:100%}
+.net-legend{margin-top:16px;display:flex;gap:20px;flex-wrap:wrap;font-size:9px;color:var(--dim)}
+.net-leg{display:flex;align-items:center;gap:5px}
+
+/* ── BASELINE tier overlay ── */
+.baseline-msg{padding:32px;text-align:center}
+.baseline-msg h2{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--dim)}
+.baseline-msg p{font-size:10px;color:var(--dim2);line-height:1.8;max-width:400px;margin:0 auto 8px}
+.session-dots{display:flex;gap:8px;justify-content:center;margin:20px 0}
+.sdot{width:10px;height:10px;border-radius:50%;background:var(--border2)}
+.sdot.filled{background:var(--dim2)}
+
+/* ── SINGULARITY tier ── */
+.singularity-msg{padding:60px 32px;text-align:center;max-width:480px;margin:0 auto}
+.sing-line{font-size:11px;color:var(--dim);line-height:1.8;margin-bottom:6px}
+.sing-moment{font-size:28px;font-weight:700;letter-spacing:-1px;margin:32px 0;color:#1e1e1e}
+
+/* ── note callout ── */
+.note{background:var(--surface2);border-left:2px solid var(--border2);padding:8px 12px;font-size:9px;color:var(--dim);line-height:1.6;margin:12px 0}
+.note.hi{border-color:#7c3aed;color:#a78bfa}
+
+/* responsive */
+@media(max-width:640px){
+  .hdr,.tabs,.tab-panel,.zone-strip{padding-left:16px;padding-right:16px}
+  .two-col,.three-col{grid-template-columns:1fr}
+  .forget-grid{grid-template-columns:1fr 1fr}
+  .co-key{width:100px}
+}
+</style>
+</head>
+<body>
+
+<!-- tier accent line -->
+<div class="tier-bar" id="tierBar"></div>
+
+<div class="hdr">
+  <div class="hdr-top">
+    <div class="hdr-label">Constellation · Student Profile</div>
+    <!-- demo tier switcher — server-determined in production -->
+    <div class="tier-sel">
+      <button class="ts" onclick="setTier('baseline')">Baseline</button>
+      <button class="ts on" onclick="setTier('developing')">Developing</button>
+      <button class="ts" onclick="setTier('alpha')">Alpha</button>
+      <button class="ts" onclick="setTier('singularity')">Singularity</button>
+    </div>
+  </div>
+  <div class="identity">
+    <div class="av" id="avEl">A</div>
+    <div>
+      <div class="id-name">Alex</div>
+      <div class="id-tier" id="tierLabel" style="color:#d97706">Observer</div>
+      <div class="id-meta" id="metaLabel">12 sessions · last active 17 days ago · Lincoln High via Clever</div>
+    </div>
+    <div class="id-badges" id="idBadges">
+      <span class="ibadge" style="color:#a78bfa;border-color:#4c1d95">School</span>
+      <span class="ibadge" style="color:#d97706;border-color:#78350f">Observer</span>
+      <span class="ibadge" style="color:#dc2626;border-color:#7f1d1d">RADICAL</span>
+    </div>
+  </div>
+</div>
+
+<!-- zone context strip -->
+<div class="zone-strip" id="zoneStrip">
+  <div class="zone-dot" id="zoneDot" style="background:#dc2626"></div>
+  <span class="zone-label" id="zoneLabel" style="color:#dc2626">RADICAL</span>
+  <span class="zone-desc" id="zoneDesc">Next session · DST mode · 51 days since last DST · maximum prior uncertainty</span>
+</div>
+
+<!-- tab bar -->
+<div class="tabs" id="tabBar">
+  <div class="tab on" onclick="showTab('model')">Model</div>
+  <div class="tab" onclick="showTab('geology')">History</div>
+  <div class="tab" onclick="showTab('uncertainty')">Uncertainty</div>
+  <div class="tab" onclick="showTab('compiler')" id="tabCompiler">Compiler</div>
+  <div class="tab" onclick="showTab('letter')">Letter</div>
+  <div class="tab" onclick="showTab('network')">Network</div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1: MODEL — the current approximation
+     ══════════════════════════════════════════════ -->
+<div class="tab-panel on" id="panel-model">
+
+  <!-- BASELINE override -->
+  <div class="baseline-msg" id="baselineMsg" style="display:none">
+    <h2>Recording in progress</h2>
+    <p>The system needs 10 sessions before the approximation becomes meaningful. You have completed 3.</p>
+    <div class="session-dots">
+      <div class="sdot filled"></div><div class="sdot filled"></div><div class="sdot filled"></div>
+      <div class="sdot"></div><div class="sdot"></div><div class="sdot"></div>
+      <div class="sdot"></div><div class="sdot"></div><div class="sdot"></div><div class="sdot"></div>
+    </div>
+    <p style="font-size:9px;color:var(--dim2)">The Ledger is accumulating observations. Come back after 7 more sessions and the model will have something to show you.</p>
+  </div>
+
+  <div id="modelContent">
+    <div class="two-col">
+      <!-- radar -->
+      <div>
+        <div class="panel-hd">Cognitive radar</div>
+        <div class="radar-wrap">
+          <canvas class="radar" id="radarCanvas" width="280" height="280"></canvas>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">
+          <div style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--dim)">
+            <div style="width:20px;height:2px;background:#888"></div>Current Elo
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--dim)">
+            <div style="width:20px;height:1px;background:#555;border-top:1px dashed #555"></div>ZPD target
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--dim)">
+            <div style="width:20px;height:6px;background:rgba(255,255,255,.04);border:1px solid #222"></div>95% CI
+          </div>
+        </div>
+      </div>
+      <!-- mode table -->
+      <div>
+        <div class="panel-hd">Mode state <span class="asserted" id="assertedMarker">ASSERTED</span></div>
+        <table class="mode-table">
+          <thead>
+            <tr>
+              <th>Mode</th>
+              <th>Elo ± CI</th>
+              <th>Vel</th>
+              <th>Days</th>
+              <th>Priority</th>
+            </tr>
+          </thead>
+          <tbody id="modeTableBody"></tbody>
+        </table>
+        <div class="note" id="gapNote" style="margin-top:10px">
+          WRM gap signal: Elo 362, velocity −18. The system is not yet alarmed — only 1 session in this mode. Insufficient data to distinguish learning from noise.
+        </div>
+      </div>
+    </div>
+    <div class="note" style="margin-top:20px" id="assertedNote">
+      All values are ASSERTED — derived from <span style="color:var(--text)">12 sessions</span> using parameters that have not yet been empirically validated for this student. Refutation conditions are defined in the Parameter Registry. These numbers are the system's best current guess, not a measurement of you.
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 2: GEOLOGY — session history
+     ══════════════════════════════════════════════ -->
+<div class="tab-panel" id="panel-geology">
+  <div class="panel-hd">Session timeline</div>
+  <div class="geo-legend" id="geoLegend"></div>
+  <div class="geo-wrap">
+    <canvas class="timeline" id="timelineCanvas" height="140"></canvas>
+  </div>
+  <div style="font-size:9px;color:var(--dim);margin-top:6px;line-height:1.7">
+    Each bar is one session. Color = cognitive mode. Height = outcome rank percentile (top = best). Space between bars = days elapsed. The large gap at session 9 → 10 was 23 days — visible as forgetting in QTY Elo on session 10's recovery. Zone assignments shown below each bar.
+  </div>
+
+  <div style="margin-top:28px">
+    <div class="panel-hd">Elo trace per mode</div>
+    <div class="forget-grid" id="traceGrid"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 3: UNCERTAINTY
+     ══════════════════════════════════════════════ -->
+<div class="tab-panel" id="panel-uncertainty">
+  <div class="two-col">
+    <div>
+      <div class="panel-hd">Confidence by mode</div>
+      <p style="font-size:9px;color:var(--dim);margin-bottom:14px;line-height:1.6">Bar width = Elo point estimate. Translucent extension = 95% confidence interval. Narrower CI = more data = more confident. INV has no data — the bar doesn't exist yet.</p>
+      <div id="uncRows"></div>
+    </div>
+    <div>
+      <div class="panel-hd">Open questions about Alex</div>
+      <div id="openQs"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 4: COMPILER — the system's reasoning
+     ══════════════════════════════════════════════ -->
+<div class="tab-panel" id="panel-compiler">
+  <div class="note hi" style="margin-bottom:20px" id="alphaCompilerNote">
+    This view is available at Alpha tier. The compiler's full decision is shown exactly as it was computed — parameters, weights, and the reason for each choice.
+  </div>
+  <div class="two-col">
+    <div>
+      <div class="panel-hd">Next session decision</div>
+      <div class="compiler-out">
+        <div class="co-line">
+          <div class="co-key">Mode selected</div>
+          <div class="co-val">
+            <span style="color:#dc2626;font-weight:700">DST</span> (Destruction)
+            <div class="co-reason">Highest priority score: staleness 51d × w=0.30 + deficit 45pts × w=0.50 = 0.452</div>
+          </div>
+        </div>
+        <div class="co-sep"></div>
+        <div class="co-line">
+          <div class="co-key">Zone assigned</div>
+          <div class="co-val">
+            <span style="color:#dc2626;font-weight:700">RADICAL</span>
+            <div class="co-reason">Trigger: DST not played in &gt;21 days AND Elo &lt;500. Both conditions met.</div>
+          </div>
+        </div>
+        <div class="co-sep"></div>
+        <div class="co-line">
+          <div class="co-key">Bot profile</div>
+          <div class="co-val">
+            ACCELERANT
+            <div class="co-reason">RADICAL zone → ACCELERANT to maximize tempo variance and force adaptation response.</div>
+          </div>
+        </div>
+        <div class="co-sep"></div>
+        <div class="co-line">
+          <div class="co-key">Expected rank %ile</div>
+          <div class="co-val">
+            0.41 <span style="color:var(--dim)">± 0.14</span>
+            <div class="co-reason">Based on DST Elo=445, forgetting decay τ=14d applied over 51 days: adjusted Elo ≈ 412</div>
+          </div>
+        </div>
+        <div class="co-sep"></div>
+        <div class="co-line">
+          <div class="co-key">Config vector</div>
+          <div class="co-val" style="font-size:9px">
+            <div class="co-vector">
+              <span>moves: 3</span><span>roundLength: 40</span><span>rounds: 5</span><br>
+              <span>steals: 1</span><span>bots: 2</span><span>map: cascade_b</span>
+            </div>
+          </div>
+        </div>
+        <div class="co-hash">config_hash: 7f3a2c91 · compiled 2026-06-16T14:22:08Z</div>
+      </div>
+    </div>
+    <div>
+      <div class="panel-hd">Priority weights <span class="asserted">ASSERTED</span></div>
+      <div id="weightRows" style="margin-bottom:20px"></div>
+      <div class="panel-hd">Mode priority scores</div>
+      <div id="priorityRows"></div>
+      <div class="note" style="margin-top:12px">
+        These weights are ASSERTED. They have not been empirically validated for this student or any student. Refutation condition: if mean(rank_pct | zone=RADICAL) &lt; 0.35 for &gt;20 sessions, w_staleness is overweighted and should decrease.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 5: LETTER — system writes to Alex
+     ══════════════════════════════════════════════ -->
+<div class="tab-panel" id="panel-letter">
+  <div class="panel-hd">Field notes</div>
+  <div class="letter" id="letterContent"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 6: NETWORK — badges as a connected graph
+     ══════════════════════════════════════════════ -->
+<div class="tab-panel" id="panel-network">
+  <div class="panel-hd">Identity graph</div>
+  <p style="font-size:10px;color:var(--dim);margin-bottom:16px;max-width:520px;line-height:1.7">Your connections and recognitions as a graph. Edge weight = how much each connection contributed to earning the recognition. Nodes without edges are earned independently of external connections.</p>
+  <div class="network-wrap">
+    <canvas class="network" id="networkCanvas" height="360"></canvas>
+  </div>
+  <div class="net-legend" id="netLegend">
+    <div class="net-leg"><div style="width:10px;height:10px;border-radius:50%;background:#7c3aed;flex-shrink:0"></div>External connection</div>
+    <div class="net-leg"><div style="width:10px;height:10px;background:var(--border2);flex-shrink:0"></div>System recognition</div>
+    <div class="net-leg"><div style="width:24px;height:1px;background:#333;flex-shrink:0"></div>Relationship</div>
+    <div class="net-leg"><div style="width:24px;height:2px;background:#7c3aed;opacity:.4;flex-shrink:0"></div>Active link</div>
+  </div>
+</div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────────
+var MODES = ['QTY','SPT','FRT','DST','WRM','INV'];
+var MODE_COLOR = {QTY:'#d97706',SPT:'#2563eb',FRT:'#7c3aed',DST:'#dc2626',WRM:'#059669',INV:'#333'};
+var MODE_FULL = {QTY:'Quantity',SPT:'Spatial',FRT:'Fortress',DST:'Destruction',WRM:'Wormhole',INV:'Inversion'};
+
+var state = {
+  QTY:{elo:487,ci:38,velocity:+12,days:22,zpd:525,n:4},
+  SPT:{elo:412,ci:45,velocity:+7, days:45,zpd:460,n:3},
+  FRT:{elo:531,ci:32,velocity:+21,days:17,zpd:572,n:5},
+  DST:{elo:445,ci:52,velocity:0,  days:51,zpd:490,n:1},
+  WRM:{elo:362,ci:55,velocity:-18,days:19,zpd:415,n:1},
+  INV:{elo:null,ci:null,velocity:null,days:null,zpd:null,n:0}
+};
+
+// sessions: date, mode, zone, rank_pct, eloAfter, predicted
+var sessions = [
+  {d:'Apr 10',mode:'QTY',zone:'ECHO',     rank:.52,elo:423,pred:.48},
+  {d:'Apr 12',mode:'QTY',zone:'PARALLEL', rank:.61,elo:436,pred:.52},
+  {d:'Apr 14',mode:'FRT',zone:'RADICAL',  rank:.38,elo:498,pred:.45},
+  {d:'Apr 16',mode:'QTY',zone:'SHIFTING', rank:.55,elo:449,pred:.56},
+  {d:'Apr 19',mode:'SPT',zone:'RADICAL',  rank:.33,elo:385,pred:.44},
+  {d:'Apr 23',mode:'FRT',zone:'PARALLEL', rank:.68,elo:519,pred:.55},
+  {d:'Apr 26',mode:'DST',zone:'ECHO',     rank:.49,elo:445,pred:.50},
+  {d:'Apr 29',mode:'FRT',zone:'SHIFTING', rank:.71,elo:531,pred:.58},
+  {d:'May 02',mode:'SPT',zone:'RADICAL',  rank:.41,elo:398,pred:.43},
+  // 23-day gap
+  {d:'May 25',mode:'QTY',zone:'RADICAL',  rank:.61,elo:487,pred:.40,gap:23},
+  {d:'May 28',mode:'WRM',zone:'RADICAL',  rank:.28,elo:362,pred:.44},
+  {d:'May 30',mode:'FRT',zone:'ECHO',     rank:.73,elo:540,pred:.64},
+];
+
+var ZONE_COLOR = {ECHO:'#2a4a5c',PARALLEL:'#1a3a2c',SHIFTING:'#3a3210',RADICAL:'#4a1010',REMATCH:'#2a2a2a'};
+var ZONE_TEXT  = {ECHO:'#5b9dbb',PARALLEL:'#059669',SHIFTING:'#d97706',RADICAL:'#dc2626',REMATCH:'#888'};
+
+// ── TIER STATE ────────────────────────────────────────────────────────────
+var currentTier = 'developing';
+
+function setTier(t) {
+  currentTier = t;
+  document.querySelectorAll('.ts').forEach(function(b){b.classList.remove('on')});
+  event.target.classList.add('on');
+  applyTier();
+  if(currentActiveTab==='model') drawRadar();
+  if(currentActiveTab==='geology') drawTimeline();
+  if(currentActiveTab==='network') drawNetwork();
+}
+
+function applyTier() {
+  var bar = document.getElementById('tierBar');
+  var tierLbl = document.getElementById('tierLabel');
+  var metaLbl = document.getElementById('metaLabel');
+  var badges = document.getElementById('idBadges');
+  var zoneStrip = document.getElementById('zoneStrip');
+  var assertedMk = document.getElementById('assertedMarker');
+  var assertedNote = document.getElementById('assertedNote');
+  var gapNote = document.getElementById('gapNote');
+  var alphaNote = document.getElementById('alphaCompilerNote');
+  var baselineMsg = document.getElementById('baselineMsg');
+  var modelContent = document.getElementById('modelContent');
+  var tabBar = document.getElementById('tabBar');
+
+  // reset
+  document.querySelectorAll('.tab').forEach(function(t){t.style.display='';});
+
+  if(currentTier==='baseline'){
+    bar.style.background='#1e1e1e';
+    tierLbl.textContent='Baseline';tierLbl.style.color='#555';
+    metaLbl.textContent='3 sessions · model forming';
+    badges.innerHTML='';
+    zoneStrip.style.display='none';
+    baselineMsg.style.display='';
+    modelContent.style.display='none';
+    document.getElementById('tabCompiler').style.display='none';
+    assertedMk && (assertedMk.style.display='none');
+    // hide geology uncertainty compiler letter network panels by switching to model
+    showTab('model');
+  } else if(currentTier==='developing'){
+    bar.style.background='linear-gradient(90deg,#d97706,#92400e)';
+    tierLbl.textContent='Observer';tierLbl.style.color='#d97706';
+    metaLbl.textContent='12 sessions · last active 17 days ago · Lincoln High via Clever';
+    badges.innerHTML='<span class="ibadge" style="color:#a78bfa;border-color:#4c1d95">School</span><span class="ibadge" style="color:#d97706;border-color:#78350f">Observer</span><span class="ibadge" style="color:#dc2626;border-color:#7f1d1d">RADICAL</span>';
+    zoneStrip.style.display='';
+    baselineMsg.style.display='none';
+    modelContent.style.display='';
+    document.getElementById('tabCompiler').style.display='none';
+    if(assertedMk) assertedMk.style.display='none';
+    if(assertedNote) assertedNote.style.display='none';
+    if(gapNote) gapNote.style.display='';
+    if(alphaNote) alphaNote.style.display='none';
+  } else if(currentTier==='alpha'){
+    bar.style.background='linear-gradient(90deg,#7c3aed,#4c1d95)';
+    tierLbl.textContent='Alpha';tierLbl.style.color='#a78bfa';
+    metaLbl.textContent='12 sessions · last active 17 days ago · Lincoln High via Clever';
+    badges.innerHTML='<span class="ibadge" style="color:#a78bfa;border-color:#4c1d95">School</span><span class="ibadge" style="color:#a78bfa;border-color:#6d28d9">Alpha</span><span class="ibadge" style="color:#d97706;border-color:#78350f">Observer</span><span class="ibadge" style="color:#dc2626;border-color:#7f1d1d">RADICAL</span>';
+    zoneStrip.style.display='';
+    baselineMsg.style.display='none';
+    modelContent.style.display='';
+    document.getElementById('tabCompiler').style.display='';
+    if(assertedMk) assertedMk.style.display='';
+    if(assertedNote) assertedNote.style.display='';
+    if(gapNote) gapNote.style.display='';
+    if(alphaNote) alphaNote.style.display='none';
+  } else if(currentTier==='singularity'){
+    bar.style.background='linear-gradient(90deg,#e11d48,#7f1d1d)';
+    tierLbl.textContent='Singularity';tierLbl.style.color='#e11d48';
+    metaLbl.textContent='The model knows you.';
+    badges.innerHTML='<span class="ibadge" style="color:#e11d48;border-color:#7f1d1d">Singularity</span>';
+    zoneStrip.style.display='none';
+    baselineMsg.style.display='none';
+    modelContent.style.display='none';
+    document.getElementById('tabCompiler').style.display='none';
+    // show singularity message instead
+    document.getElementById('modelContent').style.display='none';
+    showSingularity();
+  }
+}
+
+function showSingularity() {
+  showTab('model');
+  var mc = document.getElementById('modelContent');
+  mc.style.display='none';
+  var bm = document.getElementById('baselineMsg');
+  bm.style.display='';
+  bm.innerHTML='<div class="singularity-msg"><div class="sing-line">The system has internalized your model.</div><div class="sing-line">Showing you its work would be redundant now.</div><div class="sing-moment">Present.</div><div class="sing-line" style="color:var(--dim2);font-size:9px">Next session is prepared. Enter when ready.</div></div>';
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────
+var currentActiveTab = 'model';
+function showTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('on')});
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on')});
+  document.getElementById('panel-'+id).classList.add('on');
+  document.querySelectorAll('.tab').forEach(function(t){if(t.getAttribute('onclick')==="showTab('"+id+"')")t.classList.add('on')});
+  currentActiveTab = id;
+  if(id==='geology'){drawTimeline();drawTraces();}
+  if(id==='model'){drawRadar();}
+  if(id==='network'){drawNetwork();}
+}
+
+// ── RADAR ─────────────────────────────────────────────────────────────────
+function drawRadar() {
+  var canvas = document.getElementById('radarCanvas');
+  if(!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = 280, H = 280, cx = W/2, cy = H/2, r = 108;
+  ctx.clearRect(0,0,W,H);
+
+  var n = 6;
+  function pt(i, val, scale) {
+    var ang = (Math.PI*2/n)*i - Math.PI/2;
+    var rv = scale ? val * r : val;
+    return {x: cx + rv * Math.cos(ang), y: cy + rv * Math.sin(ang)};
+  }
+  function eloNorm(e){ return e ? Math.min(1, Math.max(0, (e-200)/600)) : 0; }
+
+  // grid rings
+  [.25,.5,.75,1].forEach(function(frac){
+    ctx.beginPath();
+    for(var i=0;i<n;i++){var p=pt(i,frac,true);i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);}
+    ctx.closePath();
+    ctx.strokeStyle='#1c1c1c'; ctx.lineWidth=1; ctx.stroke();
+  });
+
+  // axes
+  for(var i=0;i<n;i++){
+    var p=pt(i,1,true);
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(p.x,p.y);
+    ctx.strokeStyle='#1e1e1e';ctx.lineWidth=1;ctx.stroke();
+  }
+
+  // CI bands
+  MODES.forEach(function(m,i){
+    var s = state[m];
+    if(!s.elo) return;
+    var loNorm = eloNorm(s.elo - s.ci);
+    var hiNorm = eloNorm(s.elo + s.ci);
+    var pLo = pt(i, loNorm, true);
+    var pHi = pt(i, hiNorm, true);
+    ctx.beginPath();
+    ctx.moveTo(cx + (pLo.x-cx)*0.98, cy+(pLo.y-cy)*0.98);
+    // draw a thin sliver along each axis for CI
+    var ang = (Math.PI*2/n)*i - Math.PI/2;
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate(ang);
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    ctx.fillRect(loNorm*r - 2, -3, (hiNorm-loNorm)*r + 4, 6);
+    ctx.restore();
+  });
+
+  // ZPD polygon (dashed)
+  ctx.beginPath();
+  MODES.forEach(function(m,i){
+    var s=state[m];
+    var p=pt(i, s.zpd ? eloNorm(s.zpd) : 0, true);
+    i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);
+  });
+  ctx.closePath();
+  ctx.setLineDash([3,4]);ctx.strokeStyle='#2a2a2a';ctx.lineWidth=1.5;ctx.stroke();ctx.setLineDash([]);
+
+  // Elo polygon
+  ctx.beginPath();
+  MODES.forEach(function(m,i){
+    var s=state[m];
+    var p=pt(i, s.elo ? eloNorm(s.elo) : 0, true);
+    i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);
+  });
+  ctx.closePath();
+  ctx.fillStyle='rgba(255,255,255,0.05)';ctx.fill();
+  ctx.strokeStyle='#666';ctx.lineWidth=1.5;ctx.stroke();
+
+  // mode dots + labels
+  MODES.forEach(function(m,i){
+    var s=state[m];
+    var p=pt(i, s.elo ? eloNorm(s.elo) : 0, true);
+    ctx.beginPath();ctx.arc(p.x,p.y,3.5,0,Math.PI*2);
+    ctx.fillStyle = s.elo ? MODE_COLOR[m] : '#222';ctx.fill();
+
+    // label
+    var lp = pt(i, 1.22, true);
+    ctx.font = '700 9px Arial'; ctx.fillStyle = s.elo ? MODE_COLOR[m] : '#333';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(m, lp.x, lp.y);
+    if(s.elo){
+      var ep = pt(i, 1.36, true);
+      ctx.font = '9px Arial'; ctx.fillStyle = '#444';
+      ctx.fillText(s.elo, ep.x, ep.y);
+    }
+  });
+}
+
+// ── MODE TABLE ────────────────────────────────────────────────────────────
+function buildModeTable() {
+  var tbody = document.getElementById('modeTableBody');
+  if(!tbody) return;
+  var rows = '';
+  var maxElo = 800, minElo = 200;
+  MODES.forEach(function(m){
+    var s = state[m];
+    if(!s.elo){ rows += '<tr><td><span class="mode-dot" style="background:#222"></span><span style="color:#333">'+m+'</span></td><td colspan="4" style="color:#2a2a2a;font-size:9px">No data — silent mode</td></tr>'; return; }
+    var pct = ((s.elo-minElo)/(maxElo-minElo)*100).toFixed(0);
+    var ciPct = (s.ci/(maxElo-minElo)*100).toFixed(0);
+    var velStr = s.velocity > 0 ? '<span style="color:#059669">+'+s.velocity+'</span>' : s.velocity < 0 ? '<span style="color:#dc2626">'+s.velocity+'</span>' : '<span style="color:#555">0</span>';
+    var daysStr = s.days > 30 ? '<span style="color:#dc2626">'+s.days+'</span>' : '<span style="color:var(--dim)">'+s.days+'</span>';
+    var priority = calcPriority(m);
+    var priBar = '<div style="display:flex;align-items:center;gap:4px"><div style="width:'+Math.round(priority*40)+'px;height:2px;background:'+MODE_COLOR[m]+'"></div><span style="font-size:9px;color:var(--dim)">'+priority.toFixed(2)+'</span></div>';
+    var gapEl = (m==='WRM') ? '<span class="gap-alert">gap</span>' : '';
+    rows += '<tr><td><span class="mode-dot" style="background:'+MODE_COLOR[m]+'"></span>'+m+gapEl+'</td>';
+    rows += '<td><div class="elo-bar-wrap"><div class="elo-bar-bg"><div class="elo-bar-fill" style="width:'+pct+'%;background:'+MODE_COLOR[m]+'"></div><div class="elo-ci" style="left:'+pct+'%;width:'+ciPct+'%;background:'+MODE_COLOR[m]+'"></div></div><span style="font-size:9px;color:var(--dim)">'+s.elo+' ±'+s.ci+'</span></div></td>';
+    rows += '<td>'+velStr+'</td><td>'+daysStr+'</td><td>'+priBar+'</td></tr>';
+  });
+  tbody.innerHTML = rows;
+}
+
+function calcPriority(m){
+  var s = state[m];
+  if(!s.elo) return 0;
+  var deficit = Math.max(0, s.zpd - s.elo) / 600;
+  var staleness = Math.min(1, s.days / 60);
+  var gap = (m==='WRM') ? 0.8 : 0;
+  return 0.50*deficit + 0.30*staleness + 0.20*gap;
+}
+
+// ── TIMELINE ─────────────────────────────────────────────────────────────
+function drawTimeline() {
+  var canvas = document.getElementById('timelineCanvas');
+  if(!canvas) return;
+  var totalW = canvas.parentElement.offsetWidth || 680;
+  canvas.width = Math.max(600, totalW - 2);
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = 140;
+  ctx.clearRect(0,0,W,H);
+
+  var barW = 34, pad = 4, gapPx = 12, bigGapPx = 48;
+  var totalBars = sessions.length;
+  var totalGaps = sessions.reduce(function(a,s){return a+(s.gap?bigGapPx:gapPx)},0);
+  var startX = 12;
+  var x = startX;
+
+  // legend build
+  var seen = {};
+  sessions.forEach(function(s){seen[s.mode]=true});
+  var lg = document.getElementById('geoLegend');
+  if(lg && !lg.dataset.built){
+    lg.dataset.built='1';
+    Object.keys(seen).forEach(function(m){
+      var d=document.createElement('div');d.className='geo-leg-item';
+      d.innerHTML='<div class="geo-leg-dot" style="background:'+MODE_COLOR[m]+'"></div>'+MODE_FULL[m];
+      lg.appendChild(d);
+    });
+  }
+
+  // draw sessions
+  sessions.forEach(function(s, idx){
+    // gap visual
+    if(s.gap){
+      ctx.save();
+      ctx.strokeStyle='#2a2a2a';ctx.setLineDash([2,3]);ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x+barW/2,20);ctx.lineTo(x+barW/2,H-32);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font='8px Arial';ctx.fillStyle='#2a2a2a';ctx.textAlign='center';
+      ctx.fillText(s.gap+'d gap', x+bigGapPx/2, H-20);
+      x += bigGapPx/2;
+    }
+
+    var barH = Math.max(6, Math.round(s.rank * (H-60)));
+    var barY = H - 32 - barH;
+    var col = MODE_COLOR[s.mode];
+
+    // main bar
+    ctx.fillStyle = col;
+    ctx.globalAlpha = 0.7;
+    ctx.fillRect(x, barY, barW-pad, barH);
+    ctx.globalAlpha = 1;
+
+    // zone marker below
+    var zc = ZONE_TEXT[s.zone] || '#555';
+    ctx.font='700 7px Arial';ctx.fillStyle=zc;ctx.textAlign='center';
+    ctx.fillText(s.zone.substring(0,3), x+(barW-pad)/2, H-20);
+
+    // date above
+    ctx.font='7px Arial';ctx.fillStyle='#2a2a2a';ctx.textAlign='center';
+    ctx.fillText(s.d, x+(barW-pad)/2, 12);
+
+    x += barW + (s.gap ? bigGapPx/2 : gapPx);
+  });
+
+  // baseline axis
+  ctx.strokeStyle='#1c1c1c';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(startX,H-30);ctx.lineTo(x,H-30);ctx.stroke();
+
+  // rank percentile labels on left
+  ctx.font='7px Arial';ctx.fillStyle='#2a2a2a';ctx.textAlign='right';
+  ctx.fillText('rank %ile',startX-2,H-32-Math.round(.5*(H-60)));
+}
+
+// ── TRACES per mode ───────────────────────────────────────────────────────
+function drawTraces() {
+  var grid = document.getElementById('traceGrid');
+  if(!grid || grid.dataset.built) return;
+  grid.dataset.built='1';
+  MODES.forEach(function(m){
+    var pts = sessions.filter(function(s){return s.mode===m});
+    var card = document.createElement('div');
+    card.className='forget-card';
+    card.innerHTML='<div class="forget-title" style="color:'+MODE_COLOR[m]+'">'+m+'</div><canvas class="forget-curve" id="trace-'+m+'" height="60"></canvas><div style="font-size:8px;color:var(--dim);margin-top:4px">'+pts.length+' sessions'+( state[m].elo ? ' · current Elo '+state[m].elo : ' · no data'  )+'</div>';
+    grid.appendChild(card);
+    if(pts.length < 1) return;
+    requestAnimationFrame(function(){
+      var c = document.getElementById('trace-'+m);
+      if(!c) return;
+      var cw = c.offsetWidth||160; c.width=cw;
+      var ctx2 = c.getContext('2d'), H2=60;
+      var elos = pts.map(function(s){return s.elo});
+      var minE=Math.min.apply(null,elos)-20, maxE=Math.max.apply(null,elos)+20;
+      var norm=function(e){return 1-(e-minE)/(maxE-minE)};
+      ctx2.clearRect(0,0,cw,H2);
+      ctx2.beginPath();
+      pts.forEach(function(s,i){
+        var px=pts.length===1?cw/2:i/(pts.length-1)*(cw-8)+4;
+        var py=norm(s.elo)*(H2-8)+4;
+        i===0?ctx2.moveTo(px,py):ctx2.lineTo(px,py);
+      });
+      ctx2.strokeStyle=MODE_COLOR[m];ctx2.lineWidth=1.5;ctx2.globalAlpha=.7;ctx2.stroke();
+      pts.forEach(function(s,i){
+        var px=pts.length===1?cw/2:i/(pts.length-1)*(cw-8)+4;
+        var py=norm(s.elo)*(H2-8)+4;
+        ctx2.beginPath();ctx2.arc(px,py,2.5,0,Math.PI*2);
+        ctx2.fillStyle=MODE_COLOR[m];ctx2.globalAlpha=1;ctx2.fill();
+      });
+    });
+  });
+}
+
+// ── UNCERTAINTY ──────────────────────────────────────────────────────────
+function buildUncertainty() {
+  var cont = document.getElementById('uncRows');
+  if(!cont || cont.dataset.built) return;
+  cont.dataset.built='1';
+  var maxElo=800,minElo=200,range=maxElo-minElo;
+  MODES.forEach(function(m){
+    var s=state[m];
+    var row=document.createElement('div');row.className='unc-row';
+    if(!s.elo){
+      row.innerHTML='<div class="unc-mode" style="color:#2a2a2a">'+m+'</div><div class="unc-bar-outer" style="opacity:.25"><div class="unc-fill" style="width:1px;background:#222"></div></div><div class="unc-val" style="color:#2a2a2a">—</div><div class="unc-sessions" style="color:#2a2a2a">0 sessions</div>';
+    } else {
+      var pctElo=((s.elo-minElo)/range*100).toFixed(1);
+      var pctCi=(s.ci/range*100).toFixed(1);
+      var pctCiLeft=((s.elo-minElo-s.ci)/range*100).toFixed(1);
+      row.innerHTML='<div class="unc-mode" style="color:'+MODE_COLOR[m]+'">'+m+'</div><div class="unc-bar-outer"><div class="unc-ci" style="left:'+pctCiLeft+'%;width:'+parseFloat(pctCi)*2+'%;background:'+MODE_COLOR[m]+'"></div><div class="unc-fill" style="width:'+pctElo+'%;background:'+MODE_COLOR[m]+';opacity:.7"></div></div><div class="unc-val">'+s.elo+' ±'+s.ci+'</div><div class="unc-sessions">'+s.n+' session'+(s.n===1?'':'s')+'</div>';
+    }
+    cont.appendChild(row);
+  });
+  buildOpenQs();
+}
+
+function buildOpenQs() {
+  var cont = document.getElementById('openQs');
+  if(!cont || cont.dataset.built) return;
+  cont.dataset.built='1';
+  var qs=[
+    {q:'Does DST performance depend on game length?',evidence:'1 session (roundLength=40). Cannot distinguish preference from noise.',col:'#dc2626'},
+    {q:'Is WRM Elo declining or was session 11 an outlier?',evidence:'1 data point at rank_pct=0.28. Could be noise, could be a real low ceiling. Need 4+ sessions to distinguish.',col:'#059669'},
+    {q:'What is the forgetting rate in QTY mode?',evidence:'The 23-day gap produced observable Elo decay. Preliminary τ estimate: ~14 days. 1 measurement. ASSERTED.',col:'#d97706'},
+    {q:'Are SPT and FRT correlated?',evidence:'Moderate positive correlation possible (both spatial + territorial). 8 sessions total. Insufficient for covariance estimate.',col:'#7c3aed'},
+  ];
+  qs.forEach(function(q){
+    var div=document.createElement('div');div.className='open-q';
+    div.innerHTML='<div class="oq-hd"><div style="width:6px;height:6px;border-radius:50%;background:'+q.col+';flex-shrink:0"></div><span>Open question</span></div><div class="oq-body">'+q.q+'</div><div class="oq-evidence">Evidence: '+q.evidence+'</div>';
+    cont.appendChild(div);
+  });
+}
+
+// ── COMPILER ─────────────────────────────────────────────────────────────
+function buildCompiler() {
+  var wr = document.getElementById('weightRows');
+  if(wr && !wr.dataset.built){
+    wr.dataset.built='1';
+    var weights=[{label:'Deficit from ZPD',val:.50},{label:'Staleness (days)',val:.30},{label:'Gap signal',val:.20}];
+    weights.forEach(function(w){
+      wr.innerHTML+='<div class="weight-row"><div class="weight-label">'+w.label+'</div><div class="weight-bar"><div class="weight-fill" style="width:'+Math.round(w.val*100)+'%"></div></div><div class="weight-val">'+w.val+'</div></div>';
+    });
+  }
+  var pr = document.getElementById('priorityRows');
+  if(pr && !pr.dataset.built){
+    pr.dataset.built='1';
+    var modes = MODES.filter(function(m){return state[m].elo});
+    modes.sort(function(a,b){return calcPriority(b)-calcPriority(a)});
+    modes.forEach(function(m){
+      var pri=calcPriority(m);
+      pr.innerHTML+='<div class="weight-row"><div class="weight-label" style="color:'+MODE_COLOR[m]+'">'+m+'</div><div class="weight-bar"><div class="weight-fill" style="width:'+Math.round(pri*160)+'px;max-width:100%;background:'+MODE_COLOR[m]+'"></div></div><div class="weight-val">'+pri.toFixed(3)+'</div></div>';
+    });
+  }
+}
+
+// ── LETTER ────────────────────────────────────────────────────────────────
+var letters = {
+  baseline: '<p class="lo">The system has 3 sessions recorded for you.</p><p class="lo">That is not enough to say anything about you. What the Ledger has collected so far is three data points about three game configurations — not a model. The system does not yet have a meaningful current approximation.</p><p class="lo">Come back. Play more sessions. The model forms from observations, not from waiting.</p>',
+
+  developing: '<p>Alex —</p><p>You have played <span class="hi">12 sessions</span>. The model is preliminary. Here is what the Ledger has established so far, and where it is guessing.</p><p>Your strongest recorded mode is <span class="hi" style="color:#7c3aed">FRT</span> at Elo 531. You have played 5 sessions in this mode and your performance has been consistently above the predicted rank percentile — the system has underestimated you in FRT on 3 of 5 sessions. The gap between predicted and actual is notable. The system does not know why yet.</p><p>Your most uncertain mode is <span class="hi" style="color:#059669">WRM</span>. One session, rank percentile 0.28, Elo estimated at 362. The confidence interval is ±55 — which means the true Elo could be anywhere from 307 to 417. The system has almost no information here.</p><p>There was a <span class="datum">23-day gap</span> between your 9th and 10th sessions. Your QTY Elo recovered — you performed above prediction on session 10 (rank_pct 0.61, predicted 0.40). This is one data point about your forgetting curve in QTY mode. The system has noted it. One data point is not a conclusion.</p><p class="lo">The next session is prepared. DST mode. The system has one observation there — it knows almost nothing about how you play it.</p>',
+
+  alpha: '<p>Alex —</p><p>You are looking at this at Alpha tier, which means you understand what these numbers actually are. They are ASSERTED values derived from 12 sessions using parameters that have not been validated for you specifically. The weights w_deficit=0.50, w_staleness=0.30, w_gap=0.20 are starting assumptions. The forgetting τ=14d is drawn from the literature, not from your data.</p><p>Your FRT performance is the clearest signal. Five sessions, Elo 531, velocity +21. The model has been systematically underestimating you in FRT — predicted 0.55 on session 6, you produced 0.68. Predicted 0.58 on session 8, you produced 0.71. This is not noise. The system has recorded the pattern. It has not yet updated the prediction mechanism because 2 systematic misses is not enough to refute the formula.</p><p>The WRM session (session 11, rank_pct=0.28) is unresolved. The session immediately before it was your highest FRT session. Back-to-back mode switches with high cognitive load in the preceding session could account for the low WRM performance. Or WRM could genuinely be a low-ceiling mode for you. The system cannot distinguish these hypotheses yet. It needs 3-4 more WRM sessions.</p><p style="color:var(--dim)">The open question about DST is real. One session, 51 days ago. The system is selecting it because it has maximum uncertainty about you there. That is the correct decision under the One Principle — maximize expected information gain. You will learn something about yourself in the next session. So will the model.</p>',
+
+  singularity: '<p style="color:var(--dim2)">Present.</p>'
+};
+
+function buildLetter() {
+  var lc = document.getElementById('letterContent');
+  if(!lc) return;
+  lc.innerHTML = (letters[currentTier]||letters.developing) + '<div class="letter-sig">— The System · 2026-06-16<br>This letter is regenerated each session. The previous version is in the Ledger.</div>';
+}
+
+// ── NETWORK GRAPH ─────────────────────────────────────────────────────────
+function drawNetwork() {
+  var canvas = document.getElementById('networkCanvas');
+  if(!canvas) return;
+  var W = canvas.parentElement.offsetWidth || 680;
+  canvas.width = W;
+  var ctx = canvas.getContext('2d');
+  var H = 360;
+  ctx.clearRect(0,0,W,H);
+
+  // nodes
+  var nodes = {
+    clever:    {x:.16,y:.22,label:'School',sub:'Clever SSO',col:'#7c3aed',r:22,type:'conn'},
+    google:    {x:.16,y:.55,label:'Google',sub:'alex@gmail',col:'#4285F4',r:18,type:'conn'},
+    discord:   {x:.16,y:.82,label:'Discord',sub:'alex#4291',col:'#5865F2',r:18,type:'conn'},
+    spotify:   {x:.04,y:.68,label:'Spotify',sub:'not linked',col:'#333',r:14,type:'conn',dim:true},
+    steam:     {x:.04,y:.40,label:'Steam',sub:'not linked',col:'#333',r:14,type:'conn',dim:true},
+    observer:  {x:.52,y:.18,label:'Observer',sub:'earned',col:'#d97706',r:20,type:'badge'},
+    radical:   {x:.72,y:.28,label:'RADICAL',sub:'4 sessions',col:'#dc2626',r:20,type:'badge'},
+    alpha:     {x:.84,y:.55,label:'Alpha',sub:'pending',col:'#7c3aed',r:18,type:'badge',dim:true},
+    inv:       {x:.72,y:.78,label:'INVERSION',sub:'locked',col:'#333',r:14,type:'badge',dim:true},
+    sing:      {x:.52,y:.88,label:'?',sub:'unknown',col:'#1e1e1e',r:10,type:'badge',dim:true},
+  };
+
+  // absolute positions
+  Object.keys(nodes).forEach(function(k){nodes[k].ax=nodes[k].x*W;nodes[k].ay=nodes[k].y*H});
+
+  // edges: [from, to, strength, col]
+  var edges = [
+    ['clever','observer',.9,'#7c3aed'],
+    ['google','observer',.4,'#4285F4'],
+    ['discord','radical',.3,'#5865F2'],
+    ['clever','alpha',.7,'#7c3aed'],
+    ['google','alpha',.3,'#4285F4'],
+  ];
+
+  // draw edges
+  edges.forEach(function(e){
+    var a=nodes[e[0]], b=nodes[e[1]];
+    if(a.dim && b.dim) return;
+    ctx.beginPath();ctx.moveTo(a.ax,a.ay);ctx.lineTo(b.ax,b.ay);
+    ctx.strokeStyle=e[3];ctx.globalAlpha=e[2]*0.3;ctx.lineWidth=e[2]*3;ctx.stroke();
+    ctx.globalAlpha=1;
+  });
+
+  // draw nodes
+  Object.keys(nodes).forEach(function(k){
+    var n=nodes[k];
+    ctx.globalAlpha = n.dim ? .25 : 1;
+
+    if(n.type==='conn'){
+      // circle for connections
+      ctx.beginPath();ctx.arc(n.ax,n.ay,n.r,0,Math.PI*2);
+      ctx.fillStyle=n.dim?'#111':'#0d0d0d';ctx.fill();
+      ctx.strokeStyle=n.col;ctx.lineWidth=1.5;ctx.stroke();
+    } else {
+      // hexagon for badges
+      ctx.beginPath();
+      for(var i=0;i<6;i++){
+        var ang=Math.PI/180*(60*i-30);
+        var px=n.ax+n.r*Math.cos(ang), py=n.ay+n.r*Math.sin(ang);
+        i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+      }
+      ctx.closePath();
+      ctx.fillStyle=n.dim?'#0d0d0d':'#111';ctx.fill();
+      ctx.strokeStyle=n.col;ctx.lineWidth=1.5;ctx.stroke();
+    }
+
+    ctx.globalAlpha = n.dim ? .25 : 1;
+    ctx.font='700 9px Arial';ctx.fillStyle=n.col;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(n.label,n.ax,n.ay-2);
+    ctx.font='8px Arial';ctx.fillStyle='#333';
+    ctx.fillText(n.sub,n.ax,n.ay+9);
+    ctx.globalAlpha=1;
+  });
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────
+buildModeTable();
+buildUncertainty();
+buildCompiler();
+buildLetter();
+applyTier();
+
+requestAnimationFrame(function(){
+  drawRadar();
+});
+
+// rebuild letter when tier changes (applyTier calls this)
+var _origApply = applyTier;
+applyTier = function(){
+  _origApply();
+  buildLetter();
+  document.getElementById('letterContent').innerHTML = (letters[currentTier]||letters.developing) + '<div class="letter-sig">— The System · 2026-06-16<br>This letter is regenerated each session. The previous version is in the Ledger.</div>';
+};
+</script>
+</body>
+</html>

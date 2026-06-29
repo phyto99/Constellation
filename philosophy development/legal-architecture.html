@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Legal Architecture — Constellation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#111;font-family:Arial,sans-serif;font-size:12px;line-height:1.6}
+header{border-bottom:2px solid #000;padding:20px 28px 14px;position:sticky;top:0;background:#fff;z-index:10}
+.hd-label{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:4px}
+.hd-title{font-size:18px;font-weight:700;margin-bottom:5px}
+.hd-sub{font-size:11px;color:#555;max-width:720px;line-height:1.6}
+nav{display:flex;gap:0;overflow-x:auto;border-top:1px solid #eee;margin-top:12px}
+.tab{padding:8px 0;margin-right:22px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.tab:hover{color:#000}.tab.active{color:#000;border-bottom-color:#000}
+.content{max-width:980px;margin:0 auto;padding:32px 28px 80px}
+.panel{display:none}.panel.active{display:block}
+h1{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;border-bottom:2px solid #000;padding-bottom:5px;margin-bottom:18px;color:#000}
+h2{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #ccc;padding-bottom:4px;margin-bottom:12px;margin-top:24px;color:#333}
+h3{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;color:#444}
+p{font-size:11px;line-height:1.85;color:#222;margin-bottom:10px;max-width:680px}
+ul,ol{margin-left:18px;margin-bottom:10px;max-width:660px}
+li{font-size:11px;line-height:1.8;color:#333;margin-bottom:2px}
+.inset{background:#f0f0f0;border-left:3px solid #000;padding:10px 14px;font-size:11px;line-height:1.8;margin:12px 0;max-width:700px}
+.warn{background:#f8f8f8;border:1px dashed #000;padding:10px 14px;font-size:11px;line-height:1.8;margin:12px 0;max-width:700px}
+.dk{background:#000;color:#ccc;padding:14px 18px;margin:14px 0;font-size:11px;line-height:1.85;max-width:700px}
+.dk strong{color:#fff}.dk em{color:#888}
+.terminal{background:#0a0a0a;color:#e8e8e8;font-family:'Courier New',monospace;font-size:11px;line-height:1.85;padding:18px 22px;margin:14px 0;border-left:3px solid #000;max-width:700px}
+.t-dim{color:#444}.t-green{color:#059669}.t-white{color:#fff;font-weight:700}.t-amber{color:#d97706}.t-red{color:#dc2626}
+.sep{border:none;border-top:1px solid #eee;margin:28px 0}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:11px}
+th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 10px;border-bottom:2px solid #000;text-align:left;background:#f5f5f5}
+td{padding:7px 10px;border-bottom:1px solid #eee;vertical-align:top;line-height:1.7}
+tr:last-child td{border-bottom:none}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:14px 0}
+.card{border:1px solid #ddd;padding:14px 16px}
+.card-title{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.badge{display:inline-block;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid;padding:1px 6px;vertical-align:middle}
+.badge-req{border-color:#dc2626;color:#dc2626}
+.badge-opt{border-color:#888;color:#888}
+.badge-school{border-color:#2563eb;color:#2563eb}
+.badge-eu{border-color:#7c3aed;color:#7c3aed}
+
+/* Gate prototypes */
+.gate{border:2px solid #000;max-width:480px;margin:16px auto;font-family:Arial,sans-serif}
+.gate-header{background:#000;color:#fff;padding:12px 18px;font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase}
+.gate-body{padding:24px 22px}
+.gate-title{font-size:15px;font-weight:700;margin-bottom:8px}
+.gate-sub{font-size:11px;color:#555;line-height:1.7;margin-bottom:18px}
+.gate-field{margin-bottom:14px}
+.gate-label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;display:block}
+select,input{font-family:Arial,sans-serif;font-size:11px;border:1px solid #ccc;padding:6px 10px;width:100%;background:#fff}
+.gate-btn{display:block;width:100%;background:#000;color:#fff;border:none;padding:10px;font-family:Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin-top:16px}
+.gate-btn-secondary{background:#fff;color:#000;border:1px solid #000;margin-top:6px}
+.gate-footer{border-top:1px solid #eee;padding:10px 22px;font-size:9px;color:#888;line-height:1.6}
+
+/* Onboarding screens */
+.onboard{border:1px solid #ddd;max-width:560px;margin:16px auto}
+.ob-header{border-bottom:2px solid #000;padding:12px 18px;display:flex;align-items:center;gap:10px}
+.ob-logo{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase}
+.ob-session{font-size:9px;color:#888}
+.ob-body{padding:28px 22px}
+.ob-eyebrow{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:10px}
+.ob-headline{font-size:16px;font-weight:700;line-height:1.3;margin-bottom:14px}
+.ob-text{font-size:11px;color:#333;line-height:1.85;margin-bottom:18px}
+.ob-reveal{border:1px solid #eee;margin-bottom:10px}
+.ob-reveal-header{padding:8px 12px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;display:flex;justify-content:space-between;background:#f9f9f9}
+.ob-reveal-body{padding:10px 12px;font-size:10px;color:#444;line-height:1.75;border-top:1px solid #eee;display:none}
+.ob-checkbox-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px}
+.ob-checkbox-row input[type=checkbox]{margin-top:2px;width:auto;flex-shrink:0}
+.ob-checkbox-label{font-size:10px;color:#333;line-height:1.6}
+.ob-btn{width:100%;background:#000;color:#fff;border:none;padding:11px;font-family:Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin-top:14px}
+.ob-small{font-size:9px;color:#888;text-align:center;margin-top:8px;line-height:1.6}
+
+/* Student data view */
+.data-view{border:1px solid #ddd;margin:14px 0}
+.dv-header{background:#000;color:#fff;padding:8px 14px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center}
+.dv-tier{font-size:8px;padding:1px 8px;border:1px solid #555;color:#aaa;letter-spacing:1px}
+.dv-body{padding:16px}
+.dv-row{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:10px}
+.dv-row:last-child{border-bottom:none}
+.dv-key{color:#888;font-weight:700;letter-spacing:.5px;text-transform:uppercase;font-size:9px;padding-right:12px;flex-shrink:0;width:160px}
+.dv-val{color:#111;line-height:1.6;text-align:right}
+.dv-redacted{color:#ddd;font-family:'Courier New',monospace;letter-spacing:2px}
+.dv-locked{color:#ccc;font-size:9px;font-style:italic}
+
+/* Privacy policy doc */
+.policy-doc{max-width:700px;margin:0 auto}
+.policy-doc h2{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid #000;padding-bottom:4px;margin:22px 0 10px}
+.policy-doc p{font-size:11px;line-height:1.85;color:#222;margin-bottom:9px;max-width:100%}
+.policy-doc ul{margin-left:18px;margin-bottom:10px;max-width:100%}
+.policy-doc li{font-size:11px;line-height:1.8;color:#333;margin-bottom:2px}
+
+/* DPA */
+.dpa-col{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #ddd;margin:14px 0}
+.dpa-side{padding:14px 16px}
+.dpa-side+.dpa-side{border-left:1px solid #ddd}
+.dpa-side-label{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid #eee}
+.dpa-item{font-size:10px;color:#333;line-height:1.7;padding:5px 0;border-bottom:1px solid #f5f5f5;display:flex;gap:7px}
+.dpa-item:last-child{border-bottom:none}
+.dpa-dot{color:#000;font-weight:700;flex-shrink:0}
+
+/* Deletion flow */
+.del-step{display:flex;gap:14px;margin-bottom:16px;align-items:flex-start}
+.del-num{width:28px;height:28px;background:#000;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.del-content{flex:1}
+.del-title{font-size:11px;font-weight:700;margin-bottom:3px}
+.del-body{font-size:10px;color:#555;line-height:1.65}
+
+/* variant labels */
+.variant-label{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#888;border-bottom:1px solid #eee;padding-bottom:4px;margin:24px 0 12px}
+
+@media(max-width:700px){
+  header{padding:14px 14px 10px;position:relative}
+  .content{padding:20px 14px 40px}
+  .grid2,.grid3,.dpa-col{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd-label">Constellation — Legal Architecture</div>
+  <div class="hd-title">Data, Consent & Disclosure</div>
+  <div class="hd-sub">Prototypes for every legal touchpoint. The system's honesty about what it is — a cognitive development tool delivered through a game — is the compliance posture. These documents don't apologize for that. They state it.</div>
+  <nav>
+    <div class="tab active" onclick="show('principle',this)">The Principle</div>
+    <div class="tab" onclick="show('privacy',this)">Privacy Policy</div>
+    <div class="tab" onclick="show('gate',this)">Age Gate</div>
+    <div class="tab" onclick="show('onboard',this)">Student Onboarding</div>
+    <div class="tab" onclick="show('dataview',this)">Student Data View</div>
+    <div class="tab" onclick="show('parent',this)">Parental Consent</div>
+    <div class="tab" onclick="show('dpa',this)">School DPA</div>
+    <div class="tab" onclick="show('deletion',this)">Deletion Flow</div>
+  </nav>
+</header>
+
+<div class="content">
+
+<!-- ═══════════════════════════════════════ PRINCIPLE -->
+<div id="panel-principle" class="panel active">
+<h1>The Disclosure Principle — Why This System Can Be Honest</h1>
+
+<div class="dk">
+<strong>Most EdTech fails legally by obscuring what it does.</strong> It calls behavioral tracking "personalization." It describes cognitive profiling as "adaptive learning." It buries what the system actually is in terms of service no one reads. Then it is surprised when regulators and parents object. <em>Constellation does not have this problem — because the system's stated philosophy and its legal obligations point in exactly the same direction: tell the truth about what this is.</em>
+</div>
+
+<p>The honest description: Constellation is a competitive multiplayer strategy game — genuinely one of the most variable and cognitively demanding in its class — with a cognitive development system built underneath it. The game is exceptional on its own terms. The meta-system makes it something more. Both are real. Stating both plainly is the philosophical commitment and the legal requirement simultaneously.</p>
+
+<h2>What Must Be Disclosed vs What Can Remain Mysterious</h2>
+
+<table>
+<tr><th>Category</th><th>Legal requirement</th><th>Vibe-compatible?</th></tr>
+<tr><td>The existence of the ledger</td><td><strong>Must disclose.</strong> Users have a right to know data is collected.</td><td>Yes — the system being a watcher is already its aesthetic.</td></tr>
+<tr><td>What the ledger records</td><td><strong>Must disclose</strong> the categories (performance signals, config vectors, outcomes). Not every field.</td><td>Yes — "the system records what you do, not who you are" is accurate and in-vibe.</td></tr>
+<tr><td>The cognitive model's existence</td><td><strong>Must disclose.</strong> Profiling — building a model of someone — requires disclosure under GDPR and many US state laws.</td><td>Yes — the model existing is part of the system's stated identity. The mystery is not whether it exists, but what it says about you.</td></tr>
+<tr><td>The algorithm / formula</td><td><strong>No requirement to disclose</strong> trade secrets or proprietary methods. Summary sufficient.</td><td>Yes — the specific formula, weights, and parameters remain inside the system.</td></tr>
+<tr><td>Zone assignment logic</td><td>Not required to disclose specific thresholds.</td><td>Yes — RADICAL vs ECHO as concepts can be known; why you got one is the second game.</td></tr>
+<tr><td>Who sees the data</td><td><strong>Must disclose</strong> all categories of recipients.</td><td>Yes — "admin, teacher, and you (progressively)" is honest and accurate.</td></tr>
+<tr><td>Retention period</td><td><strong>Must state</strong> how long data is kept.</td><td>Yes — state it directly. The ledger's append-only nature is a philosophical property, not a secret.</td></tr>
+<tr><td>Deletion rights</td><td><strong>Must inform</strong> users they can request deletion (COPPA, GDPR, many US states).</td><td>Yes — "the ledger can be cleared" is not at odds with the system's identity.</td></tr>
+</table>
+
+<div class="sep"></div>
+
+<h2>The Four Legal Regimes That Apply</h2>
+<div class="grid2">
+  <div class="card">
+    <div class="card-title">COPPA <span class="badge badge-req">US · Under 13</span></div>
+    <p style="max-width:100%">No personal information collected from under-13 users without verifiable parental consent. Minimum age gate is the primary mechanism. If 13+ is strictly enforced: COPPA does not apply. If any under-13 users exist: full COPPA compliance required.</p>
+  </div>
+  <div class="card">
+    <div class="card-title">FERPA <span class="badge badge-school">US · School-Deployed</span></div>
+    <p style="max-width:100%">If a school enrolls students, the school holds the consent rights. A signed DPA with the school satisfies FERPA and covers parental consent. This is the simplest legal path for institutional deployment.</p>
+  </div>
+  <div class="card">
+    <div class="card-title">GDPR + UK Children's Code <span class="badge badge-eu">EU/UK</span></div>
+    <p style="max-width:100%">The UK Children's Code applies to any service "likely to be accessed by children under 18" — not just services marketed to them. Requires privacy by default, no profiling for non-obvious purposes, explicit consent for cognitive assessment data. Most demanding regime.</p>
+  </div>
+  <div class="card">
+    <div class="card-title">US State Laws <span class="badge badge-opt">Consumer Deployment</span></div>
+    <p style="max-width:100%">SOPIPA (CA, CO, NY, and many others): do not sell student data, do not use it for advertising, provide deletion on request. Your architecture already satisfies the spirit of all of these — it just needs to be stated.</p>
+  </div>
+</div>
+
+<div class="warn">
+<strong>The brain metrics integration (Phase 2 / BT Bridge) requires a separate consent layer.</strong> When cognitive assessment data from a validated external instrument is added to the ledger, that data may qualify as health or psychological data under GDPR and US state law — requiring explicit, separate consent, not just disclosure. Do not let Phase 2 data inherit the existing consent structure silently. Flag it in a pre-registered refutation condition now: <em>current consent covers game performance signals; transfer_elo and brain_metrics require new consent when introduced.</em>
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════ PRIVACY POLICY -->
+<div id="panel-privacy" class="panel">
+<h1>Privacy Policy — Full Document Prototype</h1>
+
+<div class="inset">This is the actual privacy policy text — written in the system's voice, not legalese. It should live at <code>/privacy</code> or in the game lobby. It must be linked from the age gate, the onboarding screen, and all consent forms. Version-dated. No wall of paragraphs — clear sections, direct language.</div>
+
+<div class="policy-doc" style="border:1px solid #ddd;padding:28px 32px;margin:14px 0">
+
+<div style="text-align:center;border-bottom:2px solid #000;padding-bottom:18px;margin-bottom:18px">
+  <div style="font-size:9px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:#888;margin-bottom:6px">Constellation</div>
+  <div style="font-size:20px;font-weight:700;margin-bottom:4px">Privacy Policy</div>
+  <div style="font-size:9px;color:#888">Effective: June 2026 · Applies to all Constellation game sessions and associated services</div>
+</div>
+
+<h2>What Constellation Is</h2>
+<p>Constellation is a competitive multiplayer strategy game — one of the most configurationally variable and cognitively demanding in its class. The same rules, the same map, the same moves produce genuinely different cognitive experiences depending on four parameters. That flexibility is the design.</p>
+<p>Built underneath the game is a cognitive development system. It observes how you play, builds a model of your strengths and development areas across six cognitive dimensions, and uses that model to design better sessions. The game and the system are both what Constellation is.</p>
+<p>This policy describes what the system records, why, who can see it, and what rights you have over it.</p>
+
+<h2>What Is Recorded</h2>
+<p>Every session generates a record in the system's ledger. The ledger contains:</p>
+<ul>
+  <li><strong>Session configuration:</strong> the multiplier settings, map, round length, number of rounds, and mode that defined the session</li>
+  <li><strong>Outcomes:</strong> your final rank among players, your score, your team's result</li>
+  <li><strong>Behavioral signals:</strong> round-by-round performance, move timing, strategy adaptation patterns, and similar in-session signals</li>
+  <li><strong>Session metadata:</strong> the date and time of the session, the session identifier</li>
+  <li><strong>A student identifier:</strong> a code that links records to you without storing your name in the ledger itself</li>
+</ul>
+<p>The ledger does not contain your name, your school, your device information, or any information about you outside the game.</p>
+
+<h2>What Is Derived From What Is Recorded</h2>
+<p>From the ledger, the system derives a model of your cognitive performance across six areas: spatial reasoning, network thinking, goal-directed search, inhibitory control, cognitive flexibility, and resource optimization. This model is what the system uses to select your next session.</p>
+<p>The model is a view — a current approximation built from observations, not a permanent label. Every value in it has a refutation condition: if the data says otherwise, the model updates.</p>
+
+<h2>What Is Not Recorded</h2>
+<ul>
+  <li>Your real name (unless you have confirmed your identity at the ALPHA tier — see below)</li>
+  <li>Your location</li>
+  <li>Your device, browser, or IP address beyond what is required for the network connection</li>
+  <li>Any communication between players</li>
+  <li>Any information about you from outside Constellation</li>
+</ul>
+
+<h2>Who Can See Your Data</h2>
+<table>
+<tr><th>Recipient</th><th>What they can see</th></tr>
+<tr><td>System administrator</td><td>Full ledger and derived model for all students. Used to operate and improve the system.</td></tr>
+<tr><td>Your teacher</td><td>Your performance signals and cognitive model for sessions in their program. They see signal; the system generates the interpretation.</td></tr>
+<tr><td>You</td><td>Progressive. At the BASELINE tier: nothing. At the DEVELOPING tier: your mode performance and zone history. At the ALPHA tier: your full model with provenance. This is intentional — understanding the model is part of what the system develops.</td></tr>
+<tr><td>Anyone else</td><td>Nobody. Your data is not sold, shared with third parties, or used for advertising. No exceptions.</td></tr>
+</table>
+
+<h2>How Long Data Is Kept</h2>
+<p>Ledger records are kept for the duration of your enrollment plus three years, or until you request deletion — whichever comes first. Derived model values (mode Elo, velocity, zone history) are deleted when the ledger records they are derived from are deleted.</p>
+<p>If your school's program ends, the school administrator has 90 days to request an export before records are deleted on schedule.</p>
+
+<h2>Your Rights</h2>
+<ul>
+  <li><strong>See your data.</strong> You can request a full export of your ledger records and derived model at any time.</li>
+  <li><strong>Delete your data.</strong> You can request complete deletion of your ledger and all derived values. Deletion is permanent. Sessions recorded before deletion cannot be recovered.</li>
+  <li><strong>Correct your identifier.</strong> If your student identifier is incorrect, contact your administrator.</li>
+  <li><strong>EU/UK users:</strong> You additionally have the right to object to processing, to restrict processing, and to data portability. Your data is processed under the lawful basis of legitimate educational interest. You may withdraw consent at any time by requesting deletion.</li>
+</ul>
+
+<h2>Users Under 13</h2>
+<p>Constellation requires users to be 13 or older to participate without parental consent. If you are under 13, a parent or guardian must complete the consent form before you can participate. If we learn that a student under 13 has participated without parental consent, we will delete their records immediately.</p>
+
+<h2>Younger Users — EU and UK</h2>
+<p>In the European Union and United Kingdom, the minimum age for processing personal data without parental consent varies by country (13–16). If your country requires parental consent for users under 16, that consent is required before participation. Your school's enrollment process confirms this consent has been obtained.</p>
+
+<h2>Future Data Types</h2>
+<p>If the system adds new categories of data — including data from external cognitive assessment tools — that expansion will require new explicit consent from you (and your parent or guardian if applicable) before collection begins. You will not be opted in automatically.</p>
+
+<h2>Contact and Deletion Requests</h2>
+<p>To request a data export or deletion, or for any questions about this policy: contact your program administrator, or reach the system operator directly at the address provided by your school. Requests are processed within 30 days.</p>
+
+<div style="border-top:1px solid #eee;margin-top:20px;padding-top:12px;font-size:9px;color:#888;line-height:1.6">
+  This policy applies to all Constellation sessions and associated administrative interfaces. It supersedes any prior version. The current version is always available at [your-url]/privacy. Material changes will be communicated before they take effect.
+</div>
+
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════ AGE GATE -->
+<div id="panel-gate" class="panel">
+<h1>Age Gate — Prototypes</h1>
+<p>The age gate runs before first session. It establishes the minimum age requirement and routes users appropriately. Two variants below — choose one or combine.</p>
+
+<div class="variant-label">Variant A — Minimal / Direct</div>
+<div class="grid2">
+  <div>
+    <div class="gate">
+      <div class="gate-header">Constellation</div>
+      <div class="gate-body">
+        <div class="gate-title">Before you begin</div>
+        <div class="gate-sub">Constellation is open to students 13 and older. Students younger than 13 require a parent or guardian to complete a consent form first.</div>
+        <div class="gate-field">
+          <label class="gate-label">What year were you born?</label>
+          <select>
+            <option value="">— select —</option>
+            <option>2013</option><option>2012</option><option>2011</option>
+            <option>2010</option><option>2009</option><option>2008</option>
+            <option>2007</option><option>2006</option><option>2005</option>
+            <option>2004 or earlier</option>
+          </select>
+        </div>
+        <button class="gate-btn">Continue</button>
+      </div>
+      <div class="gate-footer">
+        By continuing, you confirm that the information above is accurate.
+        <a href="#" style="color:#888">Privacy Policy</a> · <a href="#" style="color:#888">Terms of Use</a>
+      </div>
+    </div>
+    <div style="font-size:9px;color:#888;margin-top:8px;max-width:340px;line-height:1.6">If the selected year puts the user under 13: redirect to a parental consent page, not a blank wall. If 13+: proceed to onboarding.</div>
+  </div>
+
+  <div>
+    <div class="gate" style="border-color:#ddd">
+      <div class="gate-header" style="background:#fff;color:#000;border-bottom:1px solid #ddd;padding:10px 18px">
+        <span style="font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase">Constellation</span>
+      </div>
+      <div class="gate-body">
+        <div class="gate-title" style="font-size:13px">Under 13?</div>
+        <div class="gate-sub" style="font-size:10px">This page appears when the user selects a birth year under 13. Don't dead-end them.</div>
+        <div class="inset" style="max-width:100%;font-size:10px">
+          The system requires a parent or guardian to review what Constellation collects before you can participate. This takes about two minutes.<br><br>
+          <strong>Ask your parent to check your school email for a consent form.</strong> Once they complete it, your account will be activated.
+        </div>
+        <button class="gate-btn">My parent will complete the form</button>
+        <button class="gate-btn gate-btn-secondary" style="margin-top:6px">I am a parent — complete the form now</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sep"></div>
+<div class="variant-label">Variant B — Terminal Aesthetic Gate</div>
+<div style="max-width:500px;margin:0 auto">
+  <div style="background:#0a0a0a;color:#e8e8e8;font-family:'Courier New',monospace;font-size:11px;padding:28px 26px;border-left:3px solid #000">
+    <div style="color:#444;margin-bottom:18px;font-size:10px">CONSTELLATION · ENTRY VERIFICATION</div>
+    <div style="margin-bottom:4px"><span style="color:#444">// </span>The system is a cognitive development tool.</div>
+    <div style="margin-bottom:4px"><span style="color:#444">// </span>It observes how you play. It builds a model of</div>
+    <div style="margin-bottom:4px"><span style="color:#444">// </span>how you think. This requires a minimum age.</div>
+    <div style="margin-bottom:20px;color:#444">// —</div>
+    <div style="margin-bottom:8px;color:#aaa">YEAR OF BIRTH</div>
+    <select style="background:#111;color:#e8e8e8;border:1px solid #333;padding:6px 10px;font-family:'Courier New',monospace;font-size:11px;width:100%">
+      <option>——</option>
+      <option>2013</option><option>2012</option><option>2011</option>
+      <option>2010</option><option>2009</option><option>2008</option>
+      <option>2007</option><option>2006</option><option>2005</option>
+      <option>2004 or earlier</option>
+    </select>
+    <div style="margin-top:20px;border:1px solid #333;padding:10px 14px;cursor:pointer;text-align:center;font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#fff">
+      PROCEED
+    </div>
+    <div style="margin-top:12px;font-size:9px;color:#444;line-height:1.7">
+      Privacy policy · <span style="color:#333">what the system records is documented</span>
+    </div>
+  </div>
+  <div style="font-size:9px;color:#888;margin-top:8px;line-height:1.6">Variant B keeps students inside the terminal aesthetic from the first screen. Best for direct-to-student consumer deployments. Variant A is better for school-administered enrollment.</div>
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════ STUDENT ONBOARDING -->
+<div id="panel-onboard" class="panel">
+<h1>Student Onboarding — First Session Consent</h1>
+<p>This screen appears once, at the student's first session. It is not a legal dump. It is the honest statement of what the system is. The student acknowledges and proceeds.</p>
+
+<div class="variant-label">Variant A — Minimal (Recommended for 13+ / School-Enrolled)</div>
+<div style="max-width:520px;margin:0 auto">
+  <div class="onboard">
+    <div class="ob-header">
+      <div class="ob-logo">Constellation</div>
+      <div class="ob-session">Session 1</div>
+    </div>
+    <div class="ob-body">
+      <div class="ob-eyebrow">Before your first session</div>
+      <div class="ob-headline">The system builds a model of how you think.</div>
+      <div class="ob-text">
+        Not how well you play Constellation — how you think. It records what you do during sessions: the moves, the timing, the choices. It uses that record to understand your cognitive strengths and design better sessions.<br><br>
+        Your name is not in the record. A code represents you. You can ask to see the model. You can ask to delete it.
+      </div>
+
+      <div class="ob-reveal">
+        <div class="ob-reveal-header" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">
+          What exactly is recorded? <span>+</span>
+        </div>
+        <div class="ob-reveal-body">
+          Each session: the configuration (mode, multipliers, map), your rank among players, round-by-round performance, and behavioral signals like how your strategy changed during play. Not your name, not your location, not anything outside the game.
+        </div>
+      </div>
+      <div class="ob-reveal">
+        <div class="ob-reveal-header" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">
+          Who can see it? <span>+</span>
+        </div>
+        <div class="ob-reveal-body">
+          Your teacher and the system administrator. You — progressively, as you advance. Nobody else. The data is never sold or shared with third parties.
+        </div>
+      </div>
+      <div class="ob-reveal">
+        <div class="ob-reveal-header" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">
+          Can I delete it? <span>+</span>
+        </div>
+        <div class="ob-reveal-body">
+          Yes. Ask your teacher or administrator. Deletion is permanent — the record and the model are cleared. You can also request to see everything the system has on you at any time.
+        </div>
+      </div>
+
+      <div class="ob-checkbox-row" style="margin-top:16px">
+        <input type="checkbox" id="ack1">
+        <label class="ob-checkbox-label" for="ack1">I understand the system records my gameplay and builds a model of my cognitive performance. I can request to see or delete this at any time.</label>
+      </div>
+
+      <button class="ob-btn">Begin Session 1</button>
+      <div class="ob-small">Full privacy policy available at [url]/privacy · Minimum age: 13</div>
+    </div>
+  </div>
+</div>
+
+<div class="sep"></div>
+<div class="variant-label">Variant B — Terminal Voice (Recommended for Consumer / Direct Student Deployment)</div>
+<div style="max-width:520px;margin:0 auto">
+  <div class="onboard">
+    <div class="ob-header">
+      <div class="ob-logo">Constellation</div>
+      <div class="ob-session">Session 1</div>
+    </div>
+    <div class="terminal" style="margin:0;border-left:none;border-bottom:1px solid #222">
+      <div class="t-dim">// first contact</div>
+      <div style="margin-top:8px">The system is watching.</div>
+      <div style="margin-top:4px">Not your name. Not your face. Not where you are.</div>
+      <div style="margin-top:4px"><span class="t-dim">What it watches:</span> the choices you make during play.</div>
+      <div style="margin-top:4px"><span class="t-dim">What it builds from those choices:</span> a model of how you think.</div>
+      <div style="margin-top:12px">The model exists to give you better sessions. It belongs to you. You can see it. You can erase it.</div>
+      <div style="margin-top:12px" class="t-dim">// the algorithm — what it weighs, why — remains inside the system.</div>
+      <div style="margin-top:4px" class="t-dim">// that is the second game.</div>
+      <div style="margin-top:16px;color:#aaa">Understood?</div>
+    </div>
+    <div class="ob-body" style="padding-top:16px">
+      <div class="ob-checkbox-row">
+        <input type="checkbox" id="ack2">
+        <label class="ob-checkbox-label" for="ack2">The system records my play and builds a cognitive model. I can request to see or delete it.</label>
+      </div>
+      <button class="ob-btn">I understand. Begin.</button>
+      <div class="ob-small">Privacy policy · Minimum age: 13 · Not for students under 13 without parental consent</div>
+    </div>
+  </div>
+</div>
+
+<div class="sep"></div>
+<div class="variant-label">Variant C — Minimal Acknowledgment (School-Enrolled, Parent Already Consented via DPA)</div>
+<div style="max-width:520px;margin:0 auto">
+  <div class="onboard">
+    <div class="ob-header">
+      <div class="ob-logo">Constellation</div>
+      <div class="ob-session">Session 1</div>
+    </div>
+    <div class="ob-body">
+      <div class="ob-eyebrow">One thing before you begin</div>
+      <div class="ob-headline" style="font-size:14px">This system observes how you play and builds a model of your thinking.</div>
+      <div class="ob-text">Your teacher has already reviewed what this means and agreed to it on your school's behalf. Full details: <a href="#" style="color:#000">privacy policy</a>.</div>
+      <button class="ob-btn" style="margin-top:4px">Begin</button>
+    </div>
+  </div>
+  <div style="font-size:9px;color:#888;margin-top:8px;line-height:1.6">When a school DPA is in place, the student acknowledgment can be minimal. The school has already consented; this screen just informs rather than gates.</div>
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════ STUDENT DATA VIEW -->
+<div id="panel-dataview" class="panel">
+<h1>Student Data View — Progressive Disclosure in the Observatory</h1>
+<p>Students see their own data progressively, according to their tier. This is not just a privacy feature — it is part of the singularity trajectory. Understanding the model is what the system develops. The data view is an instrument, not a records request.</p>
+
+<div class="variant-label">BASELINE Tier — Sessions 1–6: No model access</div>
+<div class="data-view" style="max-width:520px">
+  <div class="dv-header">
+    Your Data <span class="dv-tier">BASELINE</span>
+  </div>
+  <div class="dv-body">
+    <div class="terminal" style="margin:0;border:none;border-bottom:1px solid #1a1a1a">
+      <div class="t-dim">// model access: restricted</div>
+      <div style="margin-top:8px">The system has been watching since session 1.</div>
+      <div style="margin-top:4px">The model exists. It is not ready to be shown.</div>
+      <div style="margin-top:4px" class="t-dim">// signal accumulates. clarity comes later.</div>
+      <div style="margin-top:12px">Sessions completed: <span class="t-white">4</span> <span class="t-dim">of approximately 6 before initial model forms.</span></div>
+    </div>
+    <div style="padding:12px 0;font-size:10px;color:#888;border-top:1px solid #f0f0f0;margin-top:0">
+      To request a full export of your raw session records at any time: ask your administrator. The model view unlocks as the signal matures.
+    </div>
+  </div>
+</div>
+
+<div class="variant-label">DEVELOPING Tier — Sessions 7+: Mode signal + zone history</div>
+<div class="data-view" style="max-width:600px">
+  <div class="dv-header">
+    Your Data <span class="dv-tier">DEVELOPING</span>
+  </div>
+  <div class="dv-body">
+    <div class="terminal" style="margin:0;border:none;border-bottom:1px solid #1a1a1a">
+      <div class="t-dim">// model access: partial · sessions: 14</div>
+      <div style="margin-top:8px">The system's current approximation of your cognitive profile:</div>
+    </div>
+    <div style="padding:8px 0">
+      <div class="dv-row"><span class="dv-key">SPATIAL</span><span class="dv-val">Elo 740 · improving</span></div>
+      <div class="dv-row"><span class="dv-key">FORTRESS</span><span class="dv-val">Elo 610 · stable</span></div>
+      <div class="dv-row"><span class="dv-key">WORMHOLE</span><span class="dv-val">Elo 690 · improving</span></div>
+      <div class="dv-row"><span class="dv-key">DESTRUCTION</span><span class="dv-val">Elo 580 · early signal</span></div>
+      <div class="dv-row"><span class="dv-key">QUANTITY</span><span class="dv-val">Elo 720 · stable</span></div>
+      <div class="dv-row"><span class="dv-key">INVERSION</span><span class="dv-val">Elo 490 · early signal</span></div>
+      <div class="dv-row"><span class="dv-key">Last zone</span><span class="dv-val">PARALLEL · session 14</span></div>
+      <div class="dv-row"><span class="dv-key">Sessions recorded</span><span class="dv-val">14</span></div>
+      <div class="dv-row"><span class="dv-key">What the model uses</span><span class="dv-val">Game performance signals. No name. No location.</span></div>
+      <div class="dv-row"><span class="dv-key">Algorithm</span><span class="dv-locked">// not shown · that is the second game</span></div>
+      <div class="dv-row"><span class="dv-key">Raw session records</span><span class="dv-val">Available on request from your administrator</span></div>
+    </div>
+    <div style="padding:10px 0 0;font-size:9px;color:#888;border-top:1px solid #f0f0f0">
+      Request deletion or full export: contact your administrator. Deletion is permanent and removes the model and all underlying records.
+    </div>
+  </div>
+</div>
+
+<div class="variant-label">ALPHA Tier — Full model with provenance</div>
+<div class="data-view" style="max-width:640px">
+  <div class="dv-header">
+    Your Data <span class="dv-tier" style="border-color:#aaa;color:#ccc">ALPHA</span>
+  </div>
+  <div class="dv-body">
+    <div class="terminal" style="margin:0;border:none;border-bottom:1px solid #1a1a1a">
+      <div class="t-dim">// model access: full · sessions: 38 · tier: alpha</div>
+      <div style="margin-top:8px">You have earned visibility into the model.</div>
+      <div style="margin-top:4px">The formula remains inside the system. The outputs, the records that produced them, and the confidence levels are yours.</div>
+    </div>
+    <div style="padding:8px 0">
+      <div class="dv-row"><span class="dv-key">SPATIAL</span><span class="dv-val">Elo 820 ± 35 · n=11 sessions · velocity: +12/session</span></div>
+      <div class="dv-row"><span class="dv-key">FORTRESS</span><span class="dv-val">Elo 640 ± 48 · n=7 sessions · velocity: +3/session</span></div>
+      <div class="dv-row"><span class="dv-key">WORMHOLE</span><span class="dv-val">Elo 710 ± 40 · n=9 sessions · velocity: +6/session</span></div>
+      <div class="dv-row"><span class="dv-key">DESTRUCTION</span><span class="dv-val">Elo 600 ± 55 · n=5 sessions · velocity: stable</span></div>
+      <div class="dv-row"><span class="dv-key">QUANTITY</span><span class="dv-val">Elo 750 ± 38 · n=8 sessions · velocity: +5/session</span></div>
+      <div class="dv-row"><span class="dv-key">INVERSION</span><span class="dv-val">Elo 530 ± 62 · n=4 sessions · early signal <span class="t-amber" style="font-size:9px">LOW CONFIDENCE</span></span></div>
+      <div class="dv-row"><span class="dv-key">Zone trajectory</span><span class="dv-val">REMATCH → PARALLEL → PARALLEL → SHIFTING → RADICAL</span></div>
+      <div class="dv-row"><span class="dv-key">Sessions in ledger</span><span class="dv-val">38 sessions · first: 2025-09-04 · last: 2026-06-12</span></div>
+      <div class="dv-row"><span class="dv-key">Model basis</span><span class="dv-val">Game performance only. No external data. No name in ledger. Identifier: <code style="font-size:9px">hash:7d4a1f</code></span></div>
+      <div class="dv-row"><span class="dv-key">Export your records</span><span class="dv-val"><a href="#" style="color:#000;font-size:10px">Download as JSONL</a> · all 38 sessions · raw Layer 0</span></div>
+      <div class="dv-row"><span class="dv-key">Request deletion</span><span class="dv-val"><a href="#" style="color:#dc2626;font-size:10px">Delete all records and model</a> · permanent · cannot be undone</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="warn" style="max-width:640px">
+<strong>The algorithm — the specific weights, formulas, and parameters — does not appear in the student data view at any tier.</strong> Students have the right to know that a model exists, what it contains, and what data produced it. They do not have the right to the proprietary model internals. This distinction is legally correct and philosophically intentional. The second game — "what is the system actually measuring?" — remains playable.
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════ PARENTAL CONSENT -->
+<div id="panel-parent" class="panel">
+<h1>Parental Consent Form — Direct Consumer Deployment</h1>
+<p>Used when a student under 13 (US) or under 16 (EU) wants to participate and the school has not already provided consent through a DPA. Parent or guardian completes this. Tone: direct, warmer than the student-facing register, honest about what the system is.</p>
+
+<div class="inset">This form must be completed and submitted before the student's first session. It is not sent via the student's device — link it to a parent email. COPPA requires <em>verifiable</em> parental consent: the standard approach is to collect the form via a parent email address separate from the student's account.</div>
+
+<div style="border:1px solid #ddd;max-width:640px;margin:14px 0;padding:28px 32px">
+
+  <div style="border-bottom:2px solid #000;padding-bottom:14px;margin-bottom:20px">
+    <div style="font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:4px">Constellation</div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:3px">Parent / Guardian Consent</div>
+    <div style="font-size:10px;color:#555">For students under 13 (US) or under 16 (EU). Completing this form authorizes your child's participation and the collection of gameplay data described below.</div>
+  </div>
+
+  <h2 style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #ccc;padding-bottom:4px;margin-bottom:12px">What Constellation Is</h2>
+  <p style="font-size:11px;line-height:1.8;color:#333;margin-bottom:10px;max-width:100%">Constellation is a competitive multiplayer strategy game — one of the most configurationally variable and cognitively demanding available — with a development system built underneath it. The same rules produce genuinely different cognitive challenges depending on session parameters. That variability is the design, and it is what makes the game exceptional in its own right.</p>
+  <p style="font-size:11px;line-height:1.8;color:#333;margin-bottom:10px;max-width:100%">The system underneath the game observes how students play — the choices they make, how their strategy adapts — and builds a model of their cognitive strengths and development areas across six dimensions. That model is used to design better sessions.</p>
+  <p style="font-size:11px;line-height:1.8;color:#333;margin-bottom:18px;max-width:100%">This is disclosed to students before they play. The system is transparent about what it is.</p>
+
+  <h2 style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #ccc;padding-bottom:4px;margin-bottom:12px">What Is Collected</h2>
+  <table style="margin-bottom:16px">
+    <tr><th>Collected</th><th>Not collected</th></tr>
+    <tr><td>Game configuration per session (mode, settings)</td><td>Your child's name (a code is used instead)</td></tr>
+    <tr><td>Outcomes (rank, score, round results)</td><td>Location or device information</td></tr>
+    <tr><td>Behavioral signals (move timing, strategy adaptation)</td><td>Communications between players</td></tr>
+    <tr><td>A derived cognitive model (performance estimates per skill area)</td><td>Anything from outside the game</td></tr>
+  </table>
+
+  <h2 style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #ccc;padding-bottom:4px;margin-bottom:12px">Who Sees It</h2>
+  <p style="font-size:11px;line-height:1.8;color:#333;margin-bottom:16px;max-width:100%">The program administrator and (if applicable) your child's teacher. Your child sees their own data progressively as they advance through the program. Data is never sold or shared with any third party.</p>
+
+  <h2 style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #ccc;padding-bottom:4px;margin-bottom:12px">Your Rights as a Parent</h2>
+  <ul style="font-size:11px;line-height:1.8;color:#333;margin-bottom:16px;margin-left:18px;max-width:100%">
+    <li>Review your child's records at any time by contacting the program administrator</li>
+    <li>Request deletion of all records — this is permanent and cannot be undone</li>
+    <li>Withdraw consent at any time, which will result in deletion of all records and termination of your child's participation</li>
+    <li>Refuse consent to any future expansion of data collection (e.g., if the program adds new data types, new consent is required)</li>
+  </ul>
+
+  <div style="border:1px solid #ddd;padding:16px;margin-bottom:16px;background:#f9f9f9">
+    <h3 style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">Parent / Guardian Information</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div>
+        <label style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:3px;color:#555">Your full name</label>
+        <input type="text" placeholder="">
+      </div>
+      <div>
+        <label style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:3px;color:#555">Relationship to student</label>
+        <select><option>Parent</option><option>Guardian</option><option>Other authorized adult</option></select>
+      </div>
+    </div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:3px;color:#555">Your email address</label>
+      <input type="text" placeholder="">
+    </div>
+    <div>
+      <label style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:3px;color:#555">Student's name or identifier (as given by the program)</label>
+      <input type="text" placeholder="">
+    </div>
+  </div>
+
+  <div style="margin-bottom:14px">
+    <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px">
+      <input type="checkbox" id="pc1" style="width:auto;margin-top:2px;flex-shrink:0">
+      <label for="pc1" style="font-size:10px;color:#333;line-height:1.7">I have read the description above and understand that Constellation collects game performance data and builds a cognitive model of my child's gameplay. I authorize this collection.</label>
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px">
+      <input type="checkbox" id="pc2" style="width:auto;margin-top:2px;flex-shrink:0">
+      <label for="pc2" style="font-size:10px;color:#333;line-height:1.7">I understand I can request to review or delete my child's data at any time and that I can withdraw this consent at any time.</label>
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-start">
+      <input type="checkbox" id="pc3" style="width:auto;margin-top:2px;flex-shrink:0">
+      <label for="pc3" style="font-size:10px;color:#333;line-height:1.7">I confirm I am the parent or legal guardian of the student named above.</label>
+    </div>
+  </div>
+
+  <button class="gate-btn" style="max-width:320px">Submit Consent</button>
+  <div style="font-size:9px;color:#888;margin-top:8px;line-height:1.5">A confirmation will be sent to the email address above. Your child's account will be activated within 24 hours of submission.</div>
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════ SCHOOL DPA -->
+<div id="panel-dpa" class="panel">
+<h1>School Data Processing Agreement — Summary</h1>
+<p>The DPA is signed between the Constellation operator and the school before any students are enrolled. It covers FERPA compliance, defines responsibilities, and acts as parental consent for all enrolled students (including those under 13). The document below is the operational summary — legal counsel drafts the binding version from this.</p>
+
+<div class="inset">Once a DPA is in place, the school has consented on behalf of all enrolled students. The student onboarding screen can use Variant C (minimal acknowledgment). No separate parental consent forms are required unless a parent opts out.</div>
+
+<div style="border:1px solid #ddd;max-width:700px;margin:14px 0">
+  <div style="background:#000;color:#fff;padding:10px 18px;font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;display:flex;justify-content:space-between">
+    <span>Data Processing Agreement</span>
+    <span style="color:#555;font-weight:400">Summary Version</span>
+  </div>
+
+  <div style="padding:16px 18px;border-bottom:1px solid #eee">
+    <div style="font-size:10px;color:#555;margin-bottom:8px">Between: <strong style="color:#000">[School / District Name]</strong> (the School) and <strong style="color:#000">Constellation</strong> (the Operator)</div>
+    <div style="font-size:10px;color:#555">This agreement governs all student data processed by Constellation during the School's program. It satisfies FERPA requirements and, for students under 13, constitutes the school's COPPA authorization under the "school official" exception.</div>
+  </div>
+
+  <div class="dpa-col" style="border:none">
+    <div class="dpa-side">
+      <div class="dpa-side-label">The School Agrees To</div>
+      <div class="dpa-item"><span class="dpa-dot">·</span>Provide Constellation with an accurate list of enrolled students and their identifiers before program start</div>
+      <div class="dpa-item"><span class="dpa-dot">·</span>Notify Constellation within 30 days if a student withdraws from the program</div>
+      <div class="dpa-item"><span class="dpa-dot">·</span>Inform parents that Constellation is used for cognitive development assessment, with a link to the privacy policy, before students participate</div>
+      <div class="dpa-item"><span class="dpa-dot">·</span>Process and forward parental opt-out requests to Constellation within 5 business days</div>
+      <div class="dpa-item"><span class="dpa-dot">·</span>Maintain this agreement as a school record under FERPA</div>
+    </div>
+    <div class="dpa-side">
+      <div class="dpa-side-label">Constellation Agrees To</div>
+      <div class="dpa-item"><span class="dpa-dot">·</span>Collect only the data categories specified in this agreement and the privacy policy</div>
+      <div class="dpa-item"><span class="dpa-dot">·</span>Not sell, share, or use student data for advertising or any purpose beyond educational program delivery</div>
+      <div class="dpa-item"><span class="dpa-dot">·</span>Delete a student's records within 10 business days of receiving an opt-out or deletion request</div>
+      <div class="dpa-item"><span class="dpa-dot">·</span>Provide a full data export to the School upon request, within 15 business days</div>
+      <div class="dpa-item"><span class="dpa-dot">·</span>Delete all student data within 90 days of program termination, unless the School requests earlier deletion</div>
+      <div class="dpa-item"><span class="dpa-dot">·</span>Notify the School within 72 hours of any security incident affecting student data</div>
+      <div class="dpa-item"><span class="dpa-dot">·</span>Obtain new written consent before collecting any data category not listed in this agreement</div>
+    </div>
+  </div>
+
+  <div style="border-top:2px solid #000;padding:14px 18px">
+    <h3 style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">Data Categories Covered by This Agreement</h3>
+    <table>
+      <tr><th>Category</th><th>Purpose</th><th>Retention</th></tr>
+      <tr><td>Session configuration vectors</td><td>Reconstruct the challenge conditions that produced each observation</td><td>Duration of enrollment + 3 years</td></tr>
+      <tr><td>Session outcomes (rank, score)</td><td>Ground truth for Elo calculation and model update</td><td>Duration of enrollment + 3 years</td></tr>
+      <tr><td>Behavioral signals (timing, adaptation)</td><td>Fine-grained cognitive signal extraction</td><td>Duration of enrollment + 3 years</td></tr>
+      <tr><td>Derived cognitive model (mode Elo, velocity, zone history)</td><td>Session selection, teacher view, progressive student disclosure</td><td>Deleted when underlying records are deleted</td></tr>
+    </table>
+  </div>
+
+  <div style="border-top:1px solid #eee;padding:14px 18px">
+    <h3 style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Not Covered — Requires New Agreement</h3>
+    <div style="font-size:10px;color:#555;line-height:1.75">Any future data types not listed above — including data from external cognitive assessment instruments, brain metrics, or third-party systems — require a new or amended agreement before collection begins. The School will be notified in writing at least 30 days before any proposed expansion.</div>
+  </div>
+
+  <div style="background:#f5f5f5;border-top:2px solid #000;padding:14px 18px;display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div>
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;color:#555">School Authorized Signature</div>
+      <div style="border-bottom:1px solid #ccc;height:28px;margin-bottom:4px"></div>
+      <div style="font-size:9px;color:#888">Name, Title, Date</div>
+    </div>
+    <div>
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;color:#555">Constellation Operator Signature</div>
+      <div style="border-bottom:1px solid #ccc;height:28px;margin-bottom:4px"></div>
+      <div style="font-size:9px;color:#888">Name, Title, Date</div>
+    </div>
+  </div>
+</div>
+
+<div class="warn" style="max-width:700px">
+<strong>The DPA summary is not the binding legal document.</strong> It is the source of truth for what the binding document should say. Have a lawyer draft the actual DPA from this summary. The key things the lawyer must include: the FERPA "school official" designation, the COPPA school-authorization exception language, a data breach notification clause, and a governing law clause.
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════ DELETION FLOW -->
+<div id="panel-deletion" class="panel">
+<h1>Deletion Flow — What Happens When a Student or Parent Requests Deletion</h1>
+<p>The deletion flow must be documented, implemented, and communicated. These are the steps, the student-facing confirmation screen, and the terminal-voice version of the deletion receipt.</p>
+
+<div class="variant-label">Process — What Actually Happens on Deletion</div>
+<div style="max-width:600px;margin:14px 0">
+  <div class="del-step">
+    <div class="del-num">1</div>
+    <div class="del-content">
+      <div class="del-title">Request received</div>
+      <div class="del-body">Student, parent, or teacher submits deletion request. Request is logged with timestamp and requester identity. Processing begins within 24 hours.</div>
+    </div>
+  </div>
+  <div class="del-step">
+    <div class="del-num">2</div>
+    <div class="del-content">
+      <div class="del-title">Ledger records removed</div>
+      <div class="del-body">All JSONL records for this student identifier are deleted from the ledger files. The append-only nature of the ledger does not exempt records from deletion — a deletion marker is appended and the record is excluded from all reads, with physical removal at the next scheduled purge (within 30 days).</div>
+    </div>
+  </div>
+  <div class="del-step">
+    <div class="del-num">3</div>
+    <div class="del-content">
+      <div class="del-title">Derived model cleared</div>
+      <div class="del-body">All Layer 1 state for this student — mode Elo values, velocity, ZPD targets, zone history, session count — is deleted. These are views derived from Layer 0; they cannot persist after Layer 0 is removed.</div>
+    </div>
+  </div>
+  <div class="del-step">
+    <div class="del-num">4</div>
+    <div class="del-content">
+      <div class="del-title">Student identifier unlinked</div>
+      <div class="del-body">The mapping from the student's real identity (if confirmed) to their ledger hash is deleted. After this step, the hash is an orphan — even if a record remained, it could not be attributed to the student.</div>
+    </div>
+  </div>
+  <div class="del-step">
+    <div class="del-num">5</div>
+    <div class="del-content">
+      <div class="del-title">Confirmation sent</div>
+      <div class="del-body">Deletion receipt sent to the requester (student email or parent email). The receipt states what was deleted and confirms completion. No records remain.</div>
+    </div>
+  </div>
+</div>
+
+<div class="sep"></div>
+<div class="variant-label">Student-Facing Confirmation Screen — Before Deletion</div>
+<div class="onboard" style="max-width:500px;margin:0 auto">
+  <div class="ob-header">
+    <div class="ob-logo">Constellation</div>
+    <div class="ob-session" style="color:#dc2626">Deletion</div>
+  </div>
+  <div class="ob-body">
+    <div class="ob-eyebrow" style="color:#dc2626">Permanent action</div>
+    <div class="ob-headline" style="font-size:14px">Delete your record from the system</div>
+    <div class="ob-text">This will permanently delete your ledger — all 38 sessions — and the cognitive model built from them. Your session history, your zone trajectory, your mode Elo: gone.<br><br>This cannot be undone. If you rejoin the program, the system will start with no prior knowledge of you.</div>
+
+    <div class="terminal" style="margin:14px 0 16px;border-left:none;border:1px solid #333">
+      <div class="t-dim">// what will be deleted</div>
+      <div style="margin-top:8px">Sessions in ledger: <span class="t-white">38</span></div>
+      <div>Mode Elo values: <span class="t-white">6 dimensions</span></div>
+      <div>Zone history: <span class="t-white">38 entries</span></div>
+      <div>Student identifier link: <span class="t-white">hash:7d4a1f</span></div>
+      <div style="margin-top:8px" class="t-red">// permanent · no recovery</div>
+    </div>
+
+    <div class="ob-checkbox-row">
+      <input type="checkbox" id="del1">
+      <label class="ob-checkbox-label" for="del1">I understand this is permanent and cannot be undone.</label>
+    </div>
+    <button class="ob-btn" style="background:#dc2626;letter-spacing:1px;margin-top:10px">Delete My Records</button>
+    <div class="ob-small">Or: <a href="#" style="color:#888">cancel and return</a></div>
+  </div>
+</div>
+
+<div class="sep"></div>
+<div class="variant-label">Deletion Receipt — Sent to Student / Parent</div>
+<div class="terminal" style="max-width:580px">
+  <div class="t-dim">// constellation · deletion receipt</div>
+  <div style="margin-top:10px">Deletion request processed.</div>
+  <div style="margin-top:4px">Completed: <span class="t-white">2026-06-16 14:32 UTC</span></div>
+  <div style="margin-top:12px" class="t-dim">Records removed:</div>
+  <div style="margin-top:4px">— 38 session records (Layer 0 ledger)</div>
+  <div>— Cognitive model (Layer 1 state, all 6 modes)</div>
+  <div>— Zone trajectory history</div>
+  <div>— Student identifier mapping</div>
+  <div style="margin-top:12px">No records associated with this student remain in the system.</div>
+  <div style="margin-top:4px" class="t-dim">// the system has no memory of this student.</div>
+  <div style="margin-top:12px;font-size:9px;color:#444">Questions: contact your program administrator. Reference: DEL-2026-0616-7d4a</div>
+</div>
+
+<div class="sep"></div>
+<div class="warn" style="max-width:580px">
+<strong>One legal subtlety about the append-only ledger:</strong> GDPR Article 17 and COPPA both require actual deletion, not just flagging. The philosophical commitment to the ledger being append-only does not override the legal right to erasure. Implement a deletion flag that excludes records from all reads immediately, followed by physical removal at a scheduled purge. Document this in the DPA. "Records marked for deletion are excluded from all processing within 24 hours and physically removed within 30 days."
+</div>
+</div>
+
+
+</div><!-- /content -->
+
+<script>
+function show(id,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  el.classList.add('active');
+}
+</script>
+</body>
+</html>
