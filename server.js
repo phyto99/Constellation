@@ -999,6 +999,7 @@ class Player extends Schema {
         this.connectedAt = 0;
         this.isHost = false;
         this.isBot = false;
+        this.avatarUrl = '';
     }
 }
 
@@ -1011,6 +1012,7 @@ type('number')(Player.prototype, 'connectedAt');
 type('string')(Player.prototype, 'studentId');
 type('number')(Player.prototype, 'movesLeft');
 type('boolean')(Player.prototype, 'isBot');
+type('string')(Player.prototype, 'avatarUrl');
 
 class RoomState extends Schema {
     constructor() {
@@ -2413,6 +2415,7 @@ class ConstellationRoom extends Room {
         player.connected = true;
         player.connectedAt = Date.now();
         player.isHost = isFirstPlayer;
+        player.avatarUrl = options.avatarUrl || '';
 
         this.state.players.set(client.sessionId, player);
 

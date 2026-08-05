@@ -2252,6 +2252,12 @@ Based on the strategy description above, generate the complete JSON configuratio
             currentRoom.onMessage('room_created', (data) => {
                 console.log('Room created response:', data);
                 if (data.success) {
+                    // When embedded (e.g. inside activity.html's session overlay),
+                    // tell the host page the roomId so it can let other
+                    // participants auto-join the same room.
+                    if (window.parent !== window) {
+                        window.parent.postMessage({ type: 'craetio:room_created', roomId: data.roomId, gameUrl: data.gameUrl }, '*');
+                    }
                     alert(`Game created! Room ID: ${data.roomId}`);
                     // Request updated rooms list
                     setTimeout(() => {
@@ -2734,10 +2740,11 @@ Based on the strategy description above, generate the complete JSON configuratio
                         headquarters:    parseInt(document.getElementById('edit-hqMax').value)           || 2,
                         multipliers,
                         aiBots: getAdminAIBots(),
-                        teamColors: colorTeamColors.map(tc => ({
+                        teamColors: colorTeamColors.map((tc, i) => ({
                             color:       (tc.rgb[0] << 16) | (tc.rgb[1] << 8) | tc.rgb[2],
                             name:        tc.name.toLowerCase(),
                             displayName: tc.name.charAt(0).toUpperCase() + tc.name.slice(1),
+                            channelName: teamChannelNames[i] || '',
                         })),
                         allowPlayerTeamSelection: document.getElementById('edit-allowPlayerTeamSelection').checked,
                         ithkuilNumerals:          document.getElementById('edit-ithkuilNumerals').checked,
@@ -3718,6 +3725,10 @@ Based on the strategy description above, generate the complete JSON configuratio
 
         let colorPlayers = [];
         let colorTeamColors = [];
+        // Voice-channel name presumed for each team, keyed by team index.
+        // Purely advisory — the game doesn't detect real channel occupancy,
+        // it just tells players which channel to move to for their team.
+        let teamChannelNames = {};
         let colorGameMode = false;
         let colorCurrentMode = 'normal';
         let colorDraggedPlayer = null;
@@ -4031,10 +4042,19 @@ Based on the strategy description above, generate the complete JSON configuratio
                         <div class="team-color-swatch" style="background: ${hexColor}"></div>
                         <div class="team-color-info">
                             <div class="team-color-name">${color.name}</div>
+                            <input type="text" class="team-channel-input" data-team-index="${index}"
+                                   value="${teamChannelNames[index] || ''}"
+                                   placeholder="voice channel for this team"
+                                   style="width:100%;margin-top:4px;background:#111;border:1px solid #333;color:#fff;font-size:11px;padding:3px 6px;border-radius:3px;">
                         </div>
                     </div>
                     <div class="team-color-players" id="color-team-${index}"></div>
                 `;
+
+                slot.querySelector('.team-channel-input').addEventListener('input', (e) => {
+                    teamChannelNames[index] = e.target.value;
+                    sendSettingsUpdate();
+                });
 
                 slot.addEventListener('dragover', (e) => {
                     e.preventDefault();
