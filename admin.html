@@ -2106,6 +2106,18 @@ Based on the strategy description above, generate the complete JSON configuratio
             if (errorDiv) errorDiv.style.display = 'none';
         }
 
+        // Discord's shared Activity-instance ID, forwarded via query string
+        // when this page is opened inside index.html's session overlay —
+        // tags any room created here so other participants' tabs can find it.
+        const discordInstanceId = new URLSearchParams(location.search).get('discordInstanceId') || null;
+        // Only Constellation's room state is understood by the Discord
+        // activity's live team/channel view — default to it here so hosts
+        // don't have to remember to switch off the usual default (Proxima).
+        if (discordInstanceId) {
+            const gameTypeSelect = document.getElementById('game-type');
+            if (gameTypeSelect) gameTypeSelect.value = 'Constellation';
+        }
+
         // Colyseus Connection
         let client = null;
         let currentRoom = null;
@@ -3282,10 +3294,25 @@ Based on the strategy description above, generate the complete JSON configuratio
                     isAdmin:    true,
                     ...settings,
                     ...(aiBots.length ? { aiBots } : {}),
+                    ...(discordInstanceId ? { discordInstanceId } : {}),
                 };
 
                 const room = await client.create(schema.roomType, roomOptions);
                 console.log('✓ Room created:', room.roomId);
+
+                // When embedded in the Discord activity's session overlay,
+                // tell the parent page so it can auto-join this same room —
+                // the AdminRoom-relay 'room_created' message below never
+                // actually fires for this button (it uses client.create()
+                // directly, not the AdminRoom's create_room message).
+                if (window.parent !== window) {
+                    window.parent.postMessage({
+                        type: 'craetio:room_created',
+                        roomId: room.roomId,
+                        gameUrl: schema.joinPath(room.roomId, roomOptions, getRoomRuntime(room.roomId)),
+                    }, '*');
+                }
+
                 room.leave(); // admin doesn't need to stay joined as a client
 
                 // Clear the game name input

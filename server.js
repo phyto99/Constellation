@@ -1144,7 +1144,12 @@ class ConstellationRoom extends Room {
             createdAt: new Date().toISOString(),
             maxPlayers: this.maxClients,
             clients: 0,
-            sessionNumber: this.sessionNumber
+            sessionNumber: this.sessionNumber,
+            // Discord's shared Activity-instance ID, when this room was created
+            // from inside a Discord session — lets every participant's own
+            // Activity tab find "the room made for my voice channel" without
+            // anyone pasting a link.
+            discordInstanceId: options.discordInstanceId || null
         });
 
         // Listen for compiler-apply pushes from HTTP API
@@ -3188,7 +3193,8 @@ class GoladRoom extends Room {
             gameState:  'waiting',
             createdAt:  new Date().toISOString(),
             maxPlayers: this.maxClients,
-            clients:    0
+            clients:    0,
+            discordInstanceId: options.discordInstanceId || null
         });
 
         if (this.presence) {
@@ -3525,7 +3531,7 @@ class CentauriRoom extends Room {
                 { color: 0xffcc00, name: 'gold'    },
             ],
         };
-        this.setMetadata({ name: this.gameConfig.name, type: 'Centauri', state: 'waiting' });
+        this.setMetadata({ name: this.gameConfig.name, type: 'Centauri', state: 'waiting', discordInstanceId: options.discordInstanceId || null });
 
         this.presence.subscribe(`room_${this.roomId}`, (data) => {
             if (data.type === 'update_settings') {
@@ -4105,7 +4111,7 @@ class GeobridgeRoom extends BaseGameRoom {
         this.onMessage('playCard',      this._onPlayCard.bind(this));
         this.onMessage('resolveHand',   this._onResolveHand.bind(this));
         this.onMessage('alliance',      this._onAlliance.bind(this));
-        this.setMetadata({ gameType: 'geobridge', sessionCode: options.sessionCode || null });
+        this.setMetadata({ gameType: 'geobridge', sessionCode: options.sessionCode || null, discordInstanceId: options.discordInstanceId || null });
     }
 
     onJoin(client, options) {
@@ -4348,6 +4354,7 @@ class C4DRoom extends BaseGameRoom {
         super.onCreate(options); // registers force_dispose + update_settings handlers
         this.autoDispose = false;
         this.maxClients  = options.maxPlayers || 20;
+        this.discordInstanceId = options.discordInstanceId || null;
 
         const state = new RoomState();
         state.gameState = 'waiting';
@@ -4502,6 +4509,7 @@ class C4DRoom extends BaseGameRoom {
             createdAt:  this.metadata?.createdAt || new Date().toISOString(),
             maxPlayers: this.maxClients,
             clients:    this.clients.length,
+            discordInstanceId: this.discordInstanceId,
         });
     }
 }
