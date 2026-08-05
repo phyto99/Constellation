@@ -1592,7 +1592,10 @@
         <iframe id="colorOptimizerFrameExpanded" src="color.html?embed=true"></iframe>
     </div>
 
-    <script src="https://unpkg.com/colyseus.js@0.15.24/dist/colyseus.js"></script>
+    <!-- Self-hosted, not CDN — Discord's Activity proxy CSP blocks
+         cross-origin script loads, which silently left Colyseus undefined
+         whenever this page is opened inside the Discord-embedded flow. -->
+    <script src="/node_modules/colyseus.js/dist/colyseus.js"></script>
     <script src="game-registry.js"></script>
     <script>
         // AI Bot Types Configuration (same as index.html)
