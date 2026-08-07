@@ -4518,10 +4518,10 @@
                 this.lastRejectedMove = null; // { starIndex, reason, timestamp }
                 
                 // PERFORMANCE: Per-bot cooldowns to prevent spam
+                // Derived from moveDelay (see shouldMakeMove) so aggression scales cooldowns too,
+                // instead of a flat 500/1000ms that dwarfed the aggression curve at high settings.
                 this.lastSuccessfulMoveTime = 0;  // Last successful move
                 this.lastFailedMoveTime = 0;      // Last failed/rejected move
-                this.successCooldown = 500;       // 500ms after successful move
-                this.failureCooldown = 1000;      // 1000ms after failed move
                 this.consecutiveFailures = 0;     // Track repeated failures
                 
                 // PERFORMANCE: Cached game state analysis
@@ -4530,24 +4530,28 @@
             }
 
             calculateMoveDelay() {
-                // INCREASED delays for better performance: 500ms to 1500ms
-                const baseDelay = 1800 - (this.aggression * 150);
-                const randomVariation = Math.random() * 200 - 100;
-                return Math.max(500, baseDelay + randomVariation);
+                // Geometric curve so aggression actually differentiates bot speed:
+                // aggression 2 lands ~500ms (old aggression-9 speed), aggression 9 ~40ms (near-instant).
+                const baseDelay = 500 * Math.pow(0.7, this.aggression - 2);
+                const randomVariation = baseDelay * (Math.random() * 0.2 - 0.1); // +/-10%
+                return Math.max(30, baseDelay + randomVariation);
             }
 
             shouldMakeMove(currentTime, gameState) {
-                // PERFORMANCE: Check cooldowns first (cheapest check)
+                // Cooldowns are derived from moveDelay (not flat constants) so aggression scales them too.
+                const successCooldown = this.moveDelay * 0.5;
+                const failureCooldown = this.moveDelay;
+
                 const timeSinceSuccess = currentTime - this.lastSuccessfulMoveTime;
                 const timeSinceFailure = currentTime - this.lastFailedMoveTime;
-                
+
                 // Enforce cooldowns
-                if (timeSinceSuccess < this.successCooldown) return false;
-                if (timeSinceFailure < this.failureCooldown) return false;
-                
+                if (timeSinceSuccess < successCooldown) return false;
+                if (timeSinceFailure < failureCooldown) return false;
+
                 // Exponential backoff for repeated failures
                 if (this.consecutiveFailures > 0) {
-                    const backoffTime = this.failureCooldown * Math.pow(1.5, Math.min(this.consecutiveFailures, 4));
+                    const backoffTime = failureCooldown * Math.pow(1.5, Math.min(this.consecutiveFailures, 4));
                     if (timeSinceFailure < backoffTime) return false;
                 }
                 
@@ -5191,25 +5195,90 @@
             }
 
             tryWormhole(game, gameState) {
-                // Einstein's specialty: target wormholes - PERFORMANCE OPTIMIZED
-                const maxSearch = Math.min(game.st.length, 50);
-                const wormholes = [];
-                
-                // Sample efficiently
-                const step = Math.max(1, Math.floor(game.st.length / maxSearch));
-                for (let i = 0; i < game.st.length && wormholes.length < maxSearch; i += step) {
-                    const star = game.st[i];
-                    if (star.ty === T.W && (star.tm === null || star.tm === this.teamIndex)) {
-                        wormholes.push({ star, index: i });
+                // Einstein's specialty: target AND connect wormholes.
+                // Reuses this.specialStars (already computed by analyzeGameState, cached 1s)
+                // instead of re-scanning the map, so this stays as cheap as the other bots' strategies.
+                const wormholeIndices = [];
+                for (const [index, type] of this.specialStars) {
+                    if (type === 'wormhole' && !game.st[index].destroyed) wormholeIndices.push(index);
+                }
+                if (wormholeIndices.length === 0) return null;
+
+                const owned = wormholeIndices.filter(i => game.st[i].tm === this.teamIndex);
+                const unclaimed = wormholeIndices.filter(i => game.st[i].tm === null);
+
+                // Own at least one wormhole and there's another one out there — path toward linking them,
+                // one step at a time, via a bounded search (same cost ballpark as the other strategies'
+                // bounded candidate scans, so this doesn't make Einstein laggier than the rest).
+                if (owned.length > 0) {
+                    const others = wormholeIndices.filter(i => !owned.includes(i));
+                    if (others.length > 0) {
+                        const from = owned[0];
+                        const target = this.findNearestStarByDistance(game, from, others);
+                        const nextStep = this.findNextStepToward(game, from, target, 40);
+                        if (nextStep !== null) {
+                            const star = game.st[nextStep];
+                            if (star.tm === null) return { type: 'capture', target: nextStep };
+                            if (star.tm !== this.teamIndex && !star.hq && !star.pr) {
+                                return { type: 'steal', target: nextStep };
+                            }
+                        }
                     }
                 }
 
-                if (wormholes.length === 0) return null;
-
-                // Prefer unclaimed wormholes
-                const unclaimed = wormholes.filter(({ star }) => star.tm === null);
+                // No owned wormhole yet (or path already fully connected) — grab any unclaimed one.
                 if (unclaimed.length > 0) {
-                    return { type: 'capture', target: unclaimed[0].index };
+                    return { type: 'capture', target: this.findNearestStarByDistance(game, owned[0] ?? unclaimed[0], unclaimed) };
+                }
+
+                return null;
+            }
+
+            // Straight-line nearest-star heuristic — used to pick a BFS target cheaply, not as the path itself.
+            findNearestStarByDistance(game, fromIndex, candidateIndices) {
+                const from = game.st[fromIndex];
+                let best = candidateIndices[0];
+                let bestDist = Infinity;
+                for (const idx of candidateIndices) {
+                    const s = game.st[idx];
+                    const d = (s.x - from.x) ** 2 + (s.y - from.y) ** 2;
+                    if (d < bestDist) { bestDist = d; best = idx; }
+                }
+                return best;
+            }
+
+            // Bounded BFS toward a target star, capped at maxNodes explored so it stays cheap
+            // regardless of map size. Returns the first hop out of `startIndex` along the shortest
+            // known path, or null if the target isn't reachable within the node budget.
+            findNextStepToward(game, startIndex, targetIndex, maxNodes) {
+                if (startIndex === targetIndex) return null;
+
+                const visited = new Set([startIndex]);
+                const parent = new Map();
+                const queue = [startIndex];
+                let explored = 0;
+
+                while (queue.length > 0 && explored < maxNodes) {
+                    const current = queue.shift();
+                    explored++;
+                    const neighbors = game.adjacencyCache[current] || [];
+
+                    for (const next of neighbors) {
+                        if (visited.has(next)) continue;
+                        const star = game.st[next];
+                        if (star.destroyed) continue;
+                        if (star.hq && star.tm !== this.teamIndex) continue; // don't path through enemy HQs
+
+                        visited.add(next);
+                        parent.set(next, current);
+
+                        if (next === targetIndex) {
+                            let step = next;
+                            while (parent.get(step) !== startIndex) step = parent.get(step);
+                            return step;
+                        }
+                        queue.push(next);
+                    }
                 }
 
                 return null;
@@ -5449,43 +5518,13 @@
                 // AI Bot System
                 this.aiBots = (s.aiBots || []).map(b => b instanceof AIBot ? b : AIBot.fromData(b));
                 this.lastAIUpdate = 0;
-                
-                // INTELLIGENT BOT THROTTLING based on map complexity
-                const mapComplexity = this.calculateMapComplexity();
-                const botCount = this.aiBots.length;
-                
-                // INCREASED base intervals for better performance (200-1000ms)
-                // Small maps (complexity < 500): 200-300ms
-                // Medium maps (500-2000): 300-500ms  
-                // Large maps (2000-5000): 500-800ms
-                // Huge maps (5000+): 800-1000ms
-                let baseInterval = 200;
-                if (mapComplexity > 5000) baseInterval = 800;
-                else if (mapComplexity > 2000) baseInterval = 500;
-                else if (mapComplexity > 500) baseInterval = 300;
-                
-                // Increase interval with more bots (more bots = more processing)
-                const botMultiplier = 1 + (botCount * 0.2); // +20% per bot
-                this.aiUpdateInterval = Math.floor(baseInterval * botMultiplier);
-                
-                // AGGRESSIVE staggering - only 1-2 bots per cycle on large maps
-                if (mapComplexity > 2000) {
-                    this.aiBotsPerUpdate = Math.max(1, Math.ceil(botCount / 8)); // Update 12.5% of bots
-                } else if (mapComplexity > 500) {
-                    this.aiBotsPerUpdate = Math.max(1, Math.ceil(botCount / 5)); // Update 20% of bots
-                } else {
-                    this.aiBotsPerUpdate = Math.max(1, Math.ceil(botCount / 3)); // Update 33% of bots
-                }
-                this.currentAIBotIndex = 0; // Round-robin bot updates
-                
+
                 // Game state analysis cache (reuse for 1 second)
                 this.gameStateCache = null;
                 this.gameStateCacheTime = 0;
                 this.gameStateCacheDuration = 1000; // 1 second cache
-                
-                console.log(`🤖 Bot throttling: ${botCount} bots, complexity ${mapComplexity}, interval ${this.aiUpdateInterval}ms, ${this.aiBotsPerUpdate} bots/update`);
-                
-                this.lastFrameTime = performance.now(); // For performance monitoring
+
+                this.lastFrameTime = performance.now(); // For performance monitoring (frame-drop circuit breaker in updateAIBots)
                 this.lastScoreUpdate = 0; // For throttling score updates in multiplayer
 
                 // Multiplayer cursor tracking
@@ -6504,43 +6543,6 @@
                 this.checkStateChanges();
             }
 
-            // Calculate map complexity for bot throttling
-            // Returns a complexity score based on stars, connections, and density variance
-            calculateMapComplexity() {
-                const starCount = this.st.length;
-                const lineCount = this.lineData.length;
-                
-                // Base complexity from star and line count
-                let complexity = starCount + (lineCount * 0.5);
-                
-                // Calculate density variance (how unevenly distributed stars are)
-                // Divide map into grid cells and measure variance
-                const gridSize = 10; // 10x10 grid
-                const cellWidth = this.MW / gridSize;
-                const cellHeight = this.MH / gridSize;
-                const grid = Array(gridSize).fill(0).map(() => Array(gridSize).fill(0));
-                
-                // Count stars per cell
-                this.st.forEach(star => {
-                    const cellX = Math.min(gridSize - 1, Math.floor(star.x / cellWidth));
-                    const cellY = Math.min(gridSize - 1, Math.floor(star.y / cellHeight));
-                    grid[cellX][cellY]++;
-                });
-                
-                // Calculate variance (higher variance = more uneven = more complex for bots)
-                const cellCounts = grid.flat();
-                const avgDensity = starCount / (gridSize * gridSize);
-                const variance = cellCounts.reduce((sum, count) => {
-                    return sum + Math.pow(count - avgDensity, 2);
-                }, 0) / cellCounts.length;
-                
-                // Add variance factor (normalized)
-                const densityFactor = Math.sqrt(variance) * 10;
-                complexity += densityFactor;
-                
-                return Math.floor(complexity);
-            }
-
             calcScores() {
                 this.tms.forEach(t => t.s = 0);
                 this.teamScoreData = this.tms.map((team, idx) => ({
@@ -7557,8 +7559,10 @@
             }
 
             updateAIBots(currentTime) {
+                if (this.aiBots.length === 0 || this.p || this.go) return;
+
                 // Debug logging for AI bot updates (every 10 seconds to reduce spam)
-                if (this.aiBots.length > 0 && currentTime - this.lastAIUpdate > 10000) {
+                if (currentTime - this.lastAIUpdate > 10000) {
                     console.log('🤖 AI Bot Status:', {
                         botCount: this.aiBots.length,
                         planning: this.p,
@@ -7575,84 +7579,36 @@
                             lastMoveTime: b.lastMoveTime
                         }))
                     });
+                    this.lastAIUpdate = currentTime;
                 }
 
-                // PERFORMANCE: Adaptive AI update interval based on frame time
+                // PERFORMANCE: if the browser is already struggling to hit ~30fps, skip bot
+                // logic entirely this frame rather than queuing it up — give rendering the frame.
                 const frameTime = performance.now() - (this.lastFrameTime || performance.now());
                 this.lastFrameTime = performance.now();
+                if (frameTime > 33) return;
 
-                // AGGRESSIVE adaptive throttling - react to poor performance
-                if (frameTime > 33) {
-                    // < 30 FPS: DOUBLE interval (emergency slowdown)
-                    this.aiUpdateInterval = Math.min(2000, this.aiUpdateInterval * 2);
-                } else if (frameTime > 20) {
-                    // < 50 FPS: Increase interval by 20%
-                    this.aiUpdateInterval = Math.min(1500, this.aiUpdateInterval * 1.2);
-                } else if (frameTime < 10) {
-                    // > 100 FPS: Can afford to speed up slightly
-                    this.aiUpdateInterval = Math.max(200, this.aiUpdateInterval * 0.95);
-                }
-
-                // CRITICAL: Process bots asynchronously to prevent blocking rendering
-                if (!this.p && !this.go && this.aiBots.length > 0) {
-                    // Only update AI during active gameplay, not planning or game over
-                    if (currentTime - this.lastAIUpdate > this.aiUpdateInterval) {
-                        // Schedule bot updates during idle time (non-blocking)
-                        this.scheduleBotUpdates(currentTime, frameTime);
-                        this.lastAIUpdate = currentTime;
-                    }
-                }
-            }
-
-            scheduleBotUpdates(currentTime, frameTime) {
-                // PERFORMANCE: Use requestIdleCallback for non-blocking bot updates
-                // This ensures player input and camera remain smooth even under heavy load
-                
-                const botsToUpdate = Math.min(this.aiBotsPerUpdate, this.aiBots.length);
-                let botsProcessed = 0;
+                // Every bot is checked every frame — no rotating subset, no artificial batching.
+                // bot.makeMove() bails out near-instantly (a handful of comparisons) for any bot
+                // that isn't due to act yet, so this stays cheap; the only real cost is the
+                // strategy computation for bots that ARE actually due, which is naturally spread
+                // out over time by each bot's own moveDelay rather than clumped onto a shared tick.
                 let anyMovesMade = false;
-
-                const processBotBatch = () => {
-                    // Process bots in small batches to avoid blocking
-                    const batchSize = Math.min(2, botsToUpdate - botsProcessed);
-                    
-                    for (let i = 0; i < batchSize && botsProcessed < botsToUpdate; i++) {
-                        const botIndex = (this.currentAIBotIndex + botsProcessed) % this.aiBots.length;
-                        const bot = this.aiBots[botIndex];
-                        botsProcessed++;
-
-                        if (bot.makeMove(this)) {
-                            this.deferredScoreUpdate = true;
-                            anyMovesMade = true;
-                        }
+                for (const bot of this.aiBots) {
+                    if (bot.makeMove(this)) {
+                        this.deferredScoreUpdate = true;
+                        anyMovesMade = true;
                     }
+                }
 
-                    // If more bots to process, schedule next batch
-                    if (botsProcessed < botsToUpdate) {
-                        // Use setTimeout with 0 delay to yield to browser
-                        setTimeout(processBotBatch, 0);
+                if (anyMovesMade) {
+                    const isMultiplayer = gameClientManager && gameClientManager.isConnected;
+                    if (!isMultiplayer) {
+                        this.calcScores();
+                        this.updateUI();
                     } else {
-                        // All bots processed, update UI if needed
-                        this.currentAIBotIndex = (this.currentAIBotIndex + botsProcessed) % this.aiBots.length;
-                        
-                        if (anyMovesMade) {
-                            const isMultiplayer = gameClientManager && gameClientManager.isConnected;
-                            if (!isMultiplayer) {
-                                this.calcScores();
-                                this.updateUI();
-                            } else {
-                                this.deferredScoreUpdate = true;
-                            }
-                        }
+                        this.deferredScoreUpdate = true;
                     }
-                };
-
-                // Start processing first batch
-                // Use requestIdleCallback if available, otherwise setTimeout
-                if (typeof requestIdleCallback !== 'undefined') {
-                    requestIdleCallback(processBotBatch, { timeout: 50 });
-                } else {
-                    setTimeout(processBotBatch, 0);
                 }
             }
 
