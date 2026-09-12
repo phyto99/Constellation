@@ -1088,6 +1088,13 @@
                 <h1>Constellation Admin Panel</h1>
                 <h2>Select a Game</h2>
                 <p>No games created yet. Create a new game to get started.</p>
+                <div id="resume-prompt" class="create-section" style="display: none; margin-top: 16px; max-width: 320px;">
+                    <h3>Resume hosting</h3>
+                    <p style="font-size: 12px; color: #666; margin-bottom: 8px;">
+                        "<span id="resume-room-name"></span>" is still running.
+                    </p>
+                    <button onclick="resumeLastHosted()" style="width: 100%;">Resume hosting</button>
+                </div>
             </div>
         </div>
 
@@ -2421,6 +2428,32 @@ Based on the strategy description above, generate the complete JSON configuratio
             if (pastCount === 0) {
                 pastGames.innerHTML = '<p>No recorded past games</p>';
             }
+
+            renderResumePrompt();
+        }
+
+        // Shows a "Resume hosting" card in the empty state when this browser
+        // was last looking at a room that's still alive server-side. Self-
+        // cleaning: a stale/closed room just quietly stops showing it.
+        function renderResumePrompt() {
+            const prompt = document.getElementById('resume-prompt');
+            const lastRoomId = localStorage.getItem('craetio_last_room');
+            const room = lastRoomId && latestRoomsData.find(r => r.roomId === lastRoomId);
+
+            if (!room || lastRoomId === selectedRoomId) {
+                if (!room) localStorage.removeItem('craetio_last_room');
+                prompt.style.display = 'none';
+                return;
+            }
+
+            const name = room.metadata?.name || `Game ${room.roomId.substring(0, 6)}`;
+            document.getElementById('resume-room-name').textContent = name;
+            prompt.style.display = 'block';
+        }
+
+        function resumeLastHosted() {
+            const lastRoomId = localStorage.getItem('craetio_last_room');
+            if (lastRoomId) selectRoom(lastRoomId);
         }
 
         function createRoomElement(room) {
@@ -2497,6 +2530,7 @@ Based on the strategy description above, generate the complete JSON configuratio
         function selectRoom(roomId) {
             console.log('Selected room:', roomId);
             selectedRoomId = roomId;
+            localStorage.setItem('craetio_last_room', roomId);
 
             // Populate settings if available
             const roomData = latestRoomsData.find(r => r.roomId === roomId);
@@ -3282,6 +3316,7 @@ Based on the strategy description above, generate the complete JSON configuratio
             selectedRoomId = null;
             document.getElementById('no-game-selected').style.display = 'block';
             document.getElementById('game-content').style.display = 'none';
+            renderResumePrompt();
 
             // Reset button states
             document.getElementById('start-btn').style.display = 'inline-block';
@@ -3640,11 +3675,16 @@ Based on the strategy description above, generate the complete JSON configuratio
                     currentRoom.send('delete_room', { roomId: selectedRoomId });
                     console.log('✓ Room delete command sent via AdminRoom');
 
+                    if (localStorage.getItem('craetio_last_room') === selectedRoomId) {
+                        localStorage.removeItem('craetio_last_room');
+                    }
+
                     // Clear selection
                     document.getElementById('no-game-selected').style.display = 'block';
                     document.getElementById('game-content').style.display = 'none';
 
                     selectedRoomId = null;
+                    renderResumePrompt();
                 }
             } catch (error) {
                 console.error('Failed to delete game:', error);
