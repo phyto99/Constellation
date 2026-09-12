@@ -146,6 +146,11 @@
             font-size: 12px;
         }
 
+        .privacy-label {
+            font-size: 12px;
+            color: #374151;
+        }
+
         .privacy-toggle {
             background: #9ca3af;
             color: black;
@@ -1164,7 +1169,8 @@
                         <h3 id="scenario-name">Game Session</h3>
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <span class="privacy-toggle" id="privacy-toggle" onclick="togglePrivacy(event)" title="Click to toggle whether this session is joinable via the room list or link-only">&#128065; Public</span>
+                        <span class="privacy-label">&#128065; =</span>
+                        <span class="privacy-toggle" id="privacy-toggle" onclick="togglePrivacy(event)" title="Click to toggle whether this session is joinable via the room list or link-only">Public</span>
                         <span class="scenario-status" id="scenario-status">Waiting</span>
                         <span id="scenario-toggle">▼</span>
                     </div>
@@ -2499,7 +2505,7 @@ Based on the strategy description above, generate the complete JSON configuratio
 
             const privacyEl = document.getElementById('privacy-toggle');
             const isPrivate = !!roomData?.metadata?.isPrivate;
-            privacyEl.innerHTML = isPrivate ? '&#128065; Private' : '&#128065; Public';
+            privacyEl.textContent = isPrivate ? 'Private' : 'Public';
             privacyEl.classList.toggle('is-private', isPrivate);
 
             if (!roomData) {
@@ -3704,7 +3710,7 @@ Based on the strategy description above, generate the complete JSON configuratio
             if (!currentRoom || !selectedRoomId) return;
             const el = document.getElementById('privacy-toggle');
             const next = !el.classList.contains('is-private');
-            el.innerHTML = next ? '&#128065; Private' : '&#128065; Public';
+            el.textContent = next ? 'Private' : 'Public';
             el.classList.toggle('is-private', next);
             currentRoom.send('set_private', { roomId: selectedRoomId, isPrivate: next });
         }
