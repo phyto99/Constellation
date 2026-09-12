@@ -1092,6 +1092,7 @@ class ConstellationRoom extends Room {
         this.autoDispose = false;
 
         this.maxClients = options.maxPlayers || 20;
+        this.isPrivate = !!options.isPrivate;
 
         // Assign sequential session number from counter
         this.sessionNumber = this.getNextSessionNumber();
@@ -1151,7 +1152,8 @@ class ConstellationRoom extends Room {
             // from inside a Discord session — lets every participant's own
             // Activity tab find "the room made for my voice channel" without
             // anyone pasting a link.
-            discordInstanceId: options.discordInstanceId || null
+            discordInstanceId: options.discordInstanceId || null,
+            isPrivate: this.isPrivate
         });
 
         // Listen for compiler-apply pushes from HTTP API
@@ -1250,6 +1252,10 @@ class ConstellationRoom extends Room {
                         // Call this BEFORE start_game for contaminated (announced) sessions.
                         this.gameConfig.invAnnounced = true;
                         console.log(`📣 INV announced for room ${this.roomId} — session marked as contaminated`);
+                    } else if (msg.type === 'set_private') {
+                        this.isPrivate = !!msg.isPrivate;
+                        this.setMetadata({ ...this.metadata, isPrivate: this.isPrivate });
+                        this.updateAdminRoom();
                     } else if (msg.type === 'force_dispose') {
                         // lock and disconnect all clients, the room will auto-dispose
                         this.locked = true;
@@ -3193,6 +3199,8 @@ class GoladRoom extends Room {
 
         this.playerTeams = new Map(); // sessionId → 0|1 or -1 (observer)
 
+        this.isPrivate = !!options.isPrivate;
+
         this.setMetadata({
             name:       this.goladConfig.name,
             type:       'GOLAD',
@@ -3200,7 +3208,8 @@ class GoladRoom extends Room {
             createdAt:  new Date().toISOString(),
             maxPlayers: this.maxClients,
             clients:    0,
-            discordInstanceId: options.discordInstanceId || null
+            discordInstanceId: options.discordInstanceId || null,
+            isPrivate: this.isPrivate
         });
 
         if (this.presence) {
@@ -3210,6 +3219,9 @@ class GoladRoom extends Room {
                     if (this.goladState.gamePhase === 'waiting') this.startGoladGame();
                 } else if (msg.type === 'force_dispose') {
                     this.disconnect();
+                } else if (msg.type === 'set_private') {
+                    this.isPrivate = !!msg.isPrivate;
+                    this.refreshMetadata();
                 } else if (msg.type === 'update_settings' && msg.settings) {
                     const s = msg.settings;
                     if (s.boardSize   !== undefined) this.goladConfig.boardSize  = s.boardSize;
@@ -3287,7 +3299,9 @@ class GoladRoom extends Room {
             type:       'GOLAD',
             gameState:  this.goladState.gamePhase,
             maxPlayers: this.maxClients,
-            clients:    this.clients.length
+            clients:    this.clients.length,
+            discordInstanceId: this.metadata?.discordInstanceId ?? null,
+            isPrivate:  this.isPrivate
         });
         if (this.presence) {
             const players = this.clients.map(c => ({
@@ -3537,9 +3551,15 @@ class CentauriRoom extends Room {
                 { color: 0xffcc00, name: 'gold'    },
             ],
         };
-        this.setMetadata({ name: this.gameConfig.name, type: 'Centauri', state: 'waiting', discordInstanceId: options.discordInstanceId || null });
+        this.isPrivate = !!options.isPrivate;
+        this.setMetadata({ name: this.gameConfig.name, type: 'Centauri', state: 'waiting', discordInstanceId: options.discordInstanceId || null, isPrivate: this.isPrivate });
 
         this.presence.subscribe(`room_${this.roomId}`, (data) => {
+            if (data.type === 'set_private') {
+                this.isPrivate = !!data.isPrivate;
+                this.setMetadata({ ...this.metadata, isPrivate: this.isPrivate });
+                this._publishAdminUpdate();
+            }
             if (data.type === 'update_settings') {
                 const s = data.settings;
                 if (s.thrustPower      !== undefined) this.gameConfig.thrustPower      = s.thrustPower;
@@ -3555,7 +3575,7 @@ class CentauriRoom extends Room {
                 this._publishAdminUpdate();
             }
             if (data.type === 'start_game') {
-                this.setMetadata({ name: this.gameConfig.name, type: 'Centauri', state: 'playing' });
+                this.setMetadata({ ...this.metadata, name: this.gameConfig.name, type: 'Centauri', state: 'playing', isPrivate: this.isPrivate });
                 this.broadcast('game_start', { config: this.gameConfig, startAt: Date.now() + 10000 });
             }
             if (data.type === 'assign_team') {
@@ -3754,6 +3774,17 @@ class AdminRoom extends Room {
                 await this.presence.publish(`room_${data.roomId}`, { type: 'update_settings', settings: data.settings });
             } catch (error) {
                 console.error('Error updating settings via AdminRoom:', error);
+            }
+        });
+
+        this.onMessage('set_private', async (client, data) => {
+            try {
+                if (!this.presence) {
+                    throw new Error('Presence not available');
+                }
+                await this.presence.publish(`room_${data.roomId}`, { type: 'set_private', isPrivate: !!data.isPrivate });
+            } catch (error) {
+                console.error('Error updating privacy via AdminRoom:', error);
             }
         });
 
@@ -4009,6 +4040,7 @@ class BaseGameRoom extends Room {
 
     // ── Base lifecycle ────────────────────────────────────────────────────────
     onCreate(_options) {
+        this.isPrivate = !!_options.isPrivate;
         this._setupBasePresence();
     }
 
@@ -4029,6 +4061,11 @@ class BaseGameRoom extends Room {
             if (!msg?.type) return;
             if (msg.type === 'force_dispose') {
                 this.disconnect();
+            } else if (msg.type === 'set_private') {
+                this.isPrivate = !!msg.isPrivate;
+                if (typeof this._refreshMeta === 'function') this._refreshMeta();
+                else this.setMetadata({ ...this.metadata, isPrivate: this.isPrivate });
+                this._publishAdminUpdate();
             } else if (msg.type === 'update_settings' && msg.settings) {
                 this.applySettings(msg.settings);
                 this.broadcast('settings_update', { config: this.getConfig() });
@@ -4117,7 +4154,7 @@ class GeobridgeRoom extends BaseGameRoom {
         this.onMessage('playCard',      this._onPlayCard.bind(this));
         this.onMessage('resolveHand',   this._onResolveHand.bind(this));
         this.onMessage('alliance',      this._onAlliance.bind(this));
-        this.setMetadata({ gameType: 'geobridge', sessionCode: options.sessionCode || null, discordInstanceId: options.discordInstanceId || null });
+        this.setMetadata({ gameType: 'geobridge', sessionCode: options.sessionCode || null, discordInstanceId: options.discordInstanceId || null, isPrivate: this.isPrivate });
     }
 
     onJoin(client, options) {
@@ -4516,6 +4553,7 @@ class C4DRoom extends BaseGameRoom {
             maxPlayers: this.maxClients,
             clients:    this.clients.length,
             discordInstanceId: this.discordInstanceId,
+            isPrivate:  this.isPrivate,
         });
     }
 }

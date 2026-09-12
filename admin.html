@@ -146,6 +146,36 @@
             font-size: 12px;
         }
 
+        .privacy-toggle {
+            background: #9ca3af;
+            color: black;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .privacy-toggle:hover {
+            background: #6b7280;
+            color: white;
+        }
+
+        .privacy-toggle.is-private {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .privacy-toggle.is-private:hover {
+            background: #2563eb;
+        }
+
+        .game-item .privacy-tag {
+            color: #3b82f6;
+            font-size: 10px;
+            font-weight: normal;
+        }
+
         .scenario-content {
             background: #f9f9f9;
             border: 1px solid #e5e7eb;
@@ -1134,6 +1164,7 @@
                         <h3 id="scenario-name">Game Session</h3>
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="privacy-toggle" id="privacy-toggle" onclick="togglePrivacy(event)" title="Click to toggle whether this session is joinable via the room list or link-only">Public</span>
                         <span class="scenario-status" id="scenario-status">Waiting</span>
                         <span id="scenario-toggle">▼</span>
                     </div>
@@ -2394,9 +2425,11 @@ Based on the strategy description above, generate the complete JSON configuratio
 
             const gameUrl = getJoinUrl(room.roomId, room.metadata);
 
+            const privacyTag = room.metadata?.isPrivate ? ' <span class="privacy-tag">· Private</span>' : '';
+
             div.innerHTML = `
         <div style="flex: 1;">
-            <strong>${name}</strong>
+            <strong>${name}</strong>${privacyTag}
             <a href="${gameUrl}" class="game-link" target="_blank" onclick="event.stopPropagation();">Join Game</a>
         </div>
         <span style="color: #999; font-size: 12px;">${playerCount} players</span>
@@ -2463,6 +2496,11 @@ Based on the strategy description above, generate the complete JSON configuratio
             // Detect game type and switch UI panels
             const detectedType = roomData?.metadata?.type || getRoomRuntime(roomId).gameType || 'Constellation';
             updateGameTypeUI(detectedType);
+
+            const privacyEl = document.getElementById('privacy-toggle');
+            const isPrivate = !!roomData?.metadata?.isPrivate;
+            privacyEl.textContent = isPrivate ? 'Private' : 'Public';
+            privacyEl.classList.toggle('is-private', isPrivate);
 
             if (!roomData) {
                 console.log('No room data found, resetting to defaults');
@@ -3659,6 +3697,16 @@ Based on the strategy description above, generate the complete JSON configuratio
             } catch (e) {
                 console.error('Failed to send settings update:', e);
             }
+        }
+
+        function togglePrivacy(event) {
+            event.stopPropagation(); // don't also trigger the header's collapse/expand
+            if (!currentRoom || !selectedRoomId) return;
+            const el = document.getElementById('privacy-toggle');
+            const next = !el.classList.contains('is-private');
+            el.textContent = next ? 'Private' : 'Public';
+            el.classList.toggle('is-private', next);
+            currentRoom.send('set_private', { roomId: selectedRoomId, isPrivate: next });
         }
 
         async function loadMapList() {
