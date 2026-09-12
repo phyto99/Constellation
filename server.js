@@ -2216,10 +2216,15 @@ class ConstellationRoom extends Room {
 
     distributeMoves(isGameStart = false) {
         try {
-            // Distribute moves for ALL teams
+            // Distribute moves for ALL teams. A disconnected-but-reconnecting
+            // player (connected === false, see onLeave's grace period) keeps
+            // their team slot and their frozen movesLeft, but is excluded
+            // from THIS round's split so their absence doesn't cost their
+            // teammates moves — a 3-player team temporarily down to 2
+            // splits the same fixed pool two ways, not three.
             const teams = {}; // teamIndex -> [players]
             this.state.players.forEach(p => {
-                if (p.team !== null) {
+                if (p.team !== null && p.connected !== false) {
                     if (!teams[p.team]) teams[p.team] = [];
                     teams[p.team].push(p);
                 }
@@ -2489,17 +2494,44 @@ class ConstellationRoom extends Room {
         this.updateAdminRoom();
     }
 
-    onLeave(client, consented) {
+    async onLeave(client, consented) {
         console.log(`Player ${client.sessionId} left room ${this.roomId}`);
-        
+
         // Clean up cursor throttle tracking
         if (this.cursorThrottleMap) {
             this.cursorThrottleMap.delete(client.sessionId);
         }
-        this.state.players.delete(client.sessionId);
-        // update monitor metadata clients count
-        this.setMetadata({ ...this.metadata, clients: this.clients.length });
+
+        const player = this.state.players.get(client.sessionId);
+
+        // A deliberate Leave click (consented) skips the grace period —
+        // clean up immediately, same as before. Anything else (tab close,
+        // refresh, dropped connection) gets a real chance to come back.
+        if (consented || !player) {
+            this.state.players.delete(client.sessionId);
+            this.setMetadata({ ...this.metadata, clients: this.clients.length });
+            this.updateAdminRoom();
+            return;
+        }
+
+        player.connected = false;
+        // Leaving clients metadata untouched here on purpose — this seat is
+        // reserved, not open, so the public room list should keep counting
+        // it. updateAdminRoom() still refreshes the player summary so the
+        // join-list's expandable details can show them as away if desired.
         this.updateAdminRoom();
+
+        try {
+            await this.allowReconnection(client, 60);
+            player.connected = true;
+            console.log(`Player ${client.sessionId} reconnected to room ${this.roomId}`);
+            this.updateAdminRoom();
+        } catch (e) {
+            // Grace period expired — really gone now.
+            this.state.players.delete(client.sessionId);
+            this.setMetadata({ ...this.metadata, clients: this.clients.length });
+            this.updateAdminRoom();
+        }
     }
 
     // Validation methods for server-authoritative game state
