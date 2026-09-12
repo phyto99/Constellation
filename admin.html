@@ -1169,8 +1169,10 @@
                         <h3 id="scenario-name">Game Session</h3>
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <span class="privacy-label">&#128065; =</span>
-                        <span class="privacy-toggle" id="privacy-toggle" onclick="togglePrivacy(event)" title="Click to toggle whether this session is joinable via the room list or link-only">Public</span>
+                        <span style="display: flex; align-items: center; gap: 3px;">
+                            <span class="privacy-label">&#128065; =</span>
+                            <span class="privacy-toggle" id="privacy-toggle" onclick="togglePrivacy(event)" title="Click to toggle whether this session is joinable via the room list or link-only">Public</span>
+                        </span>
                         <span class="scenario-status" id="scenario-status">Waiting</span>
                         <span id="scenario-toggle">▼</span>
                     </div>
