@@ -1000,6 +1000,7 @@ class Player extends Schema {
         this.isHost = false;
         this.isBot = false;
         this.avatarUrl = '';
+        this.afk = false;
     }
 }
 
@@ -1013,6 +1014,7 @@ type('string')(Player.prototype, 'studentId');
 type('number')(Player.prototype, 'movesLeft');
 type('boolean')(Player.prototype, 'isBot');
 type('string')(Player.prototype, 'avatarUrl');
+type('boolean')(Player.prototype, 'afk');
 
 class RoomState extends Schema {
     constructor() {
@@ -1490,6 +1492,10 @@ class ConstellationRoom extends Room {
                 this.updateAdminRoom();
                 console.log(`Player ${client.sessionId} updated name to: ${player.name}`);
             }
+        });
+        this.onMessage('set_afk', (client, data) => {
+            const player = this.state.players.get(client.sessionId);
+            if (player) player.afk = !!(data && data.afk);
         });
         this.onMessage('start_game', (client, data) => {
             if (this.state.gameState === 'waiting') {
