@@ -1073,6 +1073,17 @@ function _deriveStrategyShiftCount(roundSnapshots, team) {
     return shifts;
 }
 
+// Resolves a room's assorted team-color shapes (numeric 0xRRGGBB, {color},
+// or a raw [r,g,b] array like GOLAD_PALETTE) down to one '#rrggbb' string,
+// so the join list can render a ring without knowing which game it's from.
+function hexFromColorEntry(entry) {
+    if (!entry) return null;
+    if (typeof entry.color === 'number') return '#' + entry.color.toString(16).padStart(6, '0');
+    if (Array.isArray(entry.rgb)) return '#' + entry.rgb.map(v => v.toString(16).padStart(2, '0')).join('');
+    if (Array.isArray(entry)) return '#' + entry.map(v => v.toString(16).padStart(2, '0')).join('');
+    return null;
+}
+
 // ConstellationRoom class
 class ConstellationRoom extends Room {
     onCreate(options) {
@@ -2908,7 +2919,21 @@ class ConstellationRoom extends Room {
     }
 
 
+    // Lightweight name+color summary for the public room listing — separate
+    // from the full Player schema objects updateAdminRoom() sends the admin
+    // panel, since getAvailableRooms() only ever sees room metadata.
+    getPlayerSummary() {
+        const colors = (this.gameConfig && this.gameConfig.teamColors) || [];
+        return Array.from(this.state.players.values())
+            .filter(p => !p.isBot)
+            .map(p => ({
+                name: p.name,
+                color: (p.team !== null && p.team !== undefined) ? hexFromColorEntry(colors[p.team]) : null,
+            }));
+    }
+
     updateAdminRoom() {
+        this.setMetadata({ ...this.metadata, players: this.getPlayerSummary() });
         if (this.presence) {
             console.log(`📡 Room ${this.roomId} publishing admin_update (Players: ${this.clients.length})`);
             this.presence.publish('admin_update', {
@@ -3293,6 +3318,15 @@ class GoladRoom extends Room {
         this.refreshMetadata();
     }
 
+    // GOLAD has no per-player display names — just two color-coded seats —
+    // so the join-list summary shows the seat label, not a joined-in name.
+    getPlayerSummary() {
+        const seats = [];
+        if ([...this.playerTeams.values()].includes(0)) seats.push({ name: 'Player 1', color: hexFromColorEntry(this.goladConfig.p1Color) });
+        if ([...this.playerTeams.values()].includes(1)) seats.push({ name: 'Player 2', color: hexFromColorEntry(this.goladConfig.p2Color) });
+        return seats;
+    }
+
     refreshMetadata() {
         this.setMetadata({
             name:       this.goladConfig.name,
@@ -3301,7 +3335,8 @@ class GoladRoom extends Room {
             maxPlayers: this.maxClients,
             clients:    this.clients.length,
             discordInstanceId: this.metadata?.discordInstanceId ?? null,
-            isPrivate:  this.isPrivate
+            isPrivate:  this.isPrivate,
+            players:    this.getPlayerSummary()
         });
         if (this.presence) {
             const players = this.clients.map(c => ({
@@ -3655,7 +3690,13 @@ class CentauriRoom extends Room {
         console.log(`CentauriRoom ${this.roomId}: peer ${p.peerId} left`);
     }
 
+    getPlayerSummary() {
+        const colors = this.gameConfig.teamColors || [];
+        return this.players.map(p => ({ name: p.name, color: hexFromColorEntry(colors[p.teamId]) }));
+    }
+
     _publishAdminUpdate() {
+        this.setMetadata({ ...this.metadata, players: this.getPlayerSummary() });
         this.presence.publish('admin_update', {
             roomId:      this.roomId,
             players:     this.players.map(p => ({
@@ -4037,6 +4078,9 @@ class BaseGameRoom extends Room {
     getConfig()       { return {}; }
     getPhase()        { return this.state?.gameState || 'waiting'; }
     applySettings(_s) {}
+    // Join-list player summary. Default has no color concept to draw from —
+    // override where the subclass actually has team colors (see C4DRoom).
+    getColoredPlayers() { return this.getPlayers().map(p => ({ name: p.name, color: null })); }
 
     // ── Base lifecycle ────────────────────────────────────────────────────────
     onCreate(_options) {
@@ -4077,6 +4121,7 @@ class BaseGameRoom extends Room {
     // ── Admin sync ────────────────────────────────────────────────────────────
     _publishAdminUpdate() {
         if (!this.presence) return;
+        this.setMetadata({ ...this.metadata, players: this.getColoredPlayers() });
         this.presence.publish('admin_update', {
             roomId:      this.roomId,
             players:     this.getPlayers(),
@@ -4373,6 +4418,10 @@ class C4DRoom extends BaseGameRoom {
                            : (this._playerIndexMap.get(c.sessionId) ?? 0) % (this.c4dConfig.teamCount || 2),
         }));
     }
+    getColoredPlayers() {
+        const colors = this.c4dConfig.teamColors || [];
+        return this.getPlayers().map(p => ({ name: p.name, color: hexFromColorEntry(colors[p.team]) }));
+    }
     getConfig() { return this.c4dConfig; }
     getPhase()  { return this.c4dPhase; }
     applySettings(s) {
@@ -4554,6 +4603,7 @@ class C4DRoom extends BaseGameRoom {
             clients:    this.clients.length,
             discordInstanceId: this.discordInstanceId,
             isPrivate:  this.isPrivate,
+            players:    this.getColoredPlayers(),
         });
     }
 }
