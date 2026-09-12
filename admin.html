@@ -146,39 +146,28 @@
             font-size: 12px;
         }
 
-        .privacy-field {
-            display: flex;
-            align-items: center;
-            gap: 6px;
+        .privacy-toggle {
+            background: #9ca3af;
+            color: black;
+            padding: 2px 8px;
+            border-radius: 4px;
             font-size: 12px;
+            cursor: pointer;
             user-select: none;
         }
 
-        .privacy-eye {
-            font-size: 13px;
-            line-height: 1;
+        .privacy-toggle:hover {
+            background: #6b7280;
+            color: white;
         }
 
-        .privacy-seg {
-            color: #666;
-            cursor: pointer;
-            padding: 2px 0;
-            text-decoration: none;
+        .privacy-toggle.is-private {
+            background: #3b82f6;
+            color: white;
         }
 
-        .privacy-seg:hover {
-            text-decoration: underline;
-            color: #3b82f6;
-        }
-
-        .privacy-seg.active {
-            color: #333;
-            font-weight: bold;
-            text-decoration: underline;
-        }
-
-        .privacy-sep {
-            color: #ccc;
+        .privacy-toggle.is-private:hover {
+            background: #2563eb;
         }
 
         .game-item .privacy-tag {
@@ -1175,12 +1164,7 @@
                         <h3 id="scenario-name">Game Session</h3>
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <span class="privacy-field" title="Whether this session is joinable via the room list, or link-only">
-                            <span class="privacy-eye">&#128065;</span>
-                            <span class="privacy-seg active" id="privacy-seg-public" onclick="setPrivacy(event, false)">Public</span>
-                            <span class="privacy-sep">/</span>
-                            <span class="privacy-seg" id="privacy-seg-private" onclick="setPrivacy(event, true)">Private</span>
-                        </span>
+                        <span class="privacy-toggle" id="privacy-toggle" onclick="togglePrivacy(event)" title="Click to toggle whether this session is joinable via the room list or link-only">&#128065; Public</span>
                         <span class="scenario-status" id="scenario-status">Waiting</span>
                         <span id="scenario-toggle">▼</span>
                     </div>
@@ -2513,9 +2497,10 @@ Based on the strategy description above, generate the complete JSON configuratio
             const detectedType = roomData?.metadata?.type || getRoomRuntime(roomId).gameType || 'Constellation';
             updateGameTypeUI(detectedType);
 
+            const privacyEl = document.getElementById('privacy-toggle');
             const isPrivate = !!roomData?.metadata?.isPrivate;
-            document.getElementById('privacy-seg-public').classList.toggle('active', !isPrivate);
-            document.getElementById('privacy-seg-private').classList.toggle('active', isPrivate);
+            privacyEl.innerHTML = isPrivate ? '&#128065; Private' : '&#128065; Public';
+            privacyEl.classList.toggle('is-private', isPrivate);
 
             if (!roomData) {
                 console.log('No room data found, resetting to defaults');
@@ -3714,12 +3699,14 @@ Based on the strategy description above, generate the complete JSON configuratio
             }
         }
 
-        function setPrivacy(event, isPrivate) {
+        function togglePrivacy(event) {
             event.stopPropagation(); // don't also trigger the header's collapse/expand
             if (!currentRoom || !selectedRoomId) return;
-            document.getElementById('privacy-seg-public').classList.toggle('active', !isPrivate);
-            document.getElementById('privacy-seg-private').classList.toggle('active', isPrivate);
-            currentRoom.send('set_private', { roomId: selectedRoomId, isPrivate });
+            const el = document.getElementById('privacy-toggle');
+            const next = !el.classList.contains('is-private');
+            el.innerHTML = next ? '&#128065; Private' : '&#128065; Public';
+            el.classList.toggle('is-private', next);
+            currentRoom.send('set_private', { roomId: selectedRoomId, isPrivate: next });
         }
 
         async function loadMapList() {
