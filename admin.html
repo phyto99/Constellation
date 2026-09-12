@@ -1710,8 +1710,21 @@
 
     <!-- Self-hosted, not CDN — Discord's Activity proxy CSP blocks
          cross-origin script loads, which silently left Colyseus undefined
-         whenever this page is opened inside the Discord-embedded flow. -->
-    <script src="/colyseus.js"></script>
+         whenever this page is opened inside the Discord-embedded flow.
+
+         The src can't just be a hardcoded absolute path though: this same
+         file is served two ways — directly from the game server at
+         /admin, and through the gateway at /game/admin. An absolute
+         "/colyseus.js" resolves against whichever origin loaded the page,
+         so through the gateway it lands on localhost:3000/colyseus.js,
+         which isn't the /game-prefixed path the gateway actually proxies
+         to the game server — it falls through to an unrelated fallback
+         backend instead, 404s, and Colyseus is never defined. Resolving
+         the prefix from the current path before writing the tag makes the
+         same file correct in both places. -->
+    <script>
+        document.write('<script src="' + (location.pathname.startsWith('/game') ? '/game' : '') + '/colyseus.js"><' + '/script>');
+    </script>
     <script src="game-registry.js"></script>
     <script>
         // AI Bot Types Configuration (same as index.html)
