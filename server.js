@@ -1104,6 +1104,12 @@ class ConstellationRoom extends Room {
 
         this.maxClients = options.maxPlayers || 20;
         this.isPrivate = !!options.isPrivate;
+        // Never placed in metadata — a secret the creating admin.html tab
+        // holds in localStorage and must present to manage this room.
+        // Absent entirely (no creatorSecret passed) means anyone can manage
+        // it, which is what makes a room "open" — test/dev sessions and any
+        // creation path that doesn't send one behave this way automatically.
+        this.creatorSecret = options.creatorSecret || null;
 
         // Assign sequential session number from counter
         this.sessionNumber = this.getNextSessionNumber();
@@ -1164,7 +1170,11 @@ class ConstellationRoom extends Room {
             // Activity tab find "the room made for my voice channel" without
             // anyone pasting a link.
             discordInstanceId: options.discordInstanceId || null,
-            isPrivate: this.isPrivate
+            isPrivate: this.isPrivate,
+            // Public — just whether a creatorSecret exists, never the secret
+            // itself. Lets any admin.html tab decide up front whether it can
+            // manage this room, with no server round-trip.
+            isLocked: !!this.creatorSecret
         });
 
         // Listen for compiler-apply pushes from HTTP API
@@ -1197,6 +1207,14 @@ class ConstellationRoom extends Room {
             this.presence.subscribe(`room_${this.roomId}`, (msg) => {
                 try {
                     if (!msg || !msg.type) return;
+                    // Every admin-panel management action flows through here.
+                    // A room with no creatorSecret is open to anyone (test/dev
+                    // sessions, or any creation path that never sent one) —
+                    // one that has one only accepts matching requests.
+                    if (this.creatorSecret && msg.creatorSecret !== this.creatorSecret) {
+                        console.log(`🔒 Rejected ${msg.type} on room ${this.roomId}: caller isn't the creator`);
+                        return;
+                    }
                     if (msg.type === 'start_game') {
                         if (this.state.gameState === 'waiting') {
                             // Validate: Check if there are any human players (non-bot, non-admin)
@@ -3221,6 +3239,7 @@ class GoladRoom extends Room {
         console.log('GoladRoom created:', options.name || options.roomName);
         this.autoDispose = false;
         this.maxClients  = options.maxPlayers || 20;
+        this.creatorSecret = options.creatorSecret || null;
 
         const state = new RoomState();
         state.gameState = 'waiting';
@@ -3266,12 +3285,14 @@ class GoladRoom extends Room {
             maxPlayers: this.maxClients,
             clients:    0,
             discordInstanceId: options.discordInstanceId || null,
-            isPrivate: this.isPrivate
+            isPrivate: this.isPrivate,
+            isLocked: !!this.creatorSecret
         });
 
         if (this.presence) {
             this.presence.subscribe(`room_${this.roomId}`, (msg) => {
                 if (!msg || !msg.type) return;
+                if (this.creatorSecret && msg.creatorSecret !== this.creatorSecret) return;
                 if (msg.type === 'start_game') {
                     if (this.goladState.gamePhase === 'waiting') this.startGoladGame();
                 } else if (msg.type === 'force_dispose') {
@@ -3368,6 +3389,7 @@ class GoladRoom extends Room {
             clients:    this.clients.length,
             discordInstanceId: this.metadata?.discordInstanceId ?? null,
             isPrivate:  this.isPrivate,
+            isLocked:   !!this.creatorSecret,
             players:    this.getPlayerSummary()
         });
         if (this.presence) {
@@ -3599,6 +3621,7 @@ class CentauriRoom extends Room {
     onCreate(options) {
         console.log('CentauriRoom created:', options.name || options.roomId);
         this.autoDispose = false;
+        this.creatorSecret = options.creatorSecret || null;
         this.players   = [];   // { sessionId, peerId, teamId, name }
         this.nextPeerId = 1;
         this.gameConfig = {
@@ -3619,9 +3642,10 @@ class CentauriRoom extends Room {
             ],
         };
         this.isPrivate = !!options.isPrivate;
-        this.setMetadata({ name: this.gameConfig.name, type: 'Centauri', state: 'waiting', discordInstanceId: options.discordInstanceId || null, isPrivate: this.isPrivate });
+        this.setMetadata({ name: this.gameConfig.name, type: 'Centauri', state: 'waiting', discordInstanceId: options.discordInstanceId || null, isPrivate: this.isPrivate, isLocked: !!this.creatorSecret });
 
         this.presence.subscribe(`room_${this.roomId}`, (data) => {
+            if (this.creatorSecret && data.creatorSecret !== this.creatorSecret) return;
             if (data.type === 'set_private') {
                 this.isPrivate = !!data.isPrivate;
                 this.setMetadata({ ...this.metadata, isPrivate: this.isPrivate });
@@ -3795,6 +3819,7 @@ class AdminRoom extends Room {
                     type:         'start_game',
                     gs:           data.gs           || null,
                     polytopePath: data.polytopePath || null,
+                    creatorSecret: data.creatorSecret || null,
                 });
                 client.send('game_started', { success: true, roomId: data.roomId });
             } catch (error) {
@@ -3808,7 +3833,7 @@ class AdminRoom extends Room {
                 if (!this.presence) {
                     throw new Error('Presence not available');
                 }
-                await this.presence.publish(`room_${data.roomId}`, { type: 'force_dispose' });
+                await this.presence.publish(`room_${data.roomId}`, { type: 'force_dispose', creatorSecret: data.creatorSecret || null });
                 client.send('room_deleted', { success: true, roomId: data.roomId });
                 setTimeout(() => this.updateRoomsList(), 300);
             } catch (error) {
@@ -3822,7 +3847,7 @@ class AdminRoom extends Room {
                 if (!this.presence) {
                     throw new Error('Presence not available');
                 }
-                await this.presence.publish(`room_${data.roomId}`, { type: 'assign_team', playerId: data.playerId, teamIndex: data.teamIndex });
+                await this.presence.publish(`room_${data.roomId}`, { type: 'assign_team', playerId: data.playerId, teamIndex: data.teamIndex, creatorSecret: data.creatorSecret || null });
             } catch (error) {
                 console.error('Error assigning team via AdminRoom:', error);
             }
@@ -3833,7 +3858,7 @@ class AdminRoom extends Room {
                 if (!this.presence) {
                     throw new Error('Presence not available');
                 }
-                await this.presence.publish(`room_${data.roomId}`, { type: 'kick_player', playerId: data.playerId });
+                await this.presence.publish(`room_${data.roomId}`, { type: 'kick_player', playerId: data.playerId, creatorSecret: data.creatorSecret || null });
             } catch (error) {
                 console.error('Error kicking player via AdminRoom:', error);
             }
@@ -3844,7 +3869,7 @@ class AdminRoom extends Room {
                 if (!this.presence) {
                     throw new Error('Presence not available');
                 }
-                await this.presence.publish(`room_${data.roomId}`, { type: 'update_settings', settings: data.settings });
+                await this.presence.publish(`room_${data.roomId}`, { type: 'update_settings', settings: data.settings, creatorSecret: data.creatorSecret || null });
             } catch (error) {
                 console.error('Error updating settings via AdminRoom:', error);
             }
@@ -3855,7 +3880,7 @@ class AdminRoom extends Room {
                 if (!this.presence) {
                     throw new Error('Presence not available');
                 }
-                await this.presence.publish(`room_${data.roomId}`, { type: 'set_private', isPrivate: !!data.isPrivate });
+                await this.presence.publish(`room_${data.roomId}`, { type: 'set_private', isPrivate: !!data.isPrivate, creatorSecret: data.creatorSecret || null });
             } catch (error) {
                 console.error('Error updating privacy via AdminRoom:', error);
             }
@@ -3874,7 +3899,7 @@ class AdminRoom extends Room {
                     client.send('game_paused', { success: false, roomId: data.roomId, error: 'No roomId provided' });
                     return;
                 }
-                this.presence.publish(`room_${data.roomId}`, { type: 'pause_game', reason: data.reason || '' });
+                this.presence.publish(`room_${data.roomId}`, { type: 'pause_game', reason: data.reason || '', creatorSecret: data.creatorSecret || null });
                 client.send('game_paused', { success: true, roomId: data.roomId });
                 console.log('AdminRoom successfully published pause_game');
             } catch (error) {
@@ -3896,7 +3921,7 @@ class AdminRoom extends Room {
                     client.send('game_resumed', { success: false, roomId: data.roomId, error: 'No roomId provided' });
                     return;
                 }
-                this.presence.publish(`room_${data.roomId}`, { type: 'resume_game' });
+                this.presence.publish(`room_${data.roomId}`, { type: 'resume_game', creatorSecret: data.creatorSecret || null });
                 client.send('game_resumed', { success: true, roomId: data.roomId });
                 console.log('AdminRoom successfully published resume_game');
             } catch (error) {
@@ -4117,6 +4142,7 @@ class BaseGameRoom extends Room {
     // ── Base lifecycle ────────────────────────────────────────────────────────
     onCreate(_options) {
         this.isPrivate = !!_options.isPrivate;
+        this.creatorSecret = _options.creatorSecret || null;
         this._setupBasePresence();
     }
 
@@ -4135,6 +4161,7 @@ class BaseGameRoom extends Room {
         if (!this.presence) return;
         this.presence.subscribe(`room_${this.roomId}`, (msg) => {
             if (!msg?.type) return;
+            if (this.creatorSecret && msg.creatorSecret !== this.creatorSecret) return;
             if (msg.type === 'force_dispose') {
                 this.disconnect();
             } else if (msg.type === 'set_private') {
@@ -4231,7 +4258,7 @@ class GeobridgeRoom extends BaseGameRoom {
         this.onMessage('playCard',      this._onPlayCard.bind(this));
         this.onMessage('resolveHand',   this._onResolveHand.bind(this));
         this.onMessage('alliance',      this._onAlliance.bind(this));
-        this.setMetadata({ gameType: 'geobridge', sessionCode: options.sessionCode || null, discordInstanceId: options.discordInstanceId || null, isPrivate: this.isPrivate });
+        this.setMetadata({ gameType: 'geobridge', sessionCode: options.sessionCode || null, discordInstanceId: options.discordInstanceId || null, isPrivate: this.isPrivate, isLocked: !!this.creatorSecret });
     }
 
     onJoin(client, options) {
@@ -4510,6 +4537,7 @@ class C4DRoom extends BaseGameRoom {
         // C4D-specific presence messages (start_game, assign_team)
         if (this.presence) {
             this.presence.subscribe(`room_${this.roomId}`, (msg) => {
+                if (this.creatorSecret && msg?.creatorSecret !== this.creatorSecret) return;
                 if (msg?.type === 'start_game' && this.c4dPhase !== 'playing') {
                     this.c4dPhase = 'playing';
                     state.gameState = 'playing';
@@ -4635,6 +4663,7 @@ class C4DRoom extends BaseGameRoom {
             clients:    this.clients.length,
             discordInstanceId: this.discordInstanceId,
             isPrivate:  this.isPrivate,
+            isLocked:   !!this.creatorSecret,
             players:    this.getColoredPlayers(),
         });
     }

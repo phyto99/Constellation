@@ -1171,6 +1171,15 @@
             </div>
         </div>
 
+        <div id="locked-notice" style="display: none; padding: 40px; text-align: center;">
+            <h2 style="margin-bottom: 8px;">🔒 Not your session</h2>
+            <p style="color: #666; font-size: 13px; margin-bottom: 16px;">
+                "<span id="locked-room-name"></span>" was created from a different browser, so it can only be
+                viewed here, not managed. Only the browser that created a session can change its settings.
+            </p>
+            <button onclick="deselectRoom()" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">← Back</button>
+        </div>
+
         <div id="game-content" style="display: none;">
             <div style="padding: 20px;">
                 <!-- Game Action Buttons at the very top -->
@@ -2459,7 +2468,13 @@ Based on the strategy description above, generate the complete JSON configuratio
             let activeCount = 0;
             let pastCount = 0;
 
-            rooms.forEach(room => {
+            // Sessions this browser can actually manage sort first within
+            // each list — a room locked to someone else's browser is still
+            // visible (so you know it exists), just pushed below the ones
+            // you can act on.
+            const sortedRooms = [...rooms].sort((a, b) => (canManage(a) ? 0 : 1) - (canManage(b) ? 0 : 1));
+
+            sortedRooms.forEach(room => {
                 const roomEl = createRoomElement(room);
 
                 if (room.state === 'waiting') {
@@ -2536,10 +2551,12 @@ Based on the strategy description above, generate the complete JSON configuratio
             const gameUrl = getJoinUrl(room.roomId, room.metadata);
 
             const privacyTag = room.metadata?.isPrivate ? ' <span class="privacy-tag">· Private</span>' : '';
+            const isLockedOut = !canManage(room);
+            if (isLockedOut) div.title = 'Created from a different browser — view only';
 
             div.innerHTML = `
-        <div style="flex: 1;">
-            <strong>${name}</strong>${privacyTag}
+        <div style="flex: 1; ${isLockedOut ? 'opacity: 0.55;' : ''}">
+            <strong>${name}</strong>${privacyTag}${isLockedOut ? ' <span style="font-size:11px;">🔒</span>' : ''}
             <a href="${gameUrl}" class="game-link" target="_blank" onclick="event.stopPropagation();">Join Game</a>
         </div>
         <span style="color: #999; font-size: 12px;">${playerCount} players</span>
@@ -2599,10 +2616,25 @@ Based on the strategy description above, generate the complete JSON configuratio
         function selectRoom(roomId) {
             console.log('Selected room:', roomId);
             selectedRoomId = roomId;
-            localStorage.setItem('craetio_last_room', roomId);
 
             // Populate settings if available
             const roomData = latestRoomsData.find(r => r.roomId === roomId);
+
+            // A room locked to someone else's browser is viewable-by-name
+            // only — no settings panel, no way to send management messages
+            // that would just be silently rejected server-side anyway. Not
+            // saved as the "last room" either — resume-hosting should only
+            // ever offer to resume something you could actually manage.
+            if (roomData && !canManage(roomData)) {
+                document.getElementById('no-game-selected').style.display = 'none';
+                document.getElementById('game-content').style.display = 'none';
+                document.getElementById('locked-room-name').textContent =
+                    roomData.metadata?.name || `Game ${roomId.substring(0, 6)}`;
+                document.getElementById('locked-notice').style.display = 'block';
+                return;
+            }
+            localStorage.setItem('craetio_last_room', roomId);
+            document.getElementById('locked-notice').style.display = 'none';
 
             // Detect game type and switch UI panels
             const detectedType = roomData?.metadata?.type || getRoomRuntime(roomId).gameType || 'Constellation';
@@ -3361,7 +3393,7 @@ Based on the strategy description above, generate the complete JSON configuratio
             if (event.data.type === 'c4d_game_ready') {
                 const { gs, polytopePath } = event.data;
                 if (!selectedRoomId || !currentRoom) return;
-                currentRoom.send('start_game', { roomId: selectedRoomId, gs, polytopePath });
+                currentRoom.send('start_game', { roomId: selectedRoomId, gs, polytopePath, creatorSecret: getOwnedSecret(selectedRoomId) });
                 const btn = document.getElementById('start-btn');
                 if (btn) { btn.disabled = false; btn.style.display = 'none'; }
                 document.getElementById('pause-btn').style.display = 'inline-block';
@@ -3385,6 +3417,7 @@ Based on the strategy description above, generate the complete JSON configuratio
             selectedRoomId = null;
             document.getElementById('no-game-selected').style.display = 'block';
             document.getElementById('game-content').style.display = 'none';
+            document.getElementById('locked-notice').style.display = 'none';
             renderResumePrompt();
 
             // Reset button states
@@ -3407,6 +3440,28 @@ Based on the strategy description above, generate the complete JSON configuratio
             renderColorPlayerPool();
             renderColorTeamAssignments();
             updateColorStats();
+        }
+
+        // Rooms this browser created, keyed by roomId → the secret credential
+        // it must present to manage that room. Never sent anywhere except
+        // alongside a management action for that exact room — the server
+        // never puts the secret itself in public metadata, only whether one
+        // exists (metadata.isLocked). No accounts, no server-side identity —
+        // this is a key, not a login.
+        function getOwnedRooms() {
+            try { return JSON.parse(localStorage.getItem('craetio_owned_rooms') || '{}'); }
+            catch (e) { return {}; }
+        }
+        function getOwnedSecret(roomId) {
+            return getOwnedRooms()[roomId] || null;
+        }
+        function saveOwnedRoom(roomId, secret) {
+            const rooms = getOwnedRooms();
+            rooms[roomId] = secret;
+            localStorage.setItem('craetio_owned_rooms', JSON.stringify(rooms));
+        }
+        function canManage(room) {
+            return !room.metadata?.isLocked || !!getOwnedSecret(room.roomId);
         }
 
         async function createGame() {
@@ -3437,11 +3492,14 @@ Based on the strategy description above, generate the complete JSON configuratio
                 const adapter  = ADMIN_SETTINGS_ADAPTERS[gameType];
                 const settings = adapter ? adapter.readSettings() : {};
 
+                const creatorSecret = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+
                 const roomOptions = {
                     name:       gameName,
                     gameType,
                     maxPlayers: schema.maxPlayers || 20,
                     isAdmin:    true,
+                    creatorSecret,
                     ...settings,
                     ...(aiBots.length ? { aiBots } : {}),
                     ...(discordInstanceId ? { discordInstanceId } : {}),
@@ -3449,6 +3507,7 @@ Based on the strategy description above, generate the complete JSON configuratio
 
                 const room = await client.create(schema.roomType, roomOptions);
                 console.log('✓ Room created:', room.roomId);
+                saveOwnedRoom(room.roomId, creatorSecret);
 
                 // When embedded in the Discord activity's session overlay,
                 // tell the parent page so it can auto-join this same room —
@@ -3546,7 +3605,8 @@ Based on the strategy description above, generate the complete JSON configuratio
             const payload = {
                 roomId: selectedRoomId,
                 playerId,
-                teamIndex: teamIndex === '' ? null : parseInt(teamIndex, 10)
+                teamIndex: teamIndex === '' ? null : parseInt(teamIndex, 10),
+                creatorSecret: getOwnedSecret(selectedRoomId),
             };
             try {
                 currentRoom.send('assign_team', payload);
@@ -3563,7 +3623,7 @@ Based on the strategy description above, generate the complete JSON configuratio
                 alert('Connect to admin and select a game first');
                 return;
             }
-            const payload = { roomId: selectedRoomId, playerId };
+            const payload = { roomId: selectedRoomId, playerId, creatorSecret: getOwnedSecret(selectedRoomId) };
             try {
                 currentRoom.send('kick_player', payload);
                 console.log('✓ Sent kick_player', payload);
@@ -3663,7 +3723,7 @@ Based on the strategy description above, generate the complete JSON configuratio
         async function doStartGame() {
             document.getElementById('start-warning-popup').classList.remove('visible');
             try {
-                currentRoom.send('start_game', { roomId: selectedRoomId });
+                currentRoom.send('start_game', { roomId: selectedRoomId, creatorSecret: getOwnedSecret(selectedRoomId) });
                 console.log('✓ Game start command sent via AdminRoom');
 
                 document.getElementById('start-btn').style.display = 'none';
@@ -3700,7 +3760,7 @@ Based on the strategy description above, generate the complete JSON configuratio
             if (!selectedRoomId || !currentRoom) return;
             if (messageRateLimiter.isLimited(clientSessionId)) return;
 
-            currentRoom.send('pause_game', { roomId: selectedRoomId, reason: reason });
+            currentRoom.send('pause_game', { roomId: selectedRoomId, reason: reason, creatorSecret: getOwnedSecret(selectedRoomId) });
             console.log('✓ Game pause command sent via AdminRoom');
 
             isPaused = true;
@@ -3712,7 +3772,7 @@ Based on the strategy description above, generate the complete JSON configuratio
             if (!selectedRoomId || !currentRoom) return;
             if (messageRateLimiter.isLimited(clientSessionId)) return;
 
-            currentRoom.send('resume_game', { roomId: selectedRoomId });
+            currentRoom.send('resume_game', { roomId: selectedRoomId, creatorSecret: getOwnedSecret(selectedRoomId) });
             console.log('✓ Game resume command sent via AdminRoom');
 
             isPaused = false;
@@ -3741,7 +3801,7 @@ Based on the strategy description above, generate the complete JSON configuratio
             try {
                 if (confirm('Are you sure you want to delete this game?')) {
                     // Send delete command via AdminRoom
-                    currentRoom.send('delete_room', { roomId: selectedRoomId });
+                    currentRoom.send('delete_room', { roomId: selectedRoomId, creatorSecret: getOwnedSecret(selectedRoomId) });
                     console.log('✓ Room delete command sent via AdminRoom');
 
                     if (localStorage.getItem('craetio_last_room') === selectedRoomId) {
@@ -3802,7 +3862,7 @@ Based on the strategy description above, generate the complete JSON configuratio
             lastSentSettingsJson = settingsJson;
 
             try {
-                currentRoom.send('update_settings', { roomId: selectedRoomId, settings });
+                currentRoom.send('update_settings', { roomId: selectedRoomId, settings, creatorSecret: getOwnedSecret(selectedRoomId) });
                 if (currentRoomGameType === 'Centauri') showNotification('Centauri settings updated');
 
                 const statusId = SETTINGS_STATUS_ELS[currentRoomGameType];
@@ -3823,7 +3883,7 @@ Based on the strategy description above, generate the complete JSON configuratio
             const next = !el.classList.contains('is-private');
             el.textContent = next ? 'Private' : 'Public';
             el.classList.toggle('is-private', next);
-            currentRoom.send('set_private', { roomId: selectedRoomId, isPrivate: next });
+            currentRoom.send('set_private', { roomId: selectedRoomId, isPrivate: next, creatorSecret: getOwnedSecret(selectedRoomId) });
         }
 
         async function loadMapList() {
@@ -3865,7 +3925,7 @@ Based on the strategy description above, generate the complete JSON configuratio
                     const settings = {
                         customMapFilename: null // Explicitly clear the map
                     };
-                    currentRoom.send('update_settings', { roomId: selectedRoomId, settings: settings });
+                    currentRoom.send('update_settings', { roomId: selectedRoomId, settings: settings, creatorSecret: getOwnedSecret(selectedRoomId) });
                     console.log('📍 Map cleared - sent null customMapFilename');
                     showNotification('Map cleared');
                 }
@@ -4321,7 +4381,8 @@ Based on the strategy description above, generate the complete JSON configuratio
             const payload = {
                 roomId: selectedRoomId,
                 playerId: player.colyseusId,
-                teamIndex: player.colorTeam
+                teamIndex: player.colorTeam,
+                creatorSecret: getOwnedSecret(selectedRoomId),
             };
 
             try {
