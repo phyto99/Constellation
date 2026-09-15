@@ -1250,6 +1250,7 @@
                             <span class="privacy-label">&#128065; =</span>
                             <span class="privacy-toggle" id="privacy-toggle" onclick="togglePrivacy(event)" title="Click to toggle whether this session is joinable via the room list or link-only">Public</span>
                         </span>
+                        <span class="privacy-toggle" id="copy-link-btn" onclick="copySessionLink(event)" title="Copy a link to this session">Copy Link</span>
                         <span class="scenario-status" id="scenario-status">Waiting</span>
                         <span id="scenario-toggle">▼</span>
                     </div>
@@ -3939,6 +3940,24 @@ Based on the strategy description above, generate the complete JSON configuratio
             el.textContent = next ? 'Private' : 'Public';
             el.classList.toggle('is-private', next);
             currentRoom.send('set_private', { roomId: selectedRoomId, isPrivate: next, creatorSecret: getOwnedSecret(selectedRoomId) });
+        }
+
+        // origin, not a hardcoded host — correct whether this loaded
+        // through the gateway (the real public-facing path) or directly.
+        // The join list's search already matches a pasted link containing
+        // a room ID against this exact shape.
+        function copySessionLink(event) {
+            event.stopPropagation();
+            if (!selectedRoomId) return;
+            const link = `${location.origin}/?join=${selectedRoomId}`;
+            const btn = document.getElementById('copy-link-btn');
+            const original = btn.textContent;
+            navigator.clipboard.writeText(link).then(() => {
+                btn.textContent = 'Copied ✓';
+                setTimeout(() => { btn.textContent = original; }, 1500);
+            }).catch(() => {
+                alert('Could not copy automatically — here\'s the link:\n' + link);
+            });
         }
 
         async function loadMapList() {
