@@ -3539,6 +3539,8 @@ Based on the strategy description above, generate the complete JSON configuratio
                         type: 'craetio:room_created',
                         roomId: room.roomId,
                         gameUrl: schema.joinPath(room.roomId, roomOptions, getRoomRuntime(room.roomId)),
+                        name: gameName,
+                        gameType: gameType,
                     }, '*');
                 }
 
