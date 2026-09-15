@@ -2552,7 +2552,25 @@ Based on the strategy description above, generate the complete JSON configuratio
 
         function resumeLastHosted() {
             const lastRoomId = localStorage.getItem('craetio_last_room');
-            if (lastRoomId) selectRoom(lastRoomId);
+            if (!lastRoomId) return;
+            selectRoom(lastRoomId);
+
+            // selectRoom() only updates this panel's own settings view —
+            // unlike creating a fresh session, it never told the parent
+            // page anything happened, so its lobby background stayed on
+            // whatever it was already showing. Same message createGame()
+            // sends, so index.html's existing listener handles it exactly
+            // the same way: join the room, light up the real game behind
+            // this panel instead of leaving it looking unchanged.
+            if (window.parent !== window) {
+                const roomData = latestRoomsData.find(r => r.roomId === lastRoomId);
+                window.parent.postMessage({
+                    type: 'craetio:room_created',
+                    roomId: lastRoomId,
+                    name: roomData?.metadata?.name || null,
+                    gameType: roomData?.metadata?.type || getRoomRuntime(lastRoomId).gameType || 'Constellation',
+                }, '*');
+            }
         }
 
         function dismissResumePrompt() {
