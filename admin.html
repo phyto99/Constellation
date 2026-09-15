@@ -2299,9 +2299,11 @@ Based on the strategy description above, generate the complete JSON configuratio
             const url    = getGameJoinUrl(selectedRoomId);
             const linkEl = document.getElementById('game-direct-link');
             if (linkEl) { linkEl.href = url; linkEl.textContent = 'Join Game'; }
-            const runtime = getRoomRuntime(selectedRoomId);
-            const suffix  = runtime.sessionCode ? ` · ${runtime.sessionCode}` : '';
-            document.getElementById('scenario-name').textContent = `Game ${selectedRoomId.substring(0, 8)}${suffix}`;
+            const runtime  = getRoomRuntime(selectedRoomId);
+            const suffix   = runtime.sessionCode ? ` · ${runtime.sessionCode}` : '';
+            const roomData = latestRoomsData.find(r => r.roomId === selectedRoomId);
+            const label    = roomData?.metadata?.name || `Game ${selectedRoomId.substring(0, 8)}`;
+            document.getElementById('scenario-name').textContent = `${label}${suffix}`;
         }
 
         // Returns the join URL for a room given its metadata, without relying on
@@ -2473,6 +2475,14 @@ Based on the strategy description above, generate the complete JSON configuratio
 
         let latestRoomsData = [];
 
+        // Set when the Activity's Manage button opened this panel for a
+        // specific room it already knows we're in — jump straight to that
+        // room's settings the moment it shows up in a real rooms list,
+        // instead of making the host find it again or wait on the resume
+        // banner. One-time: cleared after firing once, so clicking around
+        // to a different room afterward doesn't keep snapping back.
+        let pendingManageRoomId = new URLSearchParams(location.search).get('manageRoomId');
+
         function updateRoomsList(rooms) {
             latestRoomsData = rooms || [];
             const pendingGames = document.getElementById('pending-games');
@@ -2526,6 +2536,11 @@ Based on the strategy description above, generate the complete JSON configuratio
             }
 
             renderResumePrompt();
+
+            if (pendingManageRoomId && latestRoomsData.some(r => r.roomId === pendingManageRoomId)) {
+                selectRoom(pendingManageRoomId);
+                pendingManageRoomId = null;
+            }
         }
 
         // Shows a "Resume hosting" card in the empty state when this browser
