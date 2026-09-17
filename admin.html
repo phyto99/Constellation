@@ -2594,6 +2594,21 @@ Based on the strategy description above, generate the complete JSON configuratio
             document.getElementById('resume-prompt').style.display = 'none';
         }
 
+        // "3m ago" / "2h ago" / "5d ago" — same relative-time convention
+        // planned for the join list on the Activity side, so both surfaces
+        // read the same room the same way.
+        function timeAgo(isoString) {
+            if (!isoString) return null;
+            const seconds = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
+            if (seconds < 0) return null;
+            if (seconds < 60) return `${seconds}s ago`;
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m ago`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ago`;
+            return `${Math.floor(hours / 24)}d ago`;
+        }
+
         function createRoomElement(room) {
             const div = document.createElement('div');
             div.className = 'game-item';
@@ -2605,12 +2620,24 @@ Based on the strategy description above, generate the complete JSON configuratio
             const gameUrl = getJoinUrl(room.roomId, room.metadata);
 
             const privacyTag = room.metadata?.isPrivate ? ' <span class="privacy-tag">· Private</span>' : '';
+            // Dimming + the title tooltip already say "not yours" on their
+            // own — no separate icon needed, which also keeps 🔒 meaning
+            // exactly one thing (Private) instead of two different things
+            // on two different screens.
             const isLockedOut = !canManage(room);
             if (isLockedOut) div.title = 'Created from a different browser — view only';
 
+            const created = timeAgo(room.metadata?.createdAt);
+            const exactDate = room.metadata?.createdAt
+                ? new Date(room.metadata.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+                : '';
+            const createdTag = created
+                ? ` <span style="color:#999;font-size:11px;" title="${exactDate}">· created ${created}</span>`
+                : '';
+
             div.innerHTML = `
         <div style="flex: 1; ${isLockedOut ? 'opacity: 0.55;' : ''}">
-            <strong>${name}</strong>${privacyTag}${isLockedOut ? ' <span style="font-size:11px;">🔒</span>' : ''}
+            <strong>${name}</strong>${privacyTag}${createdTag}
             <a href="${gameUrl}" class="game-link" target="_blank" onclick="event.stopPropagation();">Join Game</a>
         </div>
         <span style="color: #999; font-size: 12px;">${playerCount} players</span>

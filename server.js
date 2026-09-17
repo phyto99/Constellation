@@ -3642,7 +3642,7 @@ class CentauriRoom extends Room {
             ],
         };
         this.isPrivate = !!options.isPrivate;
-        this.setMetadata({ name: this.gameConfig.name, type: 'Centauri', state: 'waiting', discordInstanceId: options.discordInstanceId || null, isPrivate: this.isPrivate, isLocked: !!this.creatorSecret });
+        this.setMetadata({ name: this.gameConfig.name, type: 'Centauri', state: 'waiting', discordInstanceId: options.discordInstanceId || null, isPrivate: this.isPrivate, isLocked: !!this.creatorSecret, createdAt: new Date().toISOString() });
 
         this.presence.subscribe(`room_${this.roomId}`, (data) => {
             if (this.creatorSecret && data.creatorSecret !== this.creatorSecret) return;
@@ -4258,7 +4258,7 @@ class GeobridgeRoom extends BaseGameRoom {
         this.onMessage('playCard',      this._onPlayCard.bind(this));
         this.onMessage('resolveHand',   this._onResolveHand.bind(this));
         this.onMessage('alliance',      this._onAlliance.bind(this));
-        this.setMetadata({ gameType: 'geobridge', sessionCode: options.sessionCode || null, discordInstanceId: options.discordInstanceId || null, isPrivate: this.isPrivate, isLocked: !!this.creatorSecret });
+        this.setMetadata({ gameType: 'geobridge', sessionCode: options.sessionCode || null, discordInstanceId: options.discordInstanceId || null, isPrivate: this.isPrivate, isLocked: !!this.creatorSecret, createdAt: new Date().toISOString() });
     }
 
     onJoin(client, options) {
