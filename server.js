@@ -2979,6 +2979,7 @@ class ConstellationRoom extends Room {
             .map(p => ({
                 name: p.name,
                 color: (p.team !== null && p.team !== undefined) ? hexFromColorEntry(colors[p.team]) : null,
+                avatarUrl: p.avatarUrl || '',
             }));
     }
 
