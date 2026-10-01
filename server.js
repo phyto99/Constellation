@@ -1117,6 +1117,7 @@ class ConstellationRoom extends Room {
         this.gameConfig = {
             name: options.name || `Game ${this.roomId.substring(0, 6)}`,
             gameType: options.gameType || 'Constellation',
+            createdAt: new Date().toISOString(),
             roundLength: options.roundLength || 30,
             rounds: options.rounds || 10,
             countdownLength: options.countdownLength || 5,
@@ -4029,6 +4030,8 @@ app.get('/hub',            (_req, res) => res.sendFile(path.join(__dirname, 'hub
 app.use('/philosophy', express.static(path.join(__dirname, 'philosophy development')));
 app.get('/ledger', (_req, res) => res.sendFile(path.join(__dirname, 'philosophy development', 'layer-0-ledger.html')));
 app.get('/observatory', (_req, res) => res.sendFile(path.join(__dirname, 'philosophy development', 'observatory.html')));
+app.use('/shared', express.static(path.join(__dirname, '..', 'shared')));
+app.get('/maps', (_req, res) => res.sendFile(path.join(__dirname, 'maps.html')));
 app.use('/constellation-mapmaker', express.static(path.join(__dirname, 'constellation-mapmaker')));
 app.get('/golad-mapmaker',     (_req, res) => res.sendFile(path.join(__dirname, 'golad-mapmaker.html')));
 app.get('/golad-mapmaker.html', (_req, res) => res.sendFile(path.join(__dirname, 'golad-mapmaker.html')));

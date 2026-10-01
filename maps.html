@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mapmakers</title>
+  <script src="/shared/topbar.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #000;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #demo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: calc(100vh - 44px);
+      overflow-y: auto;
+      gap: 24px;
+      padding: 40px 24px 80px;
+    }
+
+    .demo-title {
+      font-size: 28px;
+      font-weight: 400;
+      letter-spacing: 0.12em;
+      text-transform: lowercase;
+    }
+
+    /* ── Gallery sections (Network / Vault) — copied as-is from codex-demo-ui.html ── */
+    .gallery-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      max-width: 720px;
+    }
+
+    .gallery-header {
+      padding: 0 24px;
+      font-size: 15px;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      color: #fff;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      padding: 0 24px;
+    }
+
+    .gallery-image,
+    .gallery-placeholder {
+      width: 100%;
+      aspect-ratio: 1950 / 941;
+      object-fit: cover;
+      display: block;
+      filter: invert(0) hue-rotate(0deg);
+      transition: filter 0.2s ease;
+      cursor: pointer;
+    }
+
+    .gallery-image:hover,
+    .gallery-placeholder:hover { filter: invert(1) hue-rotate(180deg); }
+
+    .gallery-placeholder {
+      background: #000;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0 12px;
+      font-size: 26px;
+      font-weight: 400;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    /* ── "Work in progress" notice — same modal shell as codex-demo-ui.html's
+       session-modal, stripped down to a single message since there's no
+       session calendar concept for a mapmaker that doesn't exist yet. ── */
+    #wip-modal {
+      display: none;
+      position: fixed;
+      inset: 44px 0 0 0;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 90;
+      align-items: center;
+      justify-content: center;
+    }
+    #wip-modal.--visible { display: flex; }
+
+    #wip-modal-box {
+      border: 1px solid #fff;
+      padding: 32px 40px;
+      text-align: center;
+      position: relative;
+    }
+
+    #wip-modal-box span {
+      font-size: 15px;
+      letter-spacing: 0.08em;
+      text-transform: lowercase;
+      opacity: 0.8;
+    }
+
+    #wip-modal-close {
+      position: absolute;
+      top: -14px;
+      right: -14px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #000;
+      border: 1px solid #fff;
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+    }
+    #wip-modal-close:hover { background: #111; }
+  </style>
+</head>
+<body>
+
+  <div id="demo">
+    <span class="demo-title">mapmakers</span>
+
+    <div class="gallery-section">
+      <div class="gallery-header">In the network</div>
+      <div class="gallery-grid gallery-grid--network">
+        <img class="gallery-image" data-game="Constellation" src="/shared/covers/constellation-cover.webp" alt="Constellation">
+        <img class="gallery-image" data-game="Proxima" src="/shared/covers/proxima-cover.webp" alt="Proxima">
+      </div>
+    </div>
+
+    <div class="gallery-section">
+      <div class="gallery-header">In the vault 🔒</div>
+      <div class="gallery-grid gallery-grid--vault">
+        <div class="gallery-placeholder" data-game="Pearl">pearl</div>
+        <div class="gallery-placeholder" data-game="Constellation 4D">constellation 4d</div>
+        <img class="gallery-image" data-game="Constellation 3D" src="/shared/covers/c3d-panel.png" alt="Constellation 3D">
+        <img class="gallery-image" data-game="Geobridge" src="/shared/covers/geobridge-panel.png" alt="Geobridge">
+        <img class="gallery-image" data-game="Art For All" src="/shared/covers/a4a-banner.webp" alt="Art For All">
+        <img class="gallery-image" data-game="Hollywood" src="/shared/covers/hollywood-cover.webp" alt="Hollywood">
+      </div>
+    </div>
+  </div>
+
+  <div id="wip-modal">
+    <div id="wip-modal-box">
+      <button id="wip-modal-close" title="Close">&#10005;</button>
+      <span id="wip-modal-text">work in progress</span>
+    </div>
+  </div>
+
+  <script>
+    const wipModal = document.getElementById('wip-modal');
+    const wipText  = document.getElementById('wip-modal-text');
+
+    document.querySelectorAll('.gallery-grid [data-game]').forEach(tile => {
+      tile.addEventListener('click', () => {
+        if (tile.dataset.game === 'Constellation') {
+          window.open('https://craetio.itch.io/constellation-mapmaker', '_blank', 'noopener,noreferrer');
+          return;
+        }
+        wipText.textContent = `${tile.dataset.game.toLowerCase()} mapmaker — work in progress`;
+        wipModal.classList.add('--visible');
+      });
+    });
+
+    document.getElementById('wip-modal-close').addEventListener('click', () => {
+      wipModal.classList.remove('--visible');
+    });
+  </script>
+</body>
+</html>
