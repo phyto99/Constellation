@@ -1,0 +1,398 @@
+[
+  {
+    "name": "terminal-voice (spec)",
+    "url": "/philosophy/terminal-voice.html",
+    "slug": "terminal-voice-spec",
+    "status": "ok"
+  },
+  {
+    "name": "observatory (verify)",
+    "url": "/observatory",
+    "slug": "observatory-verify",
+    "status": "ok"
+  },
+  {
+    "name": "terminal-compiler (sandbox)",
+    "url": "/philosophy/terminal-compiler.html",
+    "slug": "terminal-compiler-sandbox",
+    "status": "ok"
+  },
+  {
+    "name": "ledger (layer 0)",
+    "url": "/ledger",
+    "slug": "ledger-layer-0",
+    "status": "ok"
+  },
+  {
+    "name": "student-next-v2",
+    "url": "/student-next-v2",
+    "slug": "student-next-v2",
+    "status": "ok"
+  },
+  {
+    "name": "config-arch (field names)",
+    "url": "/philosophy/configuration-architecture.html",
+    "slug": "config-arch-field-names",
+    "status": "ok"
+  },
+  {
+    "name": "adaptive-voice (gap)",
+    "url": "/philosophy/adaptive-voice.html",
+    "slug": "adaptive-voice-gap",
+    "status": "ok"
+  },
+  {
+    "name": "responsive-intelligence (gap)",
+    "url": "/philosophy/responsive-design-intelligence.html",
+    "slug": "responsive-intelligence-gap",
+    "status": "ok"
+  },
+  {
+    "name": "terminal-test (NEW)",
+    "url": "/terminal-test",
+    "slug": "terminal-test-new",
+    "status": "http-404"
+  },
+  {
+    "name": "alpha",
+    "url": "/alpha",
+    "slug": "alpha",
+    "status": "ok"
+  },
+  {
+    "name": "student-next",
+    "url": "/student-next",
+    "slug": "student-next",
+    "status": "ok"
+  },
+  {
+    "name": "student-next-v2",
+    "url": "/student-next-v2",
+    "slug": "student-next-v2",
+    "status": "ok"
+  },
+  {
+    "name": "student-dossier",
+    "url": "/student-dossier",
+    "slug": "student-dossier",
+    "status": "ok"
+  },
+  {
+    "name": "ledger",
+    "url": "/ledger",
+    "slug": "ledger",
+    "status": "ok"
+  },
+  {
+    "name": "observatory",
+    "url": "/observatory",
+    "slug": "observatory",
+    "status": "ok"
+  },
+  {
+    "name": "hub",
+    "url": "/hub",
+    "slug": "hub",
+    "status": "ok"
+  },
+  {
+    "name": "admin-demos",
+    "url": "/admin-demos",
+    "slug": "admin-demos",
+    "status": "ok"
+  },
+  {
+    "name": "other",
+    "url": "/other",
+    "slug": "other",
+    "status": "ok"
+  },
+  {
+    "name": "student (v1)",
+    "url": "/student",
+    "slug": "student-v1",
+    "status": "ok"
+  },
+  {
+    "name": "admin",
+    "url": "/admin",
+    "slug": "admin",
+    "status": "ok"
+  },
+  {
+    "name": "golad-mapmaker",
+    "url": "/golad-mapmaker.html",
+    "slug": "golad-mapmaker",
+    "status": "ok"
+  },
+  {
+    "name": "mapmaker2",
+    "url": "/constellation-mapmaker/mapmaker2.html",
+    "slug": "mapmaker2",
+    "status": "ok"
+  },
+  {
+    "name": "constellation-mapmaker (main)",
+    "url": "/constellation-mapmaker/constellation-mapmaker.html",
+    "slug": "constellation-mapmaker-main",
+    "status": "ok"
+  },
+  {
+    "name": "constellation-mapmaker",
+    "url": "/constellation-mapmaker/mapmaker.html",
+    "slug": "constellation-mapmaker",
+    "status": "ok"
+  },
+  {
+    "name": "golad",
+    "url": "/golad/GALLERY",
+    "slug": "golad",
+    "status": "ok"
+  },
+  {
+    "name": "geobridge",
+    "url": "/geobridge",
+    "slug": "geobridge",
+    "status": "http-404"
+  },
+  {
+    "name": "c4d",
+    "url": "/c4d",
+    "slug": "c4d",
+    "status": "http-404"
+  },
+  {
+    "name": "terminal-compiler",
+    "url": "/philosophy/terminal-compiler.html",
+    "slug": "terminal-compiler",
+    "status": "ok"
+  },
+  {
+    "name": "terminal-voice",
+    "url": "/philosophy/terminal-voice.html",
+    "slug": "terminal-voice",
+    "status": "ok"
+  },
+  {
+    "name": "terminal-voice-meta",
+    "url": "/philosophy/terminal-voice-meta.html",
+    "slug": "terminal-voice-meta",
+    "status": "ok"
+  },
+  {
+    "name": "adaptive-voice",
+    "url": "/philosophy/adaptive-voice.html",
+    "slug": "adaptive-voice",
+    "status": "ok"
+  },
+  {
+    "name": "loading-text",
+    "url": "/philosophy/loading-text.html",
+    "slug": "loading-text",
+    "status": "ok"
+  },
+  {
+    "name": "induction",
+    "url": "/philosophy/induction.html",
+    "slug": "induction",
+    "status": "ok"
+  },
+  {
+    "name": "SYNTHESIS",
+    "url": "/philosophy/SYNTHESIS.html",
+    "slug": "synthesis",
+    "status": "ok"
+  },
+  {
+    "name": "centauri-mapmaker",
+    "url": "/centauri-mapmaker",
+    "slug": "centauri-mapmaker",
+    "status": "ok"
+  },
+  {
+    "name": "centauri",
+    "url": "/centauri",
+    "slug": "centauri",
+    "status": "ok"
+  },
+  {
+    "name": "system-complete",
+    "url": "/philosophy/system-complete.html",
+    "slug": "system-complete",
+    "status": "ok"
+  },
+  {
+    "name": "opacity-model",
+    "url": "/philosophy/opacity-model.html",
+    "slug": "opacity-model",
+    "status": "ok"
+  },
+  {
+    "name": "perfect-system",
+    "url": "/philosophy/perfect-system.html",
+    "slug": "perfect-system",
+    "status": "ok"
+  },
+  {
+    "name": "entropy-architecture",
+    "url": "/philosophy/entropy-architecture.html",
+    "slug": "entropy-architecture",
+    "status": "ok"
+  },
+  {
+    "name": "bayesian",
+    "url": "/philosophy/bayesian.html",
+    "slug": "bayesian",
+    "status": "ok"
+  },
+  {
+    "name": "evidence-engine",
+    "url": "/philosophy/evidence-engine.html",
+    "slug": "evidence-engine",
+    "status": "ok"
+  },
+  {
+    "name": "layer-0-ledger",
+    "url": "/philosophy/layer-0-ledger.html",
+    "slug": "layer-0-ledger",
+    "status": "ok"
+  },
+  {
+    "name": "layer-1-approximation",
+    "url": "/philosophy/layer-1-approximation.html",
+    "slug": "layer-1-approximation",
+    "status": "ok"
+  },
+  {
+    "name": "configuration-architecture",
+    "url": "/philosophy/configuration-architecture.html",
+    "slug": "configuration-architecture",
+    "status": "ok"
+  },
+  {
+    "name": "design-meta-system",
+    "url": "/philosophy/design-meta-system.html",
+    "slug": "design-meta-system",
+    "status": "ok"
+  },
+  {
+    "name": "responsive-design-intelligence",
+    "url": "/philosophy/responsive-design-intelligence.html",
+    "slug": "responsive-design-intelligence",
+    "status": "ok"
+  },
+  {
+    "name": "student-panel",
+    "url": "/philosophy/student-panel.html",
+    "slug": "student-panel",
+    "status": "ok"
+  },
+  {
+    "name": "alpha-system",
+    "url": "/philosophy/alpha-system.html",
+    "slug": "alpha-system",
+    "status": "ok"
+  },
+  {
+    "name": "student-design",
+    "url": "/philosophy/student-design.html",
+    "slug": "student-design",
+    "status": "ok"
+  },
+  {
+    "name": "student-observatory",
+    "url": "/philosophy/student-observatory.html",
+    "slug": "student-observatory",
+    "status": "ok"
+  },
+  {
+    "name": "onboarding-philosophy",
+    "url": "/philosophy/onboarding-philosophy.html",
+    "slug": "onboarding-philosophy",
+    "status": "ok"
+  },
+  {
+    "name": "_student-profile-beta",
+    "url": "/philosophy/_student-profile-beta.html",
+    "slug": "student-profile-beta",
+    "status": "ok"
+  },
+  {
+    "name": "connections",
+    "url": "/philosophy/connections.html",
+    "slug": "connections",
+    "status": "ok"
+  },
+  {
+    "name": "system-map",
+    "url": "/philosophy/system-map.html",
+    "slug": "system-map",
+    "status": "ok"
+  },
+  {
+    "name": "system-viz",
+    "url": "/philosophy/system-viz.html",
+    "slug": "system-viz",
+    "status": "ok"
+  },
+  {
+    "name": "development-diagram",
+    "url": "/philosophy/development-diagram.html",
+    "slug": "development-diagram",
+    "status": "ok"
+  },
+  {
+    "name": "multi-game-architecture",
+    "url": "/philosophy/multi-game-architecture.html",
+    "slug": "multi-game-architecture",
+    "status": "ok"
+  },
+  {
+    "name": "map-system",
+    "url": "/philosophy/map-system.html",
+    "slug": "map-system",
+    "status": "ok"
+  },
+  {
+    "name": "challenge-meta",
+    "url": "/philosophy/challenge-meta.html",
+    "slug": "challenge-meta",
+    "status": "ok"
+  },
+  {
+    "name": "navigator",
+    "url": "/philosophy/navigator.html",
+    "slug": "navigator",
+    "status": "ok"
+  },
+  {
+    "name": "roadmap",
+    "url": "/philosophy/roadmap.html",
+    "slug": "roadmap",
+    "status": "ok"
+  },
+  {
+    "name": "strategy",
+    "url": "/philosophy/strategy.html",
+    "slug": "strategy",
+    "status": "ok"
+  },
+  {
+    "name": "identity-auth",
+    "url": "/philosophy/identity-auth.html",
+    "slug": "identity-auth",
+    "status": "ok"
+  },
+  {
+    "name": "legal-architecture",
+    "url": "/philosophy/legal-architecture.html",
+    "slug": "legal-architecture",
+    "status": "ok"
+  },
+  {
+    "name": "legal-encounters",
+    "url": "/philosophy/legal-encounters.html",
+    "slug": "legal-encounters",
+    "status": "ok"
+  }
+]

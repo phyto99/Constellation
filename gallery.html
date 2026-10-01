@@ -22,6 +22,11 @@ section{padding:14px 20px 4px}
 .card:hover .card-lbl{color:#fff}
 .frame-shell{width:280px;height:200px;overflow:hidden;border:1px solid #1e1e1e;background:#111;position:relative;transition:border-color .15s}
 .frame-shell iframe{width:1120px;height:800px;transform:scale(0.25);transform-origin:0 0;pointer-events:none;border:none;background:#fff}
+.frame-shell img.shot{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
+.live-btn{position:absolute;bottom:6px;right:6px;z-index:3;font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #333;color:#999;background:rgba(10,10,10,0.85);padding:3px 7px;cursor:pointer;opacity:.55;transition:opacity .15s,border-color .15s,color .15s}
+.live-btn:hover{opacity:1;border-color:#888;color:#fff}
+.no-shot{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#0d0d0d}
+.no-shot span{font-size:8px;color:#444;letter-spacing:.5px;text-align:center;padding:0 20px;line-height:1.6}
 .card-lbl{padding:5px 6px 0;font-size:9px;font-weight:700;letter-spacing:.5px;color:#666;transition:color .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
 .card-sub{padding:1px 6px 6px;font-size:8px;color:#333}
 .overlay{position:absolute;top:0;left:0;width:280px;height:200px}
@@ -30,9 +35,6 @@ section{padding:14px 20px 4px}
 .badge.phi{border-color:#2563eb;color:#2563eb}
 .badge.new{border-color:#d97706;color:#d97706}
 .badge.mock{border-color:#0d9488;color:#0d9488}
-.deferred .frame-shell{cursor:default}
-.deferred-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#0d0d0d}
-.deferred-placeholder span{font-size:8px;color:#333;letter-spacing:.5px}
 .load-btn{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #222;color:#555;padding:4px 12px;cursor:pointer;background:transparent;transition:border-color .15s,color .15s}
 .load-btn:hover{border-color:#888;color:#ccc}
 .desc-panel{position:absolute;top:0;left:0;width:280px;height:200px;background:rgba(5,5,8,0.94);padding:10px 12px;opacity:0;transition:opacity .18s;pointer-events:none;z-index:6;overflow:hidden}
@@ -48,14 +50,13 @@ section{padding:14px 20px 4px}
   <span class="logo"><span>Constellation</span> Gallery</span>
   <input id="filter" type="text" placeholder="filter by name…" oninput="filterCards(this.value)">
   <span class="count" id="count"></span>
+  <button class="open-all" id="mode-toggle" onclick="toggleMode()" title="Screenshots load instantly; Live auto-loads every iframe like before">Mode: Screenshots</button>
   <button class="open-all" onclick="openAll()">Open All ↗</button>
 </header>
 
 <div id="gallery-root"></div>
 
 <script>
-const HEAVY = new Set(['/golad/GALLERY','/centauri','/centauri-mapmaker','/geobridge','/c4d']);
-
 const GROUPS = [
   {
     label: 'student-next-v2 Ecosystem',
@@ -177,7 +178,25 @@ const GROUPS = [
 
 let allCards = [];
 
-function loadHeavy(url, shell) {
+// Populated from gallery-screenshots/_manifest.json (written by
+// game/shoot-gallery.js) — keyed by item.url. { slug, status }.
+// status is 'ok' or a failure reason ('http-404', 'error: ...').
+let SHOTS = {};
+
+// 'shots' (default): every card shows its static screenshot, real iframe
+// only on demand — this is the whole point, ~65 cards stop auto-loading
+// ~65 apps' worth of JS/CSS/fonts on page open.
+// 'live': the original behavior, every card auto-loads its real iframe —
+// still one click away, not removed, just no longer the default.
+let mode = 'shots';
+
+function toggleMode() {
+  mode = mode === 'shots' ? 'live' : 'shots';
+  document.getElementById('mode-toggle').textContent = 'Mode: ' + (mode === 'shots' ? 'Screenshots' : 'Live');
+  build();
+}
+
+function loadLive(url, shell) {
   shell.innerHTML = '<iframe src="' + url + '" loading="lazy" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" tabindex="-1" onload="neutraliseIframeFocus(this)"></iframe>';
 }
 
@@ -193,15 +212,21 @@ function build() {
     grid.className = 'grid';
 
     g.items.forEach(item => {
-      const heavy = HEAVY.has(item.url);
+      const shot = SHOTS[item.url];
       const card = document.createElement('div');
-      card.className = 'card' + (heavy ? ' deferred' : '');
+      card.className = 'card';
       card.dataset.name = item.name.toLowerCase();
       card.dataset.url = item.url;
 
-      const frameInner = heavy
-        ? '<div class="deferred-placeholder"><span>heavy — not auto-loaded</span><button class="load-btn" onclick="event.stopPropagation();loadHeavy(\'' + item.url + '\',this.closest(\'.frame-shell\'))">Load preview</button></div>'
-        : '<iframe src="' + item.url + '" loading="lazy" sandbox="allow-scripts allow-same-origin allow-forms" tabindex="-1" onload="neutraliseIframeFocus(this)"></iframe>';
+      // Default ('shots'): a static screenshot, no iframe, no app JS running
+      // per card — "load live" swaps in the real sandboxed iframe on demand.
+      // 'live' mode restores the original always-iframe behavior wholesale.
+      const frameInner = mode === 'live'
+        ? '<iframe src="' + item.url + '" loading="lazy" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" tabindex="-1" onload="neutraliseIframeFocus(this)"></iframe>'
+        : (shot && shot.status === 'ok')
+        ? '<img class="shot" src="/gallery-screenshots/' + shot.slug + '.jpg" loading="lazy" alt="' + item.name + ' preview">' +
+          '<button class="live-btn" onclick="event.stopPropagation();loadLive(\'' + item.url + '\',this.closest(\'.frame-shell\'))">&#9654; load live</button>'
+        : '<div class="no-shot"><span>' + (shot ? 'no preview — ' + shot.status : 'no preview yet') + '</span><button class="load-btn" onclick="event.stopPropagation();loadLive(\'' + item.url + '\',this.closest(\'.frame-shell\'))">Load live</button></div>';
 
       const parts = item.sub.split(' · ');
       const descHtml = '<span class="desc-head">' + parts[0] + '</span>' +
@@ -246,7 +271,14 @@ function openAll() {
   visible.forEach((c, i) => setTimeout(() => window.open(c.dataset.url, '_blank'), i * 80));
 }
 
-build();
+// Screenshots are optional — if the manifest is missing or unreachable
+// (fresh checkout, script never run), every card just falls back to the
+// "no preview yet — Load live" state instead of failing to render.
+fetch('/gallery-screenshots/_manifest.json')
+  .then(r => r.ok ? r.json() : [])
+  .then(list => { list.forEach(r => { SHOTS[r.url] = r; }); })
+  .catch(() => {})
+  .then(build);
 
 // Prevent iframes from hijacking the gallery scroll position.
 // Root cause: pages inside iframes auto-focus elements, which causes the
