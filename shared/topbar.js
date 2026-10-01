@@ -16,7 +16,7 @@
 
 (function () {
   const NAV_LEFT  = ['Training', 'Puzzles', 'Library'];
-  const NAV_RIGHT = ['Contribute', 'Maps'];
+  const NAV_RIGHT = ['Contribute', 'Maps', 'Profile'];
 
   const NAV_HREFS = {
     Training:   '/training',
@@ -24,6 +24,7 @@
     Library:    '/library.html',
     Contribute: '/contribute',
     Maps:       '/game/maps',
+    Profile:    '/profile.html',
   };
 
   // Paths that belong to Training even without /training prefix
